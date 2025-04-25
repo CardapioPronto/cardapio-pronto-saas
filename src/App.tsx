@@ -1,9 +1,10 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -14,7 +15,7 @@ import Produtos from "./pages/Produtos";
 import Assinaturas from "./pages/Assinaturas";
 import Configuracoes from "./pages/Configuracoes";
 import Pedidos from "./pages/Pedidos";
-import React from "react"; // Add explicit React import
+import Cadastro from "./pages/Cadastro";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/teste-gratis" element={<Cadastro />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/pdv" element={<PDV />} />
           <Route path="/cardapio" element={<MenuDigital />} />
@@ -34,7 +37,6 @@ const App = () => (
           <Route path="/pedidos" element={<Pedidos />} />
           <Route path="/assinaturas" element={<Assinaturas />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -1,13 +1,12 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CTA = () => {
   return (
     <section className="py-16 bg-green">
       <div className="container mx-auto px-6">
         <div className="bg-navy rounded-2xl p-8 md:p-12 relative overflow-hidden">
-          {/* Background decoration */}
           <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
             <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
               <path 
@@ -27,12 +26,16 @@ const CTA = () => {
                 Experimente o CardápioPronto gratuitamente por 14 dias. Sem compromisso, sem necessidade de cartão de crédito.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-orange hover:bg-orange/90 text-white">
-                  Começar teste grátis
-                </Button>
-                <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-                  Agendar demonstração
-                </Button>
+                <Link to="/teste-gratis">
+                  <Button size="lg" className="bg-orange hover:bg-orange/90 text-white w-full sm:w-auto">
+                    Começar teste grátis
+                  </Button>
+                </Link>
+                <Link to="/demonstracao">
+                  <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10 w-full sm:w-auto">
+                    Agendar demonstração
+                  </Button>
+                </Link>
               </div>
             </div>
             
