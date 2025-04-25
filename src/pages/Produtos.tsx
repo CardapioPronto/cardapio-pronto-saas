@@ -112,14 +112,14 @@ const Produtos = () => {
           </div>
           
           <Select 
-            value={categoriaFiltrada || ""} 
-            onValueChange={(value) => setCategoriaFiltrada(value || null)}
+            value={categoriaFiltrada || "all"} 
+            onValueChange={(value) => setCategoriaFiltrada(value === "all" ? null : value)}
           >
             <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="lanches">Lanches</SelectItem>
               <SelectItem value="porcoes">Porções</SelectItem>
               <SelectItem value="bebidas">Bebidas</SelectItem>
