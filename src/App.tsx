@@ -14,6 +14,7 @@ import Produtos from "./pages/Produtos";
 import Assinaturas from "./pages/Assinaturas";
 import Configuracoes from "./pages/Configuracoes";
 import Pedidos from "./pages/Pedidos";
+import React from "react"; // Add explicit React import
 
 const queryClient = new QueryClient();
 
