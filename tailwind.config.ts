@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				poppins: ['Poppins', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -51,6 +55,30 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				/* Custom SaaS Theme Colors */
+				beige: {
+					DEFAULT: '#F2CC8F',
+					light: '#f8e8c9',
+				},
+				green: {
+					DEFAULT: '#81B29A',
+					light: '#a7c9b8',
+					dark: '#5e9179',
+				},
+				navy: {
+					DEFAULT: '#3D405B',
+					light: '#575a7a',
+					dark: '#2d2f43',
+				},
+				orange: {
+					DEFAULT: '#E07A5F',
+					light: '#e9a18f',
+					dark: '#d65437',
+				},
+				offwhite: {
+					DEFAULT: '#F4F1DE',
+					light: '#faf8ef',
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -89,7 +117,10 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+			},
+			backgroundImage: {
+				'hero-pattern': "url('/images/hero-pattern.svg')",
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
