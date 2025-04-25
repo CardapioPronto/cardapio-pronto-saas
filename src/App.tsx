@@ -7,6 +7,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import MenuDigital from "./pages/MenuDigital";
+import PDV from "./pages/PDV";
+import Produtos from "./pages/Produtos";
+import Assinaturas from "./pages/Assinaturas";
+import Configuracoes from "./pages/Configuracoes";
+import Pedidos from "./pages/Pedidos";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +26,13 @@ const App = () => (
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/pdv" element={<PDV />} />
+          <Route path="/cardapio" element={<MenuDigital />} />
+          <Route path="/produtos" element={<Produtos />} />
+          <Route path="/pedidos" element={<Pedidos />} />
+          <Route path="/assinaturas" element={<Assinaturas />} />
+          <Route path="/configuracoes" element={<Configuracoes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
