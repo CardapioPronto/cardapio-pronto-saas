@@ -104,12 +104,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   }
 
+  // Fix: Updated to render the billing price based on current state rather than using a function
+  const displayPrice = form.watch("billingType") === "yearly" 
+    ? <><span className="font-semibold">R$ {(planPrice * 10).toFixed(2)}</span> <span className="text-green text-sm">(2 meses grátis)</span></>
+    : <><span className="font-semibold">R$ {planPrice.toFixed(2)}</span></>;
+
   return (
     <Card className="w-full max-w-lg mx-auto">
       <CardHeader>
         <CardTitle>Assinar plano {planName}</CardTitle>
         <CardDescription>
-          {values => values.billingType === "yearly" ? (
+          {form.watch("billingType") === "yearly" ? (
             <>Cobrança anual: <span className="font-semibold">R$ {(planPrice * 10).toFixed(2)}</span> <span className="text-green text-sm">(2 meses grátis)</span></>
           ) : (
             <>Cobrança mensal: <span className="font-semibold">R$ {planPrice.toFixed(2)}</span></>
