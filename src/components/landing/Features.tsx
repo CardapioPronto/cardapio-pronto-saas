@@ -1,5 +1,6 @@
 
 import { CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const features = [
   {
@@ -71,8 +72,8 @@ const Features = () => {
 
         {/* Call-to-action */}
         <div className="flex justify-center mt-16">
-          <a 
-            href="/funcionalidades" 
+          <Link 
+            to="/funcionalidades" 
             className="group inline-flex items-center text-green hover:text-green-dark font-medium text-lg"
           >
             Ver todas as funcionalidades
@@ -85,7 +86,7 @@ const Features = () => {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </a>
+          </Link>
         </div>
       </div>
     </section>

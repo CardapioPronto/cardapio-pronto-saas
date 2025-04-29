@@ -18,6 +18,10 @@ import Configuracoes from "./pages/Configuracoes";
 import Pedidos from "./pages/Pedidos";
 import Cadastro from "./pages/Cadastro";
 import CardapioPublico from "./pages/CardapioPublico";
+import FAQ from "./pages/FAQ";
+import Demonstracao from "./pages/Demonstracao";
+import Funcionalidades from "./pages/Funcionalidades";
+import Contato from "./pages/Contato";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +46,12 @@ const App = () => (
           
           {/* Rota pública para o cardápio digital */}
           <Route path="/menu/:id" element={<CardapioPublico />} />
+          
+          {/* Novas rotas para páginas estáticas */}
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/demonstracao" element={<Demonstracao />} />
+          <Route path="/funcionalidades" element={<Funcionalidades />} />
+          <Route path="/contato" element={<Contato />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
