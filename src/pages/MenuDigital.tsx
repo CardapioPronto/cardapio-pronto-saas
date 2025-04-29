@@ -3,15 +3,19 @@ import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { QrCode, Download, Copy } from "lucide-react";
+import { QrCode, Download, Copy, ExternalLink } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "react-router-dom";
 
 const MenuDigital = () => {
-  const [qrCodeUrl, setQrCodeUrl] = useState("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://cardapiopronto.com/menu/123");
+  // Simulando ID único do restaurante para o link do cardápio digital
+  const restauranteId = "123";
+  const cardapioUrl = `${window.location.origin}/menu/${restauranteId}`;
+  const [qrCodeUrl, setQrCodeUrl] = useState(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(cardapioUrl)}`);
 
   const copiarLink = () => {
-    navigator.clipboard.writeText("https://cardapiopronto.com/menu/123");
+    navigator.clipboard.writeText(cardapioUrl);
     toast.success("Link copiado para a área de transferência");
   };
 
@@ -46,18 +50,30 @@ const MenuDigital = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-3 w-full">
-                <Button onClick={baixarQRCode} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Baixar
-                </Button>
-                <Button onClick={copiarLink}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar Link
-                </Button>
+              <div className="grid grid-cols-1 gap-3 w-full mb-4">
+                <div className="text-xs text-center text-gray-500 mb-2">
+                  Link do cardápio:
+                  <div className="font-medium text-sm truncate max-w-full">{cardapioUrl}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button onClick={baixarQRCode} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar
+                  </Button>
+                  <Button onClick={copiarLink}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar Link
+                  </Button>
+                </div>
+                <Link to={`/menu/${restauranteId}`} target="_blank">
+                  <Button variant="outline" className="w-full">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Visualizar Cardápio
+                  </Button>
+                </Link>
               </div>
               
-              <div className="mt-4 text-sm text-center text-muted-foreground">
+              <div className="mt-2 text-sm text-center text-muted-foreground">
                 <p>Imprima e coloque nas mesas</p>
                 <p>Compartilhe nas redes sociais</p>
               </div>
@@ -155,18 +171,34 @@ const MenuDigital = () => {
                         ))}
                       </TabsContent>
 
-                      <TabsContent value="bebidas" className="mt-0">
-                        {/* Conteúdo de bebidas vai aqui */}
-                        <div className="text-center text-gray-500 py-4">
-                          Selecione produtos na aba "Produtos"
-                        </div>
+                      <TabsContent value="bebidas" className="space-y-4 mt-0">
+                        {[
+                          {nome: "Refrigerante", descricao: "Lata 350ml", preco: 5.00},
+                          {nome: "Suco Natural", descricao: "Laranja ou Limão", preco: 8.00}
+                        ].map((item, index) => (
+                          <div key={index} className="flex justify-between border-b pb-3">
+                            <div>
+                              <h4 className="font-medium">{item.nome}</h4>
+                              <p className="text-sm text-gray-500">{item.descricao}</p>
+                            </div>
+                            <span className="font-bold text-green">R$ {item.preco.toFixed(2)}</span>
+                          </div>
+                        ))}
                       </TabsContent>
                       
-                      <TabsContent value="sobremesas" className="mt-0">
-                        {/* Conteúdo de sobremesas vai aqui */}
-                        <div className="text-center text-gray-500 py-4">
-                          Selecione produtos na aba "Produtos"
-                        </div>
+                      <TabsContent value="sobremesas" className="space-y-4 mt-0">
+                        {[
+                          {nome: "Pudim", descricao: "Tradicional com calda de caramelo", preco: 8.90},
+                          {nome: "Sorvete", descricao: "2 bolas com calda", preco: 10.90}
+                        ].map((item, index) => (
+                          <div key={index} className="flex justify-between border-b pb-3">
+                            <div>
+                              <h4 className="font-medium">{item.nome}</h4>
+                              <p className="text-sm text-gray-500">{item.descricao}</p>
+                            </div>
+                            <span className="font-bold text-green">R$ {item.preco.toFixed(2)}</span>
+                          </div>
+                        ))}
                       </TabsContent>
                     </div>
                   </Tabs>

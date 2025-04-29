@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import Assinaturas from "./pages/Assinaturas";
 import Configuracoes from "./pages/Configuracoes";
 import Pedidos from "./pages/Pedidos";
 import Cadastro from "./pages/Cadastro";
+import CardapioPublico from "./pages/CardapioPublico";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,10 @@ const App = () => (
           <Route path="/pedidos" element={<Pedidos />} />
           <Route path="/assinaturas" element={<Assinaturas />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          
+          {/* Rota pública para o cardápio digital */}
+          <Route path="/menu/:id" element={<CardapioPublico />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
