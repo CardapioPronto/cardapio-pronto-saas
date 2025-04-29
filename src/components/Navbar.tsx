@@ -39,10 +39,10 @@ const Navbar = () => {
                 <Link to="/cardapio-digital" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
                   Cardápio Digital
                 </Link>
-                <Link to="/pdv" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
+                <Link to="/pdv-online" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
                   PDV Online
                 </Link>
-                <Link to="/gestao" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
+                <Link to="/gestao-completa" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
                   Gestão Completa
                 </Link>
               </div>
@@ -88,10 +88,10 @@ const Navbar = () => {
             <Link to="/cardapio-digital" className="text-navy py-2 border-b border-beige">
               Cardápio Digital
             </Link>
-            <Link to="/pdv" className="text-navy py-2 border-b border-beige">
+            <Link to="/pdv-online" className="text-navy py-2 border-b border-beige">
               PDV Online
             </Link>
-            <Link to="/gestao" className="text-navy py-2 border-b border-beige">
+            <Link to="/gestao-completa" className="text-navy py-2 border-b border-beige">
               Gestão Completa
             </Link>
             <Link to="/precos" className="text-navy py-2 border-b border-beige">

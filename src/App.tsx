@@ -23,6 +23,12 @@ import Demonstracao from "./pages/Demonstracao";
 import Funcionalidades from "./pages/Funcionalidades";
 import Contato from "./pages/Contato";
 
+// Importamos as novas páginas
+import CardapioDigital from "./pages/CardapioDigital";
+import PDVOnline from "./pages/PDVOnline";
+import GestaoCompleta from "./pages/GestaoCompleta";
+import Precos from "./pages/Precos";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -52,6 +58,12 @@ const App = () => (
           <Route path="/demonstracao" element={<Demonstracao />} />
           <Route path="/funcionalidades" element={<Funcionalidades />} />
           <Route path="/contato" element={<Contato />} />
+          
+          {/* Novas rotas para links do dropdown Soluções */}
+          <Route path="/cardapio-digital" element={<CardapioDigital />} />
+          <Route path="/pdv-online" element={<PDVOnline />} />
+          <Route path="/gestao-completa" element={<GestaoCompleta />} />
+          <Route path="/precos" element={<Precos />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
