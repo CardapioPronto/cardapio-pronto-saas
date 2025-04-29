@@ -22,6 +22,8 @@ import FAQ from "./pages/FAQ";
 import Demonstracao from "./pages/Demonstracao";
 import Funcionalidades from "./pages/Funcionalidades";
 import Contato from "./pages/Contato";
+import Admin from "./pages/Admin";
+import PagarmeConfig from "./pages/PagarmeConfig";
 
 // Importamos as novas páginas
 import CardapioDigital from "./pages/CardapioDigital";
@@ -49,6 +51,8 @@ const App = () => (
           <Route path="/pedidos" element={<Pedidos />} />
           <Route path="/assinaturas" element={<Assinaturas />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/pagarme-config" element={<PagarmeConfig />} />
           
           {/* Rota pública para o cardápio digital */}
           <Route path="/menu/:id" element={<CardapioPublico />} />
