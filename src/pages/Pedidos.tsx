@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye, CheckCircle, Clock, Package, XCircle } from "lucide-react";
 import { useState } from "react";
+import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
+import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
 
 // Tipo para status do pedido
 type StatusPedido = "pendente" | "concluido" | "cancelado" | "preparo";
@@ -19,6 +21,7 @@ interface Pedido {
   valorTotal: number;
   data: Date;
   status: StatusPedido;
+  source?: 'app' | 'ifood' | 'whatsapp';
   itens: {
     nome: string;
     quantidade: number;
@@ -36,6 +39,7 @@ const Pedidos = () => {
       valorTotal: 45.80,
       data: new Date(2023, 3, 25, 19, 30),
       status: "pendente",
+      source: 'app',
       itens: [
         { nome: "X-Tudo", quantidade: 1, precoUnitario: 24.90 },
         { nome: "Batata Frita", quantidade: 1, precoUnitario: 12.90 },
@@ -49,6 +53,7 @@ const Pedidos = () => {
       valorTotal: 63.70,
       data: new Date(2023, 3, 25, 19, 45),
       status: "preparo",
+      source: 'app',
       itens: [
         { nome: "X-Salada", quantidade: 2, precoUnitario: 21.90 },
         { nome: "Anéis de Cebola", quantidade: 1, precoUnitario: 15.90 },
@@ -57,11 +62,12 @@ const Pedidos = () => {
     },
     {
       id: 10003,
-      mesa: 5,
+      mesa: 0,
       cliente: "Maria Oliveira",
       valorTotal: 36.80,
       data: new Date(2023, 3, 25, 18, 15),
       status: "concluido",
+      source: 'ifood',
       itens: [
         { nome: "X-Burger", quantidade: 1, precoUnitario: 18.90 },
         { nome: "X-Burger", quantidade: 1, precoUnitario: 18.90 }
@@ -74,6 +80,7 @@ const Pedidos = () => {
       valorTotal: 37.50,
       data: new Date(2023, 3, 25, 17, 30),
       status: "cancelado",
+      source: 'whatsapp',
       itens: [
         { nome: "X-Burger", quantidade: 1, precoUnitario: 18.90 },
         { nome: "Batata Frita", quantidade: 1, precoUnitario: 12.90 },
@@ -114,9 +121,24 @@ const Pedidos = () => {
       case "cancelado": return <XCircle className="h-4 w-4 mr-1" />;
     }
   };
+  
+  // Função para renderizar badge da fonte do pedido
+  const renderSourceBadge = (source?: 'app' | 'ifood' | 'whatsapp') => {
+    switch (source) {
+      case 'ifood':
+        return <IfoodOrderBadge className="ml-2" />;
+      case 'whatsapp':
+        return <Badge className="bg-green-500 text-white ml-2">WhatsApp</Badge>;
+      default:
+        return null;
+    }
+  };
 
   return (
     <DashboardLayout title="Pedidos">
+      {/* Lista de pedidos do iFood */}
+      <IfoodOrdersList />
+      
       <Card>
         <CardHeader>
           <CardTitle>Histórico de Pedidos</CardTitle>
@@ -137,8 +159,11 @@ const Pedidos = () => {
             <TableBody>
               {pedidos.map((pedido) => (
                 <TableRow key={pedido.id}>
-                  <TableCell className="font-medium">{pedido.id}</TableCell>
-                  <TableCell>Mesa {pedido.mesa}</TableCell>
+                  <TableCell className="font-medium">
+                    {pedido.id}
+                    {renderSourceBadge(pedido.source)}
+                  </TableCell>
+                  <TableCell>{pedido.mesa > 0 ? `Mesa ${pedido.mesa}` : 'Delivery'}</TableCell>
                   <TableCell>{pedido.cliente || "Cliente local"}</TableCell>
                   <TableCell>{pedido.data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
                   <TableCell>R$ {pedido.valorTotal.toFixed(2)}</TableCell>
@@ -163,9 +188,13 @@ const Pedidos = () => {
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Detalhes do Pedido #{pedidoDetalhes?.id}</DialogTitle>
+                          <DialogTitle className="flex items-center">
+                            Detalhes do Pedido #{pedidoDetalhes?.id}
+                            {pedidoDetalhes?.source === 'ifood' && <IfoodOrderBadge className="ml-2" />}
+                            {pedidoDetalhes?.source === 'whatsapp' && <Badge className="bg-green-500 text-white ml-2">WhatsApp</Badge>}
+                          </DialogTitle>
                           <DialogDescription>
-                            Mesa {pedidoDetalhes?.mesa} • {pedidoDetalhes?.data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                            {pedidoDetalhes?.mesa ? `Mesa ${pedidoDetalhes?.mesa}` : 'Delivery'} • {pedidoDetalhes?.data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                           </DialogDescription>
                         </DialogHeader>
                         

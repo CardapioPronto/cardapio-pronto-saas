@@ -13,6 +13,11 @@ const sidebarItems = [
   { icon: Settings, label: "Configurações", href: "/configuracoes" },
 ];
 
+const integrationItems = [
+  { label: "iFood", href: "/ifood-integracao" },
+  { label: "Pagar.me", href: "/pagarme-config" },
+];
+
 const DashboardSidebar = () => {
   const location = useLocation();
 
@@ -45,6 +50,32 @@ const DashboardSidebar = () => {
                 </li>
               );
             })}
+            
+            <li className="pt-4">
+              <div className="px-3 mb-2 text-xs font-semibold text-muted-foreground">
+                Integrações
+              </div>
+              <ul className="space-y-1">
+                {integrationItems.map((item, index) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <li key={index}>
+                      <Link
+                        to={item.href}
+                        className={cn(
+                          "flex items-center py-2 px-3 rounded-md transition-colors",
+                          isActive
+                            ? "bg-green/10 text-green"
+                            : "text-navy/70 hover:bg-beige/30 hover:text-navy"
+                        )}
+                      >
+                        <span>{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
           </ul>
         </nav>
         <div className="p-4 border-t">

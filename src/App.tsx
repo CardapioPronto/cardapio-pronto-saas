@@ -24,6 +24,7 @@ import Funcionalidades from "./pages/Funcionalidades";
 import Contato from "./pages/Contato";
 import Admin from "./pages/Admin";
 import PagarmeConfig from "./pages/PagarmeConfig";
+import IfoodIntegracao from "./pages/IfoodIntegracao";
 
 // Importamos as novas páginas
 import CardapioDigital from "./pages/CardapioDigital";
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/pagarme-config" element={<PagarmeConfig />} />
+          <Route path="/ifood-integracao" element={<IfoodIntegracao />} />
           
           {/* Rota pública para o cardápio digital */}
           <Route path="/menu/:id" element={<CardapioPublico />} />
