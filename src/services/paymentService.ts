@@ -68,7 +68,7 @@ const processCardPayment = async (subscriptionData: SubscriptionRequest) => {
   
   return {
     id: `sub_${Math.random().toString(36).substring(2, 11)}`,
-    status: 'active',
+    status: 'active' as const,
     nextBilling: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     planInfo: {
       name: getPlanName(subscriptionData.planId),
@@ -87,7 +87,7 @@ const processBoletoPayment = async (subscriptionData: SubscriptionRequest) => {
   
   return {
     id: `sub_${Math.random().toString(36).substring(2, 11)}`,
-    status: 'pending',
+    status: 'pending' as const,
     nextBilling: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     planInfo: {
       name: getPlanName(subscriptionData.planId),
@@ -106,7 +106,7 @@ const processPixPayment = async (subscriptionData: SubscriptionRequest) => {
   
   return {
     id: `sub_${Math.random().toString(36).substring(2, 11)}`,
-    status: 'pending',
+    status: 'pending' as const,
     nextBilling: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     planInfo: {
       name: getPlanName(subscriptionData.planId),
@@ -180,9 +180,11 @@ export const getSubscriptionDetails = async (subscriptionId: string): Promise<Su
   await new Promise(resolve => setTimeout(resolve, 800));
   
   // Simular uma resposta
+  const status = Math.random() > 0.2 ? 'active' as const : 'canceled' as const;
+  
   return {
     id: subscriptionId,
-    status: Math.random() > 0.2 ? 'active' : 'canceled',
+    status: status,
     nextBilling: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     planInfo: {
       name: Math.random() > 0.5 ? 'Premium' : 'Padrão',
