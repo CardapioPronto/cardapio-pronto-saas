@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,10 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 
 const Cadastro = () => {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -31,8 +33,54 @@ const Cadastro = () => {
     setLoading(true);
 
     try {
-      // Simulating API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Realizar o cadastro no Supabase
+      const { error } = await signUp(formData.email, formData.password, {
+        nome: formData.nome,
+        telefone: formData.telefone
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Criar um registro de restaurante
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user || !user.user) {
+        throw new Error("Falha ao obter informações do usuário após cadastro");
+      }
+      
+      const { data: restaurant, error: restaurantError } = await supabase
+        .from('restaurants')
+        .insert({
+          name: formData.estabelecimento,
+          owner_id: user.user.id
+        })
+        .select()
+        .single();
+      
+      if (restaurantError) {
+        throw restaurantError;
+      }
+      
+      // Criar uma assinatura trial
+      const now = new Date();
+      const trialEndDate = new Date();
+      trialEndDate.setDate(now.getDate() + 14); // 14 dias de trial
+      
+      const { error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .insert({
+          restaurant_id: restaurant.id,
+          plan_id: 'trial',
+          status: 'active',
+          start_date: now.toISOString(),
+          end_date: trialEndDate.toISOString()
+        });
+      
+      if (subscriptionError) {
+        throw subscriptionError;
+      }
       
       toast({
         title: "Cadastro realizado com sucesso!",
@@ -40,11 +88,11 @@ const Cadastro = () => {
       });
       
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Erro no cadastro",
-        description: "Ocorreu um erro ao criar sua conta. Tente novamente.",
+        description: error.message || "Ocorreu um erro ao criar sua conta. Tente novamente.",
       });
     } finally {
       setLoading(false);

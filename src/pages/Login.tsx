@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,23 +13,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      // Simulando autenticação
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { error } = await signIn(email, password);
       
-      // Simulando um erro
-      if (email === "error@example.com") {
-        throw new Error("Credenciais inválidas. Por favor, tente novamente.");
+      if (error) {
+        throw new Error(error.message || "Credenciais inválidas. Por favor, tente novamente.");
       }
       
       // Login bem-sucedido
@@ -38,8 +39,7 @@ const Login = () => {
         description: "Você será redirecionado para o dashboard.",
       });
       
-      // Redirecionamento seria feito aqui
-      console.log("Redirecionando para o dashboard...");
+      navigate("/dashboard");
     } catch (error) {
       toast({
         variant: "destructive",

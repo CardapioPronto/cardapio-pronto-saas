@@ -3,8 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import React from "react";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
@@ -34,47 +35,61 @@ import Precos from "./pages/Precos";
 
 const queryClient = new QueryClient();
 
+// Componente de proteção de rotas
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="h-screen w-screen flex items-center justify-center">Carregando...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/teste-gratis" element={<Cadastro />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/pdv" element={<PDV />} />
-          <Route path="/cardapio" element={<MenuDigital />} />
-          <Route path="/produtos" element={<Produtos />} />
-          <Route path="/pedidos" element={<Pedidos />} />
-          <Route path="/assinaturas" element={<Assinaturas />} />
-          <Route path="/configuracoes" element={<Configuracoes />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/pagarme-config" element={<PagarmeConfig />} />
-          <Route path="/ifood-integracao" element={<IfoodIntegracao />} />
-          
-          {/* Rota pública para o cardápio digital */}
-          <Route path="/menu/:id" element={<CardapioPublico />} />
-          
-          {/* Novas rotas para páginas estáticas */}
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/demonstracao" element={<Demonstracao />} />
-          <Route path="/funcionalidades" element={<Funcionalidades />} />
-          <Route path="/contato" element={<Contato />} />
-          
-          {/* Novas rotas para links do dropdown Soluções */}
-          <Route path="/cardapio-digital" element={<CardapioDigital />} />
-          <Route path="/pdv-online" element={<PDVOnline />} />
-          <Route path="/gestao-completa" element={<GestaoCompleta />} />
-          <Route path="/precos" element={<Precos />} />
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Rotas públicas */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/teste-gratis" element={<Cadastro />} />
+            <Route path="/menu/:id" element={<CardapioPublico />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/demonstracao" element={<Demonstracao />} />
+            <Route path="/funcionalidades" element={<Funcionalidades />} />
+            <Route path="/contato" element={<Contato />} />
+            <Route path="/cardapio-digital" element={<CardapioDigital />} />
+            <Route path="/pdv-online" element={<PDVOnline />} />
+            <Route path="/gestao-completa" element={<GestaoCompleta />} />
+            <Route path="/precos" element={<Precos />} />
+            
+            {/* Rotas protegidas */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/pdv" element={<ProtectedRoute><PDV /></ProtectedRoute>} />
+            <Route path="/cardapio" element={<ProtectedRoute><MenuDigital /></ProtectedRoute>} />
+            <Route path="/produtos" element={<ProtectedRoute><Produtos /></ProtectedRoute>} />
+            <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
+            <Route path="/assinaturas" element={<ProtectedRoute><Assinaturas /></ProtectedRoute>} />
+            <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/pagarme-config" element={<ProtectedRoute><PagarmeConfig /></ProtectedRoute>} />
+            <Route path="/ifood-integracao" element={<ProtectedRoute><IfoodIntegracao /></ProtectedRoute>} />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
