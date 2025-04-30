@@ -3,8 +3,8 @@ import { PagarmeConfig } from './types';
 
 // Configuração de ambiente
 export const config: PagarmeConfig = {
-  apiKey: process.env.PAGARME_API_KEY || 'test_api_key',
-  isLive: process.env.NODE_ENV === 'production',
+  apiKey: 'test_api_key', // Default value
+  isLive: false,          // Default to sandbox environment
   apiUrl: 'https://api.pagar.me/core/v5',
   debug: true // Habilita logs detalhados para depuração
 };
