@@ -34,7 +34,7 @@ export class SupabaseService<T extends TableNames> {
         .select()
         .single();
 
-      return { data: result as R, error };
+      return { data: result as unknown as R, error };
     } catch (error) {
       return { data: null, error: error as Error };
     }
@@ -67,7 +67,7 @@ export class SupabaseService<T extends TableNames> {
       }
 
       const { data, error } = await query;
-      return { data: data as R[], error };
+      return { data: data as unknown as R[], error };
     } catch (error) {
       return { data: null, error: error as Error };
     }
@@ -81,10 +81,10 @@ export class SupabaseService<T extends TableNames> {
       const { data, error } = await supabase
         .from(this.table)
         .select('*')
-        .eq('id', id)
+        .eq('id', id as any)
         .single();
 
-      return { data: data as R, error };
+      return { data: data as unknown as R, error };
     } catch (error) {
       return { data: null, error: error as Error };
     }
@@ -98,11 +98,11 @@ export class SupabaseService<T extends TableNames> {
       const { data: result, error } = await supabase
         .from(this.table)
         .update(data as any)
-        .eq('id', id)
+        .eq('id', id as any)
         .select()
         .single();
 
-      return { data: result as R, error };
+      return { data: result as unknown as R, error };
     } catch (error) {
       return { data: null, error: error as Error };
     }
@@ -116,7 +116,7 @@ export class SupabaseService<T extends TableNames> {
       const { error } = await supabase
         .from(this.table)
         .delete()
-        .eq('id', id);
+        .eq('id', id as any);
 
       return { data: null, error };
     } catch (error) {
@@ -131,7 +131,7 @@ export class SupabaseService<T extends TableNames> {
     try {
       const query = supabase.from(this.table);
       const { data, error } = await queryFn(query);
-      return { data: data as R, error };
+      return { data: data as unknown as R, error };
     } catch (error) {
       return { data: null, error: error as Error };
     }
@@ -142,7 +142,7 @@ export class SupabaseService<T extends TableNames> {
 export async function checkSupabaseConnection(): Promise<{ connected: boolean; error?: string }> {
   try {
     // Tenta fazer uma consulta simples para verificar a conexão
-    const { error } = await supabase.from('restaurants').select('count').limit(1);
+    const { error } = await supabase.from('restaurants' as TableNames).select('count').limit(1);
     
     if (error) {
       console.error('Erro na conexão com o Supabase:', error.message);
