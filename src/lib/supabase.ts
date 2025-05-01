@@ -83,19 +83,24 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
   }
 
   try {
-    // Use a type assertion to inform TypeScript about the table name
-    // This helps avoid deep type instantiation errors
-    const query = supabase
-      .from(table as ValidTable)
-      .select('id')
-      .eq('id', resourceId);
-    
-    // Get the restaurant ID and add it to the query
+    // Break up the function to avoid deep type instantiation
+    // First, get the restaurant ID
     const restaurantId = await getCurrentRestaurantId();
-    query.eq('restaurant_id', restaurantId);
+    if (!restaurantId) return false;
     
-    // Execute the query
-    const { data } = await query.single();
+    // Then build the query step by step using any type to bypass TypeScript's inference
+    // This is a workaround for the deep type instantiation issue
+    const baseQuery = supabase.from(table as ValidTable);
+    const idQuery = baseQuery.select('id').eq('id', resourceId);
+    const fullQuery = idQuery.eq('restaurant_id', restaurantId);
+    
+    // Execute the query with simplified typing
+    const { data, error } = await fullQuery.single();
+    
+    if (error) {
+      console.error(`Error checking access to ${table}:${resourceId}:`, error);
+      return false;
+    }
     
     return !!data;
   } catch (error) {
