@@ -51,6 +51,11 @@ export const getCurrentRestaurantId = async () => {
   return data?.id;
 };
 
+// Define a type for valid table names to ensure type safety
+type ValidTable = 'restaurants' | 'products' | 'orders' | 'order_items' | 'menus' | 
+                  'menu_categories' | 'menu_items' | 'subscriptions' | 
+                  'restaurant_settings' | 'ifood_integration';
+
 // Função para verificar se o usuário tem acesso a um recurso específico
 export const checkResourceAccess = async (table: string, resourceId: string) => {
   const user = await getCurrentUser();
@@ -59,7 +64,7 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
   // For type safety, we need to check if the table is valid
   // This is a workaround since we can't dynamically type the table name
   // but still want to allow flexible queries
-  const validTables = [
+  const validTables: ValidTable[] = [
     'restaurants', 
     'products', 
     'orders', 
@@ -72,14 +77,14 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
     'ifood_integration'
   ];
 
-  if (!validTables.includes(table)) {
+  if (!validTables.includes(table as ValidTable)) {
     console.error(`Invalid table name: ${table}`);
     return false;
   }
 
   try {
     const { data } = await supabase
-      .from(table)
+      .from(table as ValidTable)
       .select('id')
       .eq('id', resourceId)
       .eq('restaurant_id', await getCurrentRestaurantId())
