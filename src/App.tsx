@@ -33,6 +33,14 @@ import PDVOnline from "./pages/PDVOnline";
 import GestaoCompleta from "./pages/GestaoCompleta";
 import Precos from "./pages/Precos";
 
+// Importamos as páginas de administração
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminSuperAdmins from "./pages/admin/AdminSuperAdmins";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminLogs from "./pages/admin/AdminLogs";
+import { AdminProtectedRoute } from "./components/admin/AdminProtectedRoute";
+
 const queryClient = new QueryClient();
 
 // Componente de proteção de rotas
@@ -81,9 +89,15 @@ const App = () => (
             <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
             <Route path="/assinaturas" element={<ProtectedRoute><Assinaturas /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/pagarme-config" element={<ProtectedRoute><PagarmeConfig /></ProtectedRoute>} />
             <Route path="/ifood-integracao" element={<ProtectedRoute><IfoodIntegracao /></ProtectedRoute>} />
+            
+            {/* Rotas de administração */}
+            <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+            <Route path="/admin/subscriptions" element={<AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute>} />
+            <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
+            <Route path="/admin/logs" element={<AdminProtectedRoute><AdminLogs /></AdminProtectedRoute>} />
+            <Route path="/admin/admins" element={<AdminProtectedRoute><AdminSuperAdmins /></AdminProtectedRoute>} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

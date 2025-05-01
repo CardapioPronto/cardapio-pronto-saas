@@ -54,7 +54,8 @@ export const getCurrentRestaurantId = async () => {
 // Define a type for valid table names to ensure type safety
 type ValidTable = 'restaurants' | 'products' | 'orders' | 'order_items' | 'menus' | 
                   'menu_categories' | 'menu_items' | 'subscriptions' | 
-                  'restaurant_settings' | 'ifood_integration';
+                  'restaurant_settings' | 'ifood_integration' | 'system_admins' | 
+                  'system_settings' | 'admin_activity_logs';
 
 // Função para verificar se o usuário tem acesso a um recurso específico
 export const checkResourceAccess = async (table: string, resourceId: string) => {
@@ -74,7 +75,10 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
     'menu_items', 
     'subscriptions', 
     'restaurant_settings',
-    'ifood_integration'
+    'ifood_integration',
+    'system_admins',
+    'system_settings',
+    'admin_activity_logs'
   ];
 
   if (!validTables.includes(table as ValidTable)) {
@@ -106,5 +110,64 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
   } catch (error) {
     console.error(`Error checking resource access for ${table}:${resourceId}`, error);
     return false;
+  }
+};
+
+// Função para verificar se um usuário é super admin
+export const isSuperAdmin = async (userId?: string) => {
+  if (!userId) {
+    const user = await getCurrentUser();
+    userId = user?.id;
+  }
+  
+  if (!userId) return false;
+  
+  try {
+    const { data, error } = await supabase.rpc('is_super_admin', { user_id: userId });
+    
+    if (error) {
+      console.error("Erro ao verificar se usuário é super admin:", error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error("Erro ao verificar status de super admin:", error);
+    return false;
+  }
+};
+
+// Função para criar o primeiro super admin (usar apenas uma vez)
+export const createFirstSuperAdmin = async (userId: string) => {
+  try {
+    // Verificar se já existem super admins
+    const { data: existingAdmins, error: checkError } = await supabase
+      .from('system_admins')
+      .select('user_id')
+      .limit(1);
+    
+    if (checkError) {
+      console.error("Erro ao verificar super admins existentes:", checkError);
+      return { success: false, error: checkError };
+    }
+    
+    if (existingAdmins && existingAdmins.length > 0) {
+      return { success: false, error: "Já existem super admins no sistema" };
+    }
+    
+    // Criar o primeiro super admin
+    const { error } = await supabase
+      .from('system_admins')
+      .insert({ user_id: userId, notes: "Primeiro super administrador do sistema" });
+    
+    if (error) {
+      console.error("Erro ao criar super admin:", error);
+      return { success: false, error };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao criar primeiro super admin:", error);
+    return { success: false, error };
   }
 };

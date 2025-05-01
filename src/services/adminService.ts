@@ -1,184 +1,189 @@
 
-// Este serviço será responsável por gerenciar os dados administrativos
-// Em um ambiente de produção, isso se conectaria a APIs reais
+import { supabase } from '@/lib/supabase';
+import { PostgrestError } from '@supabase/supabase-js';
 
-interface Cliente {
-  id: string;
-  nome: string;
-  email: string;
-  documento: string;
-  telefone: string;
-  dataCadastro: Date;
-  assinaturaAtiva: boolean;
+// Interface para criar/atualizar um super admin
+interface SuperAdminData {
+  user_id: string;
+  notes?: string;
 }
 
-interface Assinatura {
-  id: string;
-  clienteId: string;
-  clienteNome: string;
-  planoId: string;
-  planoNome: string;
-  status: "ativa" | "inativa";
-  valor: number;
-  dataInicio: Date;
-  dataProximaCobranca: Date;
-  metodoPagamento: string;
+// Interface para configurações do sistema
+interface SystemSetting {
+  key: string;
+  value: any;
+  description: string;
 }
 
-interface Plano {
+// Interface para logs de atividade
+interface ActivityLog {
   id: string;
-  nome: string;
-  preco: number;
-  assinantesAtivos: number;
-  assinantesInativos: number;
-  recursos: string[];
+  user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details?: any;
+  created_at: string;
 }
 
-// Funções simuladas que seriam substituídas por chamadas de API reais
+// Interface para assinaturas com dados do cliente
+interface SubscriptionWithClient {
+  id: string;
+  restaurant_id: string;
+  restaurant: {
+    name: string;
+    owner_id: string;
+  };
+  plan_id: string;
+  status: string;
+  start_date: string;
+  end_date: string | null;
+}
 
-export const obterAssinaturas = async (): Promise<Assinatura[]> => {
-  // Simular delay de rede
-  await new Promise(resolve => setTimeout(resolve, 500));
+// Função para verificar se um usuário atual é super admin
+export async function checkCurrentUserIsSuperAdmin(): Promise<boolean> {
+  const { data: user } = await supabase.auth.getUser();
   
-  // Dados simulados - em produção, viria de uma API
-  return [
-    {
-      id: "sub_12345678",
-      clienteId: "cli_1",
-      clienteNome: "Restaurante Sabor Brasileiro",
-      planoId: "premium",
-      planoNome: "Premium",
-      status: "ativa",
-      valor: 149.90,
-      dataInicio: new Date(2023, 5, 15),
-      dataProximaCobranca: new Date(2023, 6, 15),
-      metodoPagamento: "Cartão de crédito terminado em 4589"
-    },
-    {
-      id: "sub_23456789",
-      clienteId: "cli_2",
-      clienteNome: "Pizzaria La Bella",
-      planoId: "standard",
-      planoNome: "Padrão",
-      status: "ativa",
-      valor: 99.90,
-      dataInicio: new Date(2023, 4, 10),
-      dataProximaCobranca: new Date(2023, 5, 10),
-      metodoPagamento: "Boleto bancário"
-    },
-    {
-      id: "sub_34567890",
-      clienteId: "cli_3",
-      clienteNome: "Café Central",
-      planoId: "basic",
-      planoNome: "Básico",
-      status: "inativa",
-      valor: 49.90,
-      dataInicio: new Date(2023, 3, 5),
-      dataProximaCobranca: new Date(2023, 4, 5),
-      metodoPagamento: "PIX"
-    }
-  ];
-};
+  if (!user.user) return false;
+  
+  const { data } = await supabase.rpc('is_super_admin', { user_id: user.user.id });
+  return !!data;
+}
 
-export const obterClientes = async (): Promise<Cliente[]> => {
-  // Simular delay de rede
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Dados simulados - em produção, viria de uma API
-  return [
-    {
-      id: "cli_1",
-      nome: "Restaurante Sabor Brasileiro",
-      email: "contato@saborbrasileiro.com",
-      documento: "12.345.678/0001-90",
-      telefone: "(11) 98765-4321",
-      dataCadastro: new Date(2023, 5, 15),
-      assinaturaAtiva: true
-    },
-    {
-      id: "cli_2",
-      nome: "Pizzaria La Bella",
-      email: "contato@labellapizzaria.com",
-      documento: "23.456.789/0001-01",
-      telefone: "(11) 91234-5678",
-      dataCadastro: new Date(2023, 4, 10),
-      assinaturaAtiva: true
-    },
-    {
-      id: "cli_3",
-      nome: "Café Central",
-      email: "contato@cafecentral.com",
-      documento: "34.567.890/0001-12",
-      telefone: "(11) 99876-5432",
-      dataCadastro: new Date(2023, 3, 5),
-      assinaturaAtiva: false
-    }
-  ];
-};
+// Função para listar todos os super admins
+export async function listSuperAdmins(): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+  return await supabase
+    .from('system_admins')
+    .select(`
+      user_id,
+      notes,
+      created_at,
+      created_by
+    `)
+    .order('created_at', { ascending: false });
+}
 
-export const obterPlanos = async (): Promise<Plano[]> => {
-  // Simular delay de rede
-  await new Promise(resolve => setTimeout(resolve, 500));
+// Função para adicionar um super admin
+export async function addSuperAdmin(data: SuperAdminData): Promise<{ data: any | null; error: PostgrestError | null }> {
+  const { data: currentUser } = await supabase.auth.getUser();
   
-  // Dados simulados - em produção, viria de uma API
-  return [
-    {
-      id: "basic",
-      nome: "Básico",
-      preco: 49.90,
-      assinantesAtivos: 0,
-      assinantesInativos: 1,
-      recursos: [
-        "1 Cardápio Digital",
-        "Até 30 produtos",
-        "PDV básico",
-        "Suporte por e-mail"
-      ]
-    },
-    {
-      id: "standard",
-      nome: "Padrão",
-      preco: 99.90,
-      assinantesAtivos: 1,
-      assinantesInativos: 0,
-      recursos: [
-        "1 Cardápio Digital personalizado",
-        "Até 100 produtos",
-        "PDV completo",
-        "Gestão de mesas e comandas",
-        "Relatórios básicos",
-        "Suporte por chat"
-      ]
-    },
-    {
-      id: "premium",
-      nome: "Premium",
-      preco: 149.90,
-      assinantesAtivos: 1, 
-      assinantesInativos: 0,
-      recursos: [
-        "3 Cardápios Digitais personalizáveis",
-        "Produtos ilimitados",
-        "PDV completo",
-        "Gestão de mesas e comandas",
-        "Relatórios avançados",
-        "Integração com delivery",
-        "Suporte prioritário"
-      ]
-    }
-  ];
-};
+  return await supabase
+    .from('system_admins')
+    .insert({
+      ...data,
+      created_by: currentUser.user?.id
+    })
+    .select();
+}
 
-// Atualizar status de uma assinatura
-export const atualizarStatusAssinatura = async (
-  id: string, 
-  novoStatus: "ativa" | "inativa"
-): Promise<boolean> => {
-  // Simular delay de rede
-  await new Promise(resolve => setTimeout(resolve, 800));
+// Função para remover um super admin
+export async function removeSuperAdmin(userId: string): Promise<{ error: PostgrestError | null }> {
+  return await supabase
+    .from('system_admins')
+    .delete()
+    .eq('user_id', userId);
+}
+
+// Função para listar configurações do sistema
+export async function listSystemSettings(): Promise<{ data: SystemSetting[] | null; error: PostgrestError | null }> {
+  return await supabase
+    .from('system_settings')
+    .select('*')
+    .order('key');
+}
+
+// Função para atualizar uma configuração do sistema
+export async function updateSystemSetting(key: string, value: any): Promise<{ data: any | null; error: PostgrestError | null }> {
+  const { data: currentUser } = await supabase.auth.getUser();
   
-  // Simular sucesso
-  console.log(`Assinatura ${id} atualizada para ${novoStatus}`);
-  return true;
-};
+  return await supabase
+    .from('system_settings')
+    .update({ 
+      value, 
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser.user?.id
+    })
+    .eq('key', key)
+    .select();
+}
+
+// Função para registrar atividade de admin
+export async function logAdminActivity(action: string, entityType: string, entityId: string, details: any = null): Promise<{ data: any | null; error: PostgrestError | null }> {
+  const { data: currentUser } = await supabase.auth.getUser();
+  
+  if (!currentUser.user) {
+    return { data: null, error: { message: 'Usuário não autenticado', details: '', hint: '', code: '403' } as PostgrestError };
+  }
+  
+  return await supabase
+    .rpc('log_admin_activity', {
+      admin_id: currentUser.user.id,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details
+    });
+}
+
+// Função para listar logs de atividade
+export async function listActivityLogs(limit = 100): Promise<{ data: ActivityLog[] | null; error: PostgrestError | null }> {
+  return await supabase
+    .from('admin_activity_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+}
+
+// Função para listar todas as assinaturas
+export async function listAllSubscriptions(): Promise<{ data: SubscriptionWithClient[] | null; error: PostgrestError | null }> {
+  return await supabase
+    .from('subscriptions')
+    .select(`
+      id,
+      restaurant_id,
+      restaurant:restaurants (name, owner_id),
+      plan_id,
+      status,
+      start_date,
+      end_date
+    `)
+    .order('created_at', { ascending: false });
+}
+
+// Função para atualizar status de uma assinatura
+export async function updateSubscriptionStatus(id: string, status: string): Promise<{ data: any | null; error: PostgrestError | null }> {
+  const result = await supabase
+    .from('subscriptions')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select();
+  
+  if (!result.error) {
+    await logAdminActivity(
+      'update_subscription',
+      'subscriptions',
+      id,
+      { status }
+    );
+  }
+  
+  return result;
+}
+
+// Função para buscar usuários por ID
+export async function getUsersByIds(ids: string[]): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+  const { data, error } = await supabase.auth.admin.listUsers();
+  
+  if (error) return { data: null, error: error as PostgrestError };
+  
+  const filteredUsers = data.users.filter(user => ids.includes(user.id));
+  return { data: filteredUsers, error: null };
+}
+
+// Função para listar todos os restaurantes
+export async function listAllRestaurants(): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+  return await supabase
+    .from('restaurants')
+    .select('*')
+    .order('created_at', { ascending: false });
+}
