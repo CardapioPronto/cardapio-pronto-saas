@@ -41,11 +41,18 @@ const AdminSuperAdmins = () => {
     setIsSubmitting(true);
     
     try {
+      // Buscar usuário por email usando a API do Supabase
+      // Observação: não podemos consultar auth.users diretamente com o from(),
+      // precisaremos implementar uma função RPC ou edge function para isso
+      // Por enquanto, vamos simular isso com uma mensagem de erro
+      
+      toast.error('Funcionalidade de busca por e-mail não implementada ainda. Por favor, use o ID do usuário diretamente.');
+      setIsSubmitting(false);
+      return;
+      
+      /* Implementação futura:
       const { data: userData, error: userError } = await supabase
-        .from('auth.users')
-        .select('id')
-        .eq('email', newAdminEmail)
-        .single();
+        .rpc('get_user_id_by_email', { email: newAdminEmail });
       
       if (userError || !userData) {
         toast.error('Usuário não encontrado com este e-mail');
@@ -54,19 +61,10 @@ const AdminSuperAdmins = () => {
       }
       
       const { error } = await addSuperAdmin({
-        user_id: userData.id,
+        user_id: userData,
         notes: newAdminNotes
       });
-      
-      if (error) {
-        toast.error(`Erro ao adicionar administrador: ${error.message}`);
-      } else {
-        toast.success('Administrador adicionado com sucesso!');
-        setIsAddDialogOpen(false);
-        setNewAdminEmail('');
-        setNewAdminNotes('');
-        refetch();
-      }
+      */
     } catch (error) {
       toast.error(`Erro ao adicionar administrador: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
@@ -249,29 +247,6 @@ const AdminSuperAdmins = () => {
       </Dialog>
     </AdminLayout>
   );
-  
-  async function handleRemoveAdmin() {
-    if (!selectedAdmin) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const { error } = await removeSuperAdmin(selectedAdmin);
-      
-      if (error) {
-        toast.error(`Erro ao remover administrador: ${error.message}`);
-      } else {
-        toast.success('Administrador removido com sucesso!');
-        setIsRemoveDialogOpen(false);
-        setSelectedAdmin(null);
-        refetch();
-      }
-    } catch (error) {
-      toast.error(`Erro ao remover administrador: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 };
 
 export default AdminSuperAdmins;
