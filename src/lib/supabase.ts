@@ -83,12 +83,19 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
   }
 
   try {
-    const { data } = await supabase
+    // Use a type assertion to inform TypeScript about the table name
+    // This helps avoid deep type instantiation errors
+    const query = supabase
       .from(table as ValidTable)
       .select('id')
-      .eq('id', resourceId)
-      .eq('restaurant_id', await getCurrentRestaurantId())
-      .single();
+      .eq('id', resourceId);
+    
+    // Get the restaurant ID and add it to the query
+    const restaurantId = await getCurrentRestaurantId();
+    query.eq('restaurant_id', restaurantId);
+    
+    // Execute the query
+    const { data } = await query.single();
     
     return !!data;
   } catch (error) {
