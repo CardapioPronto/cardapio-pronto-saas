@@ -13,6 +13,8 @@ interface SystemSetting {
   key: string;
   value: any;
   description: string;
+  updated_at: string;
+  updated_by?: string;
 }
 
 // Interface para logs de atividade
@@ -112,7 +114,15 @@ export async function logAdminActivity(action: string, entityType: string, entit
   const { data: currentUser } = await supabase.auth.getUser();
   
   if (!currentUser.user) {
-    return { data: null, error: { message: 'Usuário não autenticado', details: '', hint: '', code: '403' } as PostgrestError };
+    return { 
+      data: null, 
+      error: { 
+        message: 'Usuário não autenticado', 
+        details: '', 
+        hint: '', 
+        code: '403' 
+      } as PostgrestError 
+    };
   }
   
   return await supabase
@@ -172,12 +182,36 @@ export async function updateSubscriptionStatus(id: string, status: string): Prom
 
 // Função para buscar usuários por ID
 export async function getUsersByIds(ids: string[]): Promise<{ data: any[] | null; error: PostgrestError | null }> {
-  const { data, error } = await supabase.auth.admin.listUsers();
-  
-  if (error) return { data: null, error: error as PostgrestError };
-  
-  const filteredUsers = data.users.filter(user => ids.includes(user.id));
-  return { data: filteredUsers, error: null };
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers();
+    
+    if (error) {
+      // Converter o AuthError para PostgrestError
+      return { 
+        data: null, 
+        error: {
+          message: error.message,
+          details: '',
+          hint: '',
+          code: error.status?.toString() || '500'
+        } as PostgrestError
+      };
+    }
+    
+    const filteredUsers = data?.users?.filter(user => ids.includes(user.id)) || [];
+    return { data: filteredUsers, error: null };
+  } catch (error) {
+    const err = error as Error;
+    return {
+      data: null,
+      error: {
+        message: err.message,
+        details: '',
+        hint: '',
+        code: '500'
+      } as PostgrestError
+    };
+  }
 }
 
 // Função para listar todos os restaurantes

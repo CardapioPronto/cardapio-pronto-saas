@@ -17,6 +17,7 @@ import {
 import { toast } from '@/components/ui/sonner';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { listSuperAdmins, addSuperAdmin, removeSuperAdmin } from '@/services/adminService';
+import { supabase } from '@/lib/supabase';
 
 const AdminSuperAdmins = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -248,6 +249,29 @@ const AdminSuperAdmins = () => {
       </Dialog>
     </AdminLayout>
   );
+  
+  async function handleRemoveAdmin() {
+    if (!selectedAdmin) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await removeSuperAdmin(selectedAdmin);
+      
+      if (error) {
+        toast.error(`Erro ao remover administrador: ${error.message}`);
+      } else {
+        toast.success('Administrador removido com sucesso!');
+        setIsRemoveDialogOpen(false);
+        setSelectedAdmin(null);
+        refetch();
+      }
+    } catch (error) {
+      toast.error(`Erro ao remover administrador: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 };
 
 export default AdminSuperAdmins;
