@@ -180,26 +180,35 @@ export async function updateSubscriptionStatus(id: string, status: string): Prom
   return result;
 }
 
+// Interface for User data returned by the Auth API
+interface UserData {
+  id: string;
+  email?: string;
+  app_metadata?: Record<string, any>;
+  user_metadata?: Record<string, any>;
+  created_at?: string;
+}
+
 // Função para buscar usuários por ID
-export async function getUsersByIds(ids: string[]): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+export async function getUsersByIds(ids: string[]): Promise<{ data: UserData[] | null; error: PostgrestError | null }> {
   try {
-    const { data, error } = await supabase.auth.admin.listUsers();
+    // Since we can't directly query auth.users, this would need to be handled
+    // through an RPC function or edge function in a production environment.
+    // For now, we'll return a mock response or error
     
-    if (error) {
-      // Converter o AuthError para PostgrestError
-      return { 
-        data: null, 
-        error: {
-          message: error.message,
-          details: '',
-          hint: '',
-          code: error.status?.toString() || '500'
-        } as PostgrestError
-      };
-    }
+    return { 
+      data: null, 
+      error: {
+        message: "Acesso direto à tabela auth.users não é permitido via API cliente",
+        details: "Use uma função RPC ou Edge Function para acessar dados de usuários",
+        hint: "Implemente uma função Supabase para fazer esta consulta",
+        code: "403"
+      } as PostgrestError
+    };
     
-    const filteredUsers = data?.users?.filter(user => ids.includes(user.id)) || [];
-    return { data: filteredUsers, error: null };
+    // In a real implementation with proper RPC function:
+    // const { data, error } = await supabase.rpc('get_users_by_ids', { user_ids: ids });
+    // return { data, error };
   } catch (error) {
     const err = error as Error;
     return {
