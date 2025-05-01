@@ -6,13 +6,19 @@ import { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Check for environment variables and provide fallbacks for development
+// Verificação detalhada das variáveis de ambiente
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase environment variables are missing. Please check your .env file or Supabase integration.');
+  console.error('Variáveis de ambiente do Supabase não encontradas!');
+  console.error('Por favor, verifique se o arquivo .env foi criado na raiz do projeto com as variáveis:');
+  console.error('VITE_SUPABASE_URL=sua_url_do_supabase');
+  console.error('VITE_SUPABASE_ANON_KEY=sua_chave_anon_do_supabase');
   
-  // This will throw a clear error in development instead of proceeding with invalid credentials
   if (import.meta.env.DEV) {
-    throw new Error('Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are required. Please add them to your .env file or connect to Supabase using the Lovable integration.');
+    throw new Error(
+      'Variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY são obrigatórias.\n' +
+      'Por favor, crie um arquivo .env na raiz do projeto com essas variáveis ou ' +
+      'conecte-se ao Supabase usando a integração do Lovable.'
+    );
   }
 }
 
