@@ -1,6 +1,7 @@
 
 import { supabase } from './supabase';
 import { PostgrestError } from '@supabase/supabase-js';
+import { Database } from './database.types';
 
 // Interface genérica para respostas do serviço
 interface ServiceResponse<T> {
