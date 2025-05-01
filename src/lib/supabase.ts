@@ -2,16 +2,24 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 
+// Get environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Check for environment variables and provide fallbacks for development
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase environment variables are not set');
+  console.error('Supabase environment variables are missing. Please check your .env file or Supabase integration.');
+  
+  // This will throw a clear error in development instead of proceeding with invalid credentials
+  if (import.meta.env.DEV) {
+    throw new Error('Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are required. Please add them to your .env file or connect to Supabase using the Lovable integration.');
+  }
 }
 
+// Create Supabase client with proper type safety
 export const supabase = createClient<Database>(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
+  supabaseUrl || 'https://placeholder-url-for-type-safety.supabase.co',
+  supabaseAnonKey || 'placeholder-key-for-type-safety'
 );
 
 // Helpers para gerenciar a autenticação
