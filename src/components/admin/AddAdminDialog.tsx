@@ -35,21 +35,17 @@ export const AddAdminDialog = ({ open, onOpenChange, onSuccess }: AddAdminDialog
     setIsSubmitting(true);
     
     try {
-      // Buscar usuário por email
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', newAdminEmail)
-        .maybeSingle();
+      // Get the user ID by email using auth API
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(newAdminEmail);
       
-      if (userError || !userData) {
+      if (authError || !authUser?.user) {
         toast.error('Usuário não encontrado com este e-mail');
         setIsSubmitting(false);
         return;
       }
       
       const { error } = await addSuperAdmin({
-        user_id: userData.id,
+        user_id: authUser.user.id,
         notes: newAdminNotes
       });
       
