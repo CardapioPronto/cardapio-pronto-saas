@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,19 +14,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
+  const { isSuperAdmin, loading: adminLoading } = useSuperAdmin();
   const navigate = useNavigate();
+
+  // Effect to handle redirection after login is successful
+  useEffect(() => {
+    if (user && !adminLoading) {
+      console.log("User logged in:", user.id);
+      console.log("Is super admin:", isSuperAdmin);
+      
+      if (isSuperAdmin) {
+        console.log("Redirecting to admin panel...");
+        navigate("/admin");
+      } else {
+        console.log("Redirecting to dashboard...");
+        navigate("/dashboard");
+      }
+    }
+  }, [user, isSuperAdmin, adminLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
+      console.log("Attempting login for:", email);
       const { error } = await signIn(email, password);
       
       if (error) {
@@ -36,17 +55,16 @@ const Login = () => {
       // Login bem-sucedido
       toast({
         title: "Login realizado com sucesso",
-        description: "Você será redirecionado para o dashboard.",
+        description: "Você será redirecionado em instantes.",
       });
       
-      navigate("/dashboard");
+      // Redirection is handled by the useEffect
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Erro no login",
         description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
       });
-    } finally {
       setLoading(false);
     }
   };

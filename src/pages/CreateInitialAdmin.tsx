@@ -4,20 +4,26 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { supabase } from '@/lib/supabase'; // Add the import for supabase
+import { supabase } from '@/lib/supabase'; 
 
 const CreateInitialAdmin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debug, setDebug] = useState<any>(null);
   
   const createAdmin = async () => {
     setIsLoading(true);
     setResult(null);
     setError(null);
+    setDebug(null);
     
     try {
+      console.log("Starting create-initial-admin request");
       const { data: session } = await supabase.auth.getSession();
+      
+      const accessToken = session?.session?.access_token;
+      console.log("Auth session:", !!accessToken ? "Token available" : "No token");
       
       const response = await fetch(
         'https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/create-initial-admin',
@@ -25,20 +31,25 @@ const CreateInitialAdmin = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.session?.access_token}`
+            'Authorization': accessToken ? `Bearer ${accessToken}` : ''
           }
         }
       );
       
       const data = await response.json();
+      console.log("Edge function response:", response.status, data);
       
       if (response.ok) {
         setResult({ success: true, message: data.message || 'Super Admin criado com sucesso!' });
+        setDebug(data.user || null);
       } else {
         setError(data.error || 'Erro ao criar admin inicial');
+        setDebug({ status: response.status, ...data });
       }
     } catch (err) {
+      console.error("Error in createAdmin:", err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      setDebug({ errorType: typeof err, error: err });
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +83,12 @@ const CreateInitialAdmin = () => {
               <CheckCircle className="h-4 w-4 text-green-500" />
               <AlertTitle>Sucesso</AlertTitle>
               <AlertDescription>{result.message}</AlertDescription>
+              {debug && (
+                <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                  <p className="font-semibold">ID do usuário: {debug.id}</p>
+                  <p>E-mail: {debug.email}</p>
+                </div>
+              )}
             </Alert>
           )}
           
@@ -80,6 +97,11 @@ const CreateInitialAdmin = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Erro</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
+              {debug && (
+                <div className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-auto max-h-40">
+                  <pre>{JSON.stringify(debug, null, 2)}</pre>
+                </div>
+              )}
             </Alert>
           )}
         </CardContent>

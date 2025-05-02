@@ -17,11 +17,20 @@ export const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   const loading = authLoading || adminLoading;
 
   useEffect(() => {
-    if (!loading && user && !isSuperAdmin) {
-      // Log para depuração
-      console.log("Usuário autenticado mas não é super admin:", user.id);
+    if (!loading) {
+      console.log("AdminProtectedRoute - Auth state:", { 
+        user: user?.id,
+        isAuthenticated: !!user,
+        isSuperAdmin,
+        authLoading,
+        adminLoading
+      });
+      
+      if (user && !isSuperAdmin) {
+        console.log("User authenticated but not a super admin:", user.id);
+      }
     }
-  }, [loading, user, isSuperAdmin]);
+  }, [loading, user, isSuperAdmin, authLoading, adminLoading]);
 
   if (loading) {
     return (
@@ -33,10 +42,12 @@ export const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   }
 
   if (!user) {
+    console.log("No authenticated user, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
   if (!isSuperAdmin) {
+    console.log("User not a super admin, showing access denied");
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center">
         <ShieldAlert className="h-16 w-16 text-red-500 mb-4" />
