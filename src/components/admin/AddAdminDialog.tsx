@@ -35,7 +35,7 @@ export const AddAdminDialog = ({ open, onOpenChange, onSuccess }: AddAdminDialog
     setIsSubmitting(true);
     
     try {
-      // Get user by email - first list all users and then filter by email
+      // Get user by email using listUsers
       const { data, error } = await supabase.auth.admin.listUsers();
       
       if (error) {
@@ -45,7 +45,6 @@ export const AddAdminDialog = ({ open, onOpenChange, onSuccess }: AddAdminDialog
       }
       
       // Find the user with the matching email
-      // Make sure to properly type the users array and provide a type assertion if needed
       const userWithEmail = data?.users?.find(
         (user: any) => user?.email?.toLowerCase() === newAdminEmail.toLowerCase()
       );

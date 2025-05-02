@@ -26,6 +26,7 @@ import Contato from "./pages/Contato";
 import Admin from "./pages/Admin";
 import PagarmeConfig from "./pages/PagarmeConfig";
 import IfoodIntegracao from "./pages/IfoodIntegracao";
+import CreateInitialAdmin from "./pages/CreateInitialAdmin";
 
 // Importamos as novas páginas
 import CardapioDigital from "./pages/CardapioDigital";
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/pdv-online" element={<PDVOnline />} />
             <Route path="/gestao-completa" element={<GestaoCompleta />} />
             <Route path="/precos" element={<Precos />} />
+            <Route path="/create-initial-admin" element={<CreateInitialAdmin />} />
             
             {/* Rotas protegidas */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
