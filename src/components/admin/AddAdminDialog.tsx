@@ -45,8 +45,9 @@ export const AddAdminDialog = ({ open, onOpenChange, onSuccess }: AddAdminDialog
       }
       
       // Find the user with the matching email
-      const userWithEmail = data.users.find(
-        (user) => user.email?.toLowerCase() === newAdminEmail.toLowerCase()
+      // Make sure to properly type the users array and provide a type assertion if needed
+      const userWithEmail = data?.users?.find(
+        (user: any) => user?.email?.toLowerCase() === newAdminEmail.toLowerCase()
       );
       
       if (!userWithEmail) {
