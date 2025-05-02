@@ -35,22 +35,33 @@ export const AddAdminDialog = ({ open, onOpenChange, onSuccess }: AddAdminDialog
     setIsSubmitting(true);
     
     try {
-      // Get the user ID by email using auth API
-      const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(newAdminEmail);
+      // Get user by email - first list all users and then filter by email
+      const { data, error } = await supabase.auth.admin.listUsers();
       
-      if (authError || !authUser?.user) {
+      if (error) {
+        toast.error(`Erro ao buscar usuários: ${error.message}`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Find the user with the matching email
+      const userWithEmail = data.users.find(
+        (user) => user.email?.toLowerCase() === newAdminEmail.toLowerCase()
+      );
+      
+      if (!userWithEmail) {
         toast.error('Usuário não encontrado com este e-mail');
         setIsSubmitting(false);
         return;
       }
       
-      const { error } = await addSuperAdmin({
-        user_id: authUser.user.id,
+      const { error: adminError } = await addSuperAdmin({
+        user_id: userWithEmail.id,
         notes: newAdminNotes
       });
       
-      if (error) {
-        toast.error(`Erro ao adicionar administrador: ${error.message}`);
+      if (adminError) {
+        toast.error(`Erro ao adicionar administrador: ${adminError.message}`);
       } else {
         toast.success('Administrador adicionado com sucesso!');
         onOpenChange(false);
