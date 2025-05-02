@@ -230,3 +230,47 @@ export async function listAllRestaurants(): Promise<{ data: any[] | null; error:
     .select('*')
     .order('created_at', { ascending: false });
 }
+
+// Função para criar o usuário super admin inicial
+export async function createInitialSuperAdmin(email: string, password: string): Promise<{ success: boolean; error?: string | Error }> {
+  try {
+    // Primeiro criar o usuário no auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
+
+    if (authError) {
+      return { success: false, error: authError };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: "Falha ao criar usuário" };
+    }
+
+    // Agora adicionar à tabela system_admins
+    const { error: adminError } = await supabase
+      .from('system_admins')
+      .insert({
+        user_id: authData.user.id,
+        notes: "Admin inicial do sistema"
+      });
+
+    if (adminError) {
+      return { success: false, error: adminError };
+    }
+
+    await logAdminActivity(
+      'create_initial_admin',
+      'system_admins',
+      authData.user.id,
+      { email }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao criar admin inicial:", error);
+    return { success: false, error };
+  }
+}
