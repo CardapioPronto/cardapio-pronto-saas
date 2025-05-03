@@ -63,8 +63,9 @@ useEffect(() => {
     const pedidosAnterior = ordersLastMonth?.length || 0;
     const pedidosChange = calcularPercentual(pedidosAnterior, pedidosAtual);
 
-    const clientesUnicos = new Set(ordersThisMonth?.map(o => o.customer_name)).size;
-    const clientesAnteriores = new Set(ordersLastMonth?.map(o => o.customer_name)).size;
+    // Add null check for customer_name which might be undefined
+    const clientesUnicos = new Set(ordersThisMonth?.filter(o => o.customer_name).map(o => o.customer_name)).size;
+    const clientesAnteriores = new Set(ordersLastMonth?.filter(o => o.customer_name).map(o => o.customer_name)).size;
     const clientesChange = calcularPercentual(clientesAnteriores, clientesUnicos);
 
     const faturamentoAtual = ordersThisMonth?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
