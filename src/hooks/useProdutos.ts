@@ -46,12 +46,13 @@ export const useProdutos = (restaurantId: string) => {
   };
 
   const adicionarProduto = async (novoProduto: Partial<Product>) => {
-    if (!novoProduto.name || !novoProduto.description || (novoProduto.price ?? 0) <= 0) {
+    if (!novoProduto.name || !novoProduto.description || !(novoProduto.price && novoProduto.price > 0)) {
       toast.error("Preencha todos os campos obrigatórios");
-      return;
+      return false;
     }
 
     try {
+      // Fix TypeScript error by ensuring price is a number
       const { data, error } = await supabase
         .from("products")
         .insert({
