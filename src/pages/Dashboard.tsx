@@ -2,14 +2,121 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingCart, Users, TrendingUp, DollarSign } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const Dashboard = () => {
-  const stats = [
-    { title: "Vendas hoje", value: "R$ 1.250,00", change: "+12%", icon: DollarSign, color: "bg-green/10 text-green" },
-    { title: "Pedidos", value: "45", change: "+4%", icon: ShoppingCart, color: "bg-orange/10 text-orange" },
-    { title: "Clientes", value: "182", change: "+18%", icon: Users, color: "bg-navy/10 text-navy" },
-    { title: "Faturamento mensal", value: "R$ 18.400,00", change: "+8%", icon: TrendingUp, color: "bg-beige/30 text-navy" }
-  ];
+  
+
+const [stats, setStats] = useState<any[]>([]);
+const [restaurantId, setRestaurantId] = useState<string | null>(null);
+
+useEffect(() => {
+  const getRestaurant = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("users")
+      .select("restaurant_id")
+      .eq("id", user?.id)
+      .single();
+
+    if (data?.restaurant_id) {
+      setRestaurantId(data.restaurant_id);
+    }
+  };
+
+  getRestaurant();
+}, []);
+
+useEffect(() => {
+  if (!restaurantId) return;
+
+  const fetchStats = async () => {
+    const today = new Date();
+    const startOfToday = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+    const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
+    const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0).toISOString();
+
+    const { data: salesToday } = await supabase
+      .from("orders")
+      .select("total")
+      .eq("restaurant_id", restaurantId)
+      .gte("created_at", startOfToday);
+
+    const totalToday = salesToday?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+
+    const { data: ordersThisMonth } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .gte("created_at", startOfMonth);
+
+    const { data: ordersLastMonth } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .gte("created_at", startOfLastMonth)
+      .lte("created_at", endOfLastMonth);
+
+    const pedidosAtual = ordersThisMonth?.length || 0;
+    const pedidosAnterior = ordersLastMonth?.length || 0;
+    const pedidosChange = calcularPercentual(pedidosAnterior, pedidosAtual);
+
+    const clientesUnicos = new Set(ordersThisMonth?.map(o => o.customer_name)).size;
+    const clientesAnteriores = new Set(ordersLastMonth?.map(o => o.customer_name)).size;
+    const clientesChange = calcularPercentual(clientesAnteriores, clientesUnicos);
+
+    const faturamentoAtual = ordersThisMonth?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+    const faturamentoAnterior = ordersLastMonth?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+    const faturamentoChange = calcularPercentual(faturamentoAnterior, faturamentoAtual);
+
+    setStats([
+      {
+        title: "Vendas hoje",
+        value: formatarMoeda(totalToday),
+        change: "+0%",
+        icon: DollarSign,
+        color: "bg-green/10 text-green",
+      },
+      {
+        title: "Pedidos",
+        value: pedidosAtual.toString(),
+        change: pedidosChange,
+        icon: ShoppingCart,
+        color: "bg-orange/10 text-orange",
+      },
+      {
+        title: "Clientes",
+        value: clientesUnicos.toString(),
+        change: clientesChange,
+        icon: Users,
+        color: "bg-navy/10 text-navy",
+      },
+      {
+        title: "Faturamento mensal",
+        value: formatarMoeda(faturamentoAtual),
+        change: faturamentoChange,
+        icon: TrendingUp,
+        color: "bg-beige/30 text-navy",
+      },
+    ]);
+  };
+
+  fetchStats();
+}, [restaurantId]);
+
+const calcularPercentual = (anterior: number, atual: number) => {
+  if (anterior === 0 && atual > 0) return "+100%";
+  if (anterior === 0 && atual === 0) return "0%";
+  const diff = ((atual - anterior) / anterior) * 100;
+  const prefix = diff > 0 ? "+" : "";
+  return `${prefix}${diff.toFixed(0)}%`;
+};
+
+const formatarMoeda = (valor: number) =>
+  valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   
   return (
     <DashboardLayout title="Dashboard">
@@ -19,8 +126,8 @@ const Dashboard = () => {
             <CardContent className="p-6 flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{stat.title}</p>
-                <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
-                <p className="text-xs text-green mt-1">{stat.change} este mês</p>
+                <h3 className="text-2xl font-bold mt-1">{stat.value || 0}</h3>
+                <p className="text-xs text-green mt-1">{stat.change || 0} este mês</p>
               </div>
               <div className={`p-3 rounded-full ${stat.color}`}>
                 <stat.icon className="h-5 w-5" />
