@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 
 const Dashboard = () => {
   
-
 const [stats, setStats] = useState<any[]>([]);
 const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
@@ -63,9 +62,13 @@ useEffect(() => {
     const pedidosAnterior = ordersLastMonth?.length || 0;
     const pedidosChange = calcularPercentual(pedidosAnterior, pedidosAtual);
 
-    // Add null check for customer_name which might be undefined
-    const clientesUnicos = new Set(ordersThisMonth?.filter(o => o.customer_name).map(o => o.customer_name)).size;
-    const clientesAnteriores = new Set(ordersLastMonth?.filter(o => o.customer_name).map(o => o.customer_name)).size;
+    // Ensure we only include non-null customer names
+    const validCustomersThisMonth = ordersThisMonth?.filter(o => o.customer_name !== null && o.customer_name !== undefined) || [];
+    const validCustomersLastMonth = ordersLastMonth?.filter(o => o.customer_name !== null && o.customer_name !== undefined) || [];
+    
+    // Now customer_name is guaranteed to be string (not undefined)
+    const clientesUnicos = new Set(validCustomersThisMonth.map(o => o.customer_name as string)).size;
+    const clientesAnteriores = new Set(validCustomersLastMonth.map(o => o.customer_name as string)).size;
     const clientesChange = calcularPercentual(clientesAnteriores, clientesUnicos);
 
     const faturamentoAtual = ordersThisMonth?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;

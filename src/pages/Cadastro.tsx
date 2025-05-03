@@ -1,20 +1,19 @@
 
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
+import { RestaurantInfoForm } from "@/components/cadastro/RestaurantInfoForm";
+import { FormFooter } from "@/components/cadastro/FormFooter";
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -141,89 +140,30 @@ export default function Cadastro() {
         </CardHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <CardContent className="space-y-4">
-            <div>
-              <Label>Seu Nome</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label>Senha</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label>Nome do Restaurante</Label>
-              <Input
-                value={restaurantName}
-                onChange={(e) => setRestaurantName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label>Telefone (opcional)</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-            <div>
-              <Label>Endereço</Label>
-              <Input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label>CNPJ (opcional)</Label>
-              <Input value={cnpj} onChange={(e) => setCnpj(e.target.value)} />
-            </div>
-            <div>
-              <Label>Logo URL (opcional)</Label>
-              <Input
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Categoria (opcional)</Label>
-              <Input
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              />
-            </div>
+            <UserInfoForm
+              name={name}
+              setName={setName}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+            />
+            <RestaurantInfoForm
+              restaurantName={restaurantName}
+              setRestaurantName={setRestaurantName}
+              phone={phone}
+              setPhone={setPhone}
+              address={address}
+              setAddress={setAddress}
+              cnpj={cnpj}
+              setCnpj={setCnpj}
+              logoUrl={logoUrl}
+              setLogoUrl={setLogoUrl}
+              category={category}
+              setCategory={setCategory}
+            />
           </CardContent>
-          {/* {error && <p className="text-red-500 text-sm">{error}</p>}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Cadastrando..." : "Cadastrar"}
-          </Button> */}
-          <CardFooter className="flex flex-col">
-            <Button
-              type="submit"
-              className="w-full bg-green hover:bg-green-dark text-white"
-              disabled={loading}
-            >
-              {loading ? "Criando conta..." : "Criar conta grátis"}
-            </Button>
-            <p className="mt-4 text-sm text-center text-navy/70">
-              Já tem uma conta?{" "}
-              <Link to="/login" className="text-green hover:underline">
-                Faça login
-              </Link>
-            </p>
-          </CardFooter>
+          <FormFooter loading={loading} />
         </form>
       </Card>
     </div>
