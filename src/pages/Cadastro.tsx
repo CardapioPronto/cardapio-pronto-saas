@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,95 +15,106 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
-const Cadastro = () => {
+export default function Cadastro() {
   const navigate = useNavigate();
   const { signUp } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [restaurantName, setRestaurantName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [category, setCategory] = useState("");
+
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    nome: "",
-    email: "",
-    estabelecimento: "",
-    telefone: "",
-    password: "",
-  });
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     try {
       // Realizar o cadastro no Supabase
-      const { error } = await signUp(formData.email, formData.password, {
-        nome: formData.nome,
-        telefone: formData.telefone
+      const { error } = await signUp(email, password, {
+        name,
+        phone,
       });
-      
+
       if (error) {
         throw error;
       }
-      
-      // Criar um registro de restaurante
+
       const { data: user } = await supabase.auth.getUser();
-      
+
       if (!user || !user.user) {
         throw new Error("Falha ao obter informações do usuário após cadastro");
       }
-      
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from('restaurants')
-        .insert({
-          name: formData.estabelecimento,
-          owner_id: user.user.id
-        })
+
+      // Cria o restaurante
+      const { data: restaurantData, error: restaurantError } = await supabase
+        .from("restaurants")
+        .insert([
+          {
+            name: restaurantName,
+            owner_id: user.user.id,
+            phone,
+            address,
+            cnpj,
+            logo_url: logoUrl,
+            category,
+          },
+        ])
         .select()
         .single();
-      
-      if (restaurantError) {
-        throw restaurantError;
+
+      if (restaurantError || !restaurantData) {
+        setError("Erro ao criar restaurante.");
+        setLoading(false);
+        return;
       }
-      
-      // Criar uma assinatura trial
-      const now = new Date();
-      const trialEndDate = new Date();
-      trialEndDate.setDate(now.getDate() + 14); // 14 dias de trial
-      
-      const { error: subscriptionError } = await supabase
-        .from('subscriptions')
-        .insert({
-          restaurant_id: restaurant.id,
-          plan_id: 'trial',
-          status: 'active',
-          start_date: now.toISOString(),
-          end_date: trialEndDate.toISOString()
-        });
-      
-      if (subscriptionError) {
-        throw subscriptionError;
+
+      // Atualiza o usuário com o restaurant_id
+      const { error: userUpdateError } = await supabase
+        .from("users")
+        .update({ restaurant_id: restaurantData.id })
+        .eq("id", user.user.id);
+
+      if (userUpdateError) {
+        setError("Erro ao vincular restaurante ao usuário.");
+        setLoading(false);
+        return;
       }
-      
+
+      // Cria assinatura padrão (exemplo)
+      await supabase.from("subscriptions").insert([
+        {
+          user_id: user.user.id,
+          restaurant_id: restaurantData.id,
+          plan: "starter",
+          status: "active",
+        },
+      ]);
+
       toast({
         title: "Cadastro realizado com sucesso!",
         description: "Você será redirecionado para o dashboard.",
       });
-      
+
       navigate("/dashboard");
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erro no cadastro",
-        description: error.message || "Ocorreu um erro ao criar sua conta. Tente novamente.",
+        description:
+          error.message ||
+          "Ocorreu um erro ao criar sua conta. Tente novamente.",
       });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   return (
@@ -113,78 +123,91 @@ const Cadastro = () => {
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <Link to="/" className="flex items-center">
-              <span className="text-navy text-2xl font-bold">Cardápio<span className="text-orange">Pronto</span></span>
+              <span className="text-navy text-2xl font-bold">
+                Cardápio<span className="text-orange">Pronto</span>
+              </span>
             </Link>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Começar teste grátis</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Começar teste grátis
+          </CardTitle>
           <CardDescription className="text-center">
             14 dias grátis, sem necessidade de cartão de crédito
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="estabelecimento">Nome do estabelecimento</Label>
+            <div>
+              <Label>Seu Nome</Label>
               <Input
-                id="estabelecimento"
-                name="estabelecimento"
-                placeholder="Ex: Restaurante Silva"
-                value={formData.estabelecimento}
-                onChange={handleInputChange}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="nome">Seu nome</Label>
+            <div>
+              <Label>Email</Label>
               <Input
-                id="nome"
-                name="nome"
-                placeholder="Nome completo"
-                value={formData.nome}
-                onChange={handleInputChange}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
+            <div>
+              <Label>Senha</Label>
               <Input
-                id="telefone"
-                name="telefone"
-                type="tel"
-                placeholder="(00) 00000-0000"
-                value={formData.telefone}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                name="password"
                 type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleInputChange}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
+              />
+            </div>
+            <div>
+              <Label>Nome do Restaurante</Label>
+              <Input
+                value={restaurantName}
+                onChange={(e) => setRestaurantName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>Telefone (opcional)</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div>
+              <Label>Endereço</Label>
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>CNPJ (opcional)</Label>
+              <Input value={cnpj} onChange={(e) => setCnpj(e.target.value)} />
+            </div>
+            <div>
+              <Label>Logo URL (opcional)</Label>
+              <Input
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Categoria (opcional)</Label>
+              <Input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
               />
             </div>
           </CardContent>
+          {/* {error && <p className="text-red-500 text-sm">{error}</p>}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Cadastrando..." : "Cadastrar"}
+          </Button> */}
           <CardFooter className="flex flex-col">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-green hover:bg-green-dark text-white"
               disabled={loading}
             >
@@ -201,6 +224,4 @@ const Cadastro = () => {
       </Card>
     </div>
   );
-};
-
-export default Cadastro;
+}
