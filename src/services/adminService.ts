@@ -14,7 +14,7 @@ interface SystemSetting {
   value: any;
   description: string;
   updated_at: string;
-  updated_by?: string;
+  updated_by?: string | null; // Changed from string | undefined to string | null
 }
 
 // Interface para logs de atividade
@@ -88,10 +88,15 @@ export async function removeSuperAdmin(userId: string): Promise<{ error: Postgre
 
 // Função para listar configurações do sistema
 export async function listSystemSettings(): Promise<{ data: SystemSetting[] | null; error: PostgrestError | null }> {
-  return await supabase
+  const response = await supabase
     .from('system_settings')
     .select('*')
     .order('key');
+    
+  return {
+    data: response.data as SystemSetting[] | null,
+    error: response.error
+  };
 }
 
 // Função para atualizar uma configuração do sistema
@@ -271,6 +276,6 @@ export async function createInitialSuperAdmin(email: string, password: string): 
     return { success: true };
   } catch (error) {
     console.error("Erro ao criar admin inicial:", error);
-    return { success: false, error };
+    return { success: false, error: error as Error };
   }
 }

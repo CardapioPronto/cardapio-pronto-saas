@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,13 +39,13 @@ export default function Cadastro() {
 
     try {
       // Realizar o cadastro no Supabase
-      const { error } = await signUp(email, password, {
+      const { error: signUpError } = await signUp(email, password, {
         name,
         phone,
       });
 
-      if (error) {
-        throw error;
+      if (signUpError) {
+        throw signUpError;
       }
 
       const { data: user } = await supabase.auth.getUser();
@@ -89,12 +90,13 @@ export default function Cadastro() {
       }
 
       // Cria assinatura padrão (exemplo)
+      const today = new Date().toISOString();
       await supabase.from("subscriptions").insert([
         {
-          user_id: user.user.id,
           restaurant_id: restaurantData.id,
-          plan: "starter",
+          plan_id: "starter",
           status: "active",
+          start_date: today
         },
       ]);
 
@@ -105,12 +107,14 @@ export default function Cadastro() {
 
       navigate("/dashboard");
     } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Ocorreu um erro ao criar sua conta. Tente novamente.";
+      
       toast({
         variant: "destructive",
         title: "Erro no cadastro",
-        description:
-          error.message ||
-          "Ocorreu um erro ao criar sua conta. Tente novamente.",
+        description: errorMessage
       });
     } finally {
       setLoading(false);

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -46,11 +47,16 @@ const Produtos = () => {
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useCurrentUser();
-  const restaurantId = user?.restaurant_id;
+  const restaurantId = user?.restaurant_id ?? "";
 
   useEffect(() => {
     const fetchProdutos = async () => {
       setLoading(true);
+
+      if (!restaurantId) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("products")
@@ -83,7 +89,6 @@ const Produtos = () => {
   }, [restaurantId]);
 
   const [novoProduto, setNovoProduto] = useState<Partial<Product>>({});
-
   const [produtoEditando, setProdutoEditando] = useState<Product | null>(null);
   const [filtro, setFiltro] = useState("");
   const [categoriaFiltrada, setCategoriaFiltrada] = useState<string | null>(
@@ -105,16 +110,16 @@ const Produtos = () => {
     //   description: "",
     //   price: 0,
     //   category: ,
-    //   disponivel: true,
+    //   available: true,
     // });
 
     toast.success("Produto adicionado com sucesso!");
   };
 
   // Editar produto
-  // const iniciarEdicao = (produto: Produto) => {
-  //   setProdutoEditando({ ...produto });
-  // };
+  const iniciarEdicao = (produto: Product) => {
+    setProdutoEditando({ ...produto });
+  };
 
   const salvarEdicao = () => {
     if (!produtoEditando) return;
@@ -128,7 +133,7 @@ const Produtos = () => {
   };
 
   // Remover produto
-  const removerProduto = (id) => {
+  const removerProduto = (id: string) => {
     setProdutos(produtos.filter((p) => p.id !== id));
     toast.success("Produto removido com sucesso!");
   };
@@ -198,9 +203,9 @@ const Produtos = () => {
                 <Label htmlFor="nome">Nome*</Label>
                 <Input
                   id="nome"
-                  value={novoProduto.nome}
+                  value={novoProduto.name}
                   onChange={(e) =>
-                    setNovoProduto({ ...novoProduto, nome: e.target.value })
+                    setNovoProduto({ ...novoProduto, name: e.target.value })
                   }
                 />
               </div>
@@ -209,11 +214,11 @@ const Produtos = () => {
                 <Label htmlFor="descricao">Descrição*</Label>
                 <Input
                   id="descricao"
-                  value={novoProduto.descricao}
+                  value={novoProduto.description}
                   onChange={(e) =>
                     setNovoProduto({
                       ...novoProduto,
-                      descricao: e.target.value,
+                      description: e.target.value,
                     })
                   }
                 />
@@ -226,11 +231,11 @@ const Produtos = () => {
                     id="preco"
                     type="number"
                     step="0.01"
-                    value={novoProduto.preco}
+                    value={novoProduto.price}
                     onChange={(e) =>
                       setNovoProduto({
                         ...novoProduto,
-                        preco: parseFloat(e.target.value),
+                        price: parseFloat(e.target.value),
                       })
                     }
                   />
@@ -239,9 +244,16 @@ const Produtos = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="categoria">Categoria*</Label>
                   <Select
-                    value={novoProduto.categoria}
+                    value={novoProduto.category?.name}
                     onValueChange={(value) =>
-                      setNovoProduto({ ...novoProduto, categoria: value })
+                      setNovoProduto({ 
+                        ...novoProduto, 
+                        category: { 
+                          id: value,
+                          name: value,
+                          restaurant_id: restaurantId
+                        } 
+                      })
                     }
                   >
                     <SelectTrigger id="categoria">
@@ -261,11 +273,11 @@ const Produtos = () => {
                 <input
                   type="checkbox"
                   id="disponivel"
-                  checked={novoProduto.disponivel}
+                  checked={novoProduto.available}
                   onChange={(e) =>
                     setNovoProduto({
                       ...novoProduto,
-                      disponivel: e.target.checked,
+                      available: e.target.checked,
                     })
                   }
                 />
@@ -279,11 +291,15 @@ const Produtos = () => {
                 variant="outline"
                 onClick={() =>
                   setNovoProduto({
-                    nome: "",
-                    descricao: "",
-                    preco: 0,
-                    categoria: "lanches",
-                    disponivel: true,
+                    name: "",
+                    description: "",
+                    price: 0,
+                    category: {
+                      id: "lanches",
+                      name: "lanches",
+                      restaurant_id: restaurantId
+                    },
+                    available: true,
                   })
                 }
               >
@@ -370,11 +386,11 @@ const Produtos = () => {
                                   <Label htmlFor="edit-nome">Nome*</Label>
                                   <Input
                                     id="edit-nome"
-                                    value={produtoEditando.nome}
+                                    value={produtoEditando.name}
                                     onChange={(e) =>
                                       setProdutoEditando({
                                         ...produtoEditando,
-                                        nome: e.target.value,
+                                        name: e.target.value,
                                       })
                                     }
                                   />
@@ -386,11 +402,11 @@ const Produtos = () => {
                                   </Label>
                                   <Input
                                     id="edit-descricao"
-                                    value={produtoEditando.descricao}
+                                    value={produtoEditando.description}
                                     onChange={(e) =>
                                       setProdutoEditando({
                                         ...produtoEditando,
-                                        descricao: e.target.value,
+                                        description: e.target.value,
                                       })
                                     }
                                   />
@@ -405,11 +421,11 @@ const Produtos = () => {
                                       id="edit-preco"
                                       type="number"
                                       step="0.01"
-                                      value={produtoEditando.preco}
+                                      value={produtoEditando.price}
                                       onChange={(e) =>
                                         setProdutoEditando({
                                           ...produtoEditando,
-                                          preco: parseFloat(e.target.value),
+                                          price: parseFloat(e.target.value),
                                         })
                                       }
                                     />
@@ -420,11 +436,15 @@ const Produtos = () => {
                                       Categoria*
                                     </Label>
                                     <Select
-                                      value={produtoEditando.categoria}
+                                      value={produtoEditando.category?.name}
                                       onValueChange={(value) =>
                                         setProdutoEditando({
                                           ...produtoEditando,
-                                          categoria: value,
+                                          category: {
+                                            id: value,
+                                            name: value,
+                                            restaurant_id: restaurantId
+                                          },
                                         })
                                       }
                                     >
@@ -453,11 +473,11 @@ const Produtos = () => {
                                   <input
                                     type="checkbox"
                                     id="edit-disponivel"
-                                    checked={produtoEditando.disponivel}
+                                    checked={produtoEditando.available}
                                     onChange={(e) =>
                                       setProdutoEditando({
                                         ...produtoEditando,
-                                        disponivel: e.target.checked,
+                                        available: e.target.checked,
                                       })
                                     }
                                   />

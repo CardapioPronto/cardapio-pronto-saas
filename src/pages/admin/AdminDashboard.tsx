@@ -1,157 +1,102 @@
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, CreditCard, Building, ShieldCheck } from 'lucide-react';
-import { listAllSubscriptions, listAllRestaurants, listSuperAdmins } from '@/services/adminService';
+import { Users, Store, CreditCard, Activity } from 'lucide-react';
+import { listAllRestaurants, listSuperAdmins, listAllSubscriptions } from '@/services/adminService';
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({
-    totalClients: 0,
-    activeSubscriptions: 0,
-    totalRestaurants: 0,
-    totalAdmins: 0
-  });
-
-  const { data: subscriptions } = useQuery({
-    queryKey: ['admin-subscriptions'],
-    queryFn: () => listAllSubscriptions()
-  });
-
-  const { data: restaurants } = useQuery({
+  const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery({
     queryKey: ['admin-restaurants'],
     queryFn: () => listAllRestaurants()
   });
 
-  const { data: admins } = useQuery({
+  const { data: admins, isLoading: isLoadingAdmins } = useQuery({
     queryKey: ['admin-super-admins'],
     queryFn: () => listSuperAdmins()
   });
 
-  useEffect(() => {
-    // Calcular estatísticas
-    if (subscriptions?.data) {
-      const clients = new Set();
-      let active = 0;
-      
-      subscriptions.data.forEach(sub => {
-        clients.add(sub.restaurant.owner_id);
-        if (sub.status === 'ativa') active++;
-      });
-      
-      setStats(prev => ({ 
-        ...prev, 
-        totalClients: clients.size,
-        activeSubscriptions: active
-      }));
-    }
-    
-    if (restaurants?.data) {
-      setStats(prev => ({ ...prev, totalRestaurants: restaurants.data.length }));
-    }
-    
-    if (admins?.data) {
-      setStats(prev => ({ ...prev, totalAdmins: admins.data.length }));
-    }
-  }, [subscriptions, restaurants, admins]);
+  const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
+    queryKey: ['admin-subscriptions'],
+    queryFn: () => listAllSubscriptions()
+  });
 
-  const statCards = [
-    { 
-      title: 'Total de Clientes', 
-      value: stats.totalClients, 
-      icon: Users, 
-      color: 'bg-blue-100 text-blue-700' 
-    },
-    { 
-      title: 'Assinaturas Ativas', 
-      value: stats.activeSubscriptions, 
-      icon: CreditCard, 
-      color: 'bg-green-100 text-green-700' 
-    },
-    { 
-      title: 'Total de Restaurantes', 
-      value: stats.totalRestaurants, 
-      icon: Building, 
-      color: 'bg-amber-100 text-amber-700' 
-    },
-    { 
-      title: 'Super Administradores', 
-      value: stats.totalAdmins, 
-      icon: ShieldCheck, 
-      color: 'bg-purple-100 text-purple-700' 
-    }
-  ];
+  // Calculate active subscriptions
+  const activeSubscriptions = subscriptions?.data?.filter(sub => sub.status === 'active');
+  
+  // Calculate statistics
+  const stats = {
+    totalRestaurants: restaurants?.data?.length || 0,
+    totalAdmins: admins?.data?.length || 0,
+    activeSubscriptions: activeSubscriptions?.length || 0,
+    recentActivity: 0 // Placeholder for recent activity count
+  };
 
   return (
     <AdminLayout title="Dashboard Administrativo">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card, i) => (
-          <Card key={i}>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{card.title}</p>
-                <h3 className="text-2xl font-bold mt-1">{card.value}</h3>
-              </div>
-              <div className={`p-3 rounded-full ${card.color}`}>
-                <card.icon className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-6 mt-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Assinaturas Recentes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Restaurantes
+            </CardTitle>
+            <Store className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {subscriptions?.data?.slice(0, 5).map((sub) => (
-                <div key={sub.id} className="flex justify-between items-center border-b pb-3">
-                  <div>
-                    <p className="font-medium">{sub.restaurant?.name || 'Restaurante sem nome'}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Plano: {sub.plan_id} - Status: <span className={`font-medium ${sub.status === 'ativa' ? 'text-green-600' : 'text-red-600'}`}>{sub.status}</span>
-                    </p>
-                  </div>
-                  <span className="text-sm">
-                    {new Date(sub.start_date).toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-              ))}
-              {!subscriptions?.data?.length && (
-                <p className="text-muted-foreground text-sm">Nenhuma assinatura encontrada</p>
-              )}
-            </div>
+            <div className="text-2xl font-bold">{stats.totalRestaurants}</div>
+            <p className="text-xs text-muted-foreground">
+              Restaurantes cadastrados
+            </p>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader>
-            <CardTitle>Restaurantes Recentes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Administradores
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {restaurants?.data?.slice(0, 5).map((restaurant) => (
-                <div key={restaurant.id} className="flex justify-between items-center border-b pb-3">
-                  <div>
-                    <p className="font-medium">{restaurant.name}</p>
-                    <p className="text-sm text-muted-foreground">ID: {restaurant.id.substring(0, 8)}...</p>
-                  </div>
-                  <span className="text-sm">
-                    {new Date(restaurant.created_at).toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-              ))}
-              {!restaurants?.data?.length && (
-                <p className="text-muted-foreground text-sm">Nenhum restaurante encontrado</p>
-              )}
-            </div>
+            <div className="text-2xl font-bold">{stats.totalAdmins}</div>
+            <p className="text-xs text-muted-foreground">
+              Super Admins
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Assinaturas Ativas
+            </CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+            <p className="text-xs text-muted-foreground">
+              Planos ativos
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Atividades Recentes
+            </CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.recentActivity}</div>
+            <p className="text-xs text-muted-foreground">
+              Nas últimas 24h
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Additional dashboard content can be added here */}
     </AdminLayout>
   );
 };

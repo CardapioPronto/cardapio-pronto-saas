@@ -12,6 +12,13 @@ import { CreateAdminDialog } from '@/components/admin/CreateAdminDialog';
 import { RemoveAdminDialog } from '@/components/admin/RemoveAdminDialog';
 import { SuperAdminsTable } from '@/components/admin/SuperAdminsTable';
 
+interface SuperAdmin {
+  user_id: string;
+  notes?: string;
+  created_at: string;
+  created_by?: string;
+}
+
 const AdminSuperAdmins = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
@@ -73,7 +80,7 @@ const AdminSuperAdmins = () => {
         </CardHeader>
         <CardContent>
           <SuperAdminsTable 
-            data={data?.data}
+            data={data?.data as SuperAdmin[] | null}
             isLoading={isLoading}
             onRemove={handleRemoveAdmin}
           />
