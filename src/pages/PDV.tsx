@@ -74,11 +74,15 @@ const PDV = () => {
               setMesaSelecionada={setMesaSelecionada}
             />
             
-            <ListaProdutos 
-              categoriaAtiva={categoriaAtiva}
-              produtosFiltrados={produtosFiltrados}
-              onSelecionarProduto={adicionarProduto}
-            />
+            <Tabs value={categoriaAtiva}>
+              <TabsContent value={categoriaAtiva}>
+                <ListaProdutos 
+                  categoriaAtiva={categoriaAtiva}
+                  produtosFiltrados={produtosFiltrados}
+                  onSelecionarProduto={adicionarProduto}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Coluna da direita - Comanda atual */}

@@ -39,6 +39,38 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          restaurant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ifood_integration: {
         Row: {
           client_id: string
@@ -327,7 +359,7 @@ export type Database = {
       products: {
         Row: {
           available: boolean
-          category: string
+          category_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -339,7 +371,7 @@ export type Database = {
         }
         Insert: {
           available?: boolean
-          category: string
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -351,7 +383,7 @@ export type Database = {
         }
         Update: {
           available?: boolean
-          category?: string
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -362,6 +394,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -405,24 +444,45 @@ export type Database = {
       }
       restaurants: {
         Row: {
+          active: boolean
+          address: string | null
+          category: string | null
+          cnpj: string | null
           created_at: string
           id: string
+          logo_url: string | null
           name: string
           owner_id: string
+          phone: string | null
+          slug: string | null
           updated_at: string
         }
         Insert: {
+          active?: boolean
+          address?: string | null
+          category?: string | null
+          cnpj?: string | null
           created_at?: string
           id?: string
+          logo_url?: string | null
           name: string
           owner_id: string
+          phone?: string | null
+          slug?: string | null
           updated_at?: string
         }
         Update: {
+          active?: boolean
+          address?: string | null
+          category?: string | null
+          cnpj?: string | null
           created_at?: string
           id?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
+          phone?: string | null
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -513,12 +573,51 @@ export type Database = {
         }
         Relationships: []
       }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          restaurant_id: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          restaurant_id?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          restaurant_id?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       is_super_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      is_super_admin_v2: {
         Args: { user_id: string }
         Returns: boolean
       }
@@ -531,6 +630,10 @@ export type Database = {
           details?: Json
         }
         Returns: string
+      }
+      user_has_role: {
+        Args: { user_id: string; required_role: string }
+        Returns: boolean
       }
     }
     Enums: {

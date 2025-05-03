@@ -1,5 +1,4 @@
 
-import { TabsContent } from "@/components/ui/tabs";
 import { Produto } from "../types";
 import { ProdutoCard } from "./ProdutoCard";
 
@@ -15,7 +14,7 @@ export const ListaProdutos = ({
   onSelecionarProduto 
 }: ListaProdutosProps) => {
   return (
-    <TabsContent value={categoriaAtiva} className="mt-4">
+    <div className="mt-4">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {produtosFiltrados.map((produto) => (
           <ProdutoCard 
@@ -25,6 +24,6 @@ export const ListaProdutos = ({
           />
         ))}
       </div>
-    </TabsContent>
+    </div>
   );
 };
