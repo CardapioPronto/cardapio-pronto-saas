@@ -1,4 +1,3 @@
-
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,12 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCategorias } from "@/hooks/useCategorias";
 
 interface ProdutosFiltroProps {
   filtro: string;
   categoriaFiltrada: string | null;
   onFiltroChange: (filtro: string) => void;
   onCategoriaChange: (categoria: string | null) => void;
+  restaurantId: string;
 }
 
 export const ProdutosFiltro = ({
@@ -21,7 +22,10 @@ export const ProdutosFiltro = ({
   categoriaFiltrada,
   onFiltroChange,
   onCategoriaChange,
+  restaurantId,
 }: ProdutosFiltroProps) => {
+  const { categories } = useCategorias(restaurantId, true); // Buscando categorias
+
   return (
     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
       <div className="relative w-full sm:w-64">
@@ -43,10 +47,12 @@ export const ProdutosFiltro = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas</SelectItem>
-          <SelectItem value="lanches">Lanches</SelectItem>
-          <SelectItem value="porcoes">Porções</SelectItem>
-          <SelectItem value="bebidas">Bebidas</SelectItem>
-          <SelectItem value="sobremesas">Sobremesas</SelectItem>
+          {categories &&
+            categories.map((categoria) => (
+              <SelectItem key={categoria.id} value={categoria.id}>
+                {categoria.name}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
     </div>
