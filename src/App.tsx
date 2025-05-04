@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,6 +32,7 @@ import CardapioDigital from "./pages/CardapioDigital";
 import PDVOnline from "./pages/PDVOnline";
 import GestaoCompleta from "./pages/GestaoCompleta";
 import Precos from "./pages/Precos";
+import Categorias from "./pages/Categorias";
 
 // Importamos as páginas de administração
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -82,6 +82,7 @@ const App = () => (
             <Route path="/gestao-completa" element={<GestaoCompleta />} />
             <Route path="/precos" element={<Precos />} />
             <Route path="/create-initial-admin" element={<CreateInitialAdmin />} />
+            <Route path="/categorias" element={<Categorias />} />
             
             {/* Rotas protegidas */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
