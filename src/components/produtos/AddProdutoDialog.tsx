@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Product } from "@/types";
+import { useEffect, useState } from "react";
+import { Category, Product } from "@/types";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ProdutoForm } from "./ProdutoForm";
+import { supabase } from "@/lib/supabase";
+
 
 interface AddProdutoDialogProps {
   onAddProduto: (produto: Partial<Product>) => void;
@@ -19,6 +21,7 @@ interface AddProdutoDialogProps {
 }
 
 export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialogProps) => {
+
   const [isOpen, setIsOpen] = useState(false);
   const [novoProduto, setNovoProduto] = useState<Partial<Product>>({
     name: "",
@@ -56,6 +59,27 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
     resetForm();
     setIsOpen(false);
   };
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingCategories(true);
+      supabase
+        .from('categories')
+        .select('id, name, restaurant_id')
+        .eq('restaurant_id', restaurantId)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Erro ao carregar categorias:', error);
+          } else {
+            setCategories((data || []).filter((category): category is Category => category.restaurant_id !== null));
+          }
+          setLoadingCategories(false);
+        });
+    }
+  }, [isOpen, restaurantId]);
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -81,6 +105,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
           title="Adicionar Novo Produto"
           saveButtonText="Adicionar"
           restaurantId={restaurantId}
+          categories={categories}
         />
       </DialogContent>
     </Dialog>

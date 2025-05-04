@@ -1,11 +1,11 @@
 
-import { Produto } from "../types";
+import { Product } from "@/types";
 import { ProdutoCard } from "./ProdutoCard";
 
 interface ListaProdutosProps {
   categoriaAtiva: string;
-  produtosFiltrados: Produto[];
-  onSelecionarProduto: (produto: Produto) => void;
+  produtosFiltrados: Product[];
+  onSelecionarProduto: (produto: Product) => void;
 }
 
 export const ListaProdutos = ({ 

@@ -152,7 +152,7 @@ export const useProdutos = (restaurantId: string) => {
     if (restaurantId) {
       fetchProdutos();
     }
-  }, [restaurantId]);
+  }, [restaurantId, fetchProdutos]);
 
   return {
     produtos,
