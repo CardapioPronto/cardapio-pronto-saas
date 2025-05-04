@@ -59,7 +59,7 @@ export const FiltroProdutos = ({
             <SelectValue placeholder="Todas as categorias" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas as categorias</SelectItem>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             {loading ? (
               <SelectItem value="loading" disabled>
                 Carregando categorias...

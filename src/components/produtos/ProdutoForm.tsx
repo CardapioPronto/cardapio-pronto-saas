@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Product, Category } from "@/types";
 import { Label } from "@/components/ui/label";
@@ -98,7 +99,7 @@ export const ProdutoForm = ({
               </div>
             ) : (
               <Select
-                value={produto.category?.id}
+                value={produto.category?.id || "default-category"}
                 onValueChange={(value) => {
                   const selectedCategory = categories.find(
                     (cat) => cat.id === value
@@ -116,7 +117,7 @@ export const ProdutoForm = ({
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.id} value={cat.id || "default-category"}>
                       {cat.name}
                     </SelectItem>
                   ))}
