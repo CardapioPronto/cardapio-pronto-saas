@@ -28,7 +28,7 @@ const Produtos = () => {
       p.name.toLowerCase().includes(filtro.toLowerCase()) ||
       p.description.toLowerCase().includes(filtro.toLowerCase());
     const matchesCategoria = categoriaFiltrada
-      ? p.category?.name === categoriaFiltrada
+      ? p.category?.id === categoriaFiltrada
       : true;
 
     return matchesText && matchesCategoria;
@@ -48,6 +48,7 @@ const Produtos = () => {
               categoriaFiltrada={categoriaFiltrada}
               onFiltroChange={setFiltro}
               onCategoriaChange={setCategoriaFiltrada}
+              restaurantId={restaurantId}
             />
             
             <AddProdutoDialog 
