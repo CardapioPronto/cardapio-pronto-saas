@@ -6,7 +6,7 @@ import { AlertCircle, CheckCircle, Clock, Package, XCircle } from "lucide-react"
 
 interface PedidoHistoricoItemProps {
   pedido: Pedido;
-  alterarStatusPedido: (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => void;
+  alterarStatusPedido: (pedidoId: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => void;
 }
 
 export const PedidoHistoricoItem = ({

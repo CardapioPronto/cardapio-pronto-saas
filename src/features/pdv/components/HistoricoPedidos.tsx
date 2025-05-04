@@ -8,7 +8,7 @@ import { useState } from "react";
 
 interface HistoricoPedidosProps {
   pedidosHistorico: Pedido[];
-  alterarStatusPedido: (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => void;
+  alterarStatusPedido: (pedidoId: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => void;
   onAtualizar: () => Promise<void>;
 }
 

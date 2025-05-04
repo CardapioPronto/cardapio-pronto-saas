@@ -34,7 +34,9 @@ export const usePDVHook = (restaurantId: string) => {
     
     const result = await listarPedidos(restaurantId);
     if (result.success) {
-      setPedidosHistorico(result.pedidos || []);
+      // Convert API response to match our Pedido interface
+      const pedidos = result.pedidos || [];
+      setPedidosHistorico(pedidos as Pedido[]);
     } else {
       toast.error("Erro ao carregar o histórico de pedidos");
     }
@@ -142,7 +144,7 @@ export const usePDVHook = (restaurantId: string) => {
   };
 
   // Mudar status do pedido
-  const handleAlterarStatusPedido = async (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => {
+  const handleAlterarStatusPedido = async (pedidoId: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => {
     const result = await alterarStatusPedido(String(pedidoId), novoStatus);
     if (result.success) {
       // Atualizar o estado local para refletir a mudança imediatamente

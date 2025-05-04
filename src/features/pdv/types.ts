@@ -8,7 +8,7 @@ export interface ItemPedido {
 }
 
 export interface Pedido {
-  id: number;
+  id: number | string; // Allow both number and string types for id to handle API responses
   mesa: string;
   itensPedido: ItemPedido[];
   status: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado';
