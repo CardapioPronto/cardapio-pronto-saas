@@ -18,7 +18,7 @@ export interface Pedido {
   id: number;
   mesa: string;
   itensPedido: ItemPedido[];
-  status: 'em-andamento' | 'finalizado';
+  status: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado';
   timestamp: Date;
   total: number;
 }

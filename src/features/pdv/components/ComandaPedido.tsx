@@ -3,6 +3,7 @@ import { Product } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ItemPedidoLinha } from "./ItemPedidoLinha";
+import { Loader2 } from "lucide-react";
 
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
@@ -16,6 +17,7 @@ interface ComandaPedidoProps {
   alterarQuantidade: (index: number, delta: number) => void;
   removerItem: (index: number) => void;
   finalizarPedido: () => void;
+  salvandoPedido?: boolean;
 }
 
 export const ComandaPedido = ({
@@ -26,6 +28,7 @@ export const ComandaPedido = ({
   alterarQuantidade,
   removerItem,
   finalizarPedido,
+  salvandoPedido = false,
 }: ComandaPedidoProps) => {
   const titulo = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : "Balcão";
 
@@ -58,10 +61,17 @@ export const ComandaPedido = ({
         </div>
         <Button
           onClick={finalizarPedido}
-          disabled={itensPedido.length === 0}
+          disabled={itensPedido.length === 0 || salvandoPedido}
           className="w-full"
         >
-          Finalizar Pedido
+          {salvandoPedido ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processando...
+            </>
+          ) : (
+            "Finalizar Pedido"
+          )}
         </Button>
       </CardFooter>
     </Card>

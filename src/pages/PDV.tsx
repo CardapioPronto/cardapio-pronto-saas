@@ -1,7 +1,7 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiltroProdutos } from "@/features/pdv/components/FiltroProdutos";
 import { ComandaPedido } from "@/features/pdv/components/ComandaPedido";
 import { HistoricoPedidos } from "@/features/pdv/components/HistoricoPedidos";
@@ -10,6 +10,10 @@ import { Product } from "@/types";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useProdutos } from "@/hooks/useProdutos";
 import { ProdutoCard } from "@/features/pdv/components/ProdutoCard";
+import { toast } from "sonner";
+import { salvarPedido, listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
+import { Button } from "@/components/ui/button";
+import { Pedido } from "@/features/pdv/types";
 
 const PDV = () => {
   // Obter o usuário atual e ID do restaurante
@@ -27,8 +31,9 @@ const PDV = () => {
   const [produtoSelecionado, setProdutoSelecionado] = useState<Product | null>(null);
   const [busca, setBusca] = useState("");
   const [tipoPedido, setTipoPedido] = useState<"mesa" | "balcao">("mesa");
-  const [pedidosHistorico, setPedidosHistorico] = useState<any[]>([]);
+  const [pedidosHistorico, setPedidosHistorico] = useState<Pedido[]>([]);
   const [visualizacaoAtiva, setVisualizacaoAtiva] = useState<"novo" | "historico">("novo");
+  const [salvandoPedido, setSalvandoPedido] = useState(false);
   
   // Filtrar produtos por categoria e busca
   const produtosFiltrados = produtos.filter(produto => {
@@ -39,6 +44,24 @@ const PDV = () => {
     
     return matchesBusca && matchesCategoria;
   });
+
+  // Carregar histórico de pedidos
+  useEffect(() => {
+    if (restaurantId && visualizacaoAtiva === "historico") {
+      carregarHistoricoPedidos();
+    }
+  }, [restaurantId, visualizacaoAtiva]);
+
+  const carregarHistoricoPedidos = async () => {
+    if (!restaurantId) return;
+    
+    const result = await listarPedidos(restaurantId);
+    if (result.success) {
+      setPedidosHistorico(result.pedidos);
+    } else {
+      toast.error("Erro ao carregar o histórico de pedidos");
+    }
+  };
 
   // Ação ao selecionar um produto
   const adicionarProduto = (produto: Product) => {
@@ -106,27 +129,54 @@ const PDV = () => {
   );
 
   // Finalizar pedido
-  const finalizarPedido = () => {
-    console.log("Finalizando pedido:", {
-      mesa: tipoPedido === "mesa" ? mesaSelecionada : "Balcão",
-      itens: itensPedido,
-      total: totalPedido
-    });
+  const finalizarPedido = async () => {
+    if (itensPedido.length === 0) {
+      toast.error("Adicione pelo menos um item ao pedido");
+      return;
+    }
     
-    // Reset do pedido atual
-    setItensPedido([]);
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
+    }
+    
+    try {
+      setSalvandoPedido(true);
+      const mesa = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : "Balcão";
+      
+      const result = await salvarPedido(
+        restaurantId,
+        mesa,
+        itensPedido,
+        totalPedido
+      );
+      
+      if (result.success) {
+        setItensPedido([]);
+        setVisualizacaoAtiva("historico");
+        await carregarHistoricoPedidos();
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar pedido:", error);
+      toast.error("Ocorreu um erro ao finalizar o pedido");
+    } finally {
+      setSalvandoPedido(false);
+    }
   };
 
   // Mudar status do pedido
-  const alterarStatusPedido = (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado') => {
-    console.log(`Alterando status do pedido #${pedidoId} para ${novoStatus}`);
-    setPedidosHistorico(pedidos => 
-      pedidos.map(pedido => 
-        pedido.id === pedidoId 
-          ? { ...pedido, status: novoStatus } 
-          : pedido
-      )
-    );
+  const handleAlterarStatusPedido = async (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => {
+    const result = await alterarStatusPedido(String(pedidoId), novoStatus);
+    if (result.success) {
+      // Atualizar o estado local para refletir a mudança imediatamente
+      setPedidosHistorico(pedidos => 
+        pedidos.map(pedido => 
+          pedido.id === pedidoId 
+            ? { ...pedido, status: novoStatus } 
+            : pedido
+        )
+      );
+    }
   };
 
   return (
@@ -200,12 +250,14 @@ const PDV = () => {
             alterarQuantidade={alterarQuantidade}
             removerItem={removerItem}
             finalizarPedido={finalizarPedido}
+            salvandoPedido={salvandoPedido}
           />
         </div>
       ) : (
         <HistoricoPedidos 
           pedidosHistorico={pedidosHistorico}
-          alterarStatusPedido={alterarStatusPedido}
+          alterarStatusPedido={handleAlterarStatusPedido}
+          onAtualizar={carregarHistoricoPedidos}
         />
       )}
 

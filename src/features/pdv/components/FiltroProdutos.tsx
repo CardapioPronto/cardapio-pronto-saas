@@ -1,8 +1,9 @@
 
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCategorias } from "@/hooks/useCategorias";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCategorias } from "@/hooks/useCategorias";
+import { Search, XCircle } from "lucide-react";
 
 interface FiltroProdutosProps {
   categoriaAtiva: string;
@@ -23,64 +24,81 @@ export const FiltroProdutos = ({
   tipoPedido,
   mesaSelecionada,
   setMesaSelecionada,
-  restaurantId
+  restaurantId,
 }: FiltroProdutosProps) => {
-  // Obter categorias do sistema
   const { categorias, loading } = useCategorias(restaurantId);
-  
-  // Gerar números de mesa de 1 a 20
-  const mesas = Array.from({ length: 20 }, (_, i) => (i + 1).toString());
+  const numerosMesas = Array.from({ length: 20 }, (_, i) => `${i + 1}`);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-grow">
-          <Input
-            placeholder="Buscar produto..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        
-        {tipoPedido === "mesa" && (
-          <div>
-            <Select value={mesaSelecionada} onValueChange={setMesaSelecionada}>
-              <SelectTrigger className="w-24">
-                <SelectValue placeholder="Mesa" />
-              </SelectTrigger>
-              <SelectContent>
-                {mesas.map((mesa) => (
-                  <SelectItem key={mesa} value={mesa}>
-                    Mesa {mesa}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-      
-      {!loading && categorias.length > 0 && (
-        <div className="overflow-x-auto pb-2">
-          <Tabs value={categoriaAtiva} onValueChange={setCategoriaAtiva}>
-            <TabsList className="h-auto flex flex-nowrap overflow-x-auto">
-              <TabsTrigger value="" className="px-3 py-1.5">
-                Todos
-              </TabsTrigger>
-              {categorias.map((categoria) => (
-                <TabsTrigger
-                  key={categoria.id}
-                  value={categoria.id}
-                  className="px-3 py-1.5 whitespace-nowrap"
-                >
-                  {categoria.name}
-                </TabsTrigger>
+    <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filtro de mesas (apenas se for pedido de mesa) */}
+      {tipoPedido === "mesa" && (
+        <div className="w-full sm:w-1/4">
+          <Label htmlFor="mesa-select">Mesa</Label>
+          <Select value={mesaSelecionada} onValueChange={setMesaSelecionada}>
+            <SelectTrigger id="mesa-select">
+              <SelectValue placeholder="Selecione a mesa" />
+            </SelectTrigger>
+            <SelectContent>
+              {numerosMesas.map((numero) => (
+                <SelectItem key={numero} value={numero}>
+                  Mesa {numero}
+                </SelectItem>
               ))}
-            </TabsList>
-          </Tabs>
+            </SelectContent>
+          </Select>
         </div>
       )}
+
+      {/* Filtro de categorias */}
+      <div className="w-full sm:w-1/3">
+        <Label htmlFor="categoria-select">Categoria</Label>
+        <Select value={categoriaAtiva} onValueChange={setCategoriaAtiva}>
+          <SelectTrigger id="categoria-select">
+            <SelectValue placeholder="Todas as categorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Todas as categorias</SelectItem>
+            {loading ? (
+              <SelectItem value="loading" disabled>
+                Carregando categorias...
+              </SelectItem>
+            ) : (
+              categorias.map((categoria) => (
+                <SelectItem key={categoria.id} value={categoria.id}>
+                  {categoria.name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Busca de produtos */}
+      <div className="w-full sm:flex-1">
+        <Label htmlFor="produto-busca">Buscar produto</Label>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            id="produto-busca"
+            placeholder="Nome ou descrição do produto"
+            className="pl-8"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca("")}
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <XCircle className="h-4 w-4" />
+              <span className="sr-only">Limpar busca</span>
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
