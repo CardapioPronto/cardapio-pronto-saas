@@ -26,7 +26,8 @@ export const FiltroProdutos = ({
   setMesaSelecionada,
   restaurantId,
 }: FiltroProdutosProps) => {
-  const { categorias, loading } = useCategorias(restaurantId);
+  // Fix: Pass no parameters to useCategorias
+  const { categorias, loading } = useCategorias();
   const numerosMesas = Array.from({ length: 20 }, (_, i) => `${i + 1}`);
 
   return (
