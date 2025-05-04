@@ -24,7 +24,7 @@ export const ProdutosFiltro = ({
   onCategoriaChange,
   restaurantId,
 }: ProdutosFiltroProps) => {
-  const { categories } = useCategorias(restaurantId, true); // Buscando categorias
+  const { categorias } = useCategorias();
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -47,8 +47,8 @@ export const ProdutosFiltro = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas</SelectItem>
-          {categories &&
-            categories.map((categoria) => (
+          {categorias &&
+            categorias.map((categoria) => (
               <SelectItem key={categoria.id} value={categoria.id}>
                 {categoria.name}
               </SelectItem>

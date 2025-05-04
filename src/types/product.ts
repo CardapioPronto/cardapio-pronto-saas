@@ -9,4 +9,6 @@ export type Product = {
     image_url?: string;
     category: Category | null;
     restaurant_id: string;
+    created_at?: string;
+    updated_at?: string;
 };

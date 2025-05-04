@@ -44,7 +44,7 @@ export const EditProdutoDialog = ({
     setIsOpen(false);
   };
 
-  const { categories, loading } = useCategorias(restaurantId, isOpen);
+  const { categorias, loading } = useCategorias();
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -72,7 +72,7 @@ export const EditProdutoDialog = ({
             title="Editar Produto"
             saveButtonText="Salvar"
             restaurantId={restaurantId}
-            categories={categories}
+            categories={categorias}
             loadingCategories={loading}
           />
         )}

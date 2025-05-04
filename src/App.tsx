@@ -82,7 +82,6 @@ const App = () => (
             <Route path="/gestao-completa" element={<GestaoCompleta />} />
             <Route path="/precos" element={<Precos />} />
             <Route path="/create-initial-admin" element={<CreateInitialAdmin />} />
-            <Route path="/categorias" element={<Categorias />} />
             
             {/* Rotas protegidas */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -94,6 +93,7 @@ const App = () => (
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/pagarme-config" element={<ProtectedRoute><PagarmeConfig /></ProtectedRoute>} />
             <Route path="/ifood-integracao" element={<ProtectedRoute><IfoodIntegracao /></ProtectedRoute>} />
+            <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
             
             {/* Rotas de administração */}
             <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />

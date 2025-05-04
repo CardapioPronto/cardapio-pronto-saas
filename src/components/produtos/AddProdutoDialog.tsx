@@ -59,7 +59,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
     setIsOpen(false);
   };
 
-  const { categories, loading } = useCategorias(restaurantId, isOpen);
+  const { categorias, loading } = useCategorias();
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -85,7 +85,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
           title="Adicionar Novo Produto"
           saveButtonText="Adicionar"
           restaurantId={restaurantId}
-          categories={categories}
+          categories={categorias}
           loadingCategories={loading}
         />
       </DialogContent>
