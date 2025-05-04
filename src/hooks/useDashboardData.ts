@@ -3,11 +3,28 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { DollarSign, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
+// Interface para vendas recentes
+interface SaleItem {
+  id: number;
+  table: number;
+  commandaNumber: number;
+  time: string;
+  value: number;
+}
+
+// Interface para produtos populares
+interface PopularProduct {
+  id: number;
+  name: string;
+  popularity: number;
+  units: number;
+}
+
 export const useDashboardData = (restaurantId: string | null) => {
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [recentSales, setRecentSales] = useState<any[]>([]);
-  const [popularProducts, setPopularProducts] = useState<any[]>([]);
+  const [recentSales, setRecentSales] = useState<SaleItem[]>([]);
+  const [popularProducts, setPopularProducts] = useState<PopularProduct[]>([]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -88,34 +105,89 @@ export const useDashboardData = (restaurantId: string | null) => {
         },
       ]);
 
-      // Generate placeholder data for recent sales and popular products
-      generateMockData();
+      // Buscar vendas recentes reais do banco de dados
+      await fetchRecentSales(restaurantId);
+      
+      // Buscar produtos mais populares reais do banco de dados
+      await fetchPopularProducts(restaurantId);
       
       setLoading(false);
     };
 
-    const generateMockData = () => {
-      // Mock data for recent sales
-      const mockSales = [1, 2, 3, 4].map((i) => ({
-        id: i,
-        table: i,
-        commandaNumber: 1000 + i,
-        time: new Date().toLocaleTimeString(),
-        value: Math.random() * 100 + 50,
+    // Função para buscar as vendas recentes
+    const fetchRecentSales = async (restId: string) => {
+      const { data: recentOrders, error } = await supabase
+        .from("orders")
+        .select("id, total, table_number, created_at, order_number")
+        .eq("restaurant_id", restId)
+        .order("created_at", { ascending: false })
+        .limit(4);
+
+      if (error) {
+        console.error("Erro ao buscar vendas recentes:", error);
+        return;
+      }
+
+      // Transformar os dados para o formato esperado pelo componente RecentSales
+      const formattedSales: SaleItem[] = recentOrders.map((order, index) => ({
+        id: index + 1, 
+        table: parseInt(order.table_number || "0"),
+        commandaNumber: parseInt(order.order_number.replace('ORD-', '') || "0"),
+        time: new Date(order.created_at).toLocaleTimeString(),
+        value: order.total,
       }));
+
+      setRecentSales(formattedSales);
+    };
+
+    // Função para buscar os produtos mais populares
+    const fetchPopularProducts = async (restId: string) => {
+      // Primeiro, buscar os itens dos pedidos
+      const { data: orderItems, error: itemsError } = await supabase
+        .from("order_items")
+        .select("product_id, product_name, quantity")
+        .eq("order_id", supabase.from("orders").select("id").eq("restaurant_id", restId));
+
+      if (itemsError) {
+        console.error("Erro ao buscar itens de pedidos:", itemsError);
+        return;
+      }
+
+      // Agrupar por produto e calcular a quantidade total vendida
+      const productStats = new Map<string, { name: string, count: number }>();
       
-      setRecentSales(mockSales);
-      
-      // Mock data for popular products
-      const productNames = ["X-Tudo", "Porção de batatas", "Cerveja", "Refrigerante"];
-      const mockProducts = productNames.map((name, i) => ({
-        id: i + 1,
-        name,
-        popularity: 90 - i * 15,
-        units: 90 - i * 15,
-      }));
-      
-      setPopularProducts(mockProducts);
+      orderItems?.forEach(item => {
+        if (!productStats.has(item.product_id)) {
+          productStats.set(item.product_id, { name: item.product_name, count: 0 });
+        }
+        
+        const currentStat = productStats.get(item.product_id);
+        if (currentStat) {
+          currentStat.count += item.quantity;
+          productStats.set(item.product_id, currentStat);
+        }
+      });
+
+      // Converter para array, ordenar por quantidade e pegar os 4 primeiros
+      const topProducts = Array.from(productStats.entries())
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 4);
+
+      // Calcular o total de vendas para percentuais
+      const totalSales = topProducts.reduce((sum, [_, stats]) => sum + stats.count, 0);
+
+      // Formatar para o componente PopularProducts
+      const formattedProducts: PopularProduct[] = topProducts.map(([id, stats], index) => {
+        const popularity = Math.round((stats.count / totalSales) * 100);
+        return {
+          id: index + 1,
+          name: stats.name,
+          popularity: popularity,
+          units: stats.count,
+        };
+      });
+
+      setPopularProducts(formattedProducts);
     };
 
     fetchStats();
