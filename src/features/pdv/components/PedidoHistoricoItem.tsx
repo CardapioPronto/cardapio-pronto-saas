@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pedido } from "../types";
 
 interface PedidoHistoricoItemProps {
@@ -8,64 +8,70 @@ interface PedidoHistoricoItemProps {
   alterarStatusPedido: (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado') => void;
 }
 
-export const PedidoHistoricoItem = ({ pedido, alterarStatusPedido }: PedidoHistoricoItemProps) => {
+export const PedidoHistoricoItem = ({
+  pedido,
+  alterarStatusPedido,
+}: PedidoHistoricoItemProps) => {
+  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(pedido.timestamp);
+
   return (
-    <div className="border rounded-lg p-4">
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <h4 className="font-bold">Pedido #{pedido.id} - {pedido.mesa}</h4>
-          <p className="text-sm text-gray-500">
-            {pedido.timestamp.toLocaleTimeString()} - {pedido.timestamp.toLocaleDateString()}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            pedido.status === 'em-andamento' ? 'bg-orange/10 text-orange' : 'bg-green/10 text-green'
+    <Card className={pedido.status === 'finalizado' ? 'bg-gray-50' : ''}>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg">
+            {pedido.mesa.startsWith('Mesa') ? pedido.mesa : `Balcão #${pedido.id}`}
+          </CardTitle>
+          <div className={`px-2 py-1 rounded text-xs ${
+            pedido.status === 'em-andamento' 
+              ? 'bg-blue-100 text-blue-800' 
+              : 'bg-green-100 text-green-800'
           }`}>
             {pedido.status === 'em-andamento' ? 'Em andamento' : 'Finalizado'}
-          </span>
-        </div>
-      </div>
-      
-      <div className="space-y-2 mb-4">
-        {pedido.itensPedido.map((item, idx) => (
-          <div key={idx} className="flex justify-between text-sm">
-            <span>
-              {item.quantidade}x {item.produto.nome}
-              {item.observacao && <span className="text-xs text-gray-500 ml-2 italic">({item.observacao})</span>}
-            </span>
-            <span>R$ {(item.produto.preco * item.quantidade).toFixed(2)}</span>
           </div>
-        ))}
-      </div>
-      
-      <div className="flex justify-between items-center pt-3 border-t">
-        <div className="font-bold">
-          Total: R$ {pedido.total.toFixed(2)}
         </div>
-        <div className="flex gap-2">
-          {pedido.status === 'em-andamento' ? (
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => alterarStatusPedido(pedido.id, 'finalizado')}
-              className="bg-green hover:bg-green-dark"
-            >
-              <CheckCircle className="mr-1 h-4 w-4" />
-              Finalizar
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => alterarStatusPedido(pedido.id, 'em-andamento')}
-            >
-              <Clock className="mr-1 h-4 w-4" />
-              Em andamento
-            </Button>
-          )}
+        <div className="text-sm text-muted-foreground">{dataFormatada}</div>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-1">
+          {pedido.itensPedido.map((item, index) => (
+            <li key={index} className="text-sm">
+              <div className="flex justify-between">
+                <span>{item.quantidade}x {item.produto.name}</span>
+                <span>R$ {(item.produto.price * item.quantidade).toFixed(2)}</span>
+              </div>
+              {item.observacao && (
+                <p className="text-xs text-muted-foreground">Obs: {item.observacao}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+      <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
+        <div className="flex justify-between font-medium">
+          <span>Total</span>
+          <span>R$ {pedido.total.toFixed(2)}</span>
         </div>
-      </div>
-    </div>
+        {pedido.status === 'em-andamento' ? (
+          <Button 
+            variant="outline" 
+            onClick={() => alterarStatusPedido(pedido.id, 'finalizado')}
+          >
+            Marcar como Finalizado
+          </Button>
+        ) : (
+          <Button 
+            variant="outline" 
+            onClick={() => alterarStatusPedido(pedido.id, 'em-andamento')}
+          >
+            Reabrir Pedido
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   );
 };

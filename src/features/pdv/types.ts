@@ -1,4 +1,6 @@
 
+import { Product } from "@/types";
+
 export interface Produto {
   id: number;
   nome: string;
@@ -7,9 +9,9 @@ export interface Produto {
 }
 
 export interface ItemPedido {
-  produto: Produto;
+  produto: Product;
   quantidade: number;
-  observacao: string;
+  observacao?: string;
 }
 
 export interface Pedido {

@@ -1,12 +1,19 @@
 
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Produto } from "../types";
+import { Product } from "@/types";
 
 interface ObservacaoModalProps {
-  produtoSelecionado: Produto | null;
+  produtoSelecionado: Product | null;
   observacaoAtual: string;
-  setObservacaoAtual: (obs: string) => void;
+  setObservacaoAtual: (observacao: string) => void;
   confirmarAdicao: () => void;
   cancelarAdicao: () => void;
 }
@@ -18,33 +25,38 @@ export const ObservacaoModal = ({
   confirmarAdicao,
   cancelarAdicao,
 }: ObservacaoModalProps) => {
-  if (!produtoSelecionado) return null;
+  const isOpen = produtoSelecionado !== null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md">
-        <h3 className="text-lg font-bold mb-2">{produtoSelecionado.nome}</h3>
-        <p className="text-green font-medium mb-4">R$ {produtoSelecionado.preco.toFixed(2)}</p>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Observações:</label>
-          <Textarea
-            placeholder="Ex: sem cebola, bem passado, etc."
-            value={observacaoAtual}
-            onChange={(e) => setObservacaoAtual(e.target.value)}
-            className="resize-none"
-          />
+    <Dialog open={isOpen} onOpenChange={cancelarAdicao}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            Adicionar {produtoSelecionado?.name || "produto"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <div className="col-span-4">
+              <Textarea
+                id="observacao"
+                placeholder="Alguma observação? Ex: sem cebola, bem passado, etc."
+                value={observacaoAtual}
+                onChange={(e) => setObservacaoAtual(e.target.value)}
+                className="h-32"
+              />
+            </div>
+          </div>
         </div>
-        
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           <Button variant="outline" onClick={cancelarAdicao}>
             Cancelar
           </Button>
           <Button onClick={confirmarAdicao}>
             Adicionar ao Pedido
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

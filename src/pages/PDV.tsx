@@ -1,43 +1,133 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { usePDV } from "@/features/pdv/hooks/usePDV";
+import { useState } from "react";
 import { FiltroProdutos } from "@/features/pdv/components/FiltroProdutos";
-import { ListaProdutos } from "@/features/pdv/components/ListaProdutos";
 import { ComandaPedido } from "@/features/pdv/components/ComandaPedido";
 import { HistoricoPedidos } from "@/features/pdv/components/HistoricoPedidos";
 import { ObservacaoModal } from "@/features/pdv/components/ObservacaoModal";
+import { Product } from "@/types";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useProdutos } from "@/hooks/useProdutos";
+import { ProdutoCard } from "@/features/pdv/components/ProdutoCard";
 
 const PDV = () => {
-  const {
-    // Estado
-    itensPedido,
-    mesaSelecionada,
-    setMesaSelecionada,
-    categoriaAtiva,
-    setCategoriaAtiva,
-    observacaoAtual,
-    setObservacaoAtual,
-    produtoSelecionado,
-    busca,
-    setBusca,
-    tipoPedido,
-    setTipoPedido,
-    pedidosHistorico,
-    visualizacaoAtiva,
-    setVisualizacaoAtiva,
-    produtosFiltrados,
-    totalPedido,
+  // Obter o usuário atual e ID do restaurante
+  const { user } = useCurrentUser();
+  const restaurantId = user?.restaurant_id || "";
+  
+  // Obter produtos usando o hook existente
+  const { produtos, loading } = useProdutos(restaurantId);
 
-    // Ações
-    adicionarProduto,
-    confirmarAdicao,
-    cancelarAdicao,
-    alterarQuantidade,
-    removerItem,
-    finalizarPedido,
-    alterarStatusPedido,
-  } = usePDV();
+  // Estados do PDV
+  const [itensPedido, setItensPedido] = useState<{produto: Product; quantidade: number; observacao?: string}[]>([]);
+  const [mesaSelecionada, setMesaSelecionada] = useState("1");
+  const [categoriaAtiva, setCategoriaAtiva] = useState("");
+  const [observacaoAtual, setObservacaoAtual] = useState("");
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Product | null>(null);
+  const [busca, setBusca] = useState("");
+  const [tipoPedido, setTipoPedido] = useState<"mesa" | "balcao">("mesa");
+  const [pedidosHistorico, setPedidosHistorico] = useState<any[]>([]);
+  const [visualizacaoAtiva, setVisualizacaoAtiva] = useState<"novo" | "historico">("novo");
+  
+  // Filtrar produtos por categoria e busca
+  const produtosFiltrados = produtos.filter(produto => {
+    const matchesBusca = busca === "" || 
+                         produto.name.toLowerCase().includes(busca.toLowerCase()) ||
+                         produto.description.toLowerCase().includes(busca.toLowerCase());
+    const matchesCategoria = categoriaAtiva === "" || produto.category?.id === categoriaAtiva;
+    
+    return matchesBusca && matchesCategoria;
+  });
+
+  // Ação ao selecionar um produto
+  const adicionarProduto = (produto: Product) => {
+    console.log("Produto selecionado para adicionar:", produto);
+    setProdutoSelecionado(produto);
+  };
+
+  // Confirmar adição do produto com observação
+  const confirmarAdicao = () => {
+    if (!produtoSelecionado) return;
+    
+    setItensPedido(itensAtuais => {
+      const itemExistente = itensAtuais.find(
+        item => item.produto.id === produtoSelecionado.id && 
+                item.observacao === observacaoAtual
+      );
+      
+      if (itemExistente) {
+        return itensAtuais.map(item => 
+          item === itemExistente 
+            ? { ...item, quantidade: item.quantidade + 1 } 
+            : item
+        );
+      } else {
+        return [...itensAtuais, { 
+          produto: produtoSelecionado, 
+          quantidade: 1,
+          observacao: observacaoAtual 
+        }];
+      }
+    });
+    
+    setProdutoSelecionado(null);
+    setObservacaoAtual("");
+  };
+
+  // Cancelar adição do produto
+  const cancelarAdicao = () => {
+    setProdutoSelecionado(null);
+    setObservacaoAtual("");
+  };
+
+  // Função para alterar a quantidade de um item
+  const alterarQuantidade = (itemIndex: number, delta: number) => {
+    setItensPedido(itensAtuais => {
+      return itensAtuais.map((item, i) => {
+        if (i === itemIndex) {
+          const novaQuantidade = Math.max(1, item.quantidade + delta);
+          return { ...item, quantidade: novaQuantidade };
+        }
+        return item;
+      });
+    });
+  };
+
+  // Função para remover item do pedido
+  const removerItem = (itemIndex: number) => {
+    setItensPedido(itensAtuais => itensAtuais.filter((_, i) => i !== itemIndex));
+  };
+
+  // Calcular total do pedido
+  const totalPedido = itensPedido.reduce(
+    (total, item) => total + item.produto.price * item.quantidade,
+    0
+  );
+
+  // Finalizar pedido
+  const finalizarPedido = () => {
+    console.log("Finalizando pedido:", {
+      mesa: tipoPedido === "mesa" ? mesaSelecionada : "Balcão",
+      itens: itensPedido,
+      total: totalPedido
+    });
+    
+    // Reset do pedido atual
+    setItensPedido([]);
+  };
+
+  // Mudar status do pedido
+  const alterarStatusPedido = (pedidoId: number, novoStatus: 'em-andamento' | 'finalizado') => {
+    console.log(`Alterando status do pedido #${pedidoId} para ${novoStatus}`);
+    setPedidosHistorico(pedidos => 
+      pedidos.map(pedido => 
+        pedido.id === pedidoId 
+          ? { ...pedido, status: novoStatus } 
+          : pedido
+      )
+    );
+  };
 
   return (
     <DashboardLayout title="PDV - Ponto de Venda">
@@ -72,17 +162,33 @@ const PDV = () => {
               tipoPedido={tipoPedido}
               mesaSelecionada={mesaSelecionada}
               setMesaSelecionada={setMesaSelecionada}
+              restaurantId={restaurantId}
             />
             
-            <Tabs value={categoriaAtiva}>
-              <TabsContent value={categoriaAtiva}>
-                <ListaProdutos 
-                  categoriaAtiva={categoriaAtiva}
-                  produtosFiltrados={produtosFiltrados}
-                  onSelecionarProduto={adicionarProduto}
-                />
-              </TabsContent>
-            </Tabs>
+            <div className="mt-4">
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <p>Carregando produtos...</p>
+                </div>
+              ) : produtosFiltrados.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {produtosFiltrados.map((produto) => (
+                    <ProdutoCard 
+                      key={produto.id} 
+                      produto={produto} 
+                      onSelecionar={adicionarProduto} 
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-64 text-center">
+                  <div>
+                    <p className="text-lg font-medium">Nenhum produto encontrado</p>
+                    <p className="text-gray-500">Tente ajustar os filtros ou adicione novos produtos</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Coluna da direita - Comanda atual */}

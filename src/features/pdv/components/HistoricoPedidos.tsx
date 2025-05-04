@@ -1,5 +1,6 @@
 
 import { Pedido } from "../types";
+import { Card } from "@/components/ui/card";
 import { PedidoHistoricoItem } from "./PedidoHistoricoItem";
 
 interface HistoricoPedidosProps {
@@ -9,18 +10,16 @@ interface HistoricoPedidosProps {
 
 export const HistoricoPedidos = ({
   pedidosHistorico,
-  alterarStatusPedido
+  alterarStatusPedido,
 }: HistoricoPedidosProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border">
-      <h3 className="font-bold text-lg mb-4">Histórico de Pedidos</h3>
-      
+    <div className="space-y-4">
       {pedidosHistorico.length === 0 ? (
-        <div className="text-center text-gray-500 py-12">
-          Não há pedidos registrados
-        </div>
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Nenhum pedido registrado</p>
+        </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {pedidosHistorico.map((pedido) => (
             <PedidoHistoricoItem
               key={pedido.id}

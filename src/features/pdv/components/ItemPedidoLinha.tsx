@@ -1,57 +1,71 @@
 
+import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, Trash2 } from "lucide-react";
-import { ItemPedido } from "../types";
+import { Minus, Plus, Trash } from "lucide-react";
 
 interface ItemPedidoLinhaProps {
-  item: ItemPedido;
+  item: {
+    produto: Product;
+    quantidade: number;
+    observacao?: string;
+  };
   index: number;
-  alterarQuantidade: (itemIndex: number, delta: number) => void;
-  removerItem: (itemIndex: number) => void;
+  alterarQuantidade: (index: number, delta: number) => void;
+  removerItem: (index: number) => void;
 }
 
-export const ItemPedidoLinha = ({ 
-  item, 
-  index, 
-  alterarQuantidade, 
-  removerItem 
+export const ItemPedidoLinha = ({
+  item,
+  index,
+  alterarQuantidade,
+  removerItem,
 }: ItemPedidoLinhaProps) => {
+  const { produto, quantidade, observacao } = item;
+  const subtotal = produto.price * quantidade;
+
   return (
-    <div className="flex justify-between items-start border-b pb-2">
-      <div className="flex-1">
-        <p className="font-medium">{item.produto.nome}</p>
-        <p className="text-sm text-muted-foreground">
-          R$ {item.produto.preco.toFixed(2)} x {item.quantidade}
-        </p>
-        {item.observacao && (
-          <p className="text-xs text-gray-500 italic mt-1">Obs: {item.observacao}</p>
-        )}
+    <div className="py-2 border-b last:border-b-0">
+      <div className="flex justify-between">
+        <div className="font-medium">{produto.name}</div>
+        <div className="font-medium">R$ {subtotal.toFixed(2)}</div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button 
-          size="icon" 
-          variant="outline" 
-          className="h-7 w-7" 
-          onClick={() => alterarQuantidade(index, -1)}
-        >
-          <Minus className="h-3 w-3" />
-        </Button>
-        <span className="w-5 text-center">{item.quantidade}</span>
-        <Button 
-          size="icon" 
-          variant="outline" 
-          className="h-7 w-7" 
-          onClick={() => alterarQuantidade(index, 1)}
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          className="h-7 w-7 text-red-500" 
+      
+      {observacao && (
+        <div className="text-sm text-muted-foreground mt-1">
+          Obs: {observacao}
+        </div>
+      )}
+      
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => alterarQuantidade(index, -1)}
+          >
+            <Minus className="h-3 w-3" />
+          </Button>
+          
+          <span className="w-6 text-center">{quantidade}</span>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => alterarQuantidade(index, 1)}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-red-500"
           onClick={() => removerItem(index)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash className="h-3 w-3" />
         </Button>
       </div>
     </div>
