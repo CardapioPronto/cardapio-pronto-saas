@@ -85,7 +85,7 @@ export const useProdutos = (restaurantId: string) => {
         return false;
       } else {
         const novosProdutos = formatProductFromSupabase(data);
-        setProdutos([...produtos, ...novosProdutos]);
+        setProdutos((prev) => [...prev, ...novosProdutos]);
         toast.success("Produto adicionado com sucesso!");
         setLoading(false);
         return true;
