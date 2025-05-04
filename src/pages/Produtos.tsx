@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Product } from "@/types";
 import { ProdutosList } from "@/components/produtos/ProdutosList";
 import { ProdutosFiltro } from "@/components/produtos/ProdutosFiltro";
 import { AddProdutoDialog } from "@/components/produtos/AddProdutoDialog";

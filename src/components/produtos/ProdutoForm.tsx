@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Product, Category } from "@/types";
 import { Label } from "@/components/ui/label";
@@ -20,6 +19,7 @@ interface ProdutoFormProps {
   title: string;
   saveButtonText: string;
   restaurantId: string;
+  categories: Category[];
 }
 
 export const ProdutoForm = ({
@@ -30,16 +30,16 @@ export const ProdutoForm = ({
   title,
   saveButtonText,
   restaurantId,
+  categories,
 }: ProdutoFormProps) => {
-  
   const handleCategoryChange = (value: string) => {
     onChangeProduto({
       ...produto,
       category: {
         id: value,
         name: value,
-        restaurant_id: restaurantId
-      }
+        restaurant_id: restaurantId,
+      },
     });
   };
 
@@ -91,17 +91,28 @@ export const ProdutoForm = ({
           <div className="grid gap-2">
             <Label htmlFor="categoria">Categoria*</Label>
             <Select
-              value={produto.category?.name}
-              onValueChange={handleCategoryChange}
+              value={produto.category?.id}
+              onValueChange={(value) => {
+                const selectedCategory = categories.find(
+                  (cat) => cat.id === value
+                );
+                if (selectedCategory) {
+                  onChangeProduto({
+                    ...produto,
+                    category: selectedCategory,
+                  });
+                }
+              }}
             >
               <SelectTrigger id="categoria">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lanches">Lanches</SelectItem>
-                <SelectItem value="porcoes">Porções</SelectItem>
-                <SelectItem value="bebidas">Bebidas</SelectItem>
-                <SelectItem value="sobremesas">Sobremesas</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -111,6 +122,7 @@ export const ProdutoForm = ({
           <input
             type="checkbox"
             id="disponivel"
+            title="Disponível para venda"
             checked={produto.available}
             onChange={(e) =>
               onChangeProduto({
@@ -124,11 +136,7 @@ export const ProdutoForm = ({
       </div>
 
       <div className="flex justify-end gap-3 mt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
         <Button type="button" onClick={onSave}>

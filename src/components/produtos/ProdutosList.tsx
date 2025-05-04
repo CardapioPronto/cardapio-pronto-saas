@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EditProdutoDialog } from "./EditProdutoDialog";
+import { DeleteProdutoDialog } from "./DeleteProdutoDialog";
 
 interface ProdutosListProps {
   produtosFiltrados: Product[];
@@ -93,14 +94,7 @@ export const ProdutosList = ({
                       onSave={onEditProduto} 
                       restaurantId={restaurantId} 
                     />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-500"
-                      onClick={() => onDeleteProduto(produto.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <DeleteProdutoDialog produto={produto} onDelete={onDeleteProduto} />
                   </div>
                 </TableCell>
               </TableRow>
