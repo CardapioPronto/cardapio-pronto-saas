@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Product } from "@/types";
 import { Pencil } from "lucide-react";
@@ -6,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ProdutoForm } from "./ProdutoForm";
+import { useCategorias } from "@/hooks/useCategorias";
 
 interface EditProdutoDialogProps {
   produto: Product;
@@ -21,28 +22,30 @@ interface EditProdutoDialogProps {
 export const EditProdutoDialog = ({
   produto,
   onSave,
-  restaurantId
+  restaurantId,
 }: EditProdutoDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState<Product | null>(null);
-  
+
   const handleOpenDialog = () => {
     setProdutoEditando({ ...produto });
     setIsOpen(true);
   };
-  
+
   const handleSave = () => {
     if (produtoEditando) {
       onSave(produtoEditando);
       setIsOpen(false);
     }
   };
-  
+
   const handleCancel = () => {
     setProdutoEditando(null);
     setIsOpen(false);
   };
-  
+
+  const { categories, loading } = useCategorias(restaurantId, isOpen);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -53,17 +56,24 @@ export const EditProdutoDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulário para editar os dados do produto selecionado.
+          </DialogDescription>
         </DialogHeader>
 
         {produtoEditando && (
           <ProdutoForm
             produto={produtoEditando}
-            onChangeProduto={(produto) => setProdutoEditando({ ...produtoEditando, ...produto })}
+            onChangeProduto={(produto) =>
+              setProdutoEditando({ ...produtoEditando, ...produto })
+            }
             onSave={handleSave}
             onCancel={handleCancel}
             title="Editar Produto"
             saveButtonText="Salvar"
             restaurantId={restaurantId}
+            categories={categories}
+            loadingCategories={loading}
           />
         )}
       </DialogContent>

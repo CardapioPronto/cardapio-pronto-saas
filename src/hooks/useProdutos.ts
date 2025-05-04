@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatProductFromSupabase } from "@/utils/formatProductFromSupabase";
@@ -9,7 +9,7 @@ export const useProdutos = (restaurantId: string) => {
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const fetchProdutos = async () => {
+  const fetchProdutos = useCallback(async () => {
     setLoading(true);
 
     if (!restaurantId) {
@@ -43,7 +43,7 @@ export const useProdutos = (restaurantId: string) => {
     }
 
     setLoading(false);
-  };
+  }, [restaurantId]);
 
   const adicionarProduto = async (novoProduto: Partial<Product>) => {
     if (!novoProduto.name || !novoProduto.description || !(novoProduto.price && novoProduto.price > 0)) {
@@ -53,6 +53,7 @@ export const useProdutos = (restaurantId: string) => {
 
     try {
       // Fix TypeScript error by ensuring price is a number
+      setLoading(true);
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -80,22 +81,26 @@ export const useProdutos = (restaurantId: string) => {
       if (error) {
         console.error("Erro ao adicionar produto:", error);
         toast.error("Erro ao adicionar produto");
+        setLoading(false);
         return false;
       } else {
         const novosProdutos = formatProductFromSupabase(data);
-        setProdutos([...produtos, ...novosProdutos]);
+        setProdutos((prev) => [...prev, ...novosProdutos]);
         toast.success("Produto adicionado com sucesso!");
+        setLoading(false);
         return true;
       }
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
       toast.error("Erro ao adicionar produto");
+      setLoading(false);
       return false;
     }
   };
 
   const atualizarProduto = async (produtoAtualizado: Product) => {
     try {
+      setLoading(true);
       const { error } = await supabase
         .from("products")
         .update({
@@ -110,23 +115,27 @@ export const useProdutos = (restaurantId: string) => {
       if (error) {
         console.error("Erro ao atualizar produto:", error);
         toast.error("Erro ao atualizar produto");
+        setLoading(false);
         return false;
       } else {
         setProdutos(
           produtos.map((p) => (p.id === produtoAtualizado.id ? produtoAtualizado : p))
         );
         toast.success("Produto atualizado com sucesso!");
+        setLoading(false);
         return true;
       }
     } catch (error) {
       console.error("Erro ao atualizar produto:", error);
       toast.error("Erro ao atualizar produto");
+      setLoading(false);
       return false;
     }
   };
 
   const removerProduto = async (id: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase
         .from("products")
         .delete()
@@ -135,15 +144,18 @@ export const useProdutos = (restaurantId: string) => {
       if (error) {
         console.error("Erro ao remover produto:", error);
         toast.error("Erro ao remover produto");
+        setLoading(false);
         return false;
       } else {
         setProdutos(produtos.filter((p) => p.id !== id));
         toast.success("Produto removido com sucesso!");
+        setLoading(false);
         return true;
       }
     } catch (error) {
       console.error("Erro ao remover produto:", error);
       toast.error("Erro ao remover produto");
+      setLoading(false);
       return false;
     }
   };

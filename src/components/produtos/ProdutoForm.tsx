@@ -20,6 +20,7 @@ interface ProdutoFormProps {
   saveButtonText: string;
   restaurantId: string;
   categories: Category[];
+  loadingCategories: boolean;
 }
 
 export const ProdutoForm = ({
@@ -31,6 +32,7 @@ export const ProdutoForm = ({
   saveButtonText,
   restaurantId,
   categories,
+  loadingCategories,
 }: ProdutoFormProps) => {
   const handleCategoryChange = (value: string) => {
     onChangeProduto({
@@ -90,31 +92,37 @@ export const ProdutoForm = ({
 
           <div className="grid gap-2">
             <Label htmlFor="categoria">Categoria*</Label>
-            <Select
-              value={produto.category?.id}
-              onValueChange={(value) => {
-                const selectedCategory = categories.find(
-                  (cat) => cat.id === value
-                );
-                if (selectedCategory) {
-                  onChangeProduto({
-                    ...produto,
-                    category: selectedCategory,
-                  });
-                }
-              }}
-            >
-              <SelectTrigger id="categoria">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {loadingCategories ? (
+              <div className="flex items-center justify-center">
+                <span>Carregando categorias...</span>
+              </div>
+            ) : (
+              <Select
+                value={produto.category?.id}
+                onValueChange={(value) => {
+                  const selectedCategory = categories.find(
+                    (cat) => cat.id === value
+                  );
+                  if (selectedCategory) {
+                    onChangeProduto({
+                      ...produto,
+                      category: selectedCategory,
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger id="categoria" disabled={loadingCategories}>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 

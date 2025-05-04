@@ -36,38 +36,46 @@ const Produtos = () => {
 
   return (
     <DashboardLayout title="Gerenciar Produtos">
-      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <ProdutosFiltro 
-          filtro={filtro}
-          categoriaFiltrada={categoriaFiltrada}
-          onFiltroChange={setFiltro}
-          onCategoriaChange={setCategoriaFiltrada}
-        />
-        
-        <AddProdutoDialog 
-          onAddProduto={adicionarProduto}
-          restaurantId={restaurantId}
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Produtos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProdutosList
-            produtosFiltrados={produtosFiltrados}
-            restaurantId={restaurantId}
-            onEditProduto={atualizarProduto}
-            onDeleteProduto={removerProduto}
-          />
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="text-sm text-muted-foreground">
-            Mostrando {produtosFiltrados.length} de {produtos.length} produtos
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <p>Carregando produtos...</p>
+        </div>
+      ) : (
+        <>
+          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <ProdutosFiltro 
+              filtro={filtro}
+              categoriaFiltrada={categoriaFiltrada}
+              onFiltroChange={setFiltro}
+              onCategoriaChange={setCategoriaFiltrada}
+            />
+            
+            <AddProdutoDialog 
+              onAddProduto={adicionarProduto}
+              restaurantId={restaurantId}
+            />
           </div>
-        </CardFooter>
-      </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista de Produtos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProdutosList
+                produtosFiltrados={produtosFiltrados}
+                restaurantId={restaurantId}
+                onEditProduto={atualizarProduto}
+                onDeleteProduto={removerProduto}
+              />
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {produtosFiltrados.length} de {produtos.length} produtos
+              </div>
+            </CardFooter>
+          </Card>
+        </>
+      )}
     </DashboardLayout>
   );
 };
