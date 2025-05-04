@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Product } from "@/types";
-import { Pedido } from "../types";
+import { Pedido, ItemPedido } from "../types";
 import { toast } from "sonner";
 import { 
   salvarPedido, 
@@ -11,7 +11,7 @@ import {
 
 export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
-  const [itensPedido, setItensPedido] = useState<{produto: Product; quantidade: number; observacao?: string}[]>([]);
+  const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
   const [mesaSelecionada, setMesaSelecionada] = useState("1");
   const [categoriaAtiva, setCategoriaAtiva] = useState("");
   const [observacaoAtual, setObservacaoAtual] = useState("");
@@ -34,7 +34,7 @@ export const usePDVHook = (restaurantId: string) => {
     
     const result = await listarPedidos(restaurantId);
     if (result.success) {
-      setPedidosHistorico(result.pedidos);
+      setPedidosHistorico(result.pedidos || []);
     } else {
       toast.error("Erro ao carregar o histórico de pedidos");
     }

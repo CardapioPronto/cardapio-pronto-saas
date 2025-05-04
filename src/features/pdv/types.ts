@@ -1,13 +1,6 @@
 
 import { Product } from "@/types";
 
-export interface Produto {
-  id: number;
-  nome: string;
-  preco: number;
-  categoria: string;
-}
-
 export interface ItemPedido {
   produto: Product;
   quantidade: number;

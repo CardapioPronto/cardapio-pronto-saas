@@ -23,6 +23,7 @@ export const AddCategoriaDialog = ({ onAddCategoria }: AddCategoriaDialogProps) 
     if (success) {
       setOpen(false);
     }
+    return success; // Return the success status to match the expected return type
   };
 
   return (
