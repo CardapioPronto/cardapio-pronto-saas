@@ -20,6 +20,7 @@ interface ProdutoFormProps {
   saveButtonText: string;
   restaurantId: string;
   categories: Category[];
+  loadingCategories: boolean;
 }
 
 export const ProdutoForm = ({

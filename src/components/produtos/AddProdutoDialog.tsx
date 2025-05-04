@@ -12,8 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ProdutoForm } from "./ProdutoForm";
-import { supabase } from "@/lib/supabase";
-
+import { useCategorias } from "@/hooks/useCategorias";
 
 interface AddProdutoDialogProps {
   onAddProduto: (produto: Partial<Product>) => void;
@@ -60,26 +59,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
     setIsOpen(false);
   };
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setLoadingCategories(true);
-      supabase
-        .from('categories')
-        .select('id, name, restaurant_id')
-        .eq('restaurant_id', restaurantId)
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Erro ao carregar categorias:', error);
-          } else {
-            setCategories((data || []).filter((category): category is Category => category.restaurant_id !== null));
-          }
-          setLoadingCategories(false);
-        });
-    }
-  }, [isOpen, restaurantId]);
+  const { categories, loading } = useCategorias(restaurantId, isOpen);
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -106,6 +86,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
           saveButtonText="Adicionar"
           restaurantId={restaurantId}
           categories={categories}
+          loadingCategories={loading}
         />
       </DialogContent>
     </Dialog>
