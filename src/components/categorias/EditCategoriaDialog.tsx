@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { CategoriaForm } from "./CategoriaForm";
 import { Category } from "@/types";
+import { DialogTrigger } from "@radix-ui/react-dialog";
 
 interface EditCategoriaDialogProps {
   categoria: Category;
@@ -22,11 +23,12 @@ export const EditCategoriaDialog = ({
 }: EditCategoriaDialogProps) => {
   const [open, setOpen] = useState(false);
 
-  const handleEditCategoria = async (name: string) => {
+  const handleEditCategoria = async (name: string): Promise<boolean> => {
     const success = await onEditCategoria(categoria.id, name);
     if (success) {
       setOpen(false);
     }
+    return success;
   };
 
   return (
