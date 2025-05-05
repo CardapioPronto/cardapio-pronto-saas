@@ -5,6 +5,7 @@ import { ProdutoCard } from "./ProdutoCard";
 import { ComandaPedido } from "./ComandaPedido";
 import { Product } from "@/types";
 import { useProdutos } from "@/hooks/useProdutos";
+import { ItemPedido } from "../types";
 
 interface NovoPedidoProps {
   restaurantId: string;
@@ -15,7 +16,7 @@ interface NovoPedidoProps {
   setCategoriaAtiva: (categoria: string) => void;
   busca: string;
   setBusca: (busca: string) => void;
-  itensPedido: {produto: Product; quantidade: number; observacao?: string}[];
+  itensPedido: ItemPedido[];
   totalPedido: number;
   alterarQuantidade: (index: number, delta: number) => void;
   removerItem: (index: number) => void;

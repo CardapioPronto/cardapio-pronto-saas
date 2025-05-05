@@ -15,7 +15,7 @@ export interface ProdutoSimplificado {
 export interface ItemPedido {
   produto: Product | ProdutoSimplificado; // Allow both full Product and simplified product format
   quantidade: number;
-  observacao?: string;
+  observacao?: string | null;  // Allow null values from database responses
 }
 
 export interface Pedido {

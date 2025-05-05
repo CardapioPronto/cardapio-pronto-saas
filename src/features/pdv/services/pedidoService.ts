@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ItemPedido, ProdutoSimplificado } from "../types";
+import { ItemPedido, ProdutoSimplificado, Pedido } from "../types";
 import { toast } from "sonner";
 
 export async function salvarPedido(
@@ -103,7 +103,7 @@ export async function listarPedidos(restaurantId: string) {
       timestamp: new Date(pedido.created_at),
       total: pedido.total,
       source: pedido.source
-    }));
+    })) as Pedido[];
 
     return { success: true, pedidos: pedidosFormatados };
   } catch (error) {

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ItemPedidoLinha } from "./ItemPedidoLinha";
-import { Product } from "@/types";
+import { ItemPedido } from "../types";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
   mesaSelecionada: string;
-  itensPedido: { produto: Product; quantidade: number; observacao?: string }[];
+  itensPedido: ItemPedido[];
   totalPedido: number;
   alterarQuantidade: (index: number, delta: number) => void;
   removerItem: (index: number) => void;

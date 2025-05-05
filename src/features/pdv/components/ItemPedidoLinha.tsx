@@ -1,14 +1,9 @@
-
-import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash } from "lucide-react";
+import { ItemPedido } from "../types";
 
 interface ItemPedidoLinhaProps {
-  item: {
-    produto: Product;
-    quantidade: number;
-    observacao?: string;
-  };
+  item: ItemPedido;
   index: number;
   alterarQuantidade: (index: number, delta: number) => void;
   removerItem: (index: number) => void;
