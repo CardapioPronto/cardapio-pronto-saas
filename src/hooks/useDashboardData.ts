@@ -142,11 +142,31 @@ export const useDashboardData = (restaurantId: string | null) => {
 
     // Função para buscar os produtos mais populares
     const fetchPopularProducts = async (restId: string) => {
-      // Primeiro, buscar os itens dos pedidos
+      // Corrigindo o problema de tipo aqui - buscando primeiro as orders do restaurante
+      const { data: restaurantOrders, error: ordersError } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("restaurant_id", restId);
+      
+      if (ordersError) {
+        console.error("Erro ao buscar pedidos do restaurante:", ordersError);
+        return;
+      }
+      
+      // Se não houver pedidos, não há produtos para buscar
+      if (!restaurantOrders || restaurantOrders.length === 0) {
+        setPopularProducts([]);
+        return;
+      }
+      
+      // Extraímos os IDs dos pedidos para usar no filtro
+      const orderIds = restaurantOrders.map(order => order.id);
+      
+      // Agora buscamos os itens dos pedidos usando os IDs obtidos
       const { data: orderItems, error: itemsError } = await supabase
         .from("order_items")
         .select("product_id, product_name, quantity")
-        .eq("order_id", supabase.from("orders").select("id").eq("restaurant_id", restId));
+        .in("order_id", orderIds);
 
       if (itemsError) {
         console.error("Erro ao buscar itens de pedidos:", itemsError);
