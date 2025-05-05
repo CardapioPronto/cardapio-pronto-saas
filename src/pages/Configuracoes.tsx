@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,64 +8,40 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
+import { Loader2 } from "lucide-react";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { Link } from "react-router-dom";
 
 const Configuracoes = () => {
-  // Estados para formulários
-  const [dadosEstabelecimento, setDadosEstabelecimento] = useState({
-    nome: "Restaurante Exemplo",
-    endereco: "Av. Principal, 123",
-    telefone: "(11) 98765-4321",
-    email: "contato@exemplo.com",
-    horarioFuncionamento: "Segunda a Domingo: 11h às 23h"
-  });
-  
-  const [dadosUsuario, setDadosUsuario] = useState({
-    nome: "Usuário Admin",
-    email: "admin@exemplo.com",
-    senha: "••••••••",
-    novaSenha: "",
-    confirmarSenha: ""
-  });
-  
-  const [configuracoes, setConfiguracoes] = useState({
-    notificacaoNovoPedido: true,
-    notificacaoEmail: true,
-    modoEscuro: false,
-    idioma: "pt-BR",
-    impressaoAutomatica: false
-  });
-  
-  // Handlers de formulários
+  const {
+    dadosEstabelecimento,
+    setDadosEstabelecimento,
+    dadosUsuario,
+    setDadosUsuario,
+    configuracoesSistema,
+    setConfiguracoesSistema,
+    loading,
+    salvarDadosEstabelecimento,
+    salvarDadosUsuario,
+    salvarConfiguracoesDoSistema,
+    fazerUploadLogo
+  } = useConfiguracoes();
+
+  const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      await fazerUploadLogo(file);
+    }
+  };
+
   const atualizarDadosEstabelecimento = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Dados do estabelecimento atualizados com sucesso!");
+    salvarDadosEstabelecimento();
   };
   
   const atualizarDadosUsuario = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (dadosUsuario.novaSenha && dadosUsuario.novaSenha !== dadosUsuario.confirmarSenha) {
-      toast.error("As senhas não coincidem");
-      return;
-    }
-    
-    toast.success("Dados do usuário atualizados com sucesso!");
-    setDadosUsuario({
-      ...dadosUsuario,
-      senha: dadosUsuario.novaSenha ? "••••••••" : dadosUsuario.senha,
-      novaSenha: "",
-      confirmarSenha: ""
-    });
-  };
-  
-  const salvarConfiguracoes = () => {
-    toast.success("Configurações salvas com sucesso!");
-  };
-  
-  const integrarPagarMe = () => {
-    toast("Integração com Pagar.me", {
-      description: "Funcionalidade em desenvolvimento. Em breve disponível!"
-    });
+    salvarDadosUsuario();
   };
 
   return (
@@ -102,7 +78,7 @@ const Configuracoes = () => {
                   <Label htmlFor="endereco">Endereço</Label>
                   <Input 
                     id="endereco" 
-                    value={dadosEstabelecimento.endereco}
+                    value={dadosEstabelecimento.endereco || ''}
                     onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, endereco: e.target.value})}
                   />
                 </div>
@@ -112,7 +88,7 @@ const Configuracoes = () => {
                     <Label htmlFor="telefone">Telefone</Label>
                     <Input 
                       id="telefone" 
-                      value={dadosEstabelecimento.telefone}
+                      value={dadosEstabelecimento.telefone || ''}
                       onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, telefone: e.target.value})}
                     />
                   </div>
@@ -122,7 +98,7 @@ const Configuracoes = () => {
                     <Input 
                       id="email" 
                       type="email"
-                      value={dadosEstabelecimento.email}
+                      value={dadosEstabelecimento.email || ''}
                       onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, email: e.target.value})}
                     />
                   </div>
@@ -132,21 +108,36 @@ const Configuracoes = () => {
                   <Label htmlFor="horario">Horário de Funcionamento</Label>
                   <Input 
                     id="horario" 
-                    value={dadosEstabelecimento.horarioFuncionamento}
+                    value={dadosEstabelecimento.horarioFuncionamento || ''}
                     onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, horarioFuncionamento: e.target.value})}
+                    placeholder="Segunda a Domingo: 11h às 23h"
                   />
                 </div>
                 
                 <div className="grid gap-2">
                   <Label htmlFor="logo">Logo do Estabelecimento</Label>
-                  <Input id="logo" type="file" />
+                  <Input id="logo" type="file" accept="image/*" onChange={handleLogoChange} />
                   <p className="text-sm text-muted-foreground">
                     Tamanho recomendado: 200x200px. Formatos: JPG, PNG
                   </p>
+                  
+                  {dadosEstabelecimento.logo_url && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium mb-1">Logo atual:</p>
+                      <img 
+                        src={dadosEstabelecimento.logo_url} 
+                        alt="Logo do estabelecimento" 
+                        className="w-20 h-20 object-contain border rounded" 
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit">Salvar alterações</Button>
+                <Button type="submit" disabled={loading.estabelecimento}>
+                  {loading.estabelecimento && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar alterações
+                </Button>
               </CardFooter>
             </form>
           </Card>
@@ -213,17 +204,12 @@ const Configuracoes = () => {
                     />
                   </div>
                 </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="avatar">Foto de perfil</Label>
-                  <Input id="avatar" type="file" />
-                  <p className="text-sm text-muted-foreground">
-                    Tamanho recomendado: 100x100px. Formatos: JPG, PNG
-                  </p>
-                </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit">Atualizar dados</Button>
+                <Button type="submit" disabled={loading.usuario}>
+                  {loading.usuario && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Atualizar dados
+                </Button>
               </CardFooter>
             </form>
           </Card>
@@ -248,8 +234,8 @@ const Configuracoes = () => {
                 </div>
                 <Switch 
                   id="notificacao-pedido" 
-                  checked={configuracoes.notificacaoNovoPedido}
-                  onCheckedChange={(value) => setConfiguracoes({...configuracoes, notificacaoNovoPedido: value})}
+                  checked={configuracoesSistema.notification_new_order}
+                  onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, notification_new_order: value})}
                 />
               </div>
               
@@ -262,8 +248,8 @@ const Configuracoes = () => {
                 </div>
                 <Switch 
                   id="notificacao-email" 
-                  checked={configuracoes.notificacaoEmail}
-                  onCheckedChange={(value) => setConfiguracoes({...configuracoes, notificacaoEmail: value})}
+                  checked={configuracoesSistema.notification_email}
+                  onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, notification_email: value})}
                 />
               </div>
               
@@ -276,8 +262,8 @@ const Configuracoes = () => {
                 </div>
                 <Switch 
                   id="modo-escuro" 
-                  checked={configuracoes.modoEscuro}
-                  onCheckedChange={(value) => setConfiguracoes({...configuracoes, modoEscuro: value})}
+                  checked={configuracoesSistema.dark_mode}
+                  onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, dark_mode: value})}
                 />
               </div>
               
@@ -290,8 +276,8 @@ const Configuracoes = () => {
                 </div>
                 <Switch 
                   id="impressao-automatica" 
-                  checked={configuracoes.impressaoAutomatica}
-                  onCheckedChange={(value) => setConfiguracoes({...configuracoes, impressaoAutomatica: value})}
+                  checked={configuracoesSistema.auto_print}
+                  onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, auto_print: value})}
                 />
               </div>
               
@@ -300,8 +286,8 @@ const Configuracoes = () => {
                 <select 
                   id="idioma"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  value={configuracoes.idioma}
-                  onChange={(e) => setConfiguracoes({...configuracoes, idioma: e.target.value})}
+                  value={configuracoesSistema.language}
+                  onChange={(e) => setConfiguracoesSistema({...configuracoesSistema, language: e.target.value})}
                 >
                   <option value="pt-BR">Português (Brasil)</option>
                   <option value="en-US">English (US)</option>
@@ -310,7 +296,13 @@ const Configuracoes = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={salvarConfiguracoes}>Salvar configurações</Button>
+              <Button 
+                onClick={salvarConfiguracoesDoSistema} 
+                disabled={loading.configuracoes}
+              >
+                {loading.configuracoes && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar configurações
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -338,7 +330,7 @@ const Configuracoes = () => {
                       </p>
                     </div>
                   </div>
-                  <Button onClick={integrarPagarMe}>Configurar</Button>
+                  <Button as={Link} to="/pagarme-config">Configurar</Button>
                 </div>
               </div>
               
@@ -355,7 +347,7 @@ const Configuracoes = () => {
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline">Em breve</Button>
+                  <Button variant="outline" as={Link} to="/ifood-integracao">Configurar</Button>
                 </div>
               </div>
               

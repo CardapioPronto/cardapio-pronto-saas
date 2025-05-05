@@ -446,9 +446,11 @@ export type Database = {
         Row: {
           active: boolean
           address: string | null
+          business_hours: string | null
           category: string | null
           cnpj: string | null
           created_at: string
+          email: string | null
           id: string
           logo_url: string | null
           name: string
@@ -460,9 +462,11 @@ export type Database = {
         Insert: {
           active?: boolean
           address?: string | null
+          business_hours?: string | null
           category?: string | null
           cnpj?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           logo_url?: string | null
           name: string
@@ -474,9 +478,11 @@ export type Database = {
         Update: {
           active?: boolean
           address?: string | null
+          business_hours?: string | null
           category?: string | null
           cnpj?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -548,6 +554,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      system_configurations: {
+        Row: {
+          auto_print: boolean | null
+          created_at: string
+          dark_mode: boolean | null
+          id: string
+          language: string | null
+          notification_email: boolean | null
+          notification_new_order: boolean | null
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_print?: boolean | null
+          created_at?: string
+          dark_mode?: boolean | null
+          id?: string
+          language?: string | null
+          notification_email?: boolean | null
+          notification_new_order?: boolean | null
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_print?: boolean | null
+          created_at?: string
+          dark_mode?: boolean | null
+          id?: string
+          language?: string | null
+          notification_email?: boolean | null
+          notification_new_order?: boolean | null
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_configurations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
