@@ -1,8 +1,19 @@
 
 import { Product } from "@/types";
 
+// Create a simplified product type for database responses
+export interface ProdutoSimplificado {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  available?: boolean;
+  category?: any;
+  restaurant_id?: string;
+}
+
 export interface ItemPedido {
-  produto: Product;
+  produto: Product | ProdutoSimplificado; // Allow both full Product and simplified product format
   quantidade: number;
   observacao?: string;
 }

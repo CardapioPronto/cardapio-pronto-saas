@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ItemPedido } from "../types";
+import { ItemPedido, ProdutoSimplificado } from "../types";
 import { toast } from "sonner";
 
 export async function salvarPedido(
@@ -84,18 +84,25 @@ export async function listarPedidos(restaurantId: string) {
     const pedidosFormatados = data.map(pedido => ({
       id: pedido.id,
       mesa: pedido.table_number ? `Mesa ${pedido.table_number}` : 'Balcão',
+      cliente: pedido.customer_name || undefined,
+      clientName: pedido.customer_name || undefined,
       itensPedido: pedido.order_items.map(item => ({
         produto: {
           id: item.product_id,
           name: item.product_name,
-          price: item.price
-        },
+          price: item.price,
+          // Add missing properties with default values
+          description: "",
+          available: true,
+          restaurant_id: restaurantId
+        } as ProdutoSimplificado,
         quantidade: item.quantity,
         observacao: item.observations
       })),
       status: pedido.status,
       timestamp: new Date(pedido.created_at),
-      total: pedido.total
+      total: pedido.total,
+      source: pedido.source
     }));
 
     return { success: true, pedidos: pedidosFormatados };
