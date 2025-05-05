@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/types";
 import { Pedido, ItemPedido } from "../types";
 import { toast } from "sonner";
@@ -21,15 +20,10 @@ export const usePDVHook = (restaurantId: string) => {
   const [pedidosHistorico, setPedidosHistorico] = useState<Pedido[]>([]);
   const [visualizacaoAtiva, setVisualizacaoAtiva] = useState<"novo" | "historico">("novo");
   const [salvandoPedido, setSalvandoPedido] = useState(false);
+  const [nomeCliente, setNomeCliente] = useState("");
 
   // Carregar histórico de pedidos
-  useEffect(() => {
-    if (restaurantId && visualizacaoAtiva === "historico") {
-      carregarHistoricoPedidos();
-    }
-  }, [restaurantId, visualizacaoAtiva]);
-
-  const carregarHistoricoPedidos = async () => {
+  const carregarHistoricoPedidos = useCallback(async () => {
     if (!restaurantId) return;
     
     const result = await listarPedidos(restaurantId);
@@ -40,7 +34,13 @@ export const usePDVHook = (restaurantId: string) => {
     } else {
       toast.error("Erro ao carregar o histórico de pedidos");
     }
-  };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (restaurantId && visualizacaoAtiva === "historico") {
+      carregarHistoricoPedidos();
+    }
+  }, [restaurantId, visualizacaoAtiva, carregarHistoricoPedidos]);
 
   // Ação ao selecionar um produto
   const adicionarProduto = (produto: Product) => {
@@ -127,11 +127,13 @@ export const usePDVHook = (restaurantId: string) => {
         restaurantId,
         mesa,
         itensPedido,
-        totalPedido
+        totalPedido,
+        nomeCliente.trim() || undefined // Passa undefined se estiver vazio para usar o valor padrão
       );
       
       if (result.success) {
         setItensPedido([]);
+        setNomeCliente("");
         setVisualizacaoAtiva("historico");
         await carregarHistoricoPedidos();
       }
@@ -183,6 +185,8 @@ export const usePDVHook = (restaurantId: string) => {
     totalPedido,
     finalizarPedido,
     handleAlterarStatusPedido,
-    carregarHistoricoPedidos
+    carregarHistoricoPedidos,
+    nomeCliente,
+    setNomeCliente
   };
 };

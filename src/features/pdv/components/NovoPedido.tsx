@@ -22,6 +22,8 @@ interface NovoPedidoProps {
   finalizarPedido: () => void;
   salvandoPedido: boolean;
   onSelecionarProduto: (produto: Product) => void;
+  nomeCliente: string;
+  setNomeCliente: (nome: string) => void;
 }
 
 export const NovoPedido = ({
@@ -39,7 +41,9 @@ export const NovoPedido = ({
   removerItem,
   finalizarPedido,
   salvandoPedido,
-  onSelecionarProduto
+  onSelecionarProduto,
+  nomeCliente,
+  setNomeCliente
 }: NovoPedidoProps) => {
   // Obter produtos usando o hook existente
   const { produtos, loading } = useProdutos(restaurantId);
@@ -49,7 +53,7 @@ export const NovoPedido = ({
     const matchesBusca = busca === "" || 
                         produto.name.toLowerCase().includes(busca.toLowerCase()) ||
                         produto.description.toLowerCase().includes(busca.toLowerCase());
-    const matchesCategoria = categoriaAtiva === "" || produto.category?.id === categoriaAtiva;
+    const matchesCategoria = categoriaAtiva === "" || categoriaAtiva === "all" || produto.category?.id === categoriaAtiva;
     
     return matchesBusca && matchesCategoria;
   });
@@ -105,6 +109,8 @@ export const NovoPedido = ({
         removerItem={removerItem}
         finalizarPedido={finalizarPedido}
         salvandoPedido={salvandoPedido}
+        nomeCliente={nomeCliente}
+        setNomeCliente={setNomeCliente}
       />
     </div>
   );

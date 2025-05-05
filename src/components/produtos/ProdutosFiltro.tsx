@@ -47,7 +47,7 @@ export const ProdutosFiltro = ({
           <SelectValue placeholder="Categoria" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todas</SelectItem>
+          <SelectItem value="all">Todas as categorias</SelectItem>
           {categorias &&
             categorias.map((categoria) => (
               <SelectItem key={categoria.id} value={categoria.id}>

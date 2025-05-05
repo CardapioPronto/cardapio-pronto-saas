@@ -1,23 +1,23 @@
 
-import { Product } from "@/types";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ItemPedidoLinha } from "./ItemPedidoLinha";
+import { Product } from "@/types";
 import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
   mesaSelecionada: string;
-  itensPedido: Array<{
-    produto: Product;
-    quantidade: number;
-    observacao?: string;
-  }>;
+  itensPedido: { produto: Product; quantidade: number; observacao?: string }[];
   totalPedido: number;
   alterarQuantidade: (index: number, delta: number) => void;
   removerItem: (index: number) => void;
   finalizarPedido: () => void;
-  salvandoPedido?: boolean;
+  salvandoPedido: boolean;
+  nomeCliente?: string;
+  setNomeCliente?: (nome: string) => void;
 }
 
 export const ComandaPedido = ({
@@ -28,52 +28,87 @@ export const ComandaPedido = ({
   alterarQuantidade,
   removerItem,
   finalizarPedido,
-  salvandoPedido = false,
+  salvandoPedido,
+  nomeCliente = "",
+  setNomeCliente,
 }: ComandaPedidoProps) => {
-  const titulo = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : "Balcão";
+  const tituloComanda =
+    tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : "Balcão";
 
   return (
-    <Card className="h-fit sticky top-4">
-      <CardHeader>
-        <CardTitle className="text-lg">{titulo} - Comanda</CardTitle>
-      </CardHeader>
-      <CardContent className="max-h-[50vh] overflow-y-auto space-y-2">
-        {itensPedido.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            Nenhum item adicionado ao pedido
-          </div>
-        ) : (
-          itensPedido.map((item, index) => (
-            <ItemPedidoLinha
-              key={`${item.produto.id}-${index}`}
-              item={item}
-              index={index}
-              alterarQuantidade={alterarQuantidade}
-              removerItem={removerItem}
-            />
-          ))
-        )}
-      </CardContent>
-      <CardFooter className="flex flex-col gap-3 border-t pt-4">
-        <div className="flex justify-between w-full text-lg font-bold">
-          <span>Total</span>
-          <span>R$ {totalPedido.toFixed(2)}</span>
-        </div>
-        <Button
-          onClick={finalizarPedido}
-          disabled={itensPedido.length === 0 || salvandoPedido}
-          className="w-full"
-        >
-          {salvandoPedido ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processando...
-            </>
+    <div className="sticky top-4">
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            <span>Comanda: {tituloComanda}</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              {itensPedido.length} {itensPedido.length === 1 ? "item" : "itens"}
+            </span>
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="border-y py-4 space-y-4">
+          {itensPedido.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <p>Nenhum item adicionado</p>
+              <p className="text-sm">
+                Clique nos produtos para adicionar à comanda
+              </p>
+            </div>
           ) : (
-            "Finalizar Pedido"
+            <div className="space-y-2">
+              {itensPedido.map((item, index) => (
+                <ItemPedidoLinha
+                  key={`${item.produto.id}-${index}`}
+                  item={item}
+                  index={index}
+                  alterarQuantidade={alterarQuantidade}
+                  removerItem={removerItem}
+                />
+              ))}
+            </div>
           )}
-        </Button>
-      </CardFooter>
-    </Card>
+          
+          {/* Campo opcional para nome do cliente */}
+          {setNomeCliente && (
+            <div className="pt-4">
+              <Label htmlFor="nome-cliente" className="text-sm">
+                Nome do cliente (opcional)
+              </Label>
+              <Input
+                id="nome-cliente"
+                placeholder="Informe o nome do cliente"
+                value={nomeCliente}
+                onChange={(e) => setNomeCliente(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex-col pt-4">
+          <div className="flex justify-between w-full mb-4 font-bold text-lg">
+            <span>Total</span>
+            <span>R$ {totalPedido.toFixed(2)}</span>
+          </div>
+
+          <Button
+            onClick={finalizarPedido}
+            className="w-full"
+            size="lg"
+            disabled={itensPedido.length === 0 || salvandoPedido}
+          >
+            {salvandoPedido ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Finalizando...
+              </>
+            ) : (
+              "Finalizar Pedido"
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };

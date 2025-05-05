@@ -7,17 +7,21 @@ export async function salvarPedido(
   restaurantId: string,
   mesaOuBalcao: string,
   itensPedido: ItemPedido[],
-  totalPedido: number
+  totalPedido: number,
+  nomeCliente?: string
 ) {
   try {
+    // Determinar se é mesa ou balcão
+    const isMesa = mesaOuBalcao.startsWith('Mesa');
+    
     // 1. Inserir o pedido principal
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         restaurant_id: restaurantId,
-        customer_name: mesaOuBalcao.startsWith('Mesa') ? 'Cliente local' : 'Cliente balcão',
-        order_type: mesaOuBalcao.startsWith('Mesa') ? 'mesa' : 'balcao',
-        table_number: mesaOuBalcao.startsWith('Mesa') ? mesaOuBalcao.replace('Mesa ', '') : null,
+        customer_name: nomeCliente || (isMesa ? 'Cliente local' : 'Cliente balcão'),
+        order_type: isMesa ? 'mesa' : 'balcao',
+        table_number: isMesa ? mesaOuBalcao.replace('Mesa ', '') : null,
         status: 'pendente',
         total: totalPedido,
         source: 'app'

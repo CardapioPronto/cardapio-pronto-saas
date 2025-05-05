@@ -39,7 +39,9 @@ const PDV = () => {
     totalPedido,
     finalizarPedido,
     handleAlterarStatusPedido,
-    carregarHistoricoPedidos
+    carregarHistoricoPedidos,
+    nomeCliente,
+    setNomeCliente
   } = usePDVHook(restaurantId);
 
   return (
@@ -69,6 +71,8 @@ const PDV = () => {
           finalizarPedido={finalizarPedido}
           salvandoPedido={salvandoPedido}
           onSelecionarProduto={adicionarProduto}
+          nomeCliente={nomeCliente}
+          setNomeCliente={setNomeCliente}
         />
       ) : (
         <HistoricoPedidos 

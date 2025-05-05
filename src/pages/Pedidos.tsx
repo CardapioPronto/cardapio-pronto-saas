@@ -5,130 +5,105 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, CheckCircle, Clock, Package, XCircle } from "lucide-react";
-import { useState } from "react";
+import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
 import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
-
-// Tipo para status do pedido
-type StatusPedido = "pendente" | "concluido" | "cancelado" | "preparo";
-
-// Tipo para pedidos
-interface Pedido {
-  id: number;
-  mesa: number;
-  cliente: string | null;
-  valorTotal: number;
-  data: Date;
-  status: StatusPedido;
-  source?: 'app' | 'ifood' | 'whatsapp';
-  itens: {
-    nome: string;
-    quantidade: number;
-    precoUnitario: number;
-  }[];
-}
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
+import { Pedido } from "@/features/pdv/types";
+import { toast } from "sonner";
 
 const Pedidos = () => {
-  // Dados de exemplo para pedidos
-  const [pedidos, setPedidos] = useState<Pedido[]>([
-    {
-      id: 10001,
-      mesa: 1,
-      cliente: null,
-      valorTotal: 45.80,
-      data: new Date(2023, 3, 25, 19, 30),
-      status: "pendente",
-      source: 'app',
-      itens: [
-        { nome: "X-Tudo", quantidade: 1, precoUnitario: 24.90 },
-        { nome: "Batata Frita", quantidade: 1, precoUnitario: 12.90 },
-        { nome: "Refrigerante Lata", quantidade: 2, precoUnitario: 4.00 }
-      ]
-    },
-    {
-      id: 10002,
-      mesa: 3,
-      cliente: "João Silva",
-      valorTotal: 63.70,
-      data: new Date(2023, 3, 25, 19, 45),
-      status: "preparo",
-      source: 'app',
-      itens: [
-        { nome: "X-Salada", quantidade: 2, precoUnitario: 21.90 },
-        { nome: "Anéis de Cebola", quantidade: 1, precoUnitario: 15.90 },
-        { nome: "Água Mineral", quantidade: 1, precoUnitario: 3.50 }
-      ]
-    },
-    {
-      id: 10003,
-      mesa: 0,
-      cliente: "Maria Oliveira",
-      valorTotal: 36.80,
-      data: new Date(2023, 3, 25, 18, 15),
-      status: "concluido",
-      source: 'ifood',
-      itens: [
-        { nome: "X-Burger", quantidade: 1, precoUnitario: 18.90 },
-        { nome: "X-Burger", quantidade: 1, precoUnitario: 18.90 }
-      ]
-    },
-    {
-      id: 10004,
-      mesa: 2,
-      cliente: null,
-      valorTotal: 37.50,
-      data: new Date(2023, 3, 25, 17, 30),
-      status: "cancelado",
-      source: 'whatsapp',
-      itens: [
-        { nome: "X-Burger", quantidade: 1, precoUnitario: 18.90 },
-        { nome: "Batata Frita", quantidade: 1, precoUnitario: 12.90 },
-        { nome: "Refrigerante Lata", quantidade: 1, precoUnitario: 5.00 }
-      ]
-    }
-  ]);
+  const { user } = useCurrentUser();
+  const restaurantId = user?.restaurant_id || "";
   
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoDetalhes, setPedidoDetalhes] = useState<Pedido | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  
+  // Função para carregar pedidos do banco de dados
+  const carregarPedidos = async () => {
+    if (!restaurantId) return;
+    
+    setCarregando(true);
+    try {
+      const result = await listarPedidos(restaurantId);
+      if (result.success) {
+        setPedidos(result.pedidos || []);
+      } else {
+        toast.error("Erro ao carregar pedidos");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar pedidos:", error);
+      toast.error("Ocorreu um erro ao carregar os pedidos");
+    } finally {
+      setCarregando(false);
+    }
+  };
+  
+  // Carregar pedidos ao iniciar
+  useEffect(() => {
+    if (restaurantId) {
+      carregarPedidos();
+    }
+  }, [restaurantId]);
   
   // Função para alterar status do pedido
-  const alterarStatusPedido = (id: number, novoStatus: StatusPedido) => {
-    setPedidos(pedidos.map(pedido => 
-      pedido.id === id ? { ...pedido, status: novoStatus } : pedido
-    ));
-    
-    if (pedidoDetalhes && pedidoDetalhes.id === id) {
-      setPedidoDetalhes({...pedidoDetalhes, status: novoStatus});
+  const handleAlterarStatus = async (id: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => {
+    try {
+      const result = await alterarStatusPedido(String(id), novoStatus);
+      if (result.success) {
+        // Atualizar o estado local
+        setPedidos(pedidos.map(pedido => 
+          pedido.id === id ? { ...pedido, status: novoStatus } : pedido
+        ));
+        
+        if (pedidoDetalhes && pedidoDetalhes.id === id) {
+          setPedidoDetalhes({...pedidoDetalhes, status: novoStatus});
+        }
+        
+        toast.success(`Status atualizado para ${novoStatus}`);
+      }
+    } catch (error) {
+      console.error("Erro ao alterar status:", error);
+      toast.error("Erro ao atualizar status");
     }
   };
   
   // Função para obter a cor do badge de status
-  const getStatusColor = (status: StatusPedido) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "pendente": return "bg-orange/10 text-orange hover:bg-orange/20";
-      case "preparo": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
-      case "concluido": return "bg-green/10 text-green hover:bg-green/20";
+      case "preparo": 
+      case "em-andamento": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
+      case "finalizado": return "bg-green/10 text-green hover:bg-green/20";
       case "cancelado": return "bg-red-500/10 text-red-500 hover:bg-red-500/20";
+      default: return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
     }
   };
   
   // Função para obter o ícone do status
-  const getStatusIcon = (status: StatusPedido) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "pendente": return <Clock className="h-4 w-4 mr-1" />;
-      case "preparo": return <Package className="h-4 w-4 mr-1" />;
-      case "concluido": return <CheckCircle className="h-4 w-4 mr-1" />;
+      case "preparo":
+      case "em-andamento": return <Package className="h-4 w-4 mr-1" />;
+      case "finalizado": return <CheckCircle className="h-4 w-4 mr-1" />;
       case "cancelado": return <XCircle className="h-4 w-4 mr-1" />;
+      default: return <Clock className="h-4 w-4 mr-1" />;
     }
   };
   
   // Função para renderizar badge da fonte do pedido
-  const renderSourceBadge = (source?: 'app' | 'ifood' | 'whatsapp') => {
+  const renderSourceBadge = (source?: string) => {
     switch (source) {
       case 'ifood':
         return <IfoodOrderBadge className="ml-2" />;
       case 'whatsapp':
         return <Badge className="bg-green-500 text-white ml-2">WhatsApp</Badge>;
+      case 'app':
+        return <Badge className="bg-blue-500 text-white ml-2">App</Badge>;
       default:
         return null;
     }
@@ -140,15 +115,24 @@ const Pedidos = () => {
       <IfoodOrdersList />
       
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Histórico de Pedidos</CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={carregarPedidos}
+            disabled={carregando}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${carregando ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Mesa</TableHead>
+                <TableHead>Mesa/Balcão</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Valor</TableHead>
@@ -157,133 +141,143 @@ const Pedidos = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pedidos.map((pedido) => (
-                <TableRow key={pedido.id}>
-                  <TableCell className="font-medium">
-                    {pedido.id}
-                    {renderSourceBadge(pedido.source)}
-                  </TableCell>
-                  <TableCell>{pedido.mesa > 0 ? `Mesa ${pedido.mesa}` : 'Delivery'}</TableCell>
-                  <TableCell>{pedido.cliente || "Cliente local"}</TableCell>
-                  <TableCell>{pedido.data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
-                  <TableCell>R$ {pedido.valorTotal.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedido.status)}`}>
-                      {getStatusIcon(pedido.status)}
-                      <span className="capitalize">
-                        {pedido.status === "preparo" ? "Em preparo" : pedido.status}
-                      </span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setPedidoDetalhes(pedido)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" /> Ver
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center">
-                            Detalhes do Pedido #{pedidoDetalhes?.id}
-                            {pedidoDetalhes?.source === 'ifood' && <IfoodOrderBadge className="ml-2" />}
-                            {pedidoDetalhes?.source === 'whatsapp' && <Badge className="bg-green-500 text-white ml-2">WhatsApp</Badge>}
-                          </DialogTitle>
-                          <DialogDescription>
-                            {pedidoDetalhes?.mesa ? `Mesa ${pedidoDetalhes?.mesa}` : 'Delivery'} • {pedidoDetalhes?.data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-                          </DialogDescription>
-                        </DialogHeader>
-                        
-                        {pedidoDetalhes && (
-                          <div className="py-4">
-                            <div className="mb-4">
-                              <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedidoDetalhes.status)}`}>
-                                {getStatusIcon(pedidoDetalhes.status)}
-                                <span className="capitalize">
-                                  {pedidoDetalhes.status === "preparo" ? "Em preparo" : pedidoDetalhes.status}
-                                </span>
-                              </Badge>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="text-sm font-medium">Cliente</h4>
-                                <p className="text-sm text-gray-500">{pedidoDetalhes.cliente || "Cliente local"}</p>
-                              </div>
-                              
-                              <div>
-                                <h4 className="text-sm font-medium mb-2">Itens do Pedido</h4>
-                                <div className="border rounded-md divide-y">
-                                  {pedidoDetalhes.itens.map((item, index) => (
-                                    <div key={index} className="flex justify-between py-2 px-3">
-                                      <div className="flex-1">
-                                        <span className="font-medium">{item.quantidade}x</span> {item.nome}
-                                      </div>
-                                      <div className="text-right">
-                                        R$ {(item.precoUnitario * item.quantidade).toFixed(2)}
-                                      </div>
-                                    </div>
-                                  ))}
-                                  <div className="flex justify-between py-2 px-3 font-bold">
-                                    <div>Total</div>
-                                    <div>R$ {pedidoDetalhes.valorTotal.toFixed(2)}</div>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {pedidoDetalhes.status !== "concluido" && pedidoDetalhes.status !== "cancelado" && (
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2">Atualizar status</h4>
-                                  <div className="flex gap-2">
-                                    {pedidoDetalhes.status === "pendente" && (
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
-                                        onClick={() => alterarStatusPedido(pedidoDetalhes.id, "preparo")}
-                                      >
-                                        <Package className="h-4 w-4 mr-1" /> Em preparo
-                                      </Button>
-                                    )}
-                                    {pedidoDetalhes.status === "preparo" && (
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        className="border-green text-green hover:bg-green/10"
-                                        onClick={() => alterarStatusPedido(pedidoDetalhes.id, "concluido")}
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-1" /> Concluído
-                                      </Button>
-                                    )}
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      className="border-red-500 text-red-500 hover:bg-red-500/10"
-                                      onClick={() => alterarStatusPedido(pedidoDetalhes.id, "cancelado")}
-                                    >
-                                      <XCircle className="h-4 w-4 mr-1" /> Cancelar
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        
-                        <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setPedidoDetalhes(null)}>
-                            Fechar
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+              {pedidos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    {carregando ? "Carregando pedidos..." : "Nenhum pedido encontrado"}
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                pedidos.map((pedido) => (
+                  <TableRow key={pedido.id}>
+                    <TableCell className="font-medium">
+                      {typeof pedido.id === 'string' ? pedido.id.substring(0, 8) : pedido.id}
+                      {renderSourceBadge(pedido.source)}
+                    </TableCell>
+                    <TableCell>{pedido.mesa}</TableCell>
+                    <TableCell>{pedido.cliente || pedido.clientName || "Cliente local"}</TableCell>
+                    <TableCell>{new Date(pedido.timestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                    <TableCell>R$ {pedido.total.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedido.status)}`}>
+                        {getStatusIcon(pedido.status)}
+                        <span className="capitalize">
+                          {pedido.status === "preparo" || pedido.status === "em-andamento" ? "Em preparo" : pedido.status}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setPedidoDetalhes(pedido)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" /> Ver
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center">
+                              Detalhes do Pedido #{typeof pedidoDetalhes?.id === 'string' ? pedidoDetalhes?.id.substring(0, 8) : pedidoDetalhes?.id}
+                              {pedidoDetalhes?.source && renderSourceBadge(pedidoDetalhes.source)}
+                            </DialogTitle>
+                            <DialogDescription>
+                              {pedidoDetalhes?.mesa} • {pedidoDetalhes && new Date(pedidoDetalhes.timestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          {pedidoDetalhes && (
+                            <div className="py-4">
+                              <div className="mb-4">
+                                <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedidoDetalhes.status)}`}>
+                                  {getStatusIcon(pedidoDetalhes.status)}
+                                  <span className="capitalize">
+                                    {pedidoDetalhes.status === "preparo" || pedidoDetalhes.status === "em-andamento" ? "Em preparo" : pedidoDetalhes.status}
+                                  </span>
+                                </Badge>
+                              </div>
+                              
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="text-sm font-medium">Cliente</h4>
+                                  <p className="text-sm text-gray-500">{pedidoDetalhes.cliente || pedidoDetalhes.clientName || "Cliente local"}</p>
+                                </div>
+                                
+                                <div>
+                                  <h4 className="text-sm font-medium mb-2">Itens do Pedido</h4>
+                                  <div className="border rounded-md divide-y">
+                                    {pedidoDetalhes.itensPedido.map((item, index) => (
+                                      <div key={index} className="flex justify-between py-2 px-3">
+                                        <div className="flex-1">
+                                          <span className="font-medium">{item.quantidade}x</span> {item.produto.name}
+                                          {item.observacao && (
+                                            <p className="text-xs text-muted-foreground">Obs: {item.observacao}</p>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          R$ {(item.produto.price * item.quantidade).toFixed(2)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                    <div className="flex justify-between py-2 px-3 font-bold">
+                                      <div>Total</div>
+                                      <div>R$ {pedidoDetalhes.total.toFixed(2)}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {pedidoDetalhes.status !== "finalizado" && pedidoDetalhes.status !== "cancelado" && (
+                                  <div>
+                                    <h4 className="text-sm font-medium mb-2">Atualizar status</h4>
+                                    <div className="flex gap-2">
+                                      {(pedidoDetalhes.status === "pendente") && (
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                                          onClick={() => handleAlterarStatus(pedidoDetalhes.id, "preparo")}
+                                        >
+                                          <Package className="h-4 w-4 mr-1" /> Em preparo
+                                        </Button>
+                                      )}
+                                      {(pedidoDetalhes.status === "preparo" || pedidoDetalhes.status === "em-andamento") && (
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          className="border-green text-green hover:bg-green/10"
+                                          onClick={() => handleAlterarStatus(pedidoDetalhes.id, "finalizado")}
+                                        >
+                                          <CheckCircle className="h-4 w-4 mr-1" /> Concluído
+                                        </Button>
+                                      )}
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        className="border-red-500 text-red-500 hover:bg-red-500/10"
+                                        onClick={() => handleAlterarStatus(pedidoDetalhes.id, "cancelado")}
+                                      >
+                                        <XCircle className="h-4 w-4 mr-1" /> Cancelar
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setPedidoDetalhes(null)}>
+                              Fechar
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
