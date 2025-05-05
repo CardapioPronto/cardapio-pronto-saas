@@ -71,8 +71,8 @@ export function useConfiguracoes() {
         const dados = await obterDadosUsuario();
         setDadosUsuario(prev => ({
           ...prev,
-          nome: dados.nome,
-          email: dados.email
+          nome: dados.nome || "",
+          email: dados.email || ""
         }));
       } catch (error) {
         toast.error("Erro ao carregar dados do usuário");
@@ -90,7 +90,15 @@ export function useConfiguracoes() {
       setLoading(prev => ({ ...prev, configuracoes: true }));
       try {
         const config = await obterConfiguracoesSistema();
-        setConfiguracoesSistema(config);
+        // Convertendo valores possivelmente nulos para booleanos
+        setConfiguracoesSistema({
+          id: config.id,
+          notification_new_order: config.notification_new_order === null ? true : config.notification_new_order,
+          notification_email: config.notification_email === null ? true : config.notification_email,
+          dark_mode: config.dark_mode === null ? false : config.dark_mode,
+          language: config.language || "pt-BR",
+          auto_print: config.auto_print === null ? false : config.auto_print
+        });
       } catch (error) {
         toast.error("Erro ao carregar configurações do sistema");
       } finally {

@@ -330,7 +330,7 @@ const Configuracoes = () => {
                       </p>
                     </div>
                   </div>
-                  <Button as={Link} to="/pagarme-config">Configurar</Button>
+                  <Button onClick={() => window.location.href = "/pagarme-config"}>Configurar</Button>
                 </div>
               </div>
               
@@ -347,7 +347,7 @@ const Configuracoes = () => {
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline" as={Link} to="/ifood-integracao">Configurar</Button>
+                  <Button variant="outline" onClick={() => window.location.href = "/ifood-integracao"}>Configurar</Button>
                 </div>
               </div>
               
