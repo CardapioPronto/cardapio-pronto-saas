@@ -93,9 +93,7 @@ export function ProdutosList({
       {produtoToEdit && (
         <EditProdutoDialog
           produto={produtoToEdit}
-          open={!!produtoToEdit}
-          onOpenChange={() => setProdutoToEdit(null)}
-          onEditProduto={onEditProduto}
+          onSave={onEditProduto}
           restaurantId={restaurantId}
         />
       )}
@@ -103,9 +101,7 @@ export function ProdutosList({
       {produtoToDelete && (
         <DeleteProdutoDialog
           produto={produtoToDelete}
-          open={!!produtoToDelete}
-          onOpenChange={() => setProdutoToDelete(null)}
-          onDeleteProduto={onDeleteProduto}
+          onDelete={onDeleteProduto}
         />
       )}
     </>
