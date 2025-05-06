@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { User } from "@/types";
@@ -32,10 +33,15 @@ export function useCurrentUser() {
                 setError("Erro ao buscar dados do usuário.");
                 setUser(null);
             } else {
-                setUser(data ? { ...data, name: data.name || "" } : null);
+                // Ensure we have all required fields for the User type
+                // If name is null or undefined, provide an empty string as fallback
+                setUser({
+                    id: data.id,
+                    email: data.email,
+                    name: data.name || "", // Ensure name is always a string
+                    restaurant_id: data.restaurant_id
+                });
             }
-
-
 
             setLoading(false);
         };
