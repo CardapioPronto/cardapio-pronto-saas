@@ -627,6 +627,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          name: string | null
           id: string
           restaurant_id: string | null
           role: string
@@ -635,6 +636,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email: string
+          name?: string | null
           id: string
           restaurant_id?: string | null
           role?: string
@@ -643,6 +645,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+          name?: string | null
           id?: string
           restaurant_id?: string | null
           role?: string
