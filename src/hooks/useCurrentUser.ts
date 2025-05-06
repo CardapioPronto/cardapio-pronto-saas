@@ -24,7 +24,7 @@ export function useCurrentUser() {
 
             const { data, error: userError } = await supabase
                 .from("users")
-                .select("id, email, restaurant_id")
+                .select("id, email, name, restaurant_id")
                 .eq("id", authUser.id)
                 .single();
 
@@ -32,7 +32,7 @@ export function useCurrentUser() {
                 setError("Erro ao buscar dados do usuário.");
                 setUser(null);
             } else {
-                setUser(data);
+                setUser(data ? { ...data, name: data.name || "" } : null);
             }
 
 
