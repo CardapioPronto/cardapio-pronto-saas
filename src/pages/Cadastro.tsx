@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -39,7 +38,6 @@ export default function Cadastro() {
     try {
       // Realizar o cadastro no Supabase
       const { error: signUpError } = await signUp(email, password, {
-        name,
         phone,
       });
 
@@ -51,6 +49,21 @@ export default function Cadastro() {
 
       if (!user || !user.user) {
         throw new Error("Falha ao obter informações do usuário após cadastro");
+      }
+
+      // Insere o usuário na tabela public.users
+      const { error: insertUserError } = await supabase.from("users").insert([
+        {
+          id: user.user.id,
+          name,
+          email,
+        },
+      ]);
+
+      if (insertUserError) {
+        setError("Erro ao criar usuário no sistema.");
+        setLoading(false);
+        return;
       }
 
       // Cria o restaurante
