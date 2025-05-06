@@ -1,7 +1,13 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
-interface PopularProduct {
+interface Product {
   id: number;
   name: string;
   popularity: number;
@@ -9,34 +15,41 @@ interface PopularProduct {
 }
 
 interface PopularProductsProps {
-  products: PopularProduct[];
+  products: Product[];
 }
 
-export const PopularProducts = ({ products }: PopularProductsProps) => {
+export function PopularProducts({ products }: PopularProductsProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Produtos mais vendidos</CardTitle>
-        <CardDescription>Items mais populares do seu cardápio</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Produtos Populares</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {products.map((product) => (
-            <div key={product.id} className="flex justify-between items-center border-b pb-3">
-              <div className="w-full pr-4">
-                <p className="font-medium">{product.name}</p>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5">
-                  <div 
-                    className="bg-green h-1.5 rounded-full" 
-                    style={{ width: `${product.popularity}%` }}
-                  ></div>
+        {products && products.length > 0 ? (
+          <div className="space-y-4">
+            {products.map((product) => (
+              <div key={product.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium leading-none">
+                    {product.name}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {product.units} un.
+                    </p>
+                    <p className="text-xs font-medium">{product.popularity}%</p>
+                  </div>
                 </div>
+                <Progress value={product.popularity} className="h-1.5" />
               </div>
-              <span className="font-medium whitespace-nowrap">{product.units} un</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+            Nenhum produto vendido ainda.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
-};
+}

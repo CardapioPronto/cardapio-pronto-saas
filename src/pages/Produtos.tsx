@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
@@ -15,9 +16,10 @@ import { useProdutos } from "@/hooks/useProdutos";
 import { Button } from "@/components/ui/button";
 import { ChartBarStacked, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Produtos = () => {
-  const { user } = useCurrentUser();
+  const { user, loading: userLoading, error: userError } = useCurrentUser();
   const restaurantId = user?.restaurant_id ?? "";
   const {
     produtos,
@@ -44,60 +46,90 @@ const Produtos = () => {
     return matchesText && matchesCategoria;
   });
 
+  if (userLoading) {
+    return (
+      <DashboardLayout title="Gerenciar Produtos">
+        <div className="flex justify-center items-center h-64">
+          <p>Carregando dados do usuário...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (userError) {
+    return (
+      <DashboardLayout title="Gerenciar Produtos">
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{userError}</AlertDescription>
+        </Alert>
+      </DashboardLayout>
+    );
+  }
+
+  if (!restaurantId) {
+    return (
+      <DashboardLayout title="Gerenciar Produtos">
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>
+            Você não tem um restaurante associado à sua conta. Por favor, contate o suporte.
+          </AlertDescription>
+        </Alert>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Gerenciar Produtos">
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p>Carregando produtos...</p>
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <ProdutosFiltro
+          filtro={filtro}
+          categoriaFiltrada={categoriaFiltrada}
+          onFiltroChange={setFiltro}
+          onCategoriaChange={setCategoriaFiltrada}
+          restaurantId={restaurantId}
+        />
+
+        <div className="flex gap-2">
+          <AddProdutoDialog
+            onAddProduto={adicionarProduto}
+            restaurantId={restaurantId}
+          />
+
+          <Link
+            to="/categorias"
+            className="bg-green hover:bg-green-dark text-white flex items-center button px-4 py-2 rounded-md"
+          >
+            <ChartBarStacked className="h-4 w-4 mr-2" />
+            Gerenciar Categorias
+          </Link>
         </div>
-      ) : (
-        <>
-          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <ProdutosFiltro
-              filtro={filtro}
-              categoriaFiltrada={categoriaFiltrada}
-              onFiltroChange={setFiltro}
-              onCategoriaChange={setCategoriaFiltrada}
-              restaurantId={restaurantId}
-            />
+      </div>
 
-            <div className="flex gap-2">
-              <AddProdutoDialog
-                onAddProduto={adicionarProduto}
-                restaurantId={restaurantId}
-              />
-
-              <Link
-                to="/categorias"
-                className="bg-green hover:bg-green-dark text-white flex items-center button px-4 py-2 rounded-md"
-              >
-                <ChartBarStacked className="h-4 w-4 mr-2" />
-                Gerenciar Categorias
-              </Link>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Produtos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <p>Carregando produtos...</p>
             </div>
+          ) : (
+            <ProdutosList
+              produtosFiltrados={produtosFiltrados}
+              restaurantId={restaurantId}
+              onEditProduto={atualizarProduto}
+              onDeleteProduto={removerProduto}
+            />
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {produtosFiltrados.length} de {produtos.length}{" "}
+            produtos
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Produtos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProdutosList
-                produtosFiltrados={produtosFiltrados}
-                restaurantId={restaurantId}
-                onEditProduto={atualizarProduto}
-                onDeleteProduto={removerProduto}
-              />
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {produtosFiltrados.length} de {produtos.length}{" "}
-                produtos
-              </div>
-            </CardFooter>
-          </Card>
-        </>
-      )}
+        </CardFooter>
+      </Card>
     </DashboardLayout>
   );
 };
