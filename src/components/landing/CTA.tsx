@@ -32,7 +32,7 @@ const CTA = () => {
                   </Button>
                 </Link>
                 <Link to="/demonstracao">
-                  <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10 w-full sm:w-auto">
+                  <Button size="lg" className="border-white text-white hover:bg-white/10 w-full sm:w-auto">
                     Agendar demonstração
                   </Button>
                 </Link>
