@@ -6,23 +6,42 @@ import { RecentSales } from "@/components/dashboard/RecentSales";
 import { PopularProducts } from "@/components/dashboard/PopularProducts";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { supabase } from "@/lib/supabase";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 const Dashboard = () => {
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const getRestaurant = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setFetchError("Usuário não autenticado");
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from("users")
-        .select("restaurant_id")
-        .eq("id", user.id)
-        .single();
+        const { data, error } = await supabase
+          .from("users")
+          .select("restaurant_id")
+          .eq("id", user.id)
+          .single();
 
-      if (data?.restaurant_id) {
-        setRestaurantId(data.restaurant_id);
+        if (error) {
+          console.error("Erro ao buscar restaurante:", error);
+          setFetchError(null);
+          return;
+        }
+
+        if (data?.restaurant_id) {
+          setRestaurantId(data.restaurant_id);
+        } else {
+          setFetchError(null);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar restaurante:", error);
+        setFetchError(null);
       }
     };
 
@@ -33,6 +52,14 @@ const Dashboard = () => {
   
   return (
     <DashboardLayout title="Dashboard">
+      {fetchError && (
+        <Alert variant="destructive" className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Erro</AlertTitle>
+          <AlertDescription>{fetchError}</AlertDescription>
+        </Alert>
+      )}
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <p>Carregando dados...</p>

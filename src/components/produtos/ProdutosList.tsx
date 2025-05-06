@@ -1,8 +1,6 @@
 
-import { useState } from "react";
 import { Product } from "@/types";
-import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -11,34 +9,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EditProdutoDialog } from "./EditProdutoDialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
 import { DeleteProdutoDialog } from "./DeleteProdutoDialog";
+import { useState } from "react";
+import { EditProdutoDialog } from "./EditProdutoDialog";
 
 interface ProdutosListProps {
   produtosFiltrados: Product[];
   restaurantId: string;
-  onEditProduto: (produto: Product) => void;
-  onDeleteProduto: (id: string) => void;
+  onEditProduto: (produto: Product) => Promise<boolean>;
+  onDeleteProduto: (id: string) => Promise<boolean>;
 }
 
-export const ProdutosList = ({
+export function ProdutosList({
   produtosFiltrados,
   restaurantId,
   onEditProduto,
   onDeleteProduto,
-}: ProdutosListProps) => {
-  const [produtoEditando, setProdutoEditando] = useState<Product | null>(null);
+}: ProdutosListProps) {
+  const [produtoToEdit, setProdutoToEdit] = useState<Product | null>(null);
+  const [produtoToDelete, setProdutoToDelete] = useState<Product | null>(null);
 
-  const iniciarEdicao = (produto: Product) => {
-    setProdutoEditando({ ...produto });
-    onEditProduto({ ...produto });
-  };
-
-  const salvarEdicao = () => {
-    if (!produtoEditando) return;
-    onEditProduto(produtoEditando);
-    setProdutoEditando(null);
-  };
+  if (produtosFiltrados.length === 0) {
+    return (
+      <div className="bg-gray-50 rounded-md p-8 text-center">
+        <p className="text-gray-500 mb-2">Nenhum produto encontrado</p>
+        <p className="text-sm text-gray-400">
+          Adicione seu primeiro produto clicando no botão "Adicionar Produto" acima
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -46,66 +49,65 @@ export const ProdutosList = ({
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
-            <TableHead>Descrição</TableHead>
-            <TableHead>Preço</TableHead>
             <TableHead>Categoria</TableHead>
+            <TableHead>Preço</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {produtosFiltrados.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={6}
-                className="text-center py-8 text-muted-foreground"
-              >
-                Nenhum produto encontrado
+          {produtosFiltrados.map((produto) => (
+            <TableRow key={produto.id}>
+              <TableCell className="font-medium">{produto.name}</TableCell>
+              <TableCell>{produto.category?.name || "-"}</TableCell>
+              <TableCell>{formatCurrency(produto.price)}</TableCell>
+              <TableCell>
+                {produto.available ? (
+                  <Badge>Disponível</Badge>
+                ) : (
+                  <Badge variant="secondary">Indisponível</Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right space-x-2">
+                <Button
+                  onClick={() => setProdutoToEdit(produto)}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => setProdutoToDelete(produto)}
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
-          ) : (
-            produtosFiltrados.map((produto) => (
-              <TableRow key={produto.id}>
-                <TableCell className="font-medium">
-                  {produto.name}
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {produto.description}
-                </TableCell>
-                <TableCell>R$ {produto.price.toFixed(2)}</TableCell>
-                <TableCell className="capitalize">
-                  {produto.category?.name}
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`inline-block px-2 py-1 rounded-full text-xs ${
-                      produto.available
-                        ? "bg-green/10 text-green"
-                        : "bg-orange/10 text-orange"
-                    }`}
-                  >
-                    {produto.available ? "Disponível" : "Indisponível"}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <EditProdutoDialog 
-                      produto={produto} 
-                      onSave={onEditProduto} 
-                      restaurantId={restaurantId} 
-                    />
-                    <DeleteProdutoDialog produto={produto} onDelete={onDeleteProduto} />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
+          ))}
         </TableBody>
       </Table>
-      
-      <div className="mt-4 text-sm text-muted-foreground">
-        Mostrando {produtosFiltrados.length} produtos
-      </div>
+
+      {produtoToEdit && (
+        <EditProdutoDialog
+          produto={produtoToEdit}
+          open={!!produtoToEdit}
+          onOpenChange={() => setProdutoToEdit(null)}
+          onEditProduto={onEditProduto}
+          restaurantId={restaurantId}
+        />
+      )}
+
+      {produtoToDelete && (
+        <DeleteProdutoDialog
+          produto={produtoToDelete}
+          open={!!produtoToDelete}
+          onOpenChange={() => setProdutoToDelete(null)}
+          onDeleteProduto={onDeleteProduto}
+        />
+      )}
     </>
   );
-};
+}

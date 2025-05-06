@@ -1,94 +1,155 @@
 
-import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { Home, ShoppingCart, Menu, Package, FileText, CreditCard, Settings, LogOut } from "lucide-react";
-
-const sidebarItems = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: ShoppingCart, label: "PDV", href: "/pdv" },
-  { icon: Menu, label: "Cardápio Digital", href: "/cardapio" },
-  { icon: Package, label: "Produtos", href: "/produtos" },
-  { icon: FileText, label: "Pedidos", href: "/pedidos" },
-  { icon: CreditCard, label: "Assinaturas", href: "/assinaturas" },
-  { icon: Settings, label: "Configurações", href: "/configuracoes" },
-];
-
-const integrationItems = [
-  { label: "iFood", href: "/ifood-integracao" },
-  { label: "Pagar.me", href: "/pagarme-config" },
-];
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  BarChart3,
+  CreditCard,
+  Home,
+  Package2,
+  Settings,
+  ShoppingBasket,
+  UserRound,
+  Menu,
+  X,
+  Store,
+  LogOut,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useAuth } from "@/hooks/useAuth";
 
 const DashboardSidebar = () => {
-  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+  const { isSuperAdmin } = useSuperAdmin();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
-    <aside className="w-64 bg-white shadow-md flex-shrink-0 hidden md:block">
-      <div className="h-full flex flex-col">
-        <div className="p-4 border-b">
-          <Link to="/dashboard" className="flex items-center">
-            <span className="text-navy text-xl font-bold">Cardápio<span className="text-orange">Pronto</span></span>
-          </Link>
-        </div>
-        <nav className="flex-1 p-4">
-          <ul className="space-y-1">
-            {sidebarItems.map((item, index) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <li key={index}>
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      "flex items-center py-2 px-3 rounded-md transition-colors",
-                      isActive
-                        ? "bg-green/10 text-green"
-                        : "text-navy/70 hover:bg-beige/30 hover:text-navy"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5 mr-3" />
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-            
-            <li className="pt-4">
-              <div className="px-3 mb-2 text-xs font-semibold text-muted-foreground">
-                Integrações
-              </div>
-              <ul className="space-y-1">
-                {integrationItems.map((item, index) => {
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <li key={index}>
-                      <Link
-                        to={item.href}
-                        className={cn(
-                          "flex items-center py-2 px-3 rounded-md transition-colors",
-                          isActive
-                            ? "bg-green/10 text-green"
-                            : "text-navy/70 hover:bg-beige/30 hover:text-navy"
-                        )}
-                      >
-                        <span>{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </li>
-          </ul>
-        </nav>
-        <div className="p-4 border-t">
-          <Link
-            to="/login"
-            className="flex items-center py-2 px-3 rounded-md text-navy/70 hover:bg-beige/30 hover:text-navy transition-colors"
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            <span>Sair</span>
-          </Link>
+    <>
+      {/* Mobile menu button */}
+      <div className="fixed top-4 left-4 z-50 md:hidden">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setIsOpen(!isOpen)}
+          className="rounded-full h-10 w-10 bg-white shadow-md"
+        >
+          {isOpen ? <X size={18} /> : <Menu size={18} />}
+        </Button>
+      </div>
+
+      {/* Sidebar */}
+      <div
+        className={`h-screen bg-white border-r flex-shrink-0 overflow-y-auto transition-all duration-300 ${
+          isOpen ? "fixed inset-0 z-40 w-64" : "hidden md:block md:w-64"
+        }`}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-8">
+            <Link to="/" className="flex items-center">
+              <span className="text-navy text-2xl font-bold">
+                Cardápio<span className="text-orange">Pronto</span>
+              </span>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsOpen(false)}
+            >
+              <X size={18} />
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            <Link
+              to="/dashboard"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <Home className="mr-3 h-4 w-4" />
+              Dashboard
+            </Link>
+            <Link
+              to="/pdv"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <CreditCard className="mr-3 h-4 w-4" />
+              PDV
+            </Link>
+            <Link
+              to="/pedidos"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <ShoppingBasket className="mr-3 h-4 w-4" />
+              Pedidos
+            </Link>
+            <Link
+              to="/produtos"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <Package2 className="mr-3 h-4 w-4" />
+              Produtos
+            </Link>
+            <Link
+              to="/cardapio"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <Store className="mr-3 h-4 w-4" />
+              Menu Digital
+            </Link>
+            <Link
+              to="/assinaturas"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <BarChart3 className="mr-3 h-4 w-4" />
+              Assinatura
+            </Link>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="space-y-1">
+            <Link
+              to="/configuracoes"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <Settings className="mr-3 h-4 w-4" />
+              Configurações
+            </Link>
+            {isSuperAdmin && (
+              <Link
+                to="/admin"
+                className="flex items-center px-3 py-2 text-sm rounded-md bg-green/10 text-green hover:bg-green/20"
+                onClick={() => setIsOpen(false)}
+              >
+                <UserRound className="mr-3 h-4 w-4" />
+                Admin
+              </Link>
+            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center px-3 py-2 text-sm rounded-md w-full text-left text-red-500 hover:bg-red-50"
+            >
+              <LogOut className="mr-3 h-4 w-4" />
+              Sair
+            </button>
+          </div>
         </div>
       </div>
-    </aside>
+    </>
   );
 };
 

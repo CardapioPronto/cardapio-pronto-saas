@@ -629,6 +629,7 @@ export type Database = {
           email: string
           name: string | null
           id: string
+          name: string | null
           restaurant_id: string | null
           role: string
           updated_at: string
@@ -638,6 +639,7 @@ export type Database = {
           email: string
           name?: string | null
           id: string
+          name?: string | null
           restaurant_id?: string | null
           role?: string
           updated_at?: string
@@ -647,6 +649,7 @@ export type Database = {
           email?: string
           name?: string | null
           id?: string
+          name?: string | null
           restaurant_id?: string | null
           role?: string
           updated_at?: string

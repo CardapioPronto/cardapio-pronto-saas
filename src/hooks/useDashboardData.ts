@@ -21,13 +21,45 @@ interface PopularProduct {
 }
 
 export const useDashboardData = (restaurantId: string | null) => {
-  const [stats, setStats] = useState<any[]>([]);
+  const [stats, setStats] = useState<any[]>([
+    {
+      title: "Vendas hoje",
+      value: "R$ 0,00",
+      change: "+0%",
+      icon: DollarSign,
+      color: "bg-green/10 text-green",
+    },
+    {
+      title: "Pedidos",
+      value: "0",
+      change: "0%",
+      icon: ShoppingCart,
+      color: "bg-orange/10 text-orange",
+    },
+    {
+      title: "Clientes",
+      value: "0",
+      change: "0%",
+      icon: Users,
+      color: "bg-navy/10 text-navy",
+    },
+    {
+      title: "Faturamento mensal",
+      value: "R$ 0,00",
+      change: "0%",
+      icon: TrendingUp,
+      color: "bg-beige/30 text-navy",
+    },
+  ]);
   const [loading, setLoading] = useState<boolean>(true);
   const [recentSales, setRecentSales] = useState<SaleItem[]>([]);
   const [popularProducts, setPopularProducts] = useState<PopularProduct[]>([]);
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchStats = async () => {
       setLoading(true);
@@ -125,6 +157,12 @@ export const useDashboardData = (restaurantId: string | null) => {
 
       if (error) {
         console.error("Erro ao buscar vendas recentes:", error);
+        setRecentSales([]);
+        return;
+      }
+
+      if (!recentOrders || recentOrders.length === 0) {
+        setRecentSales([]);
         return;
       }
 
@@ -150,6 +188,7 @@ export const useDashboardData = (restaurantId: string | null) => {
       
       if (ordersError) {
         console.error("Erro ao buscar pedidos do restaurante:", ordersError);
+        setPopularProducts([]);
         return;
       }
       
@@ -170,6 +209,12 @@ export const useDashboardData = (restaurantId: string | null) => {
 
       if (itemsError) {
         console.error("Erro ao buscar itens de pedidos:", itemsError);
+        setPopularProducts([]);
+        return;
+      }
+
+      if (!orderItems || orderItems.length === 0) {
+        setPopularProducts([]);
         return;
       }
 
@@ -192,6 +237,11 @@ export const useDashboardData = (restaurantId: string | null) => {
       const topProducts = Array.from(productStats.entries())
         .sort((a, b) => b[1].count - a[1].count)
         .slice(0, 4);
+
+      if (topProducts.length === 0) {
+        setPopularProducts([]);
+        return;
+      }
 
       // Calcular o total de vendas para percentuais
       const totalSales = topProducts.reduce((sum, [_, stats]) => sum + stats.count, 0);

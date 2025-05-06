@@ -1,7 +1,13 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
-interface SaleItem {
+interface Sale {
   id: number;
   table: number;
   commandaNumber: number;
@@ -10,29 +16,41 @@ interface SaleItem {
 }
 
 interface RecentSalesProps {
-  sales: SaleItem[];
+  sales: Sale[];
 }
 
-export const RecentSales = ({ sales }: RecentSalesProps) => {
+export function RecentSales({ sales }: RecentSalesProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Vendas recentes</CardTitle>
-        <CardDescription>Últimos pedidos realizados no sistema</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Vendas Recentes</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {sales.map((sale) => (
-            <div key={sale.id} className="flex justify-between items-center border-b pb-3">
-              <div>
-                <p className="font-medium">Mesa {sale.table} - Comanda #{sale.commandaNumber}</p>
-                <p className="text-sm text-muted-foreground">{sale.time}</p>
+        {sales && sales.length > 0 ? (
+          <div className="space-y-4">
+            {sales.map((sale) => (
+              <div key={sale.id} className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-beige/30 flex items-center justify-center text-sm font-semibold">
+                  M{sale.table}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    Comanda #{sale.commandaNumber}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {sale.time}
+                  </p>
+                </div>
+                <div className="font-medium">{formatCurrency(sale.value)}</div>
               </div>
-              <span className="font-medium">{sale.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+            Nenhuma venda recente registrada.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
-};
+}
