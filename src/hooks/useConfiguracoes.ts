@@ -10,7 +10,7 @@ import {
   uploadLogo,
   DadosEstabelecimento,
   ConfiguracoesSistema
-} from "@/services/configuracoesService";
+} from "@/services/configuracoes";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
