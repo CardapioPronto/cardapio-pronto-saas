@@ -4,6 +4,7 @@ import { DadosEstabelecimento } from "./types";
 
 /**
  * Obtém os dados do estabelecimento do usuário autenticado
+ * Em caso de múltiplos estabelecimentos, retorna o primeiro encontrado
  */
 export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento> {
   try {
@@ -12,17 +13,23 @@ export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento>
       throw new Error("Usuário não autenticado");
     }
 
-    const { data: restaurant, error } = await supabase
+    // Modificado para usar .limit(1) em vez de .single()
+    const { data: restaurants, error } = await supabase
       .from("restaurants")
       .select("id, name, address, phone, email, business_hours, logo_url")
       .eq("owner_id", user.user.id)
-      .single();
+      .limit(1);
 
     if (error) {
       console.error("Erro ao obter dados do estabelecimento:", error);
       throw error;
     }
 
+    if (!restaurants || restaurants.length === 0) {
+      throw new Error("Nenhum estabelecimento encontrado para este usuário");
+    }
+
+    const restaurant = restaurants[0];
     return {
       nome: restaurant.name,
       endereco: restaurant.address,
@@ -47,16 +54,23 @@ export async function atualizarDadosEstabelecimento(dados: DadosEstabelecimento)
       throw new Error("Usuário não autenticado");
     }
 
-    const { data: restaurant, error: findError } = await supabase
+    // Modificado para usar .limit(1) em vez de .single()
+    const { data: restaurants, error: findError } = await supabase
       .from("restaurants")
       .select("id")
       .eq("owner_id", user.user.id)
-      .single();
+      .limit(1);
 
     if (findError) {
       console.error("Erro ao encontrar restaurante:", findError);
       throw findError;
     }
+
+    if (!restaurants || restaurants.length === 0) {
+      throw new Error("Nenhum estabelecimento encontrado para este usuário");
+    }
+
+    const restaurantId = restaurants[0].id;
 
     const { error } = await supabase
       .from("restaurants")
@@ -68,7 +82,7 @@ export async function atualizarDadosEstabelecimento(dados: DadosEstabelecimento)
         business_hours: dados.horarioFuncionamento,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", restaurant.id);
+      .eq("id", restaurantId);
 
     if (error) {
       console.error("Erro ao atualizar dados do estabelecimento:", error);
@@ -93,17 +107,23 @@ export async function uploadLogo(file: File) {
       throw new Error("Usuário não autenticado");
     }
 
-    // Obter ID do restaurante do usuário
-    const { data: restaurant, error: restaurantError } = await supabase
+    // Modificado para usar .limit(1) em vez de .single()
+    const { data: restaurants, error: restaurantError } = await supabase
       .from("restaurants")
       .select("id")
       .eq("owner_id", user.user.id)
-      .single();
+      .limit(1);
 
     if (restaurantError) {
       console.error("Erro ao obter restaurante:", restaurantError);
       throw restaurantError;
     }
+
+    if (!restaurants || restaurants.length === 0) {
+      throw new Error("Nenhum estabelecimento encontrado para este usuário");
+    }
+
+    const restaurant = restaurants[0];
 
     // Gerar nome de arquivo único
     const fileExt = file.name.split('.').pop();
