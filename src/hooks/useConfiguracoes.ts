@@ -12,8 +12,10 @@ import {
   ConfiguracoesSistema
 } from "@/services/configuracoesService";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export function useConfiguracoes() {
+  const { user } = useCurrentUser();
   const [dadosEstabelecimento, setDadosEstabelecimento] = useState<DadosEstabelecimento>({
     nome: "",
     endereco: null,
@@ -49,23 +51,30 @@ export function useConfiguracoes() {
   // Carregar dados do estabelecimento
   useEffect(() => {
     const carregarDadosEstabelecimento = async () => {
+      if (!user) return; // Não carrega dados se não houver usuário autenticado
+      
       setLoading(prev => ({ ...prev, estabelecimento: true }));
       try {
         const dados = await obterDadosEstabelecimento();
         setDadosEstabelecimento(dados);
       } catch (error) {
+        console.error("Erro ao carregar dados do estabelecimento:", error);
         toast.error("Erro ao carregar dados do estabelecimento");
       } finally {
         setLoading(prev => ({ ...prev, estabelecimento: false }));
       }
     };
 
-    carregarDadosEstabelecimento();
-  }, []);
+    if (user) {
+      carregarDadosEstabelecimento();
+    }
+  }, [user]);
 
   // Carregar dados do usuário
   useEffect(() => {
     const carregarDadosUsuario = async () => {
+      if (!user) return; // Não carrega dados se não houver usuário autenticado
+      
       setLoading(prev => ({ ...prev, usuario: true }));
       try {
         const dados = await obterDadosUsuario();
@@ -75,18 +84,23 @@ export function useConfiguracoes() {
           email: dados.email || ""
         }));
       } catch (error) {
+        console.error("Erro ao carregar dados do usuário:", error);
         toast.error("Erro ao carregar dados do usuário");
       } finally {
         setLoading(prev => ({ ...prev, usuario: false }));
       }
     };
 
-    carregarDadosUsuario();
-  }, []);
+    if (user) {
+      carregarDadosUsuario();
+    }
+  }, [user]);
 
   // Carregar configurações do sistema
   useEffect(() => {
     const carregarConfiguracoesSistema = async () => {
+      if (!user) return; // Não carrega dados se não houver usuário autenticado
+      
       setLoading(prev => ({ ...prev, configuracoes: true }));
       try {
         const config = await obterConfiguracoesSistema();
@@ -100,14 +114,17 @@ export function useConfiguracoes() {
           auto_print: config.auto_print === null ? false : config.auto_print
         });
       } catch (error) {
+        console.error("Erro ao carregar configurações do sistema:", error);
         toast.error("Erro ao carregar configurações do sistema");
       } finally {
         setLoading(prev => ({ ...prev, configuracoes: false }));
       }
     };
 
-    carregarConfiguracoesSistema();
-  }, []);
+    if (user) {
+      carregarConfiguracoesSistema();
+    }
+  }, [user]);
 
   // Atualizar dados do estabelecimento
   const salvarDadosEstabelecimento = async () => {
@@ -116,6 +133,7 @@ export function useConfiguracoes() {
       await atualizarDadosEstabelecimento(dadosEstabelecimento);
       toast.success("Dados do estabelecimento atualizados com sucesso!");
     } catch (error) {
+      console.error("Erro ao atualizar dados do estabelecimento:", error);
       toast.error("Erro ao atualizar dados do estabelecimento");
     } finally {
       setLoading(prev => ({ ...prev, estabelecimento: false }));
@@ -147,6 +165,7 @@ export function useConfiguracoes() {
       
       toast.success("Dados do usuário atualizados com sucesso!");
     } catch (error) {
+      console.error("Erro ao atualizar dados do usuário:", error);
       toast.error("Erro ao atualizar dados do usuário");
     } finally {
       setLoading(prev => ({ ...prev, usuario: false }));
@@ -160,6 +179,7 @@ export function useConfiguracoes() {
       await salvarConfiguracoesSistema(configuracoesSistema);
       toast.success("Configurações salvas com sucesso!");
     } catch (error) {
+      console.error("Erro ao salvar configurações:", error);
       toast.error("Erro ao salvar configurações");
     } finally {
       setLoading(prev => ({ ...prev, configuracoes: false }));
@@ -177,6 +197,7 @@ export function useConfiguracoes() {
       }));
       toast.success("Logo atualizado com sucesso!");
     } catch (error) {
+      console.error("Erro ao fazer upload do logo:", error);
       toast.error("Erro ao fazer upload do logo");
     } finally {
       setLoading(prev => ({ ...prev, logoUpload: false }));

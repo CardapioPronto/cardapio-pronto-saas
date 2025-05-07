@@ -34,7 +34,6 @@ export function useCurrentUser() {
                 setUser(null);
             } else {
                 // Ensure we have all required fields for the User type
-                // If name is null or undefined, provide an empty string as fallback
                 setUser({
                     id: data.id,
                     email: data.email,
