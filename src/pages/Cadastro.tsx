@@ -38,6 +38,7 @@ export default function Cadastro() {
     try {
       // Realizar o cadastro no Supabase
       const { error: signUpError } = await signUp(email, password, {
+        name,
         phone,
       });
 
@@ -61,9 +62,7 @@ export default function Cadastro() {
       ]);
 
       if (insertUserError) {
-        setError("Erro ao criar usuário no sistema.");
-        setLoading(false);
-        return;
+        setError("Erro ao criar usuário na tabela pública.");
       }
 
       // Cria o restaurante
@@ -97,8 +96,6 @@ export default function Cadastro() {
 
       if (userUpdateError) {
         setError("Erro ao vincular restaurante ao usuário.");
-        setLoading(false);
-        return;
       }
 
       // Cria assinatura padrão (exemplo)
