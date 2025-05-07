@@ -49,11 +49,11 @@ export async function obterConfiguracoesSistema(): Promise<ConfiguracoesSistema>
 
     return {
       id: data.id,
-      notification_new_order: data.notification_new_order,
-      notification_email: data.notification_email,
-      dark_mode: data.dark_mode,
-      language: data.language,
-      auto_print: data.auto_print,
+      notification_new_order: data.notification_new_order ?? true,
+      notification_email: data.notification_email ?? true,
+      dark_mode: data.dark_mode ?? false,
+      language: data.language ?? "pt-BR",
+      auto_print: data.auto_print ?? false,
     };
   } catch (error) {
     console.error("Erro ao obter configurações do sistema:", error);
