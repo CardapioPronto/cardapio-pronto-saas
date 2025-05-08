@@ -28,6 +28,7 @@ export function useSistema() {
       } catch (error) {
         console.error("Erro ao carregar configurações do sistema:", error);
         toast.error("Erro ao carregar configurações do sistema");
+        // Ainda mantemos o estado padrão das configurações
       } finally {
         setLoading(false);
       }

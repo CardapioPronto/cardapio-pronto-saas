@@ -13,22 +13,34 @@ export async function obterConfiguracoesSistema(): Promise<ConfiguracoesSistema>
     }
 
     // Obter ID do restaurante do usuário
-    const { data: restaurant, error: restaurantError } = await supabase
+    const { data: restaurants, error: restaurantError } = await supabase
       .from("restaurants")
       .select("id")
       .eq("owner_id", user.user.id)
-      .single();
+      .limit(1);
 
     if (restaurantError) {
       console.error("Erro ao obter restaurante:", restaurantError);
       throw restaurantError;
     }
 
+    if (!restaurants || restaurants.length === 0) {
+      // Se não encontrar restaurante, retornar configurações padrão
+      console.log("Nenhum restaurante encontrado, retornando configurações padrão");
+      return {
+        notification_new_order: true,
+        notification_email: true,
+        dark_mode: false,
+        language: "pt-BR",
+        auto_print: false,
+      };
+    }
+
     // Obter configurações
     const { data, error } = await supabase
       .from("system_configurations")
       .select("*")
-      .eq("restaurant_id", restaurant.id)
+      .eq("restaurant_id", restaurants[0].id)
       .maybeSingle();
 
     if (error) {
@@ -57,7 +69,14 @@ export async function obterConfiguracoesSistema(): Promise<ConfiguracoesSistema>
     };
   } catch (error) {
     console.error("Erro ao obter configurações do sistema:", error);
-    throw error;
+    // Retornar configurações padrão em caso de erro
+    return {
+      notification_new_order: true,
+      notification_email: true,
+      dark_mode: false,
+      language: "pt-BR",
+      auto_print: false,
+    };
   }
 }
 
@@ -72,15 +91,19 @@ export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema) {
     }
 
     // Obter ID do restaurante do usuário
-    const { data: restaurant, error: restaurantError } = await supabase
+    const { data: restaurants, error: restaurantError } = await supabase
       .from("restaurants")
       .select("id")
       .eq("owner_id", user.user.id)
-      .single();
+      .limit(1);
 
     if (restaurantError) {
       console.error("Erro ao obter restaurante:", restaurantError);
       throw restaurantError;
+    }
+
+    if (!restaurants || restaurants.length === 0) {
+      throw new Error("Nenhum restaurante encontrado para este usuário");
     }
 
     // Verificar se já existe configuração para este restaurante
@@ -105,7 +128,7 @@ export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema) {
     } else {
       // Criar nova configuração
       const { error } = await supabase.from("system_configurations").insert({
-        restaurant_id: restaurant.id,
+        restaurant_id: restaurants[0].id,
         notification_new_order: config.notification_new_order,
         notification_email: config.notification_email,
         dark_mode: config.dark_mode,
