@@ -661,6 +661,27 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          id: number;
+          name: string;
+          price_monthly: number;
+          price_yearly: number;
+          is_active: boolean;
+        }
+        Insert: {
+          name: string;
+          price_monthly: number;
+          price_yearly: number;
+          is_active: boolean;
+        }
+        Update: {
+          name?: string;
+          price_monthly?: number;
+          price_yearly?: number;
+          is_active?: boolean;
+        }
+      }
     }
     Views: {
       [_ in never]: never

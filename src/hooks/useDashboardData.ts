@@ -1,13 +1,13 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { DollarSign, ShoppingCart, TrendingUp, Users } from "lucide-react";
+import { DollarSign, LucideIcon, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
 // Interface para vendas recentes
 interface SaleItem {
   id: number;
   table: number;
-  commandaNumber: number;
+  commandaNumber: string;
   time: string;
   value: number;
 }
@@ -20,8 +20,17 @@ interface PopularProduct {
   units: number;
 }
 
+// Interface para os itens de estatísticas
+interface StatItem {
+  title: string;
+  value: string;
+  change: string;
+  icon: React.ElementType | LucideIcon;
+  color: string;
+}
+
 export const useDashboardData = (restaurantId: string | null) => {
-  const [stats, setStats] = useState<any[]>([
+  const [stats, setStats] = useState<StatItem[]>([
     {
       title: "Vendas hoje",
       value: "R$ 0,00",
@@ -170,7 +179,7 @@ export const useDashboardData = (restaurantId: string | null) => {
       const formattedSales: SaleItem[] = recentOrders.map((order, index) => ({
         id: index + 1, 
         table: parseInt(order.table_number || "0"),
-        commandaNumber: parseInt(order.order_number.replace('ORD-', '') || "0"),
+        commandaNumber: order.order_number.replace('ORD-', '') || "0",
         time: new Date(order.created_at).toLocaleTimeString(),
         value: order.total,
       }));

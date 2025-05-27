@@ -7,7 +7,7 @@ import { PopularProducts } from "@/components/dashboard/PopularProducts";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { supabase } from "@/lib/supabase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { icons, Info } from "lucide-react";
 
 const Dashboard = () => {
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -48,7 +48,11 @@ const Dashboard = () => {
     getRestaurant();
   }, []);
 
-  const { stats, loading, recentSales, popularProducts } = useDashboardData(restaurantId);
+  const { stats: rawStats, loading, recentSales, popularProducts } = useDashboardData(restaurantId);
+  const stats = rawStats.map(stat => ({
+    ...stat,
+    icon: typeof stat.icon === "string" ? icons[stat.icon] : stat.icon,
+  }));
   
   return (
     <DashboardLayout title="Dashboard">

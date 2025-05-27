@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/utils";
 interface Sale {
   id: number;
   table: number;
-  commandaNumber: number;
+  commandaNumber: string;
   time: string;
   value: number;
 }
