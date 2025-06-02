@@ -6,9 +6,11 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSystemInitialization } from "@/hooks/useSystemInitialization";
 import { PopularProducts } from "@/components/dashboard/PopularProducts";
 import { RecentSales } from "@/components/dashboard/RecentSales";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const Dashboard = () => {
-  const { stats, loading: statsLoading } = useDashboardData();
+  const { user } = useCurrentUser();
+  const { stats, loading: statsLoading, recentSales, popularProducts } = useDashboardData(user?.restaurant_id || null);
   const { initialized, loading: initLoading } = useSystemInitialization();
 
   if (statsLoading || initLoading || !initialized) {
@@ -38,7 +40,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PopularProducts />
+              <PopularProducts products={popularProducts} />
             </CardContent>
           </Card>
           
@@ -50,7 +52,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RecentSales />
+              <RecentSales sales={recentSales} />
             </CardContent>
           </Card>
         </div>
