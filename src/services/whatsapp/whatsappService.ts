@@ -4,7 +4,6 @@ import { WhatsAppIntegration, WhatsAppMessage } from "./types";
 import { toast } from "sonner";
 
 export class WhatsAppService {
-  // Obter configurações do WhatsApp do restaurante
   static async getIntegration(restaurantId: string): Promise<WhatsAppIntegration | null> {
     try {
       const { data, error } = await supabase
@@ -18,19 +17,41 @@ export class WhatsAppService {
         return null;
       }
 
-      return data;
+      if (!data) return null;
+
+      return {
+        restaurant_id: data.restaurant_id,
+        phone_number: data.phone_number,
+        api_token: data.api_token,
+        webhook_url: data.webhook_url,
+        is_enabled: data.is_enabled,
+        auto_send_orders: data.auto_send_orders,
+        welcome_message: data.welcome_message,
+        order_confirmation_message: data.order_confirmation_message,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
     } catch (error) {
       console.error('Erro ao buscar integração WhatsApp:', error);
       return null;
     }
   }
 
-  // Salvar/atualizar configurações do WhatsApp
-  static async saveIntegration(integration: Partial<WhatsAppIntegration>): Promise<boolean> {
+  static async saveIntegration(integration: WhatsAppIntegration): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('whatsapp_integration')
-        .upsert(integration, { 
+        .upsert({
+          restaurant_id: integration.restaurant_id,
+          phone_number: integration.phone_number,
+          api_token: integration.api_token,
+          webhook_url: integration.webhook_url,
+          is_enabled: integration.is_enabled,
+          auto_send_orders: integration.auto_send_orders,
+          welcome_message: integration.welcome_message,
+          order_confirmation_message: integration.order_confirmation_message,
+          updated_at: new Date().toISOString()
+        }, { 
           onConflict: 'restaurant_id',
           ignoreDuplicates: false 
         });
@@ -50,7 +71,6 @@ export class WhatsAppService {
     }
   }
 
-  // Enviar mensagem via WhatsApp (simulação)
   static async sendMessage(
     restaurantId: string,
     phoneNumber: string,
@@ -58,18 +78,15 @@ export class WhatsAppService {
     orderId?: string
   ): Promise<boolean> {
     try {
-      // Registrar a mensagem no histórico
       await this.logMessage({
         restaurant_id: restaurantId,
-        order_id: orderId,
+        order_id: orderId || null,
         phone_number: phoneNumber,
         message_type: 'outgoing',
         content: message,
         status: 'sent'
       });
 
-      // Aqui você integraria com uma API real do WhatsApp
-      // Por exemplo: WhatsApp Business API, Twilio, etc.
       console.log('Enviando mensagem WhatsApp:', {
         to: phoneNumber,
         message,
@@ -77,7 +94,6 @@ export class WhatsAppService {
         orderId
       });
 
-      // Simular envio via edge function
       const { error } = await supabase.functions.invoke('send-whatsapp-message', {
         body: {
           restaurantId,
@@ -99,12 +115,18 @@ export class WhatsAppService {
     }
   }
 
-  // Registrar mensagem no histórico
-  static async logMessage(message: Partial<WhatsAppMessage>): Promise<void> {
+  static async logMessage(message: WhatsAppMessage): Promise<void> {
     try {
       const { error } = await supabase
         .from('whatsapp_messages')
-        .insert(message);
+        .insert({
+          restaurant_id: message.restaurant_id,
+          order_id: message.order_id,
+          phone_number: message.phone_number,
+          message_type: message.message_type,
+          content: message.content,
+          status: message.status
+        });
 
       if (error) {
         console.error('Erro ao registrar mensagem:', error);
@@ -114,7 +136,6 @@ export class WhatsAppService {
     }
   }
 
-  // Buscar histórico de mensagens
   static async getMessages(restaurantId: string, limit: number = 50): Promise<WhatsAppMessage[]> {
     try {
       const { data, error } = await supabase
@@ -129,14 +150,22 @@ export class WhatsAppService {
         return [];
       }
 
-      return data || [];
+      return data?.map(msg => ({
+        id: msg.id,
+        restaurant_id: msg.restaurant_id,
+        order_id: msg.order_id,
+        phone_number: msg.phone_number,
+        message_type: msg.message_type as 'incoming' | 'outgoing' | 'auto',
+        content: msg.content,
+        status: msg.status as 'sent' | 'delivered' | 'read' | 'failed',
+        created_at: msg.created_at
+      })) || [];
     } catch (error) {
       console.error('Erro ao buscar mensagens:', error);
       return [];
     }
   }
 
-  // Enviar confirmação de pedido automaticamente
   static async sendOrderConfirmation(
     restaurantId: string,
     phoneNumber: string,

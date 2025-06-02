@@ -1,18 +1,17 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Restaurant } from "@/types/restaurant";
 import { toast } from "sonner";
 
 export interface DadosEstabelecimento {
-  name: string;
-  phone?: string;
-  phone_whatsapp?: string; // Novo campo
-  address: string;
-  cnpj?: string;
-  email?: string;
-  category?: string;
-  business_hours?: string;
-  logo_url?: string;
+  nome: string;
+  endereco: string | null;
+  telefone: string | null;
+  phone_whatsapp?: string | null;
+  email: string | null;
+  cnpj?: string | null;
+  categoria?: string | null;
+  horarioFuncionamento: string | null;
+  logo_url: string | null;
 }
 
 export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento> {
@@ -23,7 +22,6 @@ export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento>
       throw new Error('Usuário não autenticado');
     }
 
-    // Buscar o restaurante do usuário
     const { data: restaurants, error } = await supabase
       .from('restaurants')
       .select('*')
@@ -36,16 +34,15 @@ export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento>
     }
 
     if (!restaurants || restaurants.length === 0) {
-      // Retornar dados vazios se não houver restaurante
       return {
-        name: '',
-        phone: '',
+        nome: '',
+        endereco: '',
+        telefone: '',
         phone_whatsapp: '',
-        address: '',
-        cnpj: '',
         email: '',
-        category: '',
-        business_hours: '',
+        cnpj: '',
+        categoria: '',
+        horarioFuncionamento: '',
         logo_url: ''
       };
     }
@@ -53,14 +50,14 @@ export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento>
     const restaurant = restaurants[0];
     
     return {
-      name: restaurant.name || '',
-      phone: restaurant.phone || '',
-      phone_whatsapp: restaurant.phone_whatsapp || '', // Incluir o novo campo
-      address: restaurant.address || '',
-      cnpj: restaurant.cnpj || '',
+      nome: restaurant.name || '',
+      endereco: restaurant.address || '',
+      telefone: restaurant.phone || '',
+      phone_whatsapp: restaurant.phone_whatsapp || '',
       email: restaurant.email || '',
-      category: restaurant.category || '',
-      business_hours: restaurant.business_hours || '',
+      cnpj: restaurant.cnpj || '',
+      categoria: restaurant.category || '',
+      horarioFuncionamento: restaurant.business_hours || '',
       logo_url: restaurant.logo_url || ''
     };
   } catch (error) {
@@ -69,7 +66,7 @@ export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento>
   }
 }
 
-export async function salvarDadosEstabelecimento(dados: DadosEstabelecimento): Promise<void> {
+export async function atualizarDadosEstabelecimento(dados: DadosEstabelecimento): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -77,7 +74,6 @@ export async function salvarDadosEstabelecimento(dados: DadosEstabelecimento): P
       throw new Error('Usuário não autenticado');
     }
 
-    // Verificar se já existe um restaurante para este usuário
     const { data: existingRestaurants, error: searchError } = await supabase
       .from('restaurants')
       .select('id')
@@ -90,21 +86,20 @@ export async function salvarDadosEstabelecimento(dados: DadosEstabelecimento): P
     }
 
     const dadosParaSalvar = {
-      name: dados.name,
-      phone: dados.phone,
-      phone_whatsapp: dados.phone_whatsapp, // Incluir o novo campo
-      address: dados.address,
-      cnpj: dados.cnpj,
+      name: dados.nome,
+      address: dados.endereco,
+      phone: dados.telefone,
+      phone_whatsapp: dados.phone_whatsapp,
       email: dados.email,
-      category: dados.category,
-      business_hours: dados.business_hours,
+      cnpj: dados.cnpj,
+      category: dados.categoria,
+      business_hours: dados.horarioFuncionamento,
       logo_url: dados.logo_url,
       owner_id: user.id,
       updated_at: new Date().toISOString()
     };
 
     if (existingRestaurants && existingRestaurants.length > 0) {
-      // Atualizar restaurante existente
       const { error: updateError } = await supabase
         .from('restaurants')
         .update(dadosParaSalvar)
@@ -115,7 +110,6 @@ export async function salvarDadosEstabelecimento(dados: DadosEstabelecimento): P
         throw new Error('Erro ao salvar dados do estabelecimento');
       }
     } else {
-      // Criar novo restaurante
       const { error: insertError } = await supabase
         .from('restaurants')
         .insert(dadosParaSalvar);
@@ -134,7 +128,7 @@ export async function salvarDadosEstabelecimento(dados: DadosEstabelecimento): P
   }
 }
 
-export async function fazerUploadLogo(file: File): Promise<string> {
+export async function uploadLogo(file: File): Promise<{ url: string }> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -159,7 +153,7 @@ export async function fazerUploadLogo(file: File): Promise<string> {
       .getPublicUrl(fileName);
 
     toast.success('Logo enviada com sucesso!');
-    return data.publicUrl;
+    return { url: data.publicUrl };
   } catch (error) {
     console.error('Erro ao fazer upload da logo:', error);
     toast.error('Erro ao fazer upload da logo');

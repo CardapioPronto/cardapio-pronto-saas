@@ -10,7 +10,10 @@ export function useEstabelecimento() {
     nome: "",
     endereco: null,
     telefone: null,
+    phone_whatsapp: null,
     email: null,
+    cnpj: null,
+    categoria: null,
     horarioFuncionamento: null,
     logo_url: null
   });
@@ -18,10 +21,9 @@ export function useEstabelecimento() {
   const [loading, setLoading] = useState(false);
   const [logoLoading, setLogoLoading] = useState(false);
 
-  // Carregar dados do estabelecimento
   useEffect(() => {
     const carregarDadosEstabelecimento = async () => {
-      if (!user) return; // Não carrega dados se não houver usuário autenticado
+      if (!user) return;
       
       setLoading(true);
       try {
@@ -40,7 +42,6 @@ export function useEstabelecimento() {
     }
   }, [user]);
 
-  // Atualizar dados do estabelecimento
   const salvarDadosEstabelecimento = async () => {
     setLoading(true);
     try {
@@ -54,7 +55,6 @@ export function useEstabelecimento() {
     }
   };
 
-  // Upload de logo do estabelecimento
   const fazerUploadLogo = async (file: File) => {
     setLogoLoading(true);
     try {

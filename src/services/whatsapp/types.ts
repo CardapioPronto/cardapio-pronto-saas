@@ -2,8 +2,8 @@
 export interface WhatsAppIntegration {
   restaurant_id: string;
   phone_number: string;
-  api_token?: string;
-  webhook_url?: string;
+  api_token?: string | null;
+  webhook_url?: string | null;
   is_enabled: boolean;
   auto_send_orders: boolean;
   welcome_message: string;
@@ -15,7 +15,7 @@ export interface WhatsAppIntegration {
 export interface WhatsAppMessage {
   id?: string;
   restaurant_id: string;
-  order_id?: string;
+  order_id?: string | null;
   phone_number: string;
   message_type: 'incoming' | 'outgoing' | 'auto';
   content: string;

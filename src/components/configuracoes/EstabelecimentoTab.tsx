@@ -35,21 +35,21 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do Restaurante</Label>
+            <Label htmlFor="nome">Nome do Restaurante</Label>
             <Input
-              id="name"
-              value={dadosEstabelecimento.name}
-              onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, name: e.target.value})}
+              id="nome"
+              value={dadosEstabelecimento.nome}
+              onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, nome: e.target.value})}
               placeholder="Nome do seu restaurante"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
+            <Label htmlFor="categoria">Categoria</Label>
             <Input
-              id="category"
-              value={dadosEstabelecimento.category || ''}
-              onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, category: e.target.value})}
+              id="categoria"
+              value={dadosEstabelecimento.categoria || ''}
+              onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, categoria: e.target.value})}
               placeholder="Ex: Pizzaria, Hamburgueria, etc."
             />
           </div>
@@ -57,11 +57,11 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
+            <Label htmlFor="telefone">Telefone</Label>
             <Input
-              id="phone"
-              value={dadosEstabelecimento.phone || ''}
-              onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, phone: e.target.value})}
+              id="telefone"
+              value={dadosEstabelecimento.telefone || ''}
+              onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, telefone: e.target.value})}
               placeholder="(11) 99999-9999"
             />
           </div>
@@ -101,22 +101,22 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="address">Endereço</Label>
+          <Label htmlFor="endereco">Endereço</Label>
           <Textarea
-            id="address"
-            value={dadosEstabelecimento.address}
-            onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, address: e.target.value})}
+            id="endereco"
+            value={dadosEstabelecimento.endereco || ''}
+            onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, endereco: e.target.value})}
             placeholder="Endereço completo do restaurante"
             rows={3}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="business_hours">Horário de Funcionamento</Label>
+          <Label htmlFor="horarioFuncionamento">Horário de Funcionamento</Label>
           <Textarea
-            id="business_hours"
-            value={dadosEstabelecimento.business_hours || ''}
-            onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, business_hours: e.target.value})}
+            id="horarioFuncionamento"
+            value={dadosEstabelecimento.horarioFuncionamento || ''}
+            onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, horarioFuncionamento: e.target.value})}
             placeholder="Ex: Segunda a Sexta: 11h às 22h, Sábado e Domingo: 11h às 23h"
             rows={3}
           />
