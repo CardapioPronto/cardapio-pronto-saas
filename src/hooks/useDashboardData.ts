@@ -20,12 +20,12 @@ interface PopularProduct {
   units: number;
 }
 
-// Interface para os itens de estatísticas
+// Interface para os itens de estatísticas - updated to match StatsGrid expectations
 interface StatItem {
   title: string;
   value: string;
   change: string;
-  icon: React.ElementType | LucideIcon;
+  icon: LucideIcon;
   color: string;
 }
 
