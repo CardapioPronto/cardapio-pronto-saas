@@ -1,3 +1,4 @@
+
 export type Plano = {
     id: string;
     name: string;
@@ -6,4 +7,8 @@ export type Plano = {
     is_active: boolean;
     created_at?: string;
     updated_at?: string;
+    features?: {
+        feature: string;
+        is_enabled: boolean;
+    }[];
 };

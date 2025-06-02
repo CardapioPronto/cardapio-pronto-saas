@@ -4,7 +4,10 @@ export type DadosEstabelecimento = {
   nome: string;
   endereco: string | null;
   telefone: string | null;
+  phone_whatsapp?: string | null;
   email: string | null;
+  cnpj?: string | null;
+  categoria?: string | null;
   horarioFuncionamento: string | null;
   logo_url: string | null;
 };

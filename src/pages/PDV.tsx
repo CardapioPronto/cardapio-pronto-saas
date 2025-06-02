@@ -55,25 +55,7 @@ const PDV = () => {
       />
 
       {visualizacaoAtiva === "novo" ? (
-        <NovoPedido 
-          restaurantId={restaurantId}
-          tipoPedido={tipoPedido}
-          mesaSelecionada={mesaSelecionada}
-          setMesaSelecionada={setMesaSelecionada}
-          categoriaAtiva={categoriaAtiva}
-          setCategoriaAtiva={setCategoriaAtiva}
-          busca={busca}
-          setBusca={setBusca}
-          itensPedido={itensPedido}
-          totalPedido={totalPedido}
-          alterarQuantidade={alterarQuantidade}
-          removerItem={removerItem}
-          finalizarPedido={finalizarPedido}
-          salvandoPedido={salvandoPedido}
-          onSelecionarProduto={adicionarProduto}
-          nomeCliente={nomeCliente}
-          setNomeCliente={setNomeCliente}
-        />
+        <NovoPedido />
       ) : (
         <HistoricoPedidos 
           pedidosHistorico={pedidosHistorico}

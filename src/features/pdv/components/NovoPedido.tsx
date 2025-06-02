@@ -23,10 +23,13 @@ export const NovoPedido: React.FC = () => {
     itensPedido,
     totalPedido,
     salvandoPedido,
-    selecionarProduto,
+    adicionarProduto,
     alterarQuantidade,
     removerItem,
-    finalizarPedido: finalizarPedidoOriginal
+    finalizarPedido: finalizarPedidoOriginal,
+    tipoPedido,
+    mesaSelecionada,
+    produtosFiltrados
   } = usePDVHook();
 
   const [nomeCliente, setNomeCliente] = useState("");
@@ -82,8 +85,8 @@ export const NovoPedido: React.FC = () => {
           <CardContent>
             <ListaProdutos
               categoriaAtiva={categoriaAtiva}
-              busca={busca}
-              onSelecionarProduto={selecionarProduto}
+              produtosFiltrados={produtosFiltrados}
+              onSelecionarProduto={adicionarProduto}
             />
           </CardContent>
         </Card>
@@ -128,6 +131,8 @@ export const NovoPedido: React.FC = () => {
           removerItem={removerItem}
           finalizarPedido={finalizarPedido}
           salvandoPedido={salvandoPedido}
+          tipoPedido={tipoPedido}
+          mesaSelecionada={mesaSelecionada}
         />
       </div>
     </div>
