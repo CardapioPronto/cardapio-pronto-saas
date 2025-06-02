@@ -11,6 +11,7 @@ import { ComandaPedido } from "./ComandaPedido";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { useProdutos } from "@/hooks/useProdutos";
+import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 
 export const NovoPedido: React.FC = () => {
   const { user } = useCurrentUser();
@@ -36,6 +37,7 @@ export const NovoPedido: React.FC = () => {
 
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
+  const [telefoneError, setTelefoneError] = useState("");
 
   // Filter products based on search and category
   const produtosFiltrados = produtos.filter((produto) => {
@@ -49,6 +51,19 @@ export const NovoPedido: React.FC = () => {
     return matchesSearch && matchesCategory && produto.available;
   });
 
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formatted = formatPhone(value);
+    setTelefoneCliente(formatted);
+    
+    // Validar telefone se não estiver vazio
+    if (value && !validatePhone(value)) {
+      setTelefoneError("Telefone deve ter pelo menos 10 dígitos");
+    } else {
+      setTelefoneError("");
+    }
+  };
+
   const finalizarPedido = async () => {
     if (itensPedido.length === 0) {
       toast.error("Adicione pelo menos um item ao pedido");
@@ -60,9 +75,14 @@ export const NovoPedido: React.FC = () => {
       return;
     }
 
+    // Validar telefone se foi fornecido
+    if (telefoneCliente && !validatePhone(telefoneCliente)) {
+      toast.error("Por favor, insira um número de telefone válido");
+      return;
+    }
+
     try {
       // Call the original function without arguments since it expects 0 parameters
-      // The nomeCliente is already handled by the hook's internal state
       const pedidoId = await finalizarPedidoOriginal();
       
       // Tentar enviar notificação WhatsApp se telefone foi fornecido
@@ -73,20 +93,23 @@ export const NovoPedido: React.FC = () => {
             telefoneCliente,
             pedidoId
           );
+          toast.success("Pedido finalizado e notificação WhatsApp enviada!");
         } catch (error) {
           console.error('Erro ao enviar WhatsApp:', error);
-          // Não bloquear o pedido se o WhatsApp falhar
+          toast.success("Pedido finalizado! (Erro ao enviar WhatsApp)");
         }
+      } else {
+        toast.success("Pedido finalizado com sucesso!");
       }
 
       // Limpar campos após sucesso
       setNomeCliente("");
       setTelefoneCliente("");
+      setTelefoneError("");
       
-      toast.success("Pedido finalizado com sucesso!");
     } catch (error) {
       console.error("Erro ao finalizar pedido:", error);
-      toast.error("Erro ao finalizar pedido");
+      toast.error("Erro ao finalizar pedido. Tente novamente.");
     }
   };
 
@@ -122,6 +145,7 @@ export const NovoPedido: React.FC = () => {
                 value={nomeCliente}
                 onChange={(e) => setNomeCliente(e.target.value)}
                 placeholder="Digite o nome do cliente"
+                className={!nomeCliente.trim() && itensPedido.length > 0 ? "border-red-500" : ""}
               />
             </div>
             
@@ -130,9 +154,13 @@ export const NovoPedido: React.FC = () => {
               <Input
                 id="telefoneCliente"
                 value={telefoneCliente}
-                onChange={(e) => setTelefoneCliente(e.target.value)}
+                onChange={handleTelefoneChange}
                 placeholder="(11) 99999-9999"
+                className={telefoneError ? "border-red-500" : ""}
               />
+              {telefoneError && (
+                <p className="text-xs text-red-500">{telefoneError}</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Opcional - Para envio de confirmação via WhatsApp
               </p>

@@ -1,83 +1,60 @@
 
-import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
-import { RecentSales } from "@/components/dashboard/RecentSales";
-import { PopularProducts } from "@/components/dashboard/PopularProducts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { supabase } from "@/lib/supabase";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { icons, Info } from "lucide-react";
+import { useSystemInitialization } from "@/hooks/useSystemInitialization";
+import { PopularProducts } from "@/components/dashboard/PopularProducts";
+import { RecentSales } from "@/components/dashboard/RecentSales";
 
 const Dashboard = () => {
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const { stats, loading: statsLoading } = useDashboardData();
+  const { initialized, loading: initLoading } = useSystemInitialization();
 
-  useEffect(() => {
-    const getRestaurant = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setFetchError("Usuário não autenticado");
-          return;
-        }
+  if (statsLoading || initLoading || !initialized) {
+    return (
+      <DashboardLayout title="Dashboard">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-        const { data, error } = await supabase
-          .from("users")
-          .select("restaurant_id")
-          .eq("id", user.id)
-          .single();
-
-        if (error) {
-          console.error("Erro ao buscar restaurante:", error);
-          setFetchError(null);
-          return;
-        }
-
-        if (data?.restaurant_id) {
-          setRestaurantId(data.restaurant_id);
-        } else {
-          setFetchError(null);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar restaurante:", error);
-        setFetchError(null);
-      }
-    };
-
-    getRestaurant();
-  }, []);
-
-  const { stats: rawStats, loading, recentSales, popularProducts } = useDashboardData(restaurantId);
-  const stats = rawStats.map(stat => ({
-    ...stat,
-    icon: typeof stat.icon === "string" ? icons[stat.icon] : stat.icon,
-  }));
-  
   return (
     <DashboardLayout title="Dashboard">
-      {fetchError && (
-        <Alert variant="destructive" className="mb-6">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Erro</AlertTitle>
-          <AlertDescription>{fetchError}</AlertDescription>
-        </Alert>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p>Carregando dados...</p>
+      <div className="space-y-6">
+        <StatsGrid stats={stats} />
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Produtos Populares</CardTitle>
+              <CardDescription>
+                Os produtos mais vendidos este mês
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PopularProducts />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Vendas Recentes</CardTitle>
+              <CardDescription>
+                Últimas transações realizadas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentSales />
+            </CardContent>
+          </Card>
         </div>
-      ) : (
-        <>
-          <StatsGrid stats={stats} />
-
-          <div className="grid gap-6 mt-6 md:grid-cols-2">
-            <RecentSales sales={recentSales} />
-            <PopularProducts products={popularProducts} />
-          </div>
-        </>
-      )}
+      </div>
     </DashboardLayout>
   );
 };
