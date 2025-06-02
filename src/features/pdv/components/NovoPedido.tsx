@@ -10,6 +10,7 @@ import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
+import { useProdutos } from "@/hooks/useProdutos";
 
 export const NovoPedido: React.FC = () => {
   const { user } = useCurrentUser();
@@ -28,12 +29,25 @@ export const NovoPedido: React.FC = () => {
     removerItem,
     finalizarPedido: finalizarPedidoOriginal,
     tipoPedido,
-    mesaSelecionada,
-    produtosFiltrados
-  } = usePDVHook();
+    mesaSelecionada
+  } = usePDVHook(restaurantId);
+
+  const { produtos } = useProdutos(restaurantId);
 
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
+
+  // Filter products based on search and category
+  const produtosFiltrados = produtos.filter((produto) => {
+    const matchesSearch = busca === "" || 
+      produto.name.toLowerCase().includes(busca.toLowerCase()) ||
+      produto.description.toLowerCase().includes(busca.toLowerCase());
+    
+    const matchesCategory = categoriaAtiva === "todas" || 
+      produto.category?.id === categoriaAtiva;
+    
+    return matchesSearch && matchesCategory && produto.available;
+  });
 
   const finalizarPedido = async () => {
     if (itensPedido.length === 0) {
@@ -47,7 +61,7 @@ export const NovoPedido: React.FC = () => {
     }
 
     try {
-      const pedidoId = await finalizarPedidoOriginal();
+      const pedidoId = await finalizarPedidoOriginal(nomeCliente);
       
       // Tentar enviar notificação WhatsApp se telefone foi fornecido
       if (telefoneCliente && pedidoId) {

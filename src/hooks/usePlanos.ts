@@ -21,8 +21,8 @@ export const usePlanos = () => {
                 price_monthly: item.price_monthly,
                 price_yearly: item.price_yearly,
                 is_active: item.is_active || false,
-                created_at: item.created_at,
-                updated_at: item.updated_at,
+                created_at: item.created_at || undefined,
+                updated_at: item.updated_at || undefined,
                 features: item.plan_features?.map(f => ({
                     feature: f.feature,
                     is_enabled: f.is_enabled || false
