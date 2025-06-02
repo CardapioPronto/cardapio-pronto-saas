@@ -109,6 +109,14 @@ const DashboardSidebar = () => {
               Menu Digital
             </Link>
             <Link
+              to="/funcionarios"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <UserRound className="mr-3 h-4 w-4" />
+              Funcionários
+            </Link>
+            <Link
               to="/assinaturas"
               className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
               onClick={() => setIsOpen(false)}

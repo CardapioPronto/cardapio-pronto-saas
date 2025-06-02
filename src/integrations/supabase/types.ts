@@ -104,6 +104,85 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_permissions: {
+        Row: {
+          created_at: string
+          employee_id: string
+          granted_by: string
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          granted_by: string
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          granted_by?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_permissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          created_at: string
+          created_by: string
+          employee_email: string
+          employee_name: string
+          id: string
+          is_active: boolean
+          restaurant_id: string
+          updated_at: string
+          user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          employee_email: string
+          employee_name: string
+          id?: string
+          is_active?: boolean
+          restaurant_id: string
+          updated_at?: string
+          user_id: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          is_active?: boolean
+          restaurant_id?: string
+          updated_at?: string
+          user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ifood_integration: {
         Row: {
           client_id: string
@@ -727,6 +806,7 @@ export type Database = {
           restaurant_id: string | null
           role: string
           updated_at: string
+          user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           created_at?: string
@@ -736,6 +816,7 @@ export type Database = {
           restaurant_id?: string | null
           role?: string
           updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           created_at?: string
@@ -745,6 +826,7 @@ export type Database = {
           restaurant_id?: string | null
           role?: string
           updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Relationships: [
           {
@@ -856,6 +938,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_default_employee_permissions: {
+        Args: { employee_id_param: string; granted_by_param: string }
+        Returns: undefined
+      }
       is_super_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -880,7 +966,17 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      permission_type:
+        | "pdv_access"
+        | "orders_view"
+        | "orders_manage"
+        | "products_view"
+        | "products_manage"
+        | "reports_view"
+        | "settings_view"
+        | "settings_manage"
+        | "employees_manage"
+      user_type: "owner" | "employee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -995,6 +1091,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      permission_type: [
+        "pdv_access",
+        "orders_view",
+        "orders_manage",
+        "products_view",
+        "products_manage",
+        "reports_view",
+        "settings_view",
+        "settings_manage",
+        "employees_manage",
+      ],
+      user_type: ["owner", "employee"],
+    },
   },
 } as const

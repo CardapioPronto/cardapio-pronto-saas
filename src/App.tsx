@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ import Admin from "./pages/Admin";
 import PagarmeConfig from "./pages/PagarmeConfig";
 import IfoodIntegracao from "./pages/IfoodIntegracao";
 import CreateInitialAdmin from "./pages/CreateInitialAdmin";
+import Funcionarios from "./pages/Funcionarios";
 
 // Importamos as novas páginas
 import CardapioDigital from "./pages/CardapioDigital";
@@ -90,6 +92,7 @@ const App = () => (
             <Route path="/cardapio" element={<ProtectedRoute><MenuDigital /></ProtectedRoute>} />
             <Route path="/produtos" element={<ProtectedRoute><Produtos /></ProtectedRoute>} />
             <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
+            <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
             <Route path="/assinaturas" element={<ProtectedRoute><Assinaturas /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/pagarme-config" element={<ProtectedRoute><PagarmeConfig /></ProtectedRoute>} />
