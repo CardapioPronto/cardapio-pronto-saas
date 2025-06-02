@@ -61,7 +61,9 @@ export const NovoPedido: React.FC = () => {
     }
 
     try {
-      const pedidoId = await finalizarPedidoOriginal(nomeCliente);
+      // Call the original function without arguments since it expects 0 parameters
+      // The nomeCliente is already handled by the hook's internal state
+      const pedidoId = await finalizarPedidoOriginal();
       
       // Tentar enviar notificação WhatsApp se telefone foi fornecido
       if (telefoneCliente && pedidoId) {

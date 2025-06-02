@@ -3,4 +3,4 @@
 export * from './estabelecimentoService';
 export * from './sistemaService';
 export * from './usuarioService';
-export * from './types';
+// Note: tipos are already exported by estabelecimentoService, so we don't need to re-export them
