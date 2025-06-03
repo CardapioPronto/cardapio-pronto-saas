@@ -38,17 +38,35 @@ export const getCurrentUser = async () => {
 
 // Função para obter o ID do restaurante do usuário atual
 export const getCurrentRestaurantId = async () => {
-  const user = await getCurrentUser();
-  if (!user) return null;
-  
-  // Specify the table name explicitly as a valid table name
-  const { data } = await supabase
-    .from('restaurants')
-    .select('id')
-    .eq('owner_id', user.id)
+  const user = await getCurrentUserWithProfile();
+  if (!user) return null;  
+  return user.restaurant_id;
+};
+
+export const getCurrentUserWithProfile = async () => {
+  // 1. Busca o usuário autenticado
+  const { data: authData } = await supabase.auth.getUser();
+  const authUser = authData?.user;
+  if (!authUser) return null;
+
+  // 2. Busca apenas os campos desejados na tabela de perfil
+  const { data: userProfile, error } = await supabase
+    .from('users') // ou 'users', conforme seu banco
+    .select('name, restaurant_id')
+    .eq('id', authUser.id)
     .single();
-  
-  return data?.id;
+
+  if (error) {
+    console.error("Erro ao buscar perfil do usuário:", error);
+    return { ...authUser, name: null, restaurant_id: null };
+  }
+
+  // 3. Retorna os dados combinados (sem objeto profile)
+  return {
+    ...authUser,
+    name: userProfile?.name ?? null,
+    restaurant_id: userProfile?.restaurant_id ?? null,
+  };
 };
 
 // Define a type for valid table names to ensure type safety

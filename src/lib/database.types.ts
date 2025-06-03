@@ -326,6 +326,38 @@ export interface Database {
           updated_at?: string;
         };
       };
+      demos: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          phone: string;
+          stablishment: string;
+          message: string;
+          date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email: string;
+          phone: string;
+          stablishment: string;
+          message: string;
+          date: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string;
+          phone?: string;
+          stablishment?: string;
+          message?: string;
+          date?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

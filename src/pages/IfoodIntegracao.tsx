@@ -24,8 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { IfoodCredentials, hasIfoodCredentials, loadIfoodConfig, configureIfoodCredentials, testIfoodConnection, setIfoodIntegrationEnabled, configureIfoodPolling } from "@/services/ifoodService";
-import { supabase } from "@/lib/supabase";
-import { getCurrentRestaurantId } from "@/lib/supabase";
+import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
 
 const IfoodIntegracao = () => {
   const [activeTab, setActiveTab] = useState("geral");
@@ -59,15 +58,11 @@ const IfoodIntegracao = () => {
         }
         
         // Buscar configuração do iFood do Supabase
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('ifood_integration')
           .select('*')
           .eq('restaurant_id', restaurantId)
-          .single();
-          
-        if (error && error.code !== 'PGRST116') { // PGRST116 é "não encontrado"
-          console.error("Erro ao carregar configuração do iFood:", error);
-        }
+          .single();          
         
         if (data) {
           // Carregar dados do banco
@@ -75,7 +70,7 @@ const IfoodIntegracao = () => {
             clientId: data.client_id,
             clientSecret: data.client_secret,
             merchantId: data.merchant_id,
-            restaurantId: data.restaurant_ifood_id || ""
+            restaurantId: data.restaurant_ifood_id ?? ""
           });
           
           setConfig({
@@ -88,10 +83,10 @@ const IfoodIntegracao = () => {
           const localConfig = loadIfoodConfig();
           if (localConfig.credentials) {
             setCredentials({
-              clientId: localConfig.credentials.clientId || "",
-              clientSecret: localConfig.credentials.clientSecret || "",
-              merchantId: localConfig.credentials.merchantId || "",
-              restaurantId: localConfig.credentials.restaurantId || ""
+              clientId: localConfig.credentials.clientId ?? "",
+              clientSecret: localConfig.credentials.clientSecret ?? "",
+              merchantId: localConfig.credentials.merchantId ?? "",
+              restaurantId: localConfig.credentials.restaurantId ?? ""
             });
             
             setConfig({
@@ -144,7 +139,7 @@ const IfoodIntegracao = () => {
               client_id: credentials.clientId,
               client_secret: credentials.clientSecret,
               merchant_id: credentials.merchantId,
-              restaurant_ifood_id: credentials.restaurantId || null,
+              restaurant_ifood_id: credentials.restaurantId ?? null,
               updated_at: new Date().toISOString()
             })
             .eq('restaurant_id', restaurantId)
@@ -155,7 +150,7 @@ const IfoodIntegracao = () => {
               client_id: credentials.clientId,
               client_secret: credentials.clientSecret,
               merchant_id: credentials.merchantId,
-              restaurant_ifood_id: credentials.restaurantId || null,
+              restaurant_ifood_id: credentials.restaurantId ?? null,
               is_enabled: config.isEnabled,
               polling_enabled: config.pollingEnabled,
               polling_interval: config.pollingInterval
@@ -189,7 +184,7 @@ const IfoodIntegracao = () => {
     setTestResult(null);
     
     try {
-      const result = await testIfoodConnection();
+      await testIfoodConnection();
       setTestResult({
         success: true,
         message: "Conexão estabelecida com sucesso!"
@@ -268,13 +263,13 @@ const IfoodIntegracao = () => {
       // Atualizar no localStorage como backup
       configureIfoodPolling(
         pollingEnabled,
-        interval !== undefined ? interval : config.pollingInterval
+        interval ?? config.pollingInterval
       );
       
       setConfig(prev => ({
         ...prev,
         pollingEnabled,
-        pollingInterval: interval !== undefined ? interval : prev.pollingInterval
+        pollingInterval: interval ?? prev.pollingInterval
       }));
       
       toast.success("Configurações de sincronização atualizadas");
@@ -467,7 +462,7 @@ const IfoodIntegracao = () => {
                       <Input 
                         id="restaurant-id" 
                         placeholder="ID do restaurante específico (se aplicável)"
-                        value={credentials.restaurantId || ""}
+                        value={credentials.restaurantId ?? ""}
                         onChange={(e) => setCredentials({...credentials, restaurantId: e.target.value})}
                       />
                       <p className="text-sm text-muted-foreground">
