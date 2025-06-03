@@ -10,15 +10,14 @@ import { Separator } from "@/components/ui/separator";
 import { MessageCircle, Phone, Settings, Send } from "lucide-react";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { WhatsAppIntegration } from "@/services/whatsapp/types";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useWhatsAppIntegration } from "@/hooks/useWhatsAppIntegration";
 import { toast } from "sonner";
 
 export const WhatsAppConfigTab: React.FC = () => {
-  const { user } = useCurrentUser();
-  const restaurantId = user?.restaurant_id || "";
+  const { integration: loadedIntegration, loading, restaurantId, loadIntegration } = useWhatsAppIntegration();
   
   const [config, setConfig] = useState<WhatsAppIntegration>({
-    restaurant_id: restaurantId,
+    restaurant_id: "",
     phone_number: "",
     api_token: "",
     webhook_url: "",
@@ -28,39 +27,38 @@ export const WhatsAppConfigTab: React.FC = () => {
     order_confirmation_message: "Seu pedido foi recebido e está sendo preparado. Obrigado!"
   });
   
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (restaurantId) {
-      loadConfig();
+      setConfig(prevConfig => ({ ...prevConfig, restaurant_id: restaurantId }));
     }
   }, [restaurantId]);
 
-  const loadConfig = async () => {
-    setLoading(true);
-    try {
-      const integration = await WhatsAppService.getIntegration(restaurantId);
-      if (integration) {
-        setConfig(integration);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-      toast.error('Erro ao carregar configurações do WhatsApp');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (loadedIntegration) {
+      setConfig(loadedIntegration);
+    } else if (restaurantId) {
+      setConfig(prevConfig => ({ ...prevConfig, restaurant_id: restaurantId }));
     }
-  };
+  }, [loadedIntegration, restaurantId]);
 
   const handleSave = async () => {
+    if (!restaurantId) {
+      toast.error('ID do restaurante não encontrado');
+      return;
+    }
+
     setSaving(true);
     try {
-      const success = await WhatsAppService.saveIntegration(config);
+      const configToSave = { ...config, restaurant_id: restaurantId };
+      const success = await WhatsAppService.saveIntegration(configToSave);
       if (success) {
-        await loadConfig(); // Recarregar para pegar dados atualizados
+        await loadIntegration();
       }
     } catch (error) {
       console.error('Erro ao salvar:', error);
+      toast.error('Erro ao salvar configurações do WhatsApp');
     } finally {
       setSaving(false);
     }
@@ -69,6 +67,11 @@ export const WhatsAppConfigTab: React.FC = () => {
   const sendTestMessage = async () => {
     if (!config.phone_number) {
       toast.error('Informe o número do WhatsApp primeiro');
+      return;
+    }
+
+    if (!restaurantId) {
+      toast.error('ID do restaurante não encontrado');
       return;
     }
 
@@ -96,6 +99,18 @@ export const WhatsAppConfigTab: React.FC = () => {
         <CardContent className="py-8">
           <div className="flex items-center justify-center">
             <div className="text-muted-foreground">Carregando configurações...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!restaurantId) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex items-center justify-center">
+            <div className="text-muted-foreground">Erro: Restaurante não encontrado</div>
           </div>
         </CardContent>
       </Card>

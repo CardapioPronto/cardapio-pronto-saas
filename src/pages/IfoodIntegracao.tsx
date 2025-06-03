@@ -26,12 +26,15 @@ import { AlertCircle, CheckCircle } from "lucide-react";
 import { IfoodCredentials, hasIfoodCredentials, loadIfoodConfig, configureIfoodCredentials, testIfoodConnection, setIfoodIntegrationEnabled, configureIfoodPolling } from "@/services/ifoodService";
 import { supabase } from "@/lib/supabase";
 import { getCurrentRestaurantId } from "@/lib/supabase";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const IfoodIntegracao = () => {
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState("geral");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [restaurantId, setRestaurantId] = useState<string>("");
   
   const [credentials, setCredentials] = useState<IfoodCredentials>({
     clientId: "",
@@ -47,85 +50,101 @@ const IfoodIntegracao = () => {
   });
 
   useEffect(() => {
-    const loadExistingConfig = async () => {
-      setIsLoading(true);
-      try {
-        // Obter ID do restaurante atual
-        const restaurantId = await getCurrentRestaurantId();
-        if (!restaurantId) {
-          toast.error("Erro ao carregar configuração: Restaurante não encontrado");
+    const loadRestaurantId = async () => {
+      if (user) {
+        try {
+          const id = await getCurrentRestaurantId();
+          if (id) {
+            setRestaurantId(id);
+          } else {
+            toast.error("Restaurante não encontrado");
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error("Erro ao obter ID do restaurante:", error);
+          toast.error("Erro ao obter informações do restaurante");
           setIsLoading(false);
-          return;
         }
+      }
+    };
+
+    loadRestaurantId();
+  }, [user]);
+
+  useEffect(() => {
+    if (restaurantId) {
+      loadExistingConfig();
+    }
+  }, [restaurantId]);
+
+  const loadExistingConfig = async () => {
+    if (!restaurantId) return;
+    
+    setIsLoading(true);
+    try {
+      // Buscar configuração do iFood do Supabase
+      const { data, error } = await supabase
+        .from('ifood_integration')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .single();
         
-        // Buscar configuração do iFood do Supabase
-        const { data, error } = await supabase
-          .from('ifood_integration')
-          .select('*')
-          .eq('restaurant_id', restaurantId)
-          .single();
-          
-        if (error && error.code !== 'PGRST116') { // PGRST116 é "não encontrado"
-          console.error("Erro ao carregar configuração do iFood:", error);
-        }
+      if (error && error.code !== 'PGRST116') { // PGRST116 é "não encontrado"
+        console.error("Erro ao carregar configuração do iFood:", error);
+      }
+      
+      if (data) {
+        // Carregar dados do banco
+        setCredentials({
+          clientId: data.client_id,
+          clientSecret: data.client_secret,
+          merchantId: data.merchant_id,
+          restaurantId: data.restaurant_ifood_id || ""
+        });
         
-        if (data) {
-          // Carregar dados do banco
+        setConfig({
+          isEnabled: data.is_enabled,
+          pollingEnabled: data.polling_enabled,
+          pollingInterval: data.polling_interval
+        });
+      } else {
+        // Carregar dados do localStorage como fallback
+        const localConfig = loadIfoodConfig();
+        if (localConfig.credentials) {
           setCredentials({
-            clientId: data.client_id,
-            clientSecret: data.client_secret,
-            merchantId: data.merchant_id,
-            restaurantId: data.restaurant_ifood_id || ""
+            clientId: localConfig.credentials.clientId || "",
+            clientSecret: localConfig.credentials.clientSecret || "",
+            merchantId: localConfig.credentials.merchantId || "",
+            restaurantId: localConfig.credentials.restaurantId || ""
           });
           
           setConfig({
-            isEnabled: data.is_enabled,
-            pollingEnabled: data.polling_enabled,
-            pollingInterval: data.polling_interval
+            isEnabled: localConfig.isEnabled,
+            pollingEnabled: localConfig.pollingEnabled,
+            pollingInterval: localConfig.pollingInterval
           });
-        } else {
-          // Carregar dados do localStorage como fallback
-          const localConfig = loadIfoodConfig();
-          if (localConfig.credentials) {
-            setCredentials({
-              clientId: localConfig.credentials.clientId || "",
-              clientSecret: localConfig.credentials.clientSecret || "",
-              merchantId: localConfig.credentials.merchantId || "",
-              restaurantId: localConfig.credentials.restaurantId || ""
-            });
-            
-            setConfig({
-              isEnabled: localConfig.isEnabled,
-              pollingEnabled: localConfig.pollingEnabled,
-              pollingInterval: localConfig.pollingInterval
-            });
-          }
         }
-      } catch (error) {
-        console.error("Erro ao carregar configurações:", error);
-        toast.error("Erro ao carregar configurações");
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
-    loadExistingConfig();
-  }, []);
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+      toast.error("Erro ao carregar configurações");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSaveCredentials = async () => {
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
+    }
+
     setIsConfiguring(true);
     
     try {
       // Validar se todos os campos obrigatórios estão preenchidos
       if (!credentials.clientId || !credentials.clientSecret || !credentials.merchantId) {
         toast.error("Por favor, preencha todos os campos obrigatórios");
-        return;
-      }
-      
-      // Salvar no Supabase
-      const restaurantId = await getCurrentRestaurantId();
-      if (!restaurantId) {
-        toast.error("Restaurante não encontrado");
         return;
       }
       
@@ -206,13 +225,12 @@ const IfoodIntegracao = () => {
   };
 
   const toggleIntegration = async (enabled: boolean) => {
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
+    }
+
     try {
-      const restaurantId = await getCurrentRestaurantId();
-      if (!restaurantId) {
-        toast.error("Restaurante não encontrado");
-        return;
-      }
-      
       // Atualizar no Supabase
       const { error } = await supabase
         .from('ifood_integration')
@@ -239,13 +257,12 @@ const IfoodIntegracao = () => {
   };
 
   const updatePollingSettings = async (pollingEnabled: boolean, interval?: number) => {
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
+    }
+
     try {
-      const restaurantId = await getCurrentRestaurantId();
-      if (!restaurantId) {
-        toast.error("Restaurante não encontrado");
-        return;
-      }
-      
       const updateData: Record<string, any> = {
         polling_enabled: pollingEnabled,
         updated_at: new Date().toISOString()
@@ -283,6 +300,26 @@ const IfoodIntegracao = () => {
       toast.error("Erro ao atualizar configurações");
     }
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Integração com iFood">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-muted-foreground">Carregando configurações...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!restaurantId) {
+    return (
+      <DashboardLayout title="Integração com iFood">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-destructive">Erro: Restaurante não encontrado</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Integração com iFood">
