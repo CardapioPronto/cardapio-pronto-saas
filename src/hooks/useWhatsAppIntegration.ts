@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { WhatsAppIntegration } from "@/services/whatsapp/types";
 import { useCurrentUser } from "./useCurrentUser";
@@ -29,13 +29,7 @@ export const useWhatsAppIntegration = () => {
     loadRestaurantId();
   }, [user]);
 
-  useEffect(() => {
-    if (restaurantId) {
-      loadIntegration();
-    }
-  }, [restaurantId]);
-
-  const loadIntegration = async () => {
+  const loadIntegration = useCallback(async () => {
     if (!restaurantId) return;
     
     setLoading(true);
@@ -47,7 +41,13 @@ export const useWhatsAppIntegration = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (restaurantId) {
+      loadIntegration();
+    }
+  }, [restaurantId, loadIntegration]);
 
   const sendOrderNotification = async (customerPhone: string, orderId: string) => {
     if (!integration?.is_enabled || !integration.auto_send_orders || !restaurantId) {

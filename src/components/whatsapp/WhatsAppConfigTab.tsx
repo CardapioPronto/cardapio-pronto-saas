@@ -156,7 +156,7 @@ export const WhatsAppConfigTab: React.FC = () => {
                 id="api_token"
                 type="password"
                 placeholder="Token para integração avançada"
-                value={config.api_token || ""}
+                value={config.api_token ?? ""}
                 onChange={(e) => setConfig({...config, api_token: e.target.value})}
               />
             </div>
