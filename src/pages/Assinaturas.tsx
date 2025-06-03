@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaymentForm from "@/components/payment/PaymentForm";
 import SubscriptionDetails from "@/components/payment/SubscriptionDetails";
 import { cancelSubscription } from "@/services/paymentService";
+import { fetchPlanos } from "@/services/planosService";
+import { Plano } from "@/types/plano";
 
-// Tipos e interfaces
-interface Plano {
-  id: string;
-  nome: string;
-  preco: number;
-  periodo: string;
-  recursos: string[];
-  popular?: boolean;
-}
-
+// Interfaces existentes
 interface Assinatura {
   id: string;
   planoId: string;
@@ -37,51 +30,8 @@ interface Assinatura {
 }
 
 const Assinaturas = () => {
-  // Planos disponíveis
-  const planos: Plano[] = [
-    {
-      id: "basic",
-      nome: "Básico",
-      preco: 49.90,
-      periodo: "mensal",
-      recursos: [
-        "1 Cardápio Digital",
-        "Até 30 produtos",
-        "PDV básico",
-        "Suporte por e-mail"
-      ]
-    },
-    {
-      id: "standard",
-      nome: "Padrão",
-      preco: 99.90,
-      periodo: "mensal",
-      popular: true,
-      recursos: [
-        "1 Cardápio Digital personalizado",
-        "Até 100 produtos",
-        "PDV completo",
-        "Gestão de mesas e comandas",
-        "Relatórios básicos",
-        "Suporte por chat"
-      ]
-    },
-    {
-      id: "premium",
-      nome: "Premium",
-      preco: 149.90,
-      periodo: "mensal",
-      recursos: [
-        "3 Cardápios Digitais personalizáveis",
-        "Produtos ilimitados",
-        "PDV completo",
-        "Gestão de mesas e comandas",
-        "Relatórios avançados",
-        "Integração com delivery",
-        "Suporte prioritário"
-      ]
-    }
-  ];
+  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Estado da assinatura atual (simular assinatura ativa)
   const [assinatura, setAssinatura] = useState<Assinatura>({
@@ -96,6 +46,22 @@ const Assinaturas = () => {
   const [selectedTab, setSelectedTab] = useState<string>("overview");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<Plano | null>(null);
+
+  useEffect(() => {
+    const loadPlanos = async () => {
+      try {
+        const planosData = await fetchPlanos();
+        setPlanos(planosData);
+      } catch (error) {
+        console.error("Erro ao carregar planos:", error);
+        toast.error("Erro ao carregar planos disponíveis");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlanos();
+  }, []);
 
   // Alternar plano
   const alterarPlano = (plano: Plano) => {
@@ -145,7 +111,17 @@ const Assinaturas = () => {
   };
 
   // Encontrar plano atual
-  const planoAtual = planos.find(plano => plano.id === assinatura.planoId);
+  const planoAtual = planos.find(plano => plano.id === assinatura.planoId) || planos[0];
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Assinaturas">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Carregando planos...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Assinaturas">
@@ -164,7 +140,7 @@ const Assinaturas = () => {
             {assinatura ? (
               <SubscriptionDetails 
                 subscription={assinatura}
-                plano={planoAtual || planos[0]}
+                plano={planoAtual}
                 onCancelSubscription={handleCancelSubscription}
               />
             ) : (
@@ -196,28 +172,33 @@ const Assinaturas = () => {
             <div className="grid md:grid-cols-3 gap-6">
               {planos.map((plano) => {
                 const isAtivo = assinatura.planoId === plano.id && assinatura.status === "ativa";
+                const isPopular = plano.name === "Profissional";
                 
                 return (
-                  <Card key={plano.id} className={`relative overflow-hidden ${plano.popular ? 'border-green' : ''}`}>
-                    {plano.popular && (
+                  <Card key={plano.id} className={`relative overflow-hidden ${isPopular ? 'border-green' : ''}`}>
+                    {isPopular && (
                       <div className="absolute top-0 right-0 bg-green text-white px-3 py-1 text-xs">
                         Popular
                       </div>
                     )}
                     
                     <CardHeader>
-                      <CardTitle>{plano.nome}</CardTitle>
+                      <CardTitle>{plano.name}</CardTitle>
                       <CardDescription>
-                        <span className="text-2xl font-bold">R$ {plano.preco.toFixed(2)}</span>
-                        <span className="text-sm">/{plano.periodo}</span>
+                        <span className="text-2xl font-bold">R$ {plano.price_monthly.toFixed(2)}</span>
+                        <span className="text-sm">/mês</span>
+                        <br />
+                        <span className="text-sm text-muted-foreground">
+                          Anual: R$ {plano.price_yearly.toFixed(2)}/mês
+                        </span>
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-2">
-                        {plano.recursos.map((recurso, index) => (
+                        {plano.features?.filter(f => f.is_enabled).map((feature, index) => (
                           <li key={index} className="flex items-start">
                             <CheckCircle className="h-4 w-4 text-green mr-2 mt-1" />
-                            <span>{recurso}</span>
+                            <span className="text-sm">{feature.feature}</span>
                           </li>
                         ))}
                       </ul>
@@ -230,7 +211,7 @@ const Assinaturas = () => {
                       ) : (
                         <Button 
                           className="w-full"
-                          variant={plano.popular ? "default" : "outline"}
+                          variant={isPopular ? "default" : "outline"}
                           onClick={() => alterarPlano(plano)}
                         >
                           {assinatura.status === "ativa" ? "Mudar para este plano" : "Assinar plano"}
@@ -251,8 +232,8 @@ const Assinaturas = () => {
           {selectedPlanForPayment && (
             <PaymentForm
               planId={selectedPlanForPayment.id}
-              planName={selectedPlanForPayment.nome}
-              planPrice={selectedPlanForPayment.preco}
+              planName={selectedPlanForPayment.name}
+              planPrice={selectedPlanForPayment.price_monthly}
               onSuccess={handleSubscriptionSuccess}
               onCancel={() => setShowPaymentDialog(false)}
             />
