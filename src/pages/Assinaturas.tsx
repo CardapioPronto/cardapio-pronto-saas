@@ -113,6 +113,14 @@ const Assinaturas = () => {
   // Encontrar plano atual
   const planoAtual = planos.find(plano => plano.id === assinatura.planoId) || planos[0];
 
+  // Transformar plano para o formato esperado pelo SubscriptionDetails
+  const planoFormatado = planoAtual ? {
+    id: planoAtual.id,
+    nome: planoAtual.name,
+    preco: planoAtual.price_monthly,
+    periodo: "/mês"
+  } : null;
+
   if (loading) {
     return (
       <DashboardLayout title="Assinaturas">
@@ -140,7 +148,7 @@ const Assinaturas = () => {
             {assinatura ? (
               <SubscriptionDetails 
                 subscription={assinatura}
-                plano={planoAtual}
+                plano={planoFormatado}
                 onCancelSubscription={handleCancelSubscription}
               />
             ) : (
