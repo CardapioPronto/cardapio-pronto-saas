@@ -1,65 +1,95 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
+import { fetchPlanos } from "@/services/planosService";
+import { Plano } from "@/types/plano";
 
-const planos = [
-  {
-    nome: "Básico",
-    preco: "R$ 99,90",
-    periodo: "/mês",
-    descricao: "Ideal para pequenos negócios iniciando sua presença digital",
-    recursos: [
-      "Cardápio digital com QR Code",
-      "Até 50 produtos cadastrados",
-      "PDV online básico",
-      "1 usuário administrador",
-      "Suporte por email"
-    ],
-    destaque: false,
-    botaoTexto: "Começar agora",
-    link: "/teste-gratis?plano=basico"
-  },
-  {
-    nome: "Profissional",
-    preco: "R$ 199,90",
-    periodo: "/mês",
-    descricao: "Perfeito para estabelecimentos em crescimento",
-    recursos: [
-      "Todos os recursos do plano Básico",
-      "Produtos ilimitados",
-      "Controle de estoque básico",
-      "Relatórios de vendas",
-      "Até 3 usuários",
-      "Suporte prioritário"
-    ],
-    destaque: true,
-    botaoTexto: "Escolher Profissional",
-    link: "/teste-gratis?plano=profissional"
-  },
-  {
-    nome: "Empresarial",
-    preco: "R$ 349,90",
-    periodo: "/mês",
-    descricao: "Sistema completo para redes de restaurantes",
-    recursos: [
-      "Todos os recursos do plano Profissional",
-      "Gestão de múltiplas unidades",
-      "Controle de estoque avançado",
-      "Relatórios completos e personalizados",
-      "Usuários ilimitados",
-      "Suporte dedicado 24/7"
-    ],
-    destaque: false,
-    botaoTexto: "Falar com consultor",
-    link: "/contato"
-  }
-];
+interface PlanoFormatado {
+  nome: string;
+  preco: string;
+  periodo: string;
+  descricao: string;
+  recursos: string[];
+  destaque: boolean;
+  botaoTexto: string;
+  link: string;
+}
 
 const Precos = () => {
+  const [planos, setPlanos] = useState<PlanoFormatado[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPlanos = async () => {
+      try {
+        const planosData = await fetchPlanos();
+        const planosFormatados = planosData.map(transformPlano);
+        setPlanos(planosFormatados);
+      } catch (error) {
+        console.error("Erro ao carregar planos:", error);
+        // Fallback para dados estáticos em caso de erro
+        setPlanos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlanos();
+  }, []);
+
+  const transformPlano = (plano: Plano): PlanoFormatado => {
+    const descriptions: Record<string, string> = {
+      "Básico": "Ideal para pequenos negócios iniciando sua presença digital",
+      "Profissional": "Perfeito para estabelecimentos em crescimento",
+      "Empresarial": "Sistema completo para redes de restaurantes",
+      "Inicial": "Para estabelecimentos com operação simplificada",
+      "Enterprise": "Para redes e estabelecimentos de grande porte"
+    };
+
+    const buttonTexts: Record<string, string> = {
+      "Básico": "Começar agora",
+      "Profissional": "Escolher Profissional",
+      "Empresarial": "Falar com consultor",
+      "Inicial": "Começar grátis",
+      "Enterprise": "Falar com consultor"
+    };
+
+    const links: Record<string, string> = {
+      "Básico": "/teste-gratis?plano=basico",
+      "Profissional": "/teste-gratis?plano=profissional",
+      "Empresarial": "/contato",
+      "Inicial": "/teste-gratis?plano=inicial",
+      "Enterprise": "/contato"
+    };
+
+    return {
+      nome: plano.name,
+      preco: `R$ ${plano.price_monthly.toFixed(2)}`,
+      periodo: "/mês",
+      descricao: descriptions[plano.name] || "Plano personalizado para suas necessidades",
+      recursos: plano.features?.filter(f => f.is_enabled).map(f => f.feature) || [],
+      destaque: plano.name === "Profissional",
+      botaoTexto: buttonTexts[plano.name] || "Escolher plano",
+      link: links[plano.name] || "/teste-gratis"
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow pt-24 flex items-center justify-center">
+          <p className="text-lg text-navy/70">Carregando planos...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />

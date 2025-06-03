@@ -71,6 +71,118 @@ export type Database = {
           },
         ]
       }
+      demos: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          email: string
+          id: string
+          message: string | null
+          name: string
+          phone: string
+          stablishment: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          phone: string
+          stablishment: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string
+          stablishment?: string
+        }
+        Relationships: []
+      }
+      employee_permissions: {
+        Row: {
+          created_at: string
+          employee_id: string
+          granted_by: string
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          granted_by: string
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          granted_by?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_permissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          created_at: string
+          created_by: string
+          employee_email: string
+          employee_name: string
+          id: string
+          is_active: boolean
+          restaurant_id: string
+          updated_at: string
+          user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          employee_email: string
+          employee_name: string
+          id?: string
+          is_active?: boolean
+          restaurant_id: string
+          updated_at?: string
+          user_id: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          is_active?: boolean
+          restaurant_id?: string
+          updated_at?: string
+          user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ifood_integration: {
         Row: {
           client_id: string
@@ -356,6 +468,65 @@ export type Database = {
           },
         ]
       }
+      plan_features: {
+        Row: {
+          feature: string
+          id: string
+          is_enabled: boolean | null
+          plan_id: string | null
+        }
+        Insert: {
+          feature: string
+          id?: string
+          is_enabled?: boolean | null
+          plan_id?: string | null
+        }
+        Update: {
+          feature?: string
+          id?: string
+          is_enabled?: boolean | null
+          plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_monthly: number
+          price_yearly: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_monthly: number
+          price_yearly: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_monthly?: number
+          price_yearly?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           available: boolean
@@ -456,6 +627,7 @@ export type Database = {
           name: string
           owner_id: string
           phone: string | null
+          phone_whatsapp: string | null
           slug: string | null
           updated_at: string
         }
@@ -472,6 +644,7 @@ export type Database = {
           name: string
           owner_id: string
           phone?: string | null
+          phone_whatsapp?: string | null
           slug?: string | null
           updated_at?: string
         }
@@ -488,6 +661,7 @@ export type Database = {
           name?: string
           owner_id?: string
           phone?: string | null
+          phone_whatsapp?: string | null
           slug?: string | null
           updated_at?: string
         }
@@ -632,6 +806,7 @@ export type Database = {
           restaurant_id: string | null
           role: string
           updated_at: string
+          user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           created_at?: string
@@ -641,6 +816,7 @@ export type Database = {
           restaurant_id?: string | null
           role?: string
           updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           created_at?: string
@@ -650,6 +826,7 @@ export type Database = {
           restaurant_id?: string | null
           role?: string
           updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Relationships: [
           {
@@ -661,32 +838,110 @@ export type Database = {
           },
         ]
       }
-      plans: {
+      whatsapp_integration: {
         Row: {
-          id: number;
-          name: string;
-          price_monthly: number;
-          price_yearly: number;
-          is_active: boolean;
+          api_token: string | null
+          auto_send_orders: boolean
+          created_at: string
+          is_enabled: boolean
+          order_confirmation_message: string
+          phone_number: string
+          restaurant_id: string
+          updated_at: string
+          webhook_url: string | null
+          welcome_message: string
         }
         Insert: {
-          name: string;
-          price_monthly: number;
-          price_yearly: number;
-          is_active: boolean;
+          api_token?: string | null
+          auto_send_orders?: boolean
+          created_at?: string
+          is_enabled?: boolean
+          order_confirmation_message?: string
+          phone_number: string
+          restaurant_id: string
+          updated_at?: string
+          webhook_url?: string | null
+          welcome_message?: string
         }
         Update: {
-          name?: string;
-          price_monthly?: number;
-          price_yearly?: number;
-          is_active?: boolean;
+          api_token?: string | null
+          auto_send_orders?: boolean
+          created_at?: string
+          is_enabled?: boolean
+          order_confirmation_message?: string
+          phone_number?: string
+          restaurant_id?: string
+          updated_at?: string
+          webhook_url?: string | null
+          welcome_message?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_integration_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          message_type: string
+          order_id: string | null
+          phone_number: string
+          restaurant_id: string
+          status: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          message_type: string
+          order_id?: string | null
+          phone_number: string
+          restaurant_id: string
+          status?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          order_id?: string | null
+          phone_number?: string
+          restaurant_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      create_default_employee_permissions: {
+        Args: { employee_id_param: string; granted_by_param: string }
+        Returns: undefined
+      }
       is_super_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -711,7 +966,17 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      permission_type:
+        | "pdv_access"
+        | "orders_view"
+        | "orders_manage"
+        | "products_view"
+        | "products_manage"
+        | "reports_view"
+        | "settings_view"
+        | "settings_manage"
+        | "employees_manage"
+      user_type: "owner" | "employee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -826,6 +1091,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      permission_type: [
+        "pdv_access",
+        "orders_view",
+        "orders_manage",
+        "products_view",
+        "products_manage",
+        "reports_view",
+        "settings_view",
+        "settings_manage",
+        "employees_manage",
+      ],
+      user_type: ["owner", "employee"],
+    },
   },
 } as const

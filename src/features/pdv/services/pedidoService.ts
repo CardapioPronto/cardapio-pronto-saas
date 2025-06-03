@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ItemPedido, ProdutoSimplificado, Pedido } from "../types";
+import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { toast } from "sonner";
 
 export async function salvarPedido(
@@ -8,7 +8,8 @@ export async function salvarPedido(
   mesaOuBalcao: string,
   itensPedido: ItemPedido[],
   totalPedido: number,
-  nomeCliente?: string
+  nomeCliente?: string,
+  telefoneCliente?: string
 ) {
   try {
     // Determinar se é mesa ou balcão
@@ -20,6 +21,7 @@ export async function salvarPedido(
       .insert({
         restaurant_id: restaurantId,
         customer_name: nomeCliente || (isMesa ? 'Cliente local' : 'Cliente balcão'),
+        customer_phone: telefoneCliente || null,
         order_type: isMesa ? 'mesa' : 'balcao',
         table_number: isMesa ? mesaOuBalcao.replace('Mesa ', '') : null,
         status: 'pendente',
@@ -53,6 +55,20 @@ export async function salvarPedido(
       console.error('Erro ao criar itens do pedido:', itemsError);
       toast.error('Erro ao salvar os itens do pedido.');
       return { success: false, error: itemsError };
+    }
+
+    // 3. Enviar notificação via WhatsApp se configurado e telefone fornecido
+    if (telefoneCliente) {
+      try {
+        await WhatsAppService.sendOrderConfirmation(
+          restaurantId,
+          telefoneCliente,
+          order.id
+        );
+      } catch (whatsappError) {
+        console.error('Erro ao enviar notificação WhatsApp:', whatsappError);
+        // Não falhar o pedido por erro do WhatsApp
+      }
     }
 
     toast.success('Pedido finalizado com sucesso!');

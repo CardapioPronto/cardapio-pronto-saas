@@ -1,5 +1,6 @@
+
 import { CheckCircle, XCircle } from "lucide-react";
-import { Plano } from "@/hooks/usePlanos";
+import { Plano } from "@/types/plano";
 
 interface PlanosListProps {
     planos: Plano[];

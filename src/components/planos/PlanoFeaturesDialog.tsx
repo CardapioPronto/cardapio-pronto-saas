@@ -1,4 +1,4 @@
-// PlanoFeaturesDialog.tsx
+
 import { useCallback, useEffect, useState } from "react";
 import {
     Dialog,
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
-import { Plano } from "@/hooks/usePlanos";
+import { Plano } from "@/types/plano";
 
 interface PlanoFeaturesDialogProps {
     open: boolean;
@@ -55,8 +55,14 @@ export const PlanoFeaturesDialog = ({
             .eq("plan_id", plano.id);
 
         if (data) {
-            setFeatures(data);
-            setErrorMessage(null); // Limpa mensagens de erro
+            // Transform data to ensure boolean type
+            const transformedFeatures = data.map(item => ({
+                id: item.id,
+                feature: item.feature,
+                is_enabled: item.is_enabled || false
+            }));
+            setFeatures(transformedFeatures);
+            setErrorMessage(null);
         }
         if (error) {
             console.error("Erro ao carregar features:", error);

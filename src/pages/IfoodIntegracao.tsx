@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,259 +25,318 @@ import { toast } from "@/components/ui/sonner";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { IfoodCredentials, hasIfoodCredentials, loadIfoodConfig, configureIfoodCredentials, testIfoodConnection, setIfoodIntegrationEnabled, configureIfoodPolling } from "@/services/ifoodService";
 import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+function useRestaurantId(
+  user: unknown,
+  setRestaurantId: (id: string) => void,
+  setIsLoading: (loading: boolean) => void
+) {
+  useEffect(() => {
+    const loadRestaurantId = async () => {
+      if (user) {
+        try {
+          const id = await getCurrentRestaurantId();
+          if (id) {
+            setRestaurantId(id);
+          } else {
+            toast.error("Restaurante não encontrado");
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error("Erro ao obter ID do restaurante:", error);
+          toast.error("Erro ao obter informações do restaurante");
+          setIsLoading(false);
+        }
+      }
+    };
+    loadRestaurantId();
+  }, [user, setRestaurantId, setIsLoading]);
+}
+
+interface IfoodIntegrationConfig {
+  isEnabled: boolean;
+  pollingEnabled: boolean;
+  pollingInterval: number;
+}
+
+async function saveCredentialsHelper(
+  restaurantId: string,
+  credentials: IfoodCredentials,
+  config: IfoodIntegrationConfig,
+  setIsConfiguring: (b: boolean) => void,
+  toast: { success: (msg: string) => void; error: (msg: string) => void }
+) {
+  setIsConfiguring(true);
+  try {
+    if (!credentials.clientId || !credentials.clientSecret || !credentials.merchantId) {
+      toast.error("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+    const { data: existingConfig } = await supabase
+      .from('ifood_integration')
+      .select('restaurant_id')
+      .eq('restaurant_id', restaurantId)
+      .single();
+    const supabaseOperation = existingConfig
+      ? supabase
+          .from('ifood_integration')
+          .update({
+            client_id: credentials.clientId,
+            client_secret: credentials.clientSecret,
+            merchant_id: credentials.merchantId,
+            restaurant_ifood_id: credentials.restaurantId ?? null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('restaurant_id', restaurantId)
+      : supabase
+          .from('ifood_integration')
+          .insert({
+            restaurant_id: restaurantId,
+            client_id: credentials.clientId,
+            client_secret: credentials.clientSecret,
+            merchant_id: credentials.merchantId,
+            restaurant_ifood_id: credentials.restaurantId ?? null,
+            is_enabled: config.isEnabled,
+            polling_enabled: config.pollingEnabled,
+            polling_interval: config.pollingInterval
+          });
+    const { error } = await supabaseOperation;
+    if (error) throw error;
+    configureIfoodCredentials({
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret,
+      merchantId: credentials.merchantId,
+      restaurantId: credentials.restaurantId
+    });
+    toast.success("Credenciais salvas com sucesso");
+  } catch (error) {
+    console.error("Erro ao salvar credenciais:", error);
+    toast.error("Erro ao salvar credenciais");
+  } finally {
+    setIsConfiguring(false);
+  }
+}
+
+async function testConnectionHelper(
+  setIsLoading: (b: boolean) => void,
+  setTestResult: (result: { success: boolean; message: string } | null) => void,
+  toast: { success: (msg: string) => void; error: (msg: string) => void }
+) {
+  setIsLoading(true);
+  setTestResult(null);
+  try {
+    await testIfoodConnection();
+    setTestResult({
+      success: true,
+      message: "Conexão estabelecida com sucesso!"
+    });
+  } catch (error) {
+    console.error("Erro na conexão com iFood:", error);
+    setTestResult({
+      success: false,
+      message: "Falha na conexão. Verifique suas credenciais."
+    });
+  } finally {
+    setIsLoading(false);
+  }
+}
+
+// Helper to toggle integration enabled/disabled
+async function toggleIntegrationHelper(
+  enabled: boolean,
+  restaurantId: string,
+  setConfig: React.Dispatch<React.SetStateAction<IfoodIntegrationConfig>>,
+  toast: { success: (msg: string) => void; error: (msg: string) => void }
+) {
+  try {
+    const { error } = await supabase
+      .from('ifood_integration')
+      .update({
+        is_enabled: enabled,
+        updated_at: new Date().toISOString()
+      })
+      .eq('restaurant_id', restaurantId);
+    if (error) throw error;
+    setIfoodIntegrationEnabled(enabled);
+    setConfig((prev: any) => ({ ...prev, isEnabled: enabled }));
+    toast.success(`Integração ${enabled ? 'ativada' : 'desativada'} com sucesso`);
+  } catch (error) {
+    console.error("Erro ao alterar status da integração:", error);
+    toast.error("Erro ao alterar status da integração");
+  }
+}
+
+// Helper to update polling settings
+async function updatePollingSettingsHelper(
+  pollingEnabled: boolean,
+  interval: number | undefined,
+  restaurantId: string,
+  config: IfoodIntegrationConfig,
+  setConfig: React.Dispatch<React.SetStateAction<IfoodIntegrationConfig>>,
+  toast: { success: (msg: string) => void; error: (msg: string) => void }
+) {
+  try {
+    const updateData: {
+      polling_enabled: boolean;
+      updated_at: string;
+      polling_interval?: number;
+    } = {
+      polling_enabled: pollingEnabled,
+      updated_at: new Date().toISOString()
+    };
+    if (interval !== undefined) {
+      updateData.polling_interval = interval;
+    }
+    const { error } = await supabase
+      .from('ifood_integration')
+      .update(updateData)
+      .eq('restaurant_id', restaurantId);
+    if (error) throw error;
+    configureIfoodPolling(
+      pollingEnabled,
+      interval ?? config.pollingInterval
+    );
+    setConfig((prev: IfoodIntegrationConfig) => ({
+      ...prev,
+      pollingEnabled,
+      pollingInterval: interval ?? prev.pollingInterval
+    }));
+    toast.success("Configurações de sincronização atualizadas");
+  } catch (error) {
+    console.error("Erro ao atualizar configurações de sincronização:", error);
+    toast.error("Erro ao atualizar configurações");
+  }
+}
 
 const IfoodIntegracao = () => {
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState("geral");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  
+  const [restaurantId, setRestaurantId] = useState<string>("");
+
   const [credentials, setCredentials] = useState<IfoodCredentials>({
     clientId: "",
     clientSecret: "",
     merchantId: "",
     restaurantId: ""
   });
-  
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<IfoodIntegrationConfig>({
     isEnabled: false,
     pollingEnabled: true,
     pollingInterval: 60
   });
 
-  useEffect(() => {
-    const loadExistingConfig = async () => {
-      setIsLoading(true);
-      try {
-        // Obter ID do restaurante atual
-        const restaurantId = await getCurrentRestaurantId();
-        if (!restaurantId) {
-          toast.error("Erro ao carregar configuração: Restaurante não encontrado");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Buscar configuração do iFood do Supabase
-        const { data } = await supabase
-          .from('ifood_integration')
-          .select('*')
-          .eq('restaurant_id', restaurantId)
-          .single();          
-        
-        if (data) {
-          // Carregar dados do banco
-          setCredentials({
-            clientId: data.client_id,
-            clientSecret: data.client_secret,
-            merchantId: data.merchant_id,
-            restaurantId: data.restaurant_ifood_id ?? ""
-          });
-          
-          setConfig({
-            isEnabled: data.is_enabled,
-            pollingEnabled: data.polling_enabled,
-            pollingInterval: data.polling_interval
-          });
-        } else {
-          // Carregar dados do localStorage como fallback
-          const localConfig = loadIfoodConfig();
-          if (localConfig.credentials) {
-            setCredentials({
-              clientId: localConfig.credentials.clientId ?? "",
-              clientSecret: localConfig.credentials.clientSecret ?? "",
-              merchantId: localConfig.credentials.merchantId ?? "",
-              restaurantId: localConfig.credentials.restaurantId ?? ""
-            });
-            
-            setConfig({
-              isEnabled: localConfig.isEnabled,
-              pollingEnabled: localConfig.pollingEnabled,
-              pollingInterval: localConfig.pollingInterval
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao carregar configurações:", error);
-        toast.error("Erro ao carregar configurações");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadExistingConfig();
-  }, []);
+  useRestaurantId(user, setRestaurantId, setIsLoading);
 
-  const handleSaveCredentials = async () => {
-    setIsConfiguring(true);
-    
+  const loadExistingConfig = useCallback(async () => {
+    if (!restaurantId) return;
+
+    setIsLoading(true);
     try {
-      // Validar se todos os campos obrigatórios estão preenchidos
-      if (!credentials.clientId || !credentials.clientSecret || !credentials.merchantId) {
-        toast.error("Por favor, preencha todos os campos obrigatórios");
-        return;
-      }
-      
-      // Salvar no Supabase
-      const restaurantId = await getCurrentRestaurantId();
-      if (!restaurantId) {
-        toast.error("Restaurante não encontrado");
-        return;
-      }
-      
-      // Verificar se já existe configuração
-      const { data: existingConfig } = await supabase
+      const { data, error } = await supabase
         .from('ifood_integration')
-        .select('restaurant_id')
+        .select('*')
         .eq('restaurant_id', restaurantId)
         .single();
-        
-      // Salvar ou atualizar no Supabase
-      const supabaseOperation = existingConfig 
-        ? supabase
-            .from('ifood_integration')
-            .update({
-              client_id: credentials.clientId,
-              client_secret: credentials.clientSecret,
-              merchant_id: credentials.merchantId,
-              restaurant_ifood_id: credentials.restaurantId ?? null,
-              updated_at: new Date().toISOString()
-            })
-            .eq('restaurant_id', restaurantId)
-        : supabase
-            .from('ifood_integration')
-            .insert({
-              restaurant_id: restaurantId,
-              client_id: credentials.clientId,
-              client_secret: credentials.clientSecret,
-              merchant_id: credentials.merchantId,
-              restaurant_ifood_id: credentials.restaurantId ?? null,
-              is_enabled: config.isEnabled,
-              polling_enabled: config.pollingEnabled,
-              polling_interval: config.pollingInterval
-            });
-            
-      const { error } = await supabaseOperation;
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Salvar também no localStorage como backup
-      configureIfoodCredentials({
-        clientId: credentials.clientId,
-        clientSecret: credentials.clientSecret,
-        merchantId: credentials.merchantId,
-        restaurantId: credentials.restaurantId
-      });
-      
-      toast.success("Credenciais salvas com sucesso");
-    } catch (error) {
-      console.error("Erro ao salvar credenciais:", error);
-      toast.error("Erro ao salvar credenciais");
-    } finally {
-      setIsConfiguring(false);
-    }
-  };
 
-  const handleTestConnection = async () => {
-    setIsLoading(true);
-    setTestResult(null);
-    
-    try {
-      await testIfoodConnection();
-      setTestResult({
-        success: true,
-        message: "Conexão estabelecida com sucesso!"
-      });
+      if (error && error.code !== 'PGRST116') {
+        console.error("Erro ao carregar configuração do iFood:", error);
+      }
+
+      if (data) {
+        setCredentials({
+          clientId: data.client_id,
+          clientSecret: data.client_secret,
+          merchantId: data.merchant_id,
+          restaurantId: data.restaurant_ifood_id ?? ""
+        });
+
+        setConfig({
+          isEnabled: data.is_enabled,
+          pollingEnabled: data.polling_enabled,
+          pollingInterval: data.polling_interval
+        });
+      } else {
+        const localConfig = loadIfoodConfig();
+        if (localConfig.credentials) {
+          setCredentials({
+            clientId: localConfig.credentials.clientId ?? "",
+            clientSecret: localConfig.credentials.clientSecret ?? "",
+            merchantId: localConfig.credentials.merchantId ?? "",
+            restaurantId: localConfig.credentials.restaurantId ?? ""
+          });
+
+          setConfig({
+            isEnabled: localConfig.isEnabled ?? false,
+            pollingEnabled: localConfig.pollingEnabled ?? true,
+            pollingInterval: localConfig.pollingInterval ?? 60
+          });
+        }
+      }
     } catch (error) {
-      console.error("Erro na conexão com iFood:", error);
-      setTestResult({
-        success: false,
-        message: "Falha na conexão. Verifique suas credenciais."
-      });
+      console.error("Erro ao carregar configurações:", error);
+      toast.error("Erro ao carregar configurações");
     } finally {
       setIsLoading(false);
     }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (restaurantId) {
+      loadExistingConfig();
+    }
+  }, [restaurantId, loadExistingConfig]);
+
+  const handleSaveCredentials = async () => {
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
+    }
+    await saveCredentialsHelper(restaurantId, credentials, config, setIsConfiguring, toast);
+  };
+
+  const handleTestConnection = async () => {
+    await testConnectionHelper(setIsLoading, setTestResult, toast);
   };
 
   const toggleIntegration = async (enabled: boolean) => {
-    try {
-      const restaurantId = await getCurrentRestaurantId();
-      if (!restaurantId) {
-        toast.error("Restaurante não encontrado");
-        return;
-      }
-      
-      // Atualizar no Supabase
-      const { error } = await supabase
-        .from('ifood_integration')
-        .update({
-          is_enabled: enabled,
-          updated_at: new Date().toISOString()
-        })
-        .eq('restaurant_id', restaurantId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Atualizar no localStorage como backup
-      setIfoodIntegrationEnabled(enabled);
-      
-      setConfig(prev => ({ ...prev, isEnabled: enabled }));
-      
-      toast.success(`Integração ${enabled ? 'ativada' : 'desativada'} com sucesso`);
-    } catch (error) {
-      console.error("Erro ao alterar status da integração:", error);
-      toast.error("Erro ao alterar status da integração");
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
     }
+    await toggleIntegrationHelper(enabled, restaurantId, setConfig, toast);
   };
 
   const updatePollingSettings = async (pollingEnabled: boolean, interval?: number) => {
-    try {
-      const restaurantId = await getCurrentRestaurantId();
-      if (!restaurantId) {
-        toast.error("Restaurante não encontrado");
-        return;
-      }
-      
-      const updateData: Record<string, any> = {
-        polling_enabled: pollingEnabled,
-        updated_at: new Date().toISOString()
-      };
-      
-      if (interval !== undefined) {
-        updateData.polling_interval = interval;
-      }
-      
-      // Atualizar no Supabase
-      const { error } = await supabase
-        .from('ifood_integration')
-        .update(updateData)
-        .eq('restaurant_id', restaurantId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Atualizar no localStorage como backup
-      configureIfoodPolling(
-        pollingEnabled,
-        interval ?? config.pollingInterval
-      );
-      
-      setConfig(prev => ({
-        ...prev,
-        pollingEnabled,
-        pollingInterval: interval ?? prev.pollingInterval
-      }));
-      
-      toast.success("Configurações de sincronização atualizadas");
-    } catch (error) {
-      console.error("Erro ao atualizar configurações de sincronização:", error);
-      toast.error("Erro ao atualizar configurações");
+    if (!restaurantId) {
+      toast.error("ID do restaurante não encontrado");
+      return;
     }
+    await updatePollingSettingsHelper(pollingEnabled, interval, restaurantId, config, setConfig, toast);
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Integração com iFood">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-muted-foreground">Carregando configurações...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!restaurantId) {
+    return (
+      <DashboardLayout title="Integração com iFood">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-destructive">Erro: Restaurante não encontrado</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Integração com iFood">

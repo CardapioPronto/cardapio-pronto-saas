@@ -1,4 +1,4 @@
-// EditPlanoDialog.tsx
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plano } from "@/hooks/usePlanos";
+import { Plano } from "@/types/plano";
 import { supabase } from "@/lib/supabase";
 
 interface EditPlanoDialogProps {

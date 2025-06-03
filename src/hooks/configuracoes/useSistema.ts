@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useCurrentUser } from "../useCurrentUser";
 import { obterConfiguracoesSistema, salvarConfiguracoesSistema, ConfiguracoesSistema } from "@/services/configuracoes";
 import { toast } from "sonner";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-export function useSistema() {
+export const useSistema = () => {
   const { user } = useCurrentUser();
   const [configuracoesSistema, setConfiguracoesSistema] = useState<ConfiguracoesSistema>({
     notification_new_order: true,
@@ -13,41 +13,39 @@ export function useSistema() {
     language: "pt-BR",
     auto_print: false
   });
-  
   const [loading, setLoading] = useState(false);
 
-  // Carregar configurações do sistema
   useEffect(() => {
-    const carregarConfiguracoesSistema = async () => {
-      if (!user) return; // Não carrega dados se não houver usuário autenticado
-      
-      setLoading(true);
-      try {
-        const config = await obterConfiguracoesSistema();
-        setConfiguracoesSistema(config);
-      } catch (error) {
-        console.error("Erro ao carregar configurações do sistema:", error);
-        toast.error("Erro ao carregar configurações do sistema");
-        // Ainda mantemos o estado padrão das configurações
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      carregarConfiguracoesSistema();
+    if (user?.restaurant_id) {
+      carregarConfiguracoesDoSistema();
     }
-  }, [user]);
+  }, [user?.restaurant_id]);
 
-  // Salvar configurações do sistema
+  const carregarConfiguracoesDoSistema = async () => {
+    if (!user?.restaurant_id) return;
+
+    setLoading(true);
+    try {
+      const config = await obterConfiguracoesSistema();
+      setConfiguracoesSistema(config);
+    } catch (error) {
+      console.error("Erro ao carregar configurações do sistema:", error);
+      toast.error("Erro ao carregar configurações do sistema");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const salvarConfiguracoesDoSistema = async () => {
+    if (!user?.restaurant_id) return;
+
     setLoading(true);
     try {
       await salvarConfiguracoesSistema(configuracoesSistema);
-      toast.success("Configurações salvas com sucesso!");
+      toast.success("Configurações do sistema salvas com sucesso!");
     } catch (error) {
-      console.error("Erro ao salvar configurações:", error);
-      toast.error("Erro ao salvar configurações");
+      console.error("Erro ao salvar configurações do sistema:", error);
+      toast.error("Erro ao salvar configurações do sistema");
     } finally {
       setLoading(false);
     }
@@ -59,4 +57,4 @@ export function useSistema() {
     loading,
     salvarConfiguracoesDoSistema
   };
-}
+};

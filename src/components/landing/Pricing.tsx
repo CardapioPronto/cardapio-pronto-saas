@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { fetchPlanosForLanding } from "@/services/planosService";
 
 interface PlanFeature {
   feature: string;
@@ -12,6 +13,7 @@ interface PlanFeature {
 interface PricingPlan {
   name: string;
   price: number;
+  priceYearly: number;
   description: string;
   popular?: boolean;
   features: PlanFeature[];
@@ -20,58 +22,37 @@ interface PricingPlan {
 
 const Pricing = () => {
   const [annual, setAnnual] = useState(false);
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const plans: PricingPlan[] = [
-    {
-      name: "Inicial",
-      price: annual ? 79 : 99,
-      description: "Para estabelecimentos com operação simplificada.",
-      features: [
-        { feature: "Cardápio digital via QR Code", included: true },
-        { feature: "PDV online básico", included: true },
-        { feature: "Até 100 produtos cadastrados", included: true },
-        { feature: "1 dispositivo simultâneo", included: true },
-        { feature: "Relatórios básicos", included: true },
-        { feature: "Controle de mesas", included: false },
-        { feature: "Integração com impressoras", included: false },
-        { feature: "Suporte prioritário", included: false },
-      ],
-      buttonText: "Começar grátis",
-    },
-    {
-      name: "Profissional",
-      price: annual ? 129 : 149,
-      popular: true,
-      description: "Ideal para restaurantes de médio porte.",
-      features: [
-        { feature: "Cardápio digital via QR Code", included: true },
-        { feature: "PDV online completo", included: true },
-        { feature: "Produtos ilimitados", included: true },
-        { feature: "3 dispositivos simultâneos", included: true },
-        { feature: "Relatórios avançados", included: true },
-        { feature: "Controle de mesas", included: true },
-        { feature: "Integração com impressoras", included: true },
-        { feature: "Suporte prioritário", included: false },
-      ],
-      buttonText: "Começar teste grátis",
-    },
-    {
-      name: "Enterprise",
-      price: annual ? 199 : 249,
-      description: "Para redes e estabelecimentos de grande porte.",
-      features: [
-        { feature: "Cardápio digital via QR Code", included: true },
-        { feature: "PDV online completo", included: true },
-        { feature: "Produtos ilimitados", included: true },
-        { feature: "Dispositivos ilimitados", included: true },
-        { feature: "Relatórios avançados + API", included: true },
-        { feature: "Controle de mesas", included: true },
-        { feature: "Integração com impressoras", included: true },
-        { feature: "Suporte prioritário 24/7", included: true },
-      ],
-      buttonText: "Falar com consultor",
-    },
-  ];
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const plansData = await fetchPlanosForLanding();
+        setPlans(plansData);
+      } catch (error) {
+        console.error("Erro ao carregar planos:", error);
+        // Fallback para dados estáticos em caso de erro
+        setPlans([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
+
+  if (loading) {
+    return (
+      <section id="pricing" className="py-16 md:py-24">
+        <div className="container mx-auto px-6">
+          <div className="text-center">
+            <p className="text-lg text-navy/70">Carregando planos...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="pricing" className="py-16 md:py-24">
@@ -126,7 +107,9 @@ const Pricing = () => {
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-navy">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-bold text-navy">R${plan.price}</span>
+                  <span className="text-4xl font-bold text-navy">
+                    R${annual ? plan.priceYearly.toFixed(2) : plan.price.toFixed(2)}
+                  </span>
                   <span className="ml-1 text-gray-500">/mês</span>
                 </div>
                 <p className="mt-2 text-sm text-navy/70">{plan.description}</p>
