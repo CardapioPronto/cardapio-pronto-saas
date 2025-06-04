@@ -6,19 +6,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-
-interface Product {
-  id: number;
-  name: string;
-  popularity: number;
-  units: number;
-}
+import { PopularProduct } from "@/services/dashboardService";
 
 interface PopularProductsProps {
-  products: Product[];
+  products: PopularProduct[];
 }
 
 export function PopularProducts({ products }: PopularProductsProps) {
+  // Calculate maximum sales to normalize popularity percentages
+  const maxSales = products.length > 0 
+    ? Math.max(...products.map(product => product.sales)) 
+    : 1;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -27,22 +26,27 @@ export function PopularProducts({ products }: PopularProductsProps) {
       <CardContent>
         {products && products.length > 0 ? (
           <div className="space-y-4">
-            {products.map((product) => (
-              <div key={product.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium leading-none">
-                    {product.name}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {product.units} un.
+            {products.map((product) => {
+              // Calculate popularity percentage based on max sales
+              const popularity = Math.round((product.sales / maxSales) * 100);
+              
+              return (
+                <div key={product.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium leading-none">
+                      {product.name}
                     </p>
-                    <p className="text-xs font-medium">{product.popularity}%</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {product.sales} un.
+                      </p>
+                      <p className="text-xs font-medium">{popularity}%</p>
+                    </div>
                   </div>
+                  <Progress value={popularity} className="h-1.5" />
                 </div>
-                <Progress value={product.popularity} className="h-1.5" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">

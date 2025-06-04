@@ -1,12 +1,12 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSystemInitialization } from "@/hooks/useSystemInitialization";
-import { PopularProducts } from "@/components/dashboard/PopularProducts";
-import { RecentSales } from "@/components/dashboard/RecentSales";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { RecentSales as RecentSalesComponent } from "@/components/dashboard/RecentSales";
+import { PopularProducts as PopularProductsComponent } from "@/components/dashboard/PopularProducts";
 
 const Dashboard = () => {
   const { user } = useCurrentUser();
@@ -35,24 +35,18 @@ const Dashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle>Produtos Populares</CardTitle>
-              <CardDescription>
-                Os produtos mais vendidos este mês
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <PopularProducts products={popularProducts} />
+              <PopularProductsComponent products={popularProducts} />
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader>
               <CardTitle>Vendas Recentes</CardTitle>
-              <CardDescription>
-                Últimas transações realizadas
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <RecentSales sales={recentSales} />
+              <RecentSalesComponent sales={recentSales} />
             </CardContent>
           </Card>
         </div>

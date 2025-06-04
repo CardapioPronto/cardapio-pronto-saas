@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { fetchOrdersData } from "@/services/dashboardService";
+import { getDashboardStats } from "@/services/dashboardService";
 import { useStatsData } from "./useStatsData";
 import { useRecentSales } from "./useRecentSales";
 import { usePopularProducts } from "./usePopularProducts";
@@ -17,15 +17,15 @@ export const useDashboardData = (restaurantId: string | null) => {
       return;
     }
 
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       setLoading(true);
       
       try {
-        const ordersData = await fetchOrdersData(restaurantId);
-        updateStats(ordersData);
+        const statsData = await getDashboardStats();
+        updateStats(statsData);
         
-        await loadRecentSales(restaurantId);
-        await loadPopularProducts(restaurantId);
+        await loadRecentSales();
+        await loadPopularProducts();
       } catch (error) {
         console.error("Erro ao buscar dados do dashboard:", error);
       } finally {
@@ -33,7 +33,7 @@ export const useDashboardData = (restaurantId: string | null) => {
       }
     };
 
-    fetchStats();
+    fetchDashboardData();
   }, [restaurantId]);
 
   return { stats, loading, recentSales, popularProducts };

@@ -6,17 +6,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-
-interface Sale {
-  id: number;
-  table: number;
-  commandaNumber: string;
-  time: string;
-  value: number;
-}
+import { RecentSale } from "@/services/dashboardService";
 
 interface RecentSalesProps {
-  sales: Sale[];
+  sales: RecentSale[];
 }
 
 export function RecentSales({ sales }: RecentSalesProps) {
@@ -31,17 +24,17 @@ export function RecentSales({ sales }: RecentSalesProps) {
             {sales.map((sale) => (
               <div key={sale.id} className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-beige/30 flex items-center justify-center text-sm font-semibold">
-                  M{sale.table}
+                  {sale.customer ? sale.customer.substring(0, 1) : "C"}
                 </div>
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    Comanda #{sale.commandaNumber}
+                    {sale.customer || "Cliente"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {sale.time}
                   </p>
                 </div>
-                <div className="font-medium">{formatCurrency(sale.value)}</div>
+                <div className="font-medium">{formatCurrency(sale.amount)}</div>
               </div>
             ))}
           </div>

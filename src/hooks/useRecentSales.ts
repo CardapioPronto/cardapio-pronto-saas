@@ -1,21 +1,18 @@
 
 import { useState } from "react";
-import { fetchRecentSales } from "@/services/dashboardService";
-
-interface SaleItem {
-  id: number;
-  table: number;
-  commandaNumber: string;
-  time: string;
-  value: number;
-}
+import { getRecentSales, RecentSale } from "@/services/dashboardService";
 
 export const useRecentSales = () => {
-  const [recentSales, setRecentSales] = useState<SaleItem[]>([]);
+  const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
 
-  const loadRecentSales = async (restaurantId: string) => {
-    const sales = await fetchRecentSales(restaurantId);
-    setRecentSales(sales);
+  const loadRecentSales = async () => {
+    try {
+      const sales = await getRecentSales();
+      setRecentSales(sales);
+    } catch (error) {
+      console.error("Erro ao carregar vendas recentes:", error);
+      setRecentSales([]);
+    }
   };
 
   return { recentSales, loadRecentSales };
