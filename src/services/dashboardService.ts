@@ -1,127 +1,202 @@
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from '@/lib/supabase';
+import { getCurrentRestaurantId } from '@/lib/supabase';
 
-export const fetchOrdersData = async (restaurantId: string) => {
-  const today = new Date();
-  const startOfToday = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-  const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
-  const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0).toISOString();
+export interface DashboardStats {
+  totalPedidos: number;
+  faturamento: number;
+  produtosMaisVendidos: number;
+  avaliacaoMedia: number;
+  crescimentoPedidos: number;
+  crescimentoFaturamento: number;
+}
 
-  const { data: salesToday } = await supabase
-    .from("orders")
-    .select("total")
-    .eq("restaurant_id", restaurantId)
-    .gte("created_at", startOfToday);
+export interface RecentSale {
+  id: string;
+  customer: string;
+  amount: number;
+  status: string;
+  time: string;
+}
 
-  const { data: ordersThisMonth } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("restaurant_id", restaurantId)
-    .gte("created_at", startOfMonth);
+export interface PopularProduct {
+  id: string;
+  name: string;
+  sales: number;
+  revenue: number;
+  category: string;
+}
 
-  const { data: ordersLastMonth } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("restaurant_id", restaurantId)
-    .gte("created_at", startOfLastMonth)
-    .lte("created_at", endOfLastMonth);
-
-  return {
-    salesToday: salesToday?.reduce((sum, o) => sum + (o.total || 0), 0) || 0,
-    ordersThisMonth: ordersThisMonth || [],
-    ordersLastMonth: ordersLastMonth || []
-  };
-};
-
-export const fetchRecentSales = async (restaurantId: string) => {
-  const { data: recentOrders, error } = await supabase
-    .from("orders")
-    .select("id, total, table_number, created_at, order_number")
-    .eq("restaurant_id", restaurantId)
-    .order("created_at", { ascending: false })
-    .limit(4);
-
-  if (error) {
-    console.error("Erro ao buscar vendas recentes:", error);
-    return [];
-  }
-
-  if (!recentOrders || recentOrders.length === 0) {
-    return [];
-  }
-
-  return recentOrders.map((order, index) => ({
-    id: index + 1, 
-    table: parseInt(order.table_number || "0"),
-    commandaNumber: order.order_number.replace('ORD-', '') || "0",
-    time: new Date(order.created_at).toLocaleTimeString(),
-    value: order.total,
-  }));
-};
-
-export const fetchPopularProducts = async (restaurantId: string) => {
-  const { data: restaurantOrders, error: ordersError } = await supabase
-    .from("orders")
-    .select("id")
-    .eq("restaurant_id", restaurantId);
-  
-  if (ordersError) {
-    console.error("Erro ao buscar pedidos do restaurante:", ordersError);
-    return [];
-  }
-  
-  if (!restaurantOrders || restaurantOrders.length === 0) {
-    return [];
-  }
-  
-  const orderIds = restaurantOrders.map(order => order.id);
-  
-  const { data: orderItems, error: itemsError } = await supabase
-    .from("order_items")
-    .select("product_id, product_name, quantity")
-    .in("order_id", orderIds);
-
-  if (itemsError) {
-    console.error("Erro ao buscar itens de pedidos:", itemsError);
-    return [];
-  }
-
-  if (!orderItems || orderItems.length === 0) {
-    return [];
-  }
-
-  const productStats = new Map<string, { name: string, count: number }>();
-  
-  orderItems?.forEach(item => {
-    if (!productStats.has(item.product_id)) {
-      productStats.set(item.product_id, { name: item.product_name, count: 0 });
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+  try {
+    const restaurantId = await getCurrentRestaurantId();
+    if (!restaurantId) {
+      throw new Error('Restaurant ID not found');
     }
+
+    // Calcular data de 30 dias atrás para comparação
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const currentStat = productStats.get(item.product_id);
-    if (currentStat) {
-      currentStat.count += item.quantity;
-      productStats.set(item.product_id, currentStat);
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    // Buscar pedidos dos últimos 30 dias
+    const { data: recentOrders, error: recentError } = await supabase
+      .from('orders')
+      .select('total, created_at')
+      .eq('restaurant_id', restaurantId)
+      .gte('created_at', thirtyDaysAgo.toISOString());
+
+    if (recentError) throw recentError;
+
+    // Buscar pedidos de 30-60 dias atrás para comparação
+    const { data: previousOrders, error: previousError } = await supabase
+      .from('orders')
+      .select('total, created_at')
+      .eq('restaurant_id', restaurantId)
+      .gte('created_at', sixtyDaysAgo.toISOString())
+      .lt('created_at', thirtyDaysAgo.toISOString());
+
+    if (previousError) throw previousError;
+
+    // Calcular estatísticas
+    const totalPedidos = recentOrders?.length || 0;
+    const faturamento = recentOrders?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
+    
+    const previousTotalPedidos = previousOrders?.length || 0;
+    const previousFaturamento = previousOrders?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
+
+    // Calcular crescimento
+    const crescimentoPedidos = previousTotalPedidos > 0 
+      ? ((totalPedidos - previousTotalPedidos) / previousTotalPedidos) * 100 
+      : totalPedidos > 0 ? 100 : 0;
+
+    const crescimentoFaturamento = previousFaturamento > 0 
+      ? ((faturamento - previousFaturamento) / previousFaturamento) * 100 
+      : faturamento > 0 ? 100 : 0;
+
+    // Buscar produtos mais vendidos
+    const { data: topProducts, error: productsError } = await supabase
+      .from('order_items')
+      .select(`
+        product_id,
+        quantity,
+        orders!inner(restaurant_id, created_at)
+      `)
+      .eq('orders.restaurant_id', restaurantId)
+      .gte('orders.created_at', thirtyDaysAgo.toISOString());
+
+    if (productsError) throw productsError;
+
+    const produtosMaisVendidos = topProducts?.length || 0;
+
+    return {
+      totalPedidos,
+      faturamento,
+      produtosMaisVendidos,
+      avaliacaoMedia: 4.5, // Pode ser implementado com sistema de avaliação
+      crescimentoPedidos,
+      crescimentoFaturamento,
+    };
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas do dashboard:', error);
+    // Retornar dados padrão em caso de erro
+    return {
+      totalPedidos: 0,
+      faturamento: 0,
+      produtosMaisVendidos: 0,
+      avaliacaoMedia: 0,
+      crescimentoPedidos: 0,
+      crescimentoFaturamento: 0,
+    };
+  }
+};
+
+export const getRecentSales = async (): Promise<RecentSale[]> => {
+  try {
+    const restaurantId = await getCurrentRestaurantId();
+    if (!restaurantId) {
+      throw new Error('Restaurant ID not found');
     }
-  });
 
-  const topProducts = Array.from(productStats.entries())
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 4);
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('id, customer_name, total, status, created_at')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-  if (topProducts.length === 0) {
+    if (error) throw error;
+
+    return orders?.map(order => ({
+      id: order.id,
+      customer: order.customer_name,
+      amount: Number(order.total),
+      status: order.status,
+      time: new Date(order.created_at).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    })) || [];
+  } catch (error) {
+    console.error('Erro ao buscar vendas recentes:', error);
     return [];
   }
+};
 
-  const totalSales = topProducts.reduce((sum, [_, stats]) => sum + stats.count, 0);
+export const getPopularProducts = async (): Promise<PopularProduct[]> => {
+  try {
+    const restaurantId = await getCurrentRestaurantId();
+    if (!restaurantId) {
+      throw new Error('Restaurant ID not found');
+    }
 
-  return topProducts.map(([id, stats], index) => {
-    const popularity = Math.round((stats.count / totalSales) * 100);
-    return {
-      id: index + 1,
-      name: stats.name,
-      popularity: popularity,
-      units: stats.count,
-    };
-  });
+    // Buscar produtos mais vendidos dos últimos 30 dias
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: productSales, error } = await supabase
+      .from('order_items')
+      .select(`
+        product_id,
+        product_name,
+        quantity,
+        price,
+        products!inner(name, category_id),
+        orders!inner(restaurant_id, created_at)
+      `)
+      .eq('orders.restaurant_id', restaurantId)
+      .gte('orders.created_at', thirtyDaysAgo.toISOString());
+
+    if (error) throw error;
+
+    // Agrupar por produto e calcular totais
+    const productMap = new Map();
+    
+    productSales?.forEach(item => {
+      const productId = item.product_id;
+      if (productMap.has(productId)) {
+        const existing = productMap.get(productId);
+        existing.sales += item.quantity;
+        existing.revenue += item.quantity * Number(item.price);
+      } else {
+        productMap.set(productId, {
+          id: productId,
+          name: item.product_name,
+          sales: item.quantity,
+          revenue: item.quantity * Number(item.price),
+          category: 'Produto' // Pode buscar da categoria se necessário
+        });
+      }
+    });
+
+    // Converter para array e ordenar por vendas
+    return Array.from(productMap.values())
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+  } catch (error) {
+    console.error('Erro ao buscar produtos populares:', error);
+    return [];
+  }
 };

@@ -59,71 +59,30 @@ export const useEmployees = () => {
     if (!user?.restaurant_id || !user?.id) return { success: false };
 
     try {
-      // Criar usuário no auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: employeeData.employee_email,
-        password: employeeData.password,
-        email_confirm: true,
-        user_metadata: {
-          name: employeeData.employee_name,
-          user_type: 'employee'
+      // Usar Edge Function para criar funcionário
+      const { data: result, error } = await supabase.functions.invoke('create-employee', {
+        body: {
+          employee_name: employeeData.employee_name,
+          employee_email: employeeData.employee_email,
+          password: employeeData.password,
+          restaurant_id: user.restaurant_id,
+          created_by: user.id,
+          permissions: employeeData.permissions || [
+            'pdv_access',
+            'orders_view', 
+            'orders_manage',
+            'products_view'
+          ]
         }
       });
 
-      if (authError) throw authError;
+      if (error) {
+        console.error('Erro ao criar funcionário:', error);
+        throw error;
+      }
 
-      if (!authData.user) throw new Error('Falha ao criar usuário');
-
-      // Criar registro na tabela users
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: employeeData.employee_email,
-          name: employeeData.employee_name,
-          restaurant_id: user.restaurant_id,
-          user_type: 'employee'
-        });
-
-      if (userError) throw userError;
-
-      // Criar registro do funcionário
-      const { data: employeeRecord, error: employeeError } = await supabase
-        .from('employees')
-        .insert({
-          user_id: authData.user.id,
-          restaurant_id: user.restaurant_id,
-          employee_name: employeeData.employee_name,
-          employee_email: employeeData.employee_email,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (employeeError) throw employeeError;
-
-      // Criar permissões (padrão ou customizadas)
-      if (employeeData.permissions && employeeData.permissions.length > 0) {
-        const permissionsToInsert = employeeData.permissions.map(permission => ({
-          employee_id: employeeRecord.id,
-          permission,
-          granted_by: user.id
-        }));
-
-        const { error: permissionsError } = await supabase
-          .from('employee_permissions')
-          .insert(permissionsToInsert);
-
-        if (permissionsError) throw permissionsError;
-      } else {
-        // Usar função para criar permissões padrão
-        const { error: defaultPermissionsError } = await supabase
-          .rpc('create_default_employee_permissions', {
-            employee_id_param: employeeRecord.id,
-            granted_by_param: user.id
-          });
-
-        if (defaultPermissionsError) throw defaultPermissionsError;
+      if (!result.success) {
+        throw new Error(result.error || 'Erro desconhecido ao criar funcionário');
       }
 
       toast.success('Funcionário criado com sucesso!');
@@ -131,7 +90,7 @@ export const useEmployees = () => {
       return { success: true };
     } catch (error) {
       console.error('Erro ao criar funcionário:', error);
-      toast.error('Erro ao criar funcionário');
+      toast.error('Erro ao criar funcionário. Verifique se o email já não está em uso.');
       return { success: false };
     }
   };
