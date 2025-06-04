@@ -12,7 +12,15 @@ export const menuThemeService = {
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    
+    // Transformar null em undefined para compatibilidade com TypeScript
+    const themes = (data || []).map(theme => ({
+      ...theme,
+      description: theme.description || undefined,
+      preview_image_url: theme.preview_image_url || undefined
+    }));
+    
+    return themes;
   },
 
   // Buscar configuração do menu de um restaurante
@@ -25,7 +33,15 @@ export const menuThemeService = {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    
+    if (!data) return null;
+    
+    // Transformar os tipos para compatibilidade
+    return {
+      ...data,
+      custom_colors: (data.custom_colors as Record<string, string>) || {},
+      custom_settings: (data.custom_settings as Record<string, any>) || {}
+    };
   },
 
   // Buscar dados do cardápio público por slug
@@ -63,11 +79,27 @@ export const menuThemeService = {
     // Buscar configuração do tema
     const config = await this.getRestaurantMenuConfig(restaurant.id);
     
+    // Transformar os dados para o formato esperado
+    const transformedRestaurant = {
+      ...restaurant,
+      logo_url: restaurant.logo_url || undefined,
+      slug: restaurant.slug || restaurant.id // fallback se slug for null
+    };
+
+    const transformedCategories = (categories || [])
+      .filter(cat => cat.products && cat.products.length > 0)
+      .map(category => ({
+        ...category,
+        products: category.products.map(product => ({
+          ...product,
+          description: product.description || undefined,
+          image_url: product.image_url || undefined
+        }))
+      }));
+    
     return {
-      restaurant,
-      categories: categories?.filter(cat => 
-        cat.products && cat.products.length > 0
-      ) || [],
+      restaurant: transformedRestaurant,
+      categories: transformedCategories,
       config
     };
   },
@@ -92,6 +124,11 @@ export const menuThemeService = {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      ...data,
+      custom_colors: (data.custom_colors as Record<string, string>) || {},
+      custom_settings: (data.custom_settings as Record<string, any>) || {}
+    };
   }
 };
