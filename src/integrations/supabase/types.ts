@@ -323,6 +323,39 @@ export type Database = {
           },
         ]
       }
+      menu_themes: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          name: string
+          preview_image_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          name: string
+          preview_image_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          preview_image_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       menus: {
         Row: {
           active: boolean
@@ -577,6 +610,47 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_menu_config: {
+        Row: {
+          created_at: string
+          custom_colors: Json | null
+          custom_settings: Json | null
+          id: string
+          is_active: boolean
+          restaurant_id: string
+          theme_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_colors?: Json | null
+          custom_settings?: Json | null
+          id?: string
+          is_active?: boolean
+          restaurant_id: string
+          theme_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_colors?: Json | null
+          custom_settings?: Json | null
+          id?: string
+          is_active?: boolean
+          restaurant_id?: string
+          theme_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_menu_config_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "menu_themes"
             referencedColumns: ["id"]
           },
         ]

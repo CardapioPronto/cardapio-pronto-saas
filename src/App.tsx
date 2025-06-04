@@ -1,118 +1,139 @@
+import { useState, useEffect } from 'react';
+import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import { Dashboard } from './pages/Dashboard';
+import { Produtos } from './pages/Produtos';
+import { Pedidos } from './pages/Pedidos';
+import { Restaurantes } from './pages/Restaurantes';
+import { Funcionarios } from './pages/Funcionarios';
+import { Categorias } from './pages/Categorias';
+import { Cardapio } from './pages/Cardapio';
+import { Configuracoes } from './pages/Configuracoes';
+import { Login } from './pages/Login';
+import { RecuperarSenha } from './pages/RecuperarSenha';
+import { DefinirNovaSenha } from './pages/DefinirNovaSenha';
+import { ErrorBoundary } from 'react-error-boundary';
+import { AuthLayout } from './layouts/AuthLayout';
+import { MainLayout } from './layouts/MainLayout';
+import { NotFound } from './pages/NotFound';
+import { useSession } from './hooks/useSession';
+import { initSupabase, setupAuthListeners } from './lib/supabase-init';
+import { Cadastro } from './pages/Cadastro';
+import { Toast } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
+import { useToast } from '@/components/ui/use-toast';
+import { BemVindo } from './pages/BemVindo';
+import { Analytics } from '@vercel/analytics/react';
+import CardapioPublico from './pages/CardapioPublico';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React from "react";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
+function App() {
+  const { session, isLoading } = useSession();
+  const { toast } = useToast();
+  const [supabaseReady, setSupabaseReady] = useState(false);
 
-import LandingPage from "./pages/LandingPage";
-import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
-import MenuDigital from "./pages/MenuDigital";
-import PDV from "./pages/PDV";
-import Produtos from "./pages/Produtos";
-import Assinaturas from "./pages/Assinaturas";
-import Configuracoes from "./pages/Configuracoes";
-import Pedidos from "./pages/Pedidos";
-import Cadastro from "./pages/Cadastro";
-import CardapioPublico from "./pages/CardapioPublico";
-import FAQ from "./pages/FAQ";
-import Demonstracao from "./pages/Demonstracao";
-import Funcionalidades from "./pages/Funcionalidades";
-import Contato from "./pages/Contato";
-import Admin from "./pages/Admin";
-import PagarmeConfig from "./pages/PagarmeConfig";
-import IfoodIntegracao from "./pages/IfoodIntegracao";
-import CreateInitialAdmin from "./pages/CreateInitialAdmin";
-import Funcionarios from "./pages/Funcionarios";
+  useEffect(() => {
+    const initializeSupabase = async () => {
+      const isReady = await initSupabase();
+      setSupabaseReady(isReady);
 
-// Importamos as novas páginas
-import CardapioDigital from "./pages/CardapioDigital";
-import PDVOnline from "./pages/PDVOnline";
-import GestaoCompleta from "./pages/GestaoCompleta";
-import Precos from "./pages/Precos";
-import Categorias from "./pages/Categorias";
+      if (isReady) {
+        setupAuthListeners();
+      }
+    };
 
-// Importamos as páginas de administração
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminSuperAdmins from "./pages/admin/AdminSuperAdmins";
-import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminLogs from "./pages/admin/AdminLogs";
-import AdminPlanos from "./pages/admin/AdminPlanos";
-import { AdminProtectedRoute } from "./components/admin/AdminProtectedRoute";
+    initializeSupabase();
+  }, []);
 
-const queryClient = new QueryClient();
-
-// Componente de proteção de rotas
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center">Carregando...</div>;
+  if (isLoading || !supabaseReady) {
+    return (
+      <div className="grid h-screen place-items-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary text-4xl text-primary animate-spin">
+          🍕
+        </div>
+      </div>
+    );
   }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Rotas públicas */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/teste-gratis" element={<Cadastro />} />
-            <Route path="/menu/:id" element={<CardapioPublico />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/demonstracao" element={<Demonstracao />} />
-            <Route path="/funcionalidades" element={<Funcionalidades />} />
-            <Route path="/contato" element={<Contato />} />
-            <Route path="/cardapio-digital" element={<CardapioDigital />} />
-            <Route path="/pdv-online" element={<PDVOnline />} />
-            <Route path="/gestao-completa" element={<GestaoCompleta />} />
-            <Route path="/precos" element={<Precos />} />
-            <Route path="/create-initial-admin" element={<CreateInitialAdmin />} />
-            
-            {/* Rotas protegidas */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/pdv" element={<ProtectedRoute><PDV /></ProtectedRoute>} />
-            <Route path="/cardapio" element={<ProtectedRoute><MenuDigital /></ProtectedRoute>} />
-            <Route path="/produtos" element={<ProtectedRoute><Produtos /></ProtectedRoute>} />
-            <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
-            <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
-            <Route path="/assinaturas" element={<ProtectedRoute><Assinaturas /></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
-            <Route path="/pagarme-config" element={<ProtectedRoute><PagarmeConfig /></ProtectedRoute>} />
-            <Route path="/ifood-integracao" element={<ProtectedRoute><IfoodIntegracao /></ProtectedRoute>} />
-            <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
-            
-            {/* Rotas de administração */}
-            <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-            <Route path="/admin/subscriptions" element={<AdminProtectedRoute><AdminSubscriptions /></AdminProtectedRoute>} />
-            <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
-            <Route path="/admin/logs" element={<AdminProtectedRoute><AdminLogs /></AdminProtectedRoute>} />
-            <Route path="/admin/admins" element={<AdminProtectedRoute><AdminSuperAdmins /></AdminProtectedRoute>} />
-            <Route path="/admin/planos" element={<AdminProtectedRoute><AdminPlanos /></AdminProtectedRoute>} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+  return (
+    <div className="min-h-screen bg-background">
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/login" element={
+            <AuthLayout>
+              <Login />
+            </AuthLayout>
+          } />
+          <Route path="/cadastro" element={
+            <AuthLayout>
+              <Cadastro />
+            </AuthLayout>
+          } />
+          <Route path="/recuperar-senha" element={
+            <AuthLayout>
+              <RecuperarSenha />
+            </AuthLayout>
+          } />
+          <Route path="/definir-nova-senha" element={
+            <AuthLayout>
+              <DefinirNovaSenha />
+            </AuthLayout>
+          } />
+          <Route path="/bem-vindo" element={
+            <AuthLayout>
+              <BemVindo />
+            </AuthLayout>
+          } />
+
+          <Route path="/" element={
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          } />
+          <Route path="/produtos" element={
+            <MainLayout>
+              <Produtos />
+            </MainLayout>
+          } />
+          <Route path="/pedidos" element={
+            <MainLayout>
+              <Pedidos />
+            </MainLayout>
+          } />
+          <Route path="/restaurantes" element={
+            <MainLayout>
+              <Restaurantes />
+            </MainLayout>
+          } />
+          <Route path="/funcionarios" element={
+            <MainLayout>
+              <Funcionarios />
+            </MainLayout>
+          } />
+          <Route path="/categorias" element={
+            <MainLayout>
+              <Categorias />
+            </MainLayout>
+          } />
+          <Route path="/cardapio" element={
+            <MainLayout>
+              <Cardapio />
+            </MainLayout>
+          } />
+          <Route path="/configuracoes" element={
+            <MainLayout>
+              <Configuracoes />
+            </MainLayout>
+          } />
+          
+          {/* Rota para cardápio público */}
+          <Route path="/cardapio/:slug" element={<CardapioPublico />} />
+          
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </ErrorBoundary>
+      <Toaster />
+      <Analytics />
+    </div>
+  );
+}
 
 export default App;
