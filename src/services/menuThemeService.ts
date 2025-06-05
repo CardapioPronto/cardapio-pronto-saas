@@ -117,16 +117,30 @@ export const menuThemeService = {
     };
   },
 
-  // Atualizar configuração do tema de um restaurante
+  // Atualizar configuração do tema de um restaurante usando upsert
   async updateRestaurantTheme(
     restaurantId: string, 
     themeId: string, 
     customColors: Record<string, string> = {},
     customSettings: Record<string, any> = {}
   ): Promise<RestaurantMenuConfig> {
+    console.log('Updating restaurant theme:', {
+      restaurantId,
+      themeId,
+      customColors,
+      customSettings
+    });
+
+    // Primeiro, desativar configurações existentes para este restaurante
+    await supabase
+      .from('restaurant_menu_config')
+      .update({ is_active: false })
+      .eq('restaurant_id', restaurantId);
+
+    // Criar nova configuração
     const { data, error } = await supabase
       .from('restaurant_menu_config')
-      .upsert({
+      .insert({
         restaurant_id: restaurantId,
         theme_id: themeId,
         custom_colors: customColors,
@@ -136,7 +150,12 @@ export const menuThemeService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating restaurant theme:', error);
+      throw error;
+    }
+    
+    console.log('Theme updated successfully:', data);
     
     return {
       ...data,

@@ -46,8 +46,11 @@ function App() {
     );
   }
 
-  // Verifica se está em produção para carregar o Analytics
-  const isProduction = import.meta.env.PROD && window.location.hostname !== 'localhost';
+  // Verifica se está em produção e não é localhost para carregar o Analytics
+  const isProduction = import.meta.env.PROD && 
+                      typeof window !== 'undefined' && 
+                      !window.location.hostname.includes('localhost') &&
+                      !window.location.hostname.includes('lovableproject.com');
 
   return (
     <QueryClientProvider client={queryClient}>
