@@ -46,6 +46,9 @@ function App() {
     );
   }
 
+  // Verifica se está em produção para carregar o Analytics
+  const isProduction = import.meta.env.PROD && window.location.hostname !== 'localhost';
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -54,7 +57,7 @@ function App() {
             <AppRoutes />
           </BrowserRouter>
           <Toaster />
-          <Analytics />
+          {isProduction && <Analytics />}
         </div>
       </AuthProvider>
     </QueryClientProvider>
