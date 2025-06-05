@@ -46,15 +46,22 @@ export const menuThemeService = {
 
   // Buscar dados do cardápio público por slug
   async getPublicMenuData(slug: string) {
-    // Buscar restaurante pelo slug
+    console.log('Getting public menu data for slug:', slug);
+    
+    // Buscar restaurante pelo slug ou ID
     const { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
       .select('id, name, logo_url, slug')
-      .eq('slug', slug)
+      .or(`slug.eq.${slug},id.eq.${slug}`)
       .eq('active', true)
       .single();
 
-    if (restaurantError) throw restaurantError;
+    if (restaurantError) {
+      console.error('Restaurant error:', restaurantError);
+      throw restaurantError;
+    }
+
+    console.log('Restaurant found:', restaurant);
 
     // Buscar categorias e produtos
     const { data: categories, error: categoriesError } = await supabase
@@ -74,10 +81,16 @@ export const menuThemeService = {
       .eq('restaurant_id', restaurant.id)
       .order('name');
 
-    if (categoriesError) throw categoriesError;
+    if (categoriesError) {
+      console.error('Categories error:', categoriesError);
+      throw categoriesError;
+    }
+
+    console.log('Categories found:', categories);
 
     // Buscar configuração do tema
     const config = await this.getRestaurantMenuConfig(restaurant.id);
+    console.log('Config found:', config);
     
     // Transformar os dados para o formato esperado
     const transformedRestaurant = {

@@ -23,7 +23,10 @@ const CardapioPublico = () => {
 
       try {
         setLoading(true);
+        console.log('Loading menu data for slug:', slug);
+        
         const data = await menuThemeService.getPublicMenuData(slug);
+        console.log('Menu data loaded:', data);
         
         // Determinar o tema
         let selectedTheme = 'default';
@@ -48,10 +51,11 @@ const CardapioPublico = () => {
         });
         
         setThemeName(selectedTheme);
-        setLoading(false);
+        setError(null);
       } catch (error) {
         console.error('Erro ao carregar cardápio:', error);
         setError('Não foi possível carregar o cardápio. Verifique se o link está correto.');
+      } finally {
         setLoading(false);
       }
     };
@@ -80,6 +84,9 @@ const CardapioPublico = () => {
         <div className="bg-white rounded-lg shadow-md w-full max-w-md p-6 text-center">
           <h1 className="text-xl font-bold text-red-500 mb-2">Ops!</h1>
           <p className="text-gray-700 mb-4">{error}</p>
+          <p className="text-sm text-gray-500">
+            Verifique se o link do cardápio está correto ou entre em contato com o restaurante.
+          </p>
         </div>
       </div>
     );

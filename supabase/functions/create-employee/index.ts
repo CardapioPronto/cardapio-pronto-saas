@@ -55,7 +55,7 @@ serve(async (req) => {
       );
     }
 
-    // Criar registro na tabela users
+    // Criar registro na tabela users como FUNCIONÁRIO
     const { error: userError } = await supabaseClient
       .from('users')
       .insert({
@@ -63,7 +63,8 @@ serve(async (req) => {
         email: employee_email,
         name: employee_name,
         restaurant_id: restaurant_id,
-        user_type: 'employee'
+        user_type: 'employee',
+        role: 'employee' // Importante: definir como employee, não restaurant_owner
       });
 
     if (userError) {
@@ -82,7 +83,8 @@ serve(async (req) => {
         restaurant_id: restaurant_id,
         employee_name: employee_name,
         employee_email: employee_email,
-        created_by: created_by
+        created_by: created_by,
+        user_type: 'employee' // Garantir que seja employee
       })
       .select()
       .single();
