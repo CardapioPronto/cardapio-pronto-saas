@@ -117,7 +117,7 @@ export const menuThemeService = {
     };
   },
 
-  // Atualizar configuração do tema de um restaurante usando upsert
+  // Atualizar configuração do tema de um restaurante
   async updateRestaurantTheme(
     restaurantId: string, 
     themeId: string, 
@@ -131,36 +131,71 @@ export const menuThemeService = {
       customSettings
     });
 
-    // Primeiro, desativar configurações existentes para este restaurante
-    await supabase
-      .from('restaurant_menu_config')
-      .update({ is_active: false })
-      .eq('restaurant_id', restaurantId);
+    try {
+      // Buscar configuração existente
+      const { data: existingConfig } = await supabase
+        .from('restaurant_menu_config')
+        .select('id')
+        .eq('restaurant_id', restaurantId)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    // Criar nova configuração
-    const { data, error } = await supabase
-      .from('restaurant_menu_config')
-      .insert({
-        restaurant_id: restaurantId,
-        theme_id: themeId,
-        custom_colors: customColors,
-        custom_settings: customSettings,
-        is_active: true
-      })
-      .select()
-      .single();
+      if (existingConfig) {
+        // Atualizar configuração existente
+        const { data, error } = await supabase
+          .from('restaurant_menu_config')
+          .update({
+            theme_id: themeId,
+            custom_colors: customColors,
+            custom_settings: customSettings,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingConfig.id)
+          .select()
+          .single();
 
-    if (error) {
-      console.error('Error updating restaurant theme:', error);
+        if (error) {
+          console.error('Error updating restaurant theme:', error);
+          throw error;
+        }
+
+        console.log('Theme updated successfully:', data);
+        
+        return {
+          ...data,
+          custom_colors: (data.custom_colors as Record<string, string>) || {},
+          custom_settings: (data.custom_settings as Record<string, any>) || {}
+        };
+      } else {
+        // Criar nova configuração
+        const { data, error } = await supabase
+          .from('restaurant_menu_config')
+          .insert({
+            restaurant_id: restaurantId,
+            theme_id: themeId,
+            custom_colors: customColors,
+            custom_settings: customSettings,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating restaurant theme:', error);
+          throw error;
+        }
+        
+        console.log('Theme created successfully:', data);
+        
+        return {
+          ...data,
+          custom_colors: (data.custom_colors as Record<string, string>) || {},
+          custom_settings: (data.custom_settings as Record<string, any>) || {}
+        };
+      }
+    } catch (error) {
+      console.error('Error in updateRestaurantTheme:', error);
       throw error;
     }
-    
-    console.log('Theme updated successfully:', data);
-    
-    return {
-      ...data,
-      custom_colors: (data.custom_colors as Record<string, string>) || {},
-      custom_settings: (data.custom_settings as Record<string, any>) || {}
-    };
   }
 };

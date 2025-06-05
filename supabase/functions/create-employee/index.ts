@@ -29,6 +29,26 @@ serve(async (req) => {
 
     const { employee_name, employee_email, password, restaurant_id, created_by, permissions } = await req.json() as EmployeeRequest;
 
+    // Verificar se o email já existe
+    const { data: existingUser, error: checkError } = await supabaseClient.auth.admin.listUsers();
+    
+    if (checkError) {
+      console.error('Erro ao verificar usuários existentes:', checkError);
+      return new Response(
+        JSON.stringify({ success: false, error: checkError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userExists = existingUser?.users?.find(user => user.email === employee_email);
+    
+    if (userExists) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Um usuário com este email já existe' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Criar usuário no auth usando service role
     const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
       email: employee_email,
@@ -55,24 +75,41 @@ serve(async (req) => {
       );
     }
 
-    // Criar registro na tabela users como FUNCIONÁRIO
-    const { error: userError } = await supabaseClient
+    // Verificar se já existe um registro na tabela users
+    const { data: existingUserRecord, error: userCheckError } = await supabaseClient
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email: employee_email,
-        name: employee_name,
-        restaurant_id: restaurant_id,
-        user_type: 'employee',
-        role: 'employee' // Importante: definir como employee, não restaurant_owner
-      });
+      .select('id')
+      .eq('id', authData.user.id)
+      .single();
 
-    if (userError) {
-      console.error('Erro ao criar registro de usuário:', userError);
+    if (userCheckError && userCheckError.code !== 'PGRST116') {
+      console.error('Erro ao verificar registro de usuário:', userCheckError);
       return new Response(
-        JSON.stringify({ success: false, error: userError.message }),
+        JSON.stringify({ success: false, error: userCheckError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Criar registro na tabela users apenas se não existir
+    if (!existingUserRecord) {
+      const { error: userError } = await supabaseClient
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: employee_email,
+          name: employee_name,
+          restaurant_id: restaurant_id,
+          user_type: 'employee',
+          role: 'employee'
+        });
+
+      if (userError) {
+        console.error('Erro ao criar registro de usuário:', userError);
+        return new Response(
+          JSON.stringify({ success: false, error: userError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Criar registro do funcionário
@@ -84,7 +121,7 @@ serve(async (req) => {
         employee_name: employee_name,
         employee_email: employee_email,
         created_by: created_by,
-        user_type: 'employee' // Garantir que seja employee
+        user_type: 'employee'
       })
       .select()
       .single();
