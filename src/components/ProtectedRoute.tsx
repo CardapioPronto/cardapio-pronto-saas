@@ -60,7 +60,7 @@ export const ProtectedRoute = ({
       console.log("User doesn't have required permissions:", {
         required: requiredPermissions,
         requireAny,
-        userType: appUser.user_type
+        userType: appUser?.user_type
       });
       
       return (

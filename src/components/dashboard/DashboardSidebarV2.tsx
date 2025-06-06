@@ -20,61 +20,62 @@ import {
 } from "lucide-react";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { PermissionType } from "@/types/employee";
 
 const navigation = [
   {
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
-    permissions: []
+    permissions: [] as PermissionType[]
   },
   {
     name: "Produtos",
     href: "/produtos",
     icon: Package,
-    permissions: ['products_view']
+    permissions: ['products_view'] as PermissionType[]
   },
   {
     name: "Categorias",
     href: "/categorias",
     icon: Tags,
-    permissions: ['products_view']
+    permissions: ['products_view'] as PermissionType[]
   },
   {
     name: "Pedidos",
     href: "/pedidos",
     icon: ShoppingCart,
-    permissions: ['orders_view']
+    permissions: ['orders_view'] as PermissionType[]
   },
   {
     name: "PDV",
     href: "/pdv",
     icon: CreditCard,
-    permissions: ['pdv_access']
+    permissions: ['pdv_access'] as PermissionType[]
   },
   {
     name: "Cardápio Digital",
     href: "/menu-digital",
     icon: Smartphone,
-    permissions: ['products_view']
+    permissions: ['products_view'] as PermissionType[]
   },
   {
     name: "Funcionários",
     href: "/funcionarios",
     icon: Users,
-    permissions: ['employees_manage']
+    permissions: ['employees_manage'] as PermissionType[]
   },
   {
     name: "Relatórios",
     href: "/relatorios",
     icon: BarChart3,
-    permissions: ['reports_view']
+    permissions: ['reports_view'] as PermissionType[]
   },
   {
     name: "Configurações",
     href: "/configuracoes",
     icon: Settings,
-    permissions: ['settings_view']
+    permissions: ['settings_view'] as PermissionType[]
   }
 ];
 
@@ -83,7 +84,7 @@ const adminNavigation = [
     name: "Admin Dashboard",
     href: "/admin",
     icon: Shield,
-    permissions: []
+    permissions: [] as PermissionType[]
   }
 ];
 

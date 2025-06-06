@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { User as AppUser } from '@/types/user';
 
 interface UserSession {
   session: Session | null;
-  authUser: User | null;
+  authUser: AuthUser | null;
   appUser: AppUser | null;
   loading: boolean;
   error: string | null;
@@ -14,12 +14,12 @@ interface UserSession {
 
 export const useUserSession = (): UserSession => {
   const [session, setSession] = useState<Session | null>(null);
-  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string): Promise<AppUser | null> => {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -28,7 +28,12 @@ export const useUserSession = (): UserSession => {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Garantir que o nome nunca seja null para compatibilidade
+      return {
+        ...data,
+        name: data.name || data.email || 'Usuário'
+      } as AppUser;
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err);
       return null;

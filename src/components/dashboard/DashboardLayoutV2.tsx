@@ -1,7 +1,7 @@
 
 import { ReactNode } from "react";
 import { DashboardSidebarV2 } from "./DashboardSidebarV2";
-import { DashboardHeader } from "./DashboardHeader";
+import DashboardHeader from "./DashboardHeader";
 
 interface DashboardLayoutProps {
   title: string;
