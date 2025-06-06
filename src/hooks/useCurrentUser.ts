@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { User } from "@/types";
+import { User } from "@/types/user";
 
 export function useCurrentUser() {
     const [user, setUser] = useState<User | null>(null);
@@ -25,7 +25,7 @@ export function useCurrentUser() {
 
             const { data, error: userError } = await supabase
                 .from("users")
-                .select("id, email, name, restaurant_id")
+                .select("id, email, name, restaurant_id, user_type, role")
                 .eq("id", authUser.id)
                 .single();
 
@@ -37,8 +37,10 @@ export function useCurrentUser() {
                 setUser({
                     id: data.id,
                     email: data.email,
-                    name: data.name || "", // Ensure name is always a string
-                    restaurant_id: data.restaurant_id
+                    name: data.name || authUser.email || "Usuário", // Fallback para garantir que name não seja null
+                    restaurant_id: data.restaurant_id,
+                    user_type: data.user_type,
+                    role: data.role
                 });
             }
 
