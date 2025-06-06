@@ -14,6 +14,7 @@ interface ColorCustomizerProps {
 
 export const ColorCustomizer = ({ config, onUpdateColors }: ColorCustomizerProps) => {
   const [colors, setColors] = useState(config.custom_colors || {});
+  const [hasChanges, setHasChanges] = useState(false);
   
   const colorOptions = [
     { key: 'primary', label: 'Cor Primária', defaultValue: '#81B29A' },
@@ -26,15 +27,18 @@ export const ColorCustomizer = ({ config, onUpdateColors }: ColorCustomizerProps
   const handleColorChange = (key: string, value: string) => {
     const newColors = { ...colors, [key]: value };
     setColors(newColors);
+    setHasChanges(true);
   };
 
   const handleSave = () => {
     onUpdateColors(colors);
+    setHasChanges(false);
   };
 
   const handleReset = () => {
     setColors({});
     onUpdateColors({});
+    setHasChanges(false);
   };
 
   return (
@@ -71,10 +75,18 @@ export const ColorCustomizer = ({ config, onUpdateColors }: ColorCustomizerProps
         </div>
         
         <div className="flex gap-2 pt-4">
-          <Button onClick={handleSave} className="flex-1">
-            Salvar Cores
+          <Button 
+            onClick={handleSave} 
+            className="flex-1"
+            disabled={!hasChanges}
+          >
+            {hasChanges ? 'Salvar Alterações' : 'Salvo'}
           </Button>
-          <Button onClick={handleReset} variant="outline">
+          <Button 
+            onClick={handleReset} 
+            variant="outline"
+            disabled={Object.keys(colors).length === 0}
+          >
             Resetar
           </Button>
         </div>

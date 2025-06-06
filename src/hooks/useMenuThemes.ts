@@ -6,16 +6,20 @@ import { MenuTheme, RestaurantMenuConfig } from '@/types/menuTheme';
 import { toast } from '@/components/ui/use-toast';
 
 export const useMenuThemes = () => {
-  const queryClient = useQueryClient();
-
-  // Buscar temas disponíveis
   const {
     data: themes = [],
     isLoading: loadingThemes,
     error: themesError
   } = useQuery({
     queryKey: ['menu-themes'],
-    queryFn: menuThemeService.getAvailableThemes
+    queryFn: async () => {
+      try {
+        return await menuThemeService.getAvailableThemes();
+      } catch (error) {
+        console.error('Erro ao buscar temas:', error);
+        throw error;
+      }
+    }
   });
 
   return {
@@ -35,13 +39,21 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
     error: configError
   } = useQuery({
     queryKey: ['restaurant-menu-config', restaurantId],
-    queryFn: () => menuThemeService.getRestaurantMenuConfig(restaurantId),
+    queryFn: async () => {
+      if (!restaurantId) return null;
+      try {
+        return await menuThemeService.getRestaurantMenuConfig(restaurantId);
+      } catch (error) {
+        console.error('Erro ao buscar configuração:', error);
+        return null;
+      }
+    },
     enabled: !!restaurantId
   });
 
   // Atualizar configuração
   const updateConfigMutation = useMutation({
-    mutationFn: ({ 
+    mutationFn: async ({ 
       themeId, 
       customColors, 
       customSettings 
@@ -49,12 +61,17 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
       themeId: string; 
       customColors?: Record<string, string>; 
       customSettings?: Record<string, any>; 
-    }) => menuThemeService.updateRestaurantTheme(
-      restaurantId, 
-      themeId, 
-      customColors, 
-      customSettings
-    ),
+    }) => {
+      if (!restaurantId) {
+        throw new Error('Restaurant ID é obrigatório');
+      }
+      return await menuThemeService.updateRestaurantTheme(
+        restaurantId, 
+        themeId, 
+        customColors || {}, 
+        customSettings || {}
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['restaurant-menu-config', restaurantId] });
       toast({

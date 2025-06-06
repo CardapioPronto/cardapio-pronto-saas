@@ -5,13 +5,20 @@ import { MenuTheme, RestaurantMenuConfig } from '@/types/menuTheme';
 export const menuThemeService = {
   // Buscar todos os temas disponíveis
   async getAvailableThemes(): Promise<MenuTheme[]> {
+    console.log('Buscando temas disponíveis...');
+    
     const { data, error } = await supabase
       .from('menu_themes')
       .select('*')
       .eq('is_active', true)
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao buscar temas:', error);
+      throw error;
+    }
+    
+    console.log('Temas encontrados:', data);
     
     // Transformar null em undefined para compatibilidade com TypeScript
     const themes = (data || []).map(theme => ({
@@ -25,14 +32,26 @@ export const menuThemeService = {
 
   // Buscar configuração do menu de um restaurante
   async getRestaurantMenuConfig(restaurantId: string): Promise<RestaurantMenuConfig | null> {
+    console.log('Buscando configuração do restaurante:', restaurantId);
+    
+    if (!restaurantId) {
+      console.warn('Restaurant ID não fornecido');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('restaurant_menu_config')
       .select('*')
       .eq('restaurant_id', restaurantId)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) {
+      console.error('Erro ao buscar configuração:', error);
+      throw error;
+    }
+    
+    console.log('Configuração encontrada:', data);
     
     if (!data) return null;
     
@@ -131,6 +150,14 @@ export const menuThemeService = {
       customSettings
     });
 
+    if (!restaurantId) {
+      throw new Error('Restaurant ID é obrigatório');
+    }
+
+    if (!themeId) {
+      throw new Error('Theme ID é obrigatório');
+    }
+
     try {
       // Buscar configuração existente
       const { data: existingConfig } = await supabase
@@ -141,6 +168,8 @@ export const menuThemeService = {
         .maybeSingle();
 
       if (existingConfig) {
+        console.log('Atualizando configuração existente:', existingConfig.id);
+        
         // Atualizar configuração existente
         const { data, error } = await supabase
           .from('restaurant_menu_config')
@@ -167,6 +196,8 @@ export const menuThemeService = {
           custom_settings: (data.custom_settings as Record<string, any>) || {}
         };
       } else {
+        console.log('Criando nova configuração');
+        
         // Criar nova configuração
         const { data, error } = await supabase
           .from('restaurant_menu_config')
