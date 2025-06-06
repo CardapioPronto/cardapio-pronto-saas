@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppIntegration, WhatsAppMessage } from "./types";
+import { UltraMsgService } from "./ultraMsgService";
 import { toast } from "sonner";
 
 export class WhatsAppService {
@@ -78,39 +79,53 @@ export class WhatsAppService {
     orderId?: string
   ): Promise<boolean> {
     try {
+      // Validar número de telefone
+      if (!UltraMsgService.validatePhoneNumber(phoneNumber)) {
+        console.error('Número de telefone inválido:', phoneNumber);
+        toast.error('Número de telefone inválido');
+        return false;
+      }
+
+      // Enviar mensagem via UltraMsg
+      const result = await UltraMsgService.sendMessage(phoneNumber, message);
+      
+      // Registrar log da mensagem no banco
       await this.logMessage({
         restaurant_id: restaurantId,
         order_id: orderId || null,
         phone_number: phoneNumber,
         message_type: 'outgoing',
         content: message,
-        status: 'sent'
+        status: result.sent ? 'sent' : 'failed'
       });
 
-      console.log('Enviando mensagem WhatsApp:', {
-        to: phoneNumber,
-        message,
-        restaurantId,
-        orderId
-      });
-
-      const { error } = await supabase.functions.invoke('send-whatsapp-message', {
-        body: {
-          restaurantId,
-          phoneNumber,
-          message,
-          orderId
-        }
-      });
-
-      if (error) {
-        console.error('Erro ao enviar mensagem:', error);
+      if (result.sent) {
+        console.log('Mensagem WhatsApp enviada com sucesso via UltraMsg');
+        toast.success('Mensagem WhatsApp enviada com sucesso!');
+        return true;
+      } else {
+        console.error('Falha no envio via UltraMsg:', result.message);
+        toast.error(`Erro ao enviar mensagem: ${result.message || 'Falha desconhecida'}`);
         return false;
       }
-
-      return true;
     } catch (error) {
       console.error('Erro ao enviar mensagem WhatsApp:', error);
+      
+      // Registrar log de erro
+      try {
+        await this.logMessage({
+          restaurant_id: restaurantId,
+          order_id: orderId || null,
+          phone_number: phoneNumber,
+          message_type: 'outgoing',
+          content: message,
+          status: 'failed'
+        });
+      } catch (logError) {
+        console.error('Erro ao registrar log de erro:', logError);
+      }
+      
+      toast.error('Erro ao enviar mensagem WhatsApp');
       return false;
     }
   }
@@ -175,6 +190,7 @@ export class WhatsAppService {
       const integration = await this.getIntegration(restaurantId);
       
       if (!integration || !integration.is_enabled || !integration.auto_send_orders) {
+        console.log('Integração WhatsApp não habilitada ou envio automático desabilitado');
         return false;
       }
 
@@ -182,6 +198,26 @@ export class WhatsAppService {
       return await this.sendMessage(restaurantId, phoneNumber, message, orderId);
     } catch (error) {
       console.error('Erro ao enviar confirmação de pedido:', error);
+      return false;
+    }
+  }
+
+  static async sendWelcomeMessage(
+    restaurantId: string,
+    phoneNumber: string
+  ): Promise<boolean> {
+    try {
+      const integration = await this.getIntegration(restaurantId);
+      
+      if (!integration || !integration.is_enabled) {
+        console.log('Integração WhatsApp não habilitada');
+        return false;
+      }
+
+      const message = integration.welcome_message;
+      return await this.sendMessage(restaurantId, phoneNumber, message);
+    } catch (error) {
+      console.error('Erro ao enviar mensagem de boas-vindas:', error);
       return false;
     }
   }
