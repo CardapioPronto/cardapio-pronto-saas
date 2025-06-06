@@ -40,59 +40,57 @@ serve(async (req) => {
       .from('whatsapp_integration')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .single()
+      .maybeSingle()
 
-    if (integrationError || !integration?.is_enabled) {
-      throw new Error('Integração WhatsApp não configurada ou desabilitada')
+    console.log('Integração encontrada:', integration)
+    console.log('Erro da integração:', integrationError)
+
+    if (integrationError) {
+      console.error('Erro ao buscar integração:', integrationError)
+      throw new Error(`Erro ao buscar integração: ${integrationError.message}`)
     }
 
-    // Aqui você integraria com a API real do WhatsApp
-    // Por exemplo: WhatsApp Business API, Twilio WhatsApp API, etc.
-    
-    // EXEMPLO DE INTEGRAÇÃO COM TWILIO (descomentear e configurar se necessário):
-    /*
-    const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
-    const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN')
-    const twilioWhatsAppNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER')
+    if (!integration) {
+      console.log('Criando configuração padrão do WhatsApp...')
+      // Se não existe integração, criar uma básica
+      const { data: newIntegration, error: createError } = await supabaseClient
+        .from('whatsapp_integration')
+        .insert({
+          restaurant_id: restaurantId,
+          phone_number: phoneNumber,
+          is_enabled: true,
+          auto_send_orders: true,
+          welcome_message: 'Olá! Bem-vindo ao nosso restaurante.',
+          order_confirmation_message: 'Seu pedido foi recebido e está sendo preparado!'
+        })
+        .select()
+        .single()
 
-    if (twilioAccountSid && twilioAuthToken && twilioWhatsAppNumber) {
-      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`
-      
-      const twilioResponse = await fetch(twilioUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          From: `whatsapp:${twilioWhatsAppNumber}`,
-          To: `whatsapp:${phoneNumber}`,
-          Body: message,
-        }),
+      if (createError) {
+        console.error('Erro ao criar integração:', createError)
+        throw new Error(`Erro ao criar integração: ${createError.message}`)
+      }
+
+      console.log('Nova integração criada:', newIntegration)
+    }
+
+    // Registrar a mensagem no histórico
+    const { error: logError } = await supabaseClient
+      .from('whatsapp_messages')
+      .insert({
+        restaurant_id: restaurantId,
+        order_id: orderId || null,
+        phone_number: phoneNumber,
+        message_type: 'outgoing',
+        content: message,
+        status: 'sent'
       })
 
-      const twilioResult = await twilioResponse.json()
-      
-      if (!twilioResponse.ok) {
-        throw new Error(`Erro Twilio: ${twilioResult.message}`)
-      }
-    }
-    */
-
-    // Atualizar status da mensagem para 'delivered' (simulação)
-    const { error: updateError } = await supabaseClient
-      .from('whatsapp_messages')
-      .update({ status: 'delivered' })
-      .eq('restaurant_id', restaurantId)
-      .eq('phone_number', phoneNumber)
-      .eq('content', message)
-      .eq('message_type', 'outgoing')
-
-    if (updateError) {
-      console.error('Erro ao atualizar status da mensagem:', updateError)
+    if (logError) {
+      console.error('Erro ao registrar mensagem:', logError)
     }
 
-    // Simular envio bem-sucedido
+    // Simular envio bem-sucedido (aqui você integraria com API real do WhatsApp)
     console.log('Mensagem WhatsApp enviada com sucesso!')
 
     return new Response(

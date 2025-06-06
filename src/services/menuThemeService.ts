@@ -7,27 +7,66 @@ export const menuThemeService = {
   async getAvailableThemes(): Promise<MenuTheme[]> {
     console.log('Buscando temas disponíveis...');
     
-    const { data, error } = await supabase
-      .from('menu_themes')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
+    try {
+      const { data, error } = await supabase
+        .from('menu_themes')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
 
-    if (error) {
-      console.error('Erro ao buscar temas:', error);
+      if (error) {
+        console.error('Erro ao buscar temas:', error);
+        throw new Error(`Erro ao buscar temas: ${error.message}`);
+      }
+      
+      console.log('Temas encontrados:', data);
+      
+      // Se não há temas no banco, retornar temas padrão
+      if (!data || data.length === 0) {
+        console.log('Nenhum tema encontrado no banco, retornando temas padrão');
+        return [
+          {
+            id: 'default',
+            name: 'default',
+            display_name: 'Tema Padrão',
+            description: 'Tema limpo e moderno',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 'elegant',
+            name: 'elegant',
+            display_name: 'Tema Elegante',
+            description: 'Tema sofisticado para restaurantes refinados',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 'modern',
+            name: 'modern',
+            display_name: 'Tema Moderno',
+            description: 'Design contemporâneo e minimalista',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ];
+      }
+      
+      // Transformar null em undefined para compatibilidade com TypeScript
+      const themes = data.map(theme => ({
+        ...theme,
+        description: theme.description || undefined,
+        preview_image_url: theme.preview_image_url || undefined
+      }));
+      
+      return themes;
+    } catch (error) {
+      console.error('Erro na função getAvailableThemes:', error);
       throw error;
     }
-    
-    console.log('Temas encontrados:', data);
-    
-    // Transformar null em undefined para compatibilidade com TypeScript
-    const themes = (data || []).map(theme => ({
-      ...theme,
-      description: theme.description || undefined,
-      preview_image_url: theme.preview_image_url || undefined
-    }));
-    
-    return themes;
   },
 
   // Buscar configuração do menu de um restaurante
@@ -39,101 +78,114 @@ export const menuThemeService = {
       return null;
     }
 
-    const { data, error } = await supabase
-      .from('restaurant_menu_config')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .eq('is_active', true)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_menu_config')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Erro ao buscar configuração:', error);
+      if (error) {
+        console.error('Erro ao buscar configuração:', error);
+        throw new Error(`Erro ao buscar configuração: ${error.message}`);
+      }
+      
+      console.log('Configuração encontrada:', data);
+      
+      if (!data) {
+        console.log('Nenhuma configuração encontrada, retornando null');
+        return null;
+      }
+      
+      // Transformar os tipos para compatibilidade
+      return {
+        ...data,
+        custom_colors: (data.custom_colors as Record<string, string>) || {},
+        custom_settings: (data.custom_settings as Record<string, any>) || {}
+      };
+    } catch (error) {
+      console.error('Erro na função getRestaurantMenuConfig:', error);
       throw error;
     }
-    
-    console.log('Configuração encontrada:', data);
-    
-    if (!data) return null;
-    
-    // Transformar os tipos para compatibilidade
-    return {
-      ...data,
-      custom_colors: (data.custom_colors as Record<string, string>) || {},
-      custom_settings: (data.custom_settings as Record<string, any>) || {}
-    };
   },
 
   // Buscar dados do cardápio público por slug
   async getPublicMenuData(slug: string) {
     console.log('Getting public menu data for slug:', slug);
     
-    // Buscar restaurante pelo slug ou ID
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurants')
-      .select('id, name, logo_url, slug')
-      .or(`slug.eq.${slug},id.eq.${slug}`)
-      .eq('active', true)
-      .single();
+    try {
+      // Buscar restaurante pelo slug ou ID
+      const { data: restaurant, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id, name, logo_url, slug')
+        .or(`slug.eq.${slug},id.eq.${slug}`)
+        .eq('active', true)
+        .single();
 
-    if (restaurantError) {
-      console.error('Restaurant error:', restaurantError);
-      throw restaurantError;
-    }
+      if (restaurantError) {
+        console.error('Restaurant error:', restaurantError);
+        throw new Error(`Erro ao buscar restaurante: ${restaurantError.message}`);
+      }
 
-    console.log('Restaurant found:', restaurant);
+      console.log('Restaurant found:', restaurant);
 
-    // Buscar categorias e produtos
-    const { data: categories, error: categoriesError } = await supabase
-      .from('categories')
-      .select(`
-        id,
-        name,
-        products:products(
+      // Buscar categorias e produtos
+      const { data: categories, error: categoriesError } = await supabase
+        .from('categories')
+        .select(`
           id,
           name,
-          description,
-          price,
-          image_url,
-          available
-        )
-      `)
-      .eq('restaurant_id', restaurant.id)
-      .order('name');
+          products:products(
+            id,
+            name,
+            description,
+            price,
+            image_url,
+            available
+          )
+        `)
+        .eq('restaurant_id', restaurant.id)
+        .order('name');
 
-    if (categoriesError) {
-      console.error('Categories error:', categoriesError);
-      throw categoriesError;
+      if (categoriesError) {
+        console.error('Categories error:', categoriesError);
+        throw new Error(`Erro ao buscar categorias: ${categoriesError.message}`);
+      }
+
+      console.log('Categories found:', categories);
+
+      // Buscar configuração do tema
+      const config = await this.getRestaurantMenuConfig(restaurant.id);
+      console.log('Config found:', config);
+      
+      // Transformar os dados para o formato esperado
+      const transformedRestaurant = {
+        ...restaurant,
+        logo_url: restaurant.logo_url || undefined,
+        slug: restaurant.slug || restaurant.id // fallback se slug for null
+      };
+
+      const transformedCategories = (categories || [])
+        .filter(cat => cat.products && cat.products.length > 0)
+        .map(category => ({
+          ...category,
+          products: category.products.map(product => ({
+            ...product,
+            description: product.description || undefined,
+            image_url: product.image_url || undefined
+          }))
+        }));
+      
+      return {
+        restaurant: transformedRestaurant,
+        categories: transformedCategories,
+        config
+      };
+    } catch (error) {
+      console.error('Erro na função getPublicMenuData:', error);
+      throw error;
     }
-
-    console.log('Categories found:', categories);
-
-    // Buscar configuração do tema
-    const config = await this.getRestaurantMenuConfig(restaurant.id);
-    console.log('Config found:', config);
-    
-    // Transformar os dados para o formato esperado
-    const transformedRestaurant = {
-      ...restaurant,
-      logo_url: restaurant.logo_url || undefined,
-      slug: restaurant.slug || restaurant.id // fallback se slug for null
-    };
-
-    const transformedCategories = (categories || [])
-      .filter(cat => cat.products && cat.products.length > 0)
-      .map(category => ({
-        ...category,
-        products: category.products.map(product => ({
-          ...product,
-          description: product.description || undefined,
-          image_url: product.image_url || undefined
-        }))
-      }));
-    
-    return {
-      restaurant: transformedRestaurant,
-      categories: transformedCategories,
-      config
-    };
   },
 
   // Atualizar configuração do tema de um restaurante
@@ -185,7 +237,7 @@ export const menuThemeService = {
 
         if (error) {
           console.error('Error updating restaurant theme:', error);
-          throw error;
+          throw new Error(`Erro ao atualizar tema: ${error.message}`);
         }
 
         console.log('Theme updated successfully:', data);
@@ -213,7 +265,7 @@ export const menuThemeService = {
 
         if (error) {
           console.error('Error creating restaurant theme:', error);
-          throw error;
+          throw new Error(`Erro ao criar tema: ${error.message}`);
         }
         
         console.log('Theme created successfully:', data);

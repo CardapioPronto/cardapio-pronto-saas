@@ -5,7 +5,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Palette, Eye, AlertCircle } from 'lucide-react';
+import { Palette, Eye, AlertCircle, Loader2 } from 'lucide-react';
 import { ColorCustomizer } from './ColorCustomizer';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,37 +21,27 @@ export const MenuThemeSelector = () => {
     configError 
   } = useRestaurantMenuConfig(user?.restaurant_id || '');
 
+  console.log('MenuThemeSelector - Estado atual:', {
+    user: user?.restaurant_id,
+    themes: themes?.length,
+    config,
+    userLoading,
+    loadingThemes,
+    loadingConfig,
+    isUpdating,
+    themesError,
+    configError
+  });
+
   // Mostrar loading enquanto carrega dados essenciais
   if (userLoading || loadingThemes || loadingConfig) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-32 bg-gray-200 animate-pulse rounded-lg" />
-        ))}
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Carregando configurações...</span>
+        </div>
       </div>
-    );
-  }
-
-  // Verificar se há erros
-  if (themesError) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Erro ao carregar temas disponíveis. Tente recarregar a página.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (configError) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Erro ao carregar configuração do restaurante. Tente recarregar a página.
-        </AlertDescription>
-      </Alert>
     );
   }
 
@@ -67,19 +57,32 @@ export const MenuThemeSelector = () => {
     );
   }
 
+  // Verificar se há erros críticos
+  if (themesError) {
+    console.error('Erro ao carregar temas:', themesError);
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Erro ao carregar temas disponíveis: {themesError.message}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   // Verificar se há temas disponíveis
   if (!themes || themes.length === 0) {
     return (
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Nenhum tema disponível no momento.
+          Nenhum tema disponível no momento. Por favor, tente novamente mais tarde.
         </AlertDescription>
       </Alert>
     );
   }
 
-  const handleThemeSelect = (themeId: string) => {
+  const handleThemeSelect = async (themeId: string) => {
     if (!user?.restaurant_id) {
       toast({
         variant: 'destructive',
@@ -90,16 +93,26 @@ export const MenuThemeSelector = () => {
     }
 
     if (isUpdating) {
+      console.log('Já existe uma atualização em andamento, ignorando...');
       return; // Evita múltiplas submissões
     }
 
-    console.log('Selecionando tema:', themeId);
+    console.log('Selecionando tema:', { themeId, restaurantId: user.restaurant_id });
     
-    updateConfig({
-      themeId,
-      customColors: config?.custom_colors || {},
-      customSettings: config?.custom_settings || {}
-    });
+    try {
+      updateConfig({
+        themeId,
+        customColors: config?.custom_colors || {},
+        customSettings: config?.custom_settings || {}
+      });
+    } catch (error) {
+      console.error('Erro ao selecionar tema:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Erro ao selecionar tema'
+      });
+    }
   };
 
   return (
@@ -162,7 +175,12 @@ export const MenuThemeSelector = () => {
                         handleThemeSelect(theme.id);
                       }}
                     >
-                      {isUpdating ? 'Aplicando...' : isActive ? 'Tema Ativo' : 'Selecionar'}
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Aplicando...
+                        </>
+                      ) : isActive ? 'Tema Ativo' : 'Selecionar'}
                     </Button>
                   </div>
                 </CardContent>
@@ -176,7 +194,12 @@ export const MenuThemeSelector = () => {
         <ColorCustomizer 
           config={config}
           onUpdateColors={(colors) => {
-            if (isUpdating) return;
+            if (isUpdating) {
+              console.log('Já existe uma atualização em andamento, ignorando...');
+              return;
+            }
+            
+            console.log('Atualizando cores personalizadas:', colors);
             
             updateConfig({
               themeId: config.theme_id,
