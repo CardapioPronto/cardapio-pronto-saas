@@ -11,6 +11,10 @@ interface DefaultThemeProps {
 export const DefaultTheme = ({ data }: DefaultThemeProps) => {
   const { restaurant, categories, theme } = data;
 
+  const getProductImage = (imageUrl?: string) => {
+    return imageUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+  };
+
   return (
     <PublicMenuBase theme={theme}>
       {/* Header */}
@@ -47,20 +51,34 @@ export const DefaultTheme = ({ data }: DefaultThemeProps) => {
                 .map(product => (
                 <Card key={product.id} className={`theme-card ${theme.borderRadius}`}>
                   <CardContent className={theme.spacing.card}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-bold theme-heading">{product.name}</h3>
-                        {product.description && (
-                          <p className="text-sm opacity-70 mt-1">
-                            {product.description}
-                          </p>
-                        )}
+                    <div className="flex gap-3">
+                      {/* Imagem do produto */}
+                      <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md">
+                        <img 
+                          src={getProductImage(product.image_url)} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <div 
-                        className="font-bold whitespace-nowrap ml-4"
-                        style={{ color: theme.colors.secondary }}
-                      >
-                        R$ {product.price.toFixed(2)}
+                      
+                      {/* Conteúdo do produto */}
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-bold theme-heading">{product.name}</h3>
+                            {product.description && (
+                              <p className="text-sm opacity-70 mt-1">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                          <div 
+                            className="font-bold whitespace-nowrap ml-4"
+                            style={{ color: theme.colors.secondary }}
+                          >
+                            R$ {product.price.toFixed(2)}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

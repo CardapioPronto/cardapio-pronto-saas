@@ -12,6 +12,10 @@ interface ElegantThemeProps {
 export const ElegantTheme = ({ data }: ElegantThemeProps) => {
   const { restaurant, categories, theme } = data;
 
+  const getProductImage = (imageUrl?: string) => {
+    return imageUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+  };
+
   return (
     <PublicMenuBase theme={theme}>
       {/* Header elegante */}
@@ -79,39 +83,53 @@ export const ElegantTheme = ({ data }: ElegantThemeProps) => {
                 .map(product => (
                 <Card 
                   key={product.id} 
-                  className={`theme-card border-0 ${theme.borderRadius}`}
+                  className={`theme-card border-0 ${theme.borderRadius} overflow-hidden`}
                   style={{ backgroundColor: theme.colors.accent }}
                 >
-                  <CardContent className={theme.spacing.card}>
-                    <div className="text-center">
-                      <h3 
-                        className="text-xl font-bold theme-heading mb-2"
-                        style={{ color: theme.colors.primary }}
-                      >
-                        {product.name}
-                      </h3>
-                      
-                      {product.description && (
-                        <p className="text-sm opacity-80 mb-4 leading-relaxed italic">
-                          {product.description}
-                        </p>
-                      )}
-                      
-                      <div className="flex items-center justify-center">
-                        <div 
-                          className="w-8 h-0.5"
-                          style={{ backgroundColor: theme.colors.secondary }}
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      {/* Imagem do produto */}
+                      <div className="w-32 h-24 flex-shrink-0">
+                        <img 
+                          src={getProductImage(product.image_url)} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
                         />
-                        <span 
-                          className="mx-4 text-2xl font-bold theme-heading"
-                          style={{ color: theme.colors.secondary }}
-                        >
-                          R$ {product.price.toFixed(2)}
-                        </span>
-                        <div 
-                          className="w-8 h-0.5"
-                          style={{ backgroundColor: theme.colors.secondary }}
-                        />
+                      </div>
+                      
+                      {/* Conteúdo do produto */}
+                      <div className={`flex-1 ${theme.spacing.card}`}>
+                        <div className="text-center">
+                          <h3 
+                            className="text-xl font-bold theme-heading mb-2"
+                            style={{ color: theme.colors.primary }}
+                          >
+                            {product.name}
+                          </h3>
+                          
+                          {product.description && (
+                            <p className="text-sm opacity-80 mb-4 leading-relaxed italic">
+                              {product.description}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center justify-center">
+                            <div 
+                              className="w-8 h-0.5"
+                              style={{ backgroundColor: theme.colors.secondary }}
+                            />
+                            <span 
+                              className="mx-4 text-2xl font-bold theme-heading"
+                              style={{ color: theme.colors.secondary }}
+                            >
+                              R$ {product.price.toFixed(2)}
+                            </span>
+                            <div 
+                              className="w-8 h-0.5"
+                              style={{ backgroundColor: theme.colors.secondary }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
