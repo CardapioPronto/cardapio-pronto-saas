@@ -22,8 +22,8 @@ export class WhatsAppIntegrationService {
       return {
         restaurant_id: data.restaurant_id,
         phone_number: data.phone_number,
-        ultramsg_instance_id: (data as any).ultramsg_instance_id || undefined,
-        ultramsg_token: (data as any).ultramsg_token || undefined,
+        ultramsg_instance_id: data.ultramsg_instance_id || undefined,
+        ultramsg_token: data.ultramsg_token || undefined,
         api_token: data.api_token || undefined,
         webhook_url: data.webhook_url || undefined,
         is_enabled: data.is_enabled,

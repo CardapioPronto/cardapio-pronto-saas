@@ -921,6 +921,8 @@ export type Database = {
           order_confirmation_message: string
           phone_number: string
           restaurant_id: string
+          ultramsg_instance_id: string | null
+          ultramsg_token: string | null
           updated_at: string
           webhook_url: string | null
           welcome_message: string
@@ -933,6 +935,8 @@ export type Database = {
           order_confirmation_message?: string
           phone_number: string
           restaurant_id: string
+          ultramsg_instance_id?: string | null
+          ultramsg_token?: string | null
           updated_at?: string
           webhook_url?: string | null
           welcome_message?: string
@@ -945,6 +949,8 @@ export type Database = {
           order_confirmation_message?: string
           phone_number?: string
           restaurant_id?: string
+          ultramsg_instance_id?: string | null
+          ultramsg_token?: string | null
           updated_at?: string
           webhook_url?: string | null
           welcome_message?: string
