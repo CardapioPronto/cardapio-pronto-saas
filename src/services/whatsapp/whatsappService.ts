@@ -1,7 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppIntegration, WhatsAppMessage } from "./types";
-import { UltraMsgService } from "./ultraMsgService";
+import { UltraMsgService, UltraMsgCredentials } from "./ultraMsgService";
 import { toast } from "sonner";
 
 export class WhatsAppService {
@@ -23,6 +22,8 @@ export class WhatsAppService {
       return {
         restaurant_id: data.restaurant_id,
         phone_number: data.phone_number,
+        ultramsg_instance_id: data.ultramsg_instance_id,
+        ultramsg_token: data.ultramsg_token,
         api_token: data.api_token,
         webhook_url: data.webhook_url,
         is_enabled: data.is_enabled,
@@ -45,6 +46,8 @@ export class WhatsAppService {
         .upsert({
           restaurant_id: integration.restaurant_id,
           phone_number: integration.phone_number,
+          ultramsg_instance_id: integration.ultramsg_instance_id,
+          ultramsg_token: integration.ultramsg_token,
           api_token: integration.api_token,
           webhook_url: integration.webhook_url,
           is_enabled: integration.is_enabled,
@@ -79,6 +82,15 @@ export class WhatsAppService {
     orderId?: string
   ): Promise<boolean> {
     try {
+      // Buscar credenciais do restaurante
+      const integration = await this.getIntegration(restaurantId);
+      
+      if (!integration || !integration.ultramsg_instance_id || !integration.ultramsg_token) {
+        console.error('Credenciais UltraMsg não configuradas para o restaurante');
+        toast.error('Configure as credenciais do UltraMsg primeiro');
+        return false;
+      }
+
       // Validar número de telefone
       if (!UltraMsgService.validatePhoneNumber(phoneNumber)) {
         console.error('Número de telefone inválido:', phoneNumber);
@@ -86,8 +98,13 @@ export class WhatsAppService {
         return false;
       }
 
+      const credentials: UltraMsgCredentials = {
+        instanceId: integration.ultramsg_instance_id,
+        token: integration.ultramsg_token
+      };
+
       // Enviar mensagem via UltraMsg
-      const result = await UltraMsgService.sendMessage(phoneNumber, message);
+      const result = await UltraMsgService.sendMessage(credentials, phoneNumber, message);
       
       // Registrar log da mensagem no banco
       await this.logMessage({

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { MessageCircle, Phone, Settings, Send, AlertCircle, CheckCircle } from "lucide-react";
+import { MessageCircle, Phone, Settings, Send, AlertCircle, CheckCircle, ExternalLink } from "lucide-react";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { UltraMsgService } from "@/services/whatsapp/ultraMsgService";
 import { WhatsAppIntegration } from "@/services/whatsapp/types";
@@ -20,6 +20,8 @@ export const WhatsAppConfigTab: React.FC = () => {
   const [config, setConfig] = useState<WhatsAppIntegration>({
     restaurant_id: "",
     phone_number: "",
+    ultramsg_instance_id: "",
+    ultramsg_token: "",
     api_token: "",
     webhook_url: "",
     is_enabled: false,
@@ -30,14 +32,9 @@ export const WhatsAppConfigTab: React.FC = () => {
   
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
-  const [ultraMsgConfigured, setUltraMsgConfigured] = useState(false);
 
-  // Verificar se as variáveis do UltraMsg estão configuradas
-  useEffect(() => {
-    const instanceId = import.meta.env.VITE_ULTRAMSG_INSTANCE_ID;
-    const token = import.meta.env.VITE_ULTRAMSG_TOKEN;
-    setUltraMsgConfigured(!!(instanceId && token));
-  }, []);
+  // Verificar se as credenciais UltraMsg estão configuradas
+  const ultraMsgConfigured = !!(config.ultramsg_instance_id && config.ultramsg_token);
 
   useEffect(() => {
     if (restaurantId) {
@@ -81,7 +78,7 @@ export const WhatsAppConfigTab: React.FC = () => {
     }
 
     if (!ultraMsgConfigured) {
-      toast.error('Configure as variáveis ULTRAMSG_INSTANCE_ID e ULTRAMSG_TOKEN primeiro');
+      toast.error('Configure o Instance ID e Token do UltraMsg primeiro');
       return;
     }
 
@@ -162,22 +159,82 @@ export const WhatsAppConfigTab: React.FC = () => {
           </div>
           <p className={`text-sm ${ultraMsgConfigured ? 'text-green-700' : 'text-red-700'}`}>
             {ultraMsgConfigured 
-              ? 'Variáveis ULTRAMSG_INSTANCE_ID e ULTRAMSG_TOKEN configuradas corretamente' 
-              : 'Configure as variáveis ULTRAMSG_INSTANCE_ID e ULTRAMSG_TOKEN nas configurações do projeto'
+              ? 'Instance ID e Token do UltraMsg configurados corretamente' 
+              : 'Configure o Instance ID e Token do UltraMsg abaixo'
             }
           </p>
         </div>
 
-        {/* Configurações Básicas */}
+        {/* Credenciais UltraMsg */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            <h3 className="text-lg font-medium">Configurações Básicas</h3>
+            <h3 className="text-lg font-medium">Credenciais UltraMsg</h3>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => window.open('https://app.ultramsg.com/', '_blank')}
+              className="ml-auto"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Acessar UltraMsg
+            </Button>
+          </div>
+          
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium mb-2">Como obter suas credenciais:</h4>
+            <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Acesse <a href="https://app.ultramsg.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">app.ultramsg.com</a></li>
+              <li>Faça login ou crie sua conta gratuita</li>
+              <li>Crie uma nova instância WhatsApp</li>
+              <li>Conecte seu WhatsApp escaneando o QR Code</li>
+              <li>Copie o <strong>Instance ID</strong> e <strong>Token</strong> da sua instância</li>
+              <li>Cole os dados nos campos abaixo</li>
+            </ol>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="phone_number">Número do WhatsApp</Label>
+              <Label htmlFor="ultramsg_instance_id">Instance ID *</Label>
+              <Input
+                id="ultramsg_instance_id"
+                placeholder="instance123456"
+                value={config.ultramsg_instance_id || ""}
+                onChange={(e) => setConfig({...config, ultramsg_instance_id: e.target.value})}
+              />
+              <p className="text-xs text-muted-foreground">
+                ID da sua instância no UltraMsg
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ultramsg_token">Token *</Label>
+              <Input
+                id="ultramsg_token"
+                type="password"
+                placeholder="seu_token_aqui"
+                value={config.ultramsg_token || ""}
+                onChange={(e) => setConfig({...config, ultramsg_token: e.target.value})}
+              />
+              <p className="text-xs text-muted-foreground">
+                Token de acesso da sua instância
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Configurações Básicas */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            <h3 className="text-lg font-medium">Configurações Básicas</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone_number">Número do WhatsApp para Teste</Label>
               <div className="flex gap-2">
                 <Phone className="h-4 w-4 mt-3 text-muted-foreground" />
                 <Input
@@ -187,44 +244,36 @@ export const WhatsAppConfigTab: React.FC = () => {
                   onChange={(e) => setConfig({...config, phone_number: e.target.value})}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Número para enviar mensagens de teste (pode ser seu próprio número)
+              </p>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="api_token">Token da API (Opcional)</Label>
-              <Input
-                id="api_token"
-                type="password"
-                placeholder="Token para integração avançada"
-                value={config.api_token ?? ""}
-                onChange={(e) => setConfig({...config, api_token: e.target.value})}
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Habilitar WhatsApp</Label>
+                <div className="text-sm text-muted-foreground">
+                  Ativa a integração com WhatsApp
+                </div>
+              </div>
+              <Switch
+                checked={config.is_enabled}
+                onCheckedChange={(checked) => setConfig({...config, is_enabled: checked})}
               />
             </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Habilitar WhatsApp</Label>
-              <div className="text-sm text-muted-foreground">
-                Ativa a integração com WhatsApp
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Envio Automático de Pedidos</Label>
+                <div className="text-sm text-muted-foreground">
+                  Envia confirmação automática quando pedido é finalizado
+                </div>
               </div>
+              <Switch
+                checked={config.auto_send_orders}
+                onCheckedChange={(checked) => setConfig({...config, auto_send_orders: checked})}
+              />
             </div>
-            <Switch
-              checked={config.is_enabled}
-              onCheckedChange={(checked) => setConfig({...config, is_enabled: checked})}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Envio Automático de Pedidos</Label>
-              <div className="text-sm text-muted-foreground">
-                Envia confirmação automática quando pedido é finalizado
-              </div>
-            </div>
-            <Switch
-              checked={config.auto_send_orders}
-              onCheckedChange={(checked) => setConfig({...config, auto_send_orders: checked})}
-            />
           </div>
         </div>
 
@@ -287,11 +336,12 @@ export const WhatsAppConfigTab: React.FC = () => {
 
         {/* Informações sobre a Integração */}
         <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Como Funciona a Nova Integração</h4>
+          <h4 className="font-medium mb-2">Como Funciona a Integração UltraMsg</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Agora usa a API UltraMsg para envio direto de mensagens</li>
-            <li>• Configure o número do WhatsApp do seu restaurante</li>
-            <li>• Habilite o envio automático para confirmar pedidos</li>
+            <li>• Cada restaurante tem suas próprias credenciais UltraMsg</li>
+            <li>• Configure o Instance ID e Token da sua conta UltraMsg</li>
+            <li>• Conecte seu WhatsApp à instância UltraMsg</li>
+            <li>• Envie mensagens automáticas para confirmar pedidos</li>
             <li>• Personalize as mensagens conforme sua necessidade</li>
             <li>• Todas as mensagens são registradas no histórico</li>
           </ul>

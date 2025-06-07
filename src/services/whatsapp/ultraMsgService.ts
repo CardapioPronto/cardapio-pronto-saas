@@ -12,37 +12,31 @@ export interface UltraMsgSendRequest {
   body: string;
 }
 
+export interface UltraMsgCredentials {
+  instanceId: string;
+  token: string;
+}
+
 export class UltraMsgService {
   private static readonly BASE_URL = "https://api.ultramsg.com";
   
-  private static getInstanceId(): string {
-    const instanceId = import.meta.env.VITE_ULTRAMSG_INSTANCE_ID;
-    if (!instanceId) {
-      throw new Error('ULTRAMSG_INSTANCE_ID não configurado');
-    }
-    return instanceId;
-  }
-  
-  private static getToken(): string {
-    const token = import.meta.env.VITE_ULTRAMSG_TOKEN;
-    if (!token) {
-      throw new Error('ULTRAMSG_TOKEN não configurado');
-    }
-    return token;
-  }
-  
-  static async sendMessage(to: string, body: string): Promise<UltraMsgResponse> {
+  static async sendMessage(
+    credentials: UltraMsgCredentials,
+    to: string, 
+    body: string
+  ): Promise<UltraMsgResponse> {
     try {
-      const instanceId = this.getInstanceId();
-      const token = this.getToken();
+      if (!credentials.instanceId || !credentials.token) {
+        throw new Error('Credenciais do UltraMsg não configuradas');
+      }
       
       // Formatar número para padrão internacional (adicionar 55 se necessário)
       const formattedNumber = this.formatPhoneNumber(to);
       
-      const url = `${this.BASE_URL}/${instanceId}/messages/chat`;
+      const url = `${this.BASE_URL}/${credentials.instanceId}/messages/chat`;
       
       const payload = {
-        token,
+        token: credentials.token,
         to: formattedNumber,
         body
       };
@@ -99,5 +93,9 @@ export class UltraMsgService {
     const cleaned = phoneNumber.replace(/\D/g, '');
     // Aceita números com 10, 11, 12 ou 13 dígitos
     return cleaned.length >= 10 && cleaned.length <= 13;
+  }
+
+  static validateCredentials(credentials: UltraMsgCredentials): boolean {
+    return !!(credentials.instanceId && credentials.token);
   }
 }
