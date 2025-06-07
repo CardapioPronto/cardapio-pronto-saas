@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppIntegration, WhatsAppMessage } from "./types";
 import { UltraMsgService, UltraMsgCredentials } from "./ultraMsgService";
@@ -22,8 +23,8 @@ export class WhatsAppService {
       return {
         restaurant_id: data.restaurant_id,
         phone_number: data.phone_number,
-        ultramsg_instance_id: data.ultramsg_instance_id,
-        ultramsg_token: data.ultramsg_token,
+        ultramsg_instance_id: data.ultramsg_instance_id || undefined,
+        ultramsg_token: data.ultramsg_token || undefined,
         api_token: data.api_token,
         webhook_url: data.webhook_url,
         is_enabled: data.is_enabled,
@@ -46,8 +47,8 @@ export class WhatsAppService {
         .upsert({
           restaurant_id: integration.restaurant_id,
           phone_number: integration.phone_number,
-          ultramsg_instance_id: integration.ultramsg_instance_id,
-          ultramsg_token: integration.ultramsg_token,
+          ultramsg_instance_id: integration.ultramsg_instance_id || null,
+          ultramsg_token: integration.ultramsg_token || null,
           api_token: integration.api_token,
           webhook_url: integration.webhook_url,
           is_enabled: integration.is_enabled,
