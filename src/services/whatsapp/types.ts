@@ -2,8 +2,10 @@
 export interface WhatsAppIntegration {
   restaurant_id: string;
   phone_number: string;
-  api_token?: string | null;
-  webhook_url?: string | null;
+  ultramsg_instance_id?: string;
+  ultramsg_token?: string;
+  api_token?: string;
+  webhook_url?: string;
   is_enabled: boolean;
   auto_send_orders: boolean;
   welcome_message: string;
@@ -21,10 +23,4 @@ export interface WhatsAppMessage {
   content: string;
   status: 'sent' | 'delivered' | 'read' | 'failed';
   created_at?: string;
-}
-
-export interface WhatsAppWebhookPayload {
-  from: string;
-  body: string;
-  timestamp: string;
 }

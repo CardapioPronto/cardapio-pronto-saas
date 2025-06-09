@@ -12,6 +12,10 @@ interface ModernThemeProps {
 export const ModernTheme = ({ data }: ModernThemeProps) => {
   const { restaurant, categories, theme } = data;
 
+  const getProductImage = (imageUrl?: string) => {
+    return imageUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+  };
+
   return (
     <PublicMenuBase theme={theme}>
       {/* Header com gradiente */}
@@ -58,26 +62,40 @@ export const ModernTheme = ({ data }: ModernThemeProps) => {
                 .map(product => (
                 <Card 
                   key={product.id} 
-                  className={`theme-card ${theme.borderRadius} hover:scale-105 transition-transform`}
+                  className={`theme-card ${theme.borderRadius} hover:scale-105 transition-transform overflow-hidden`}
                 >
-                  <CardContent className={theme.spacing.card}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg theme-heading mb-1">
-                          {product.name}
-                        </h3>
-                        {product.description && (
-                          <p className="text-sm opacity-70 leading-relaxed">
-                            {product.description}
-                          </p>
-                        )}
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      {/* Imagem do produto */}
+                      <div className="w-24 h-24 flex-shrink-0">
+                        <img 
+                          src={getProductImage(product.image_url)} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <div className="ml-4 text-right">
-                        <div 
-                          className="text-2xl font-bold"
-                          style={{ color: theme.colors.secondary }}
-                        >
-                          R$ {product.price.toFixed(2)}
+                      
+                      {/* Conteúdo do produto */}
+                      <div className="flex-1 p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg theme-heading mb-1">
+                              {product.name}
+                            </h3>
+                            {product.description && (
+                              <p className="text-sm opacity-70 leading-relaxed">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="ml-4 text-right">
+                            <div 
+                              className="text-xl font-bold"
+                              style={{ color: theme.colors.secondary }}
+                            >
+                              R$ {product.price.toFixed(2)}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

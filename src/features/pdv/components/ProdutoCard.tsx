@@ -8,6 +8,10 @@ interface ProdutoCardProps {
 }
 
 export const ProdutoCard = ({ produto, onSelecionar }: ProdutoCardProps) => {
+  const getProductImage = (imageUrl?: string) => {
+    return imageUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+  };
+
   return (
     <Card 
       key={produto.id} 
@@ -15,15 +19,13 @@ export const ProdutoCard = ({ produto, onSelecionar }: ProdutoCardProps) => {
       onClick={() => onSelecionar(produto)}
     >
       <CardContent className="p-4">
-        {produto.image_url && (
-          <div className="w-full h-32 mb-2 overflow-hidden rounded-md">
-            <img 
-              src={produto.image_url} 
-              alt={produto.name} 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+        <div className="w-full h-32 mb-2 overflow-hidden rounded-md">
+          <img 
+            src={getProductImage(produto.image_url)} 
+            alt={produto.name} 
+            className="w-full h-full object-cover"
+          />
+        </div>
         <div className="font-medium">{produto.name}</div>
         <div className="text-sm text-muted-foreground line-clamp-2">
           {produto.description}
