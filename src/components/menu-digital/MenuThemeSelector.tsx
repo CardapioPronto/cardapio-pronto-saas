@@ -5,7 +5,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Palette, Eye, AlertCircle, Loader2 } from 'lucide-react';
+import { Palette, AlertCircle, Loader2 } from 'lucide-react';
 import { ColorCustomizer } from './ColorCustomizer';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -19,7 +19,7 @@ export const MenuThemeSelector = () => {
     updateConfig, 
     isUpdating,
     configError 
-  } = useRestaurantMenuConfig(user?.restaurant_id || '');
+  } = useRestaurantMenuConfig(user?.restaurant_id ?? '');
 
   console.log('MenuThemeSelector - Estado atual:', {
     user: user?.restaurant_id,

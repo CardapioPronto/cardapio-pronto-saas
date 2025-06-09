@@ -37,7 +37,7 @@ export function useCurrentUser() {
                 setUser({
                     id: data.id,
                     email: data.email,
-                    name: data.name || authUser.email || "Usuário", // Fallback para garantir que name não seja null
+                    name: data.name ?? authUser.email ?? "Usuário", // Fallback para garantir que name não seja null
                     restaurant_id: data.restaurant_id,
                     user_type: data.user_type,
                     role: data.role

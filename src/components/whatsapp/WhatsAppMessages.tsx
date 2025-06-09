@@ -13,18 +13,12 @@ import { ptBR } from "date-fns/locale";
 
 export const WhatsAppMessages: React.FC = () => {
   const { user } = useCurrentUser();
-  const restaurantId = user?.restaurant_id || "";
+  const restaurantId = user?.restaurant_id ?? "";
   
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (restaurantId) {
-      loadMessages();
-    }
-  }, [restaurantId]);
-
-  const loadMessages = async () => {
+  const loadMessages = React.useCallback(async () => {
     setLoading(true);
     try {
       const data = await WhatsAppService.getMessages(restaurantId);
@@ -34,7 +28,13 @@ export const WhatsAppMessages: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (restaurantId) {
+      loadMessages();
+    }
+  }, [restaurantId, loadMessages]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -113,53 +113,83 @@ export const WhatsAppMessages: React.FC = () => {
         ) : (
           <ScrollArea className="h-[400px]">
             <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className="border rounded-lg p-4 space-y-2"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{message.phone_number}</span>
-                      <Badge 
-                        variant="outline" 
-                        className={getMessageTypeColor(message.message_type)}
-                      >
-                        {message.message_type === 'incoming' ? 'Recebida' : 
-                         message.message_type === 'outgoing' ? 'Enviada' : 'Automática'}
-                      </Badge>
+              {messages.map((message) => {
+                let messageTypeLabel = '';
+                if (message.message_type === 'incoming') {
+                  messageTypeLabel = 'Recebida';
+                } else if (message.message_type === 'outgoing') {
+                  messageTypeLabel = 'Enviada';
+                } else {
+                  messageTypeLabel = 'Automática';
+                }
+
+                let messageStatusLabel = '';
+                if (message.status === 'sent') {
+                  messageStatusLabel = 'Enviada';
+                } else if (message.status === 'delivered') {
+                  messageStatusLabel = 'Entregue';
+                } else if (message.status === 'read') {
+                  messageStatusLabel = 'Lida';
+                } else {
+                  messageStatusLabel = 'Falhou';
+                }
+
+                // Extracted className for the container
+                const containerClassName = "border rounded-lg p-4 space-y-2";
+
+                // Extracted orderIdDisplay for conditional rendering
+                const orderIdDisplay = message.order_id
+                  ? <span>Pedido: {message.order_id.substring(0, 8)}</span>
+                  : null;
+
+                // Extracted createdAtDisplay for conditional rendering
+                const createdAtDisplay = message.created_at
+                  ? formatDistanceToNow(
+                      new Date(message.created_at),
+                      { addSuffix: true, locale: ptBR }
+                    )
+                  : null;
+
+                return (
+                  <div
+                    key={message.id}
+                    className={containerClassName}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{message.phone_number}</span>
+                        <Badge 
+                          variant="outline" 
+                          className={getMessageTypeColor(message.message_type)}
+                        >
+                          {messageTypeLabel}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`${getStatusColor(message.status)} flex items-center gap-1`}
+                        >
+                          {getStatusIcon(message.status)}
+                          {messageStatusLabel}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="outline" 
-                        className={`${getStatusColor(message.status)} flex items-center gap-1`}
-                      >
-                        {getStatusIcon(message.status)}
-                        {message.status === 'sent' ? 'Enviada' : 
-                         message.status === 'delivered' ? 'Entregue' : 
-                         message.status === 'read' ? 'Lida' : 'Falhou'}
-                      </Badge>
+                    
+                    <div className="text-sm bg-gray-50 p-3 rounded">
+                      {message.content}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      {orderIdDisplay}
+                      <span>
+                        {createdAtDisplay}
+                      </span>
                     </div>
                   </div>
-                  
-                  <div className="text-sm bg-gray-50 p-3 rounded">
-                    {message.content}
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    {message.order_id && (
-                      <span>Pedido: {message.order_id.substring(0, 8)}</span>
-                    )}
-                    <span>
-                      {message.created_at && formatDistanceToNow(
-                        new Date(message.created_at), 
-                        { addSuffix: true, locale: ptBR }
-                      )}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         )}

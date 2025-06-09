@@ -80,7 +80,7 @@ export class WhatsAppService {
     try {
       await this.logMessage({
         restaurant_id: restaurantId,
-        order_id: orderId || null,
+        order_id: orderId ?? null,
         phone_number: phoneNumber,
         message_type: 'outgoing',
         content: message,
