@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
 import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
+import { FiltroProdutos } from "./FiltroProdutos";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { useProdutos } from "@/hooks/useProdutos";
@@ -30,7 +31,8 @@ export const NovoPedido: React.FC = () => {
     removerItem,
     finalizarPedido: finalizarPedidoOriginal,
     tipoPedido,
-    mesaSelecionada
+    mesaSelecionada,
+    setMesaSelecionada
   } = usePDVHook(restaurantId);
 
   const { produtos } = useProdutos(restaurantId);
@@ -45,7 +47,7 @@ export const NovoPedido: React.FC = () => {
       produto.name.toLowerCase().includes(busca.toLowerCase()) ||
       produto.description.toLowerCase().includes(busca.toLowerCase());
     
-    const matchesCategory = categoriaAtiva === "todas" || 
+    const matchesCategory = categoriaAtiva === "" || categoriaAtiva === "all" || 
       produto.category?.id === categoriaAtiva;
     
     return matchesSearch && matchesCategory && produto.available;
@@ -121,7 +123,17 @@ export const NovoPedido: React.FC = () => {
           <CardHeader>
             <CardTitle>Selecionar Produtos</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <FiltroProdutos
+              categoriaAtiva={categoriaAtiva}
+              setCategoriaAtiva={setCategoriaAtiva}
+              busca={busca}
+              setBusca={setBusca}
+              tipoPedido={tipoPedido}
+              mesaSelecionada={mesaSelecionada}
+              setMesaSelecionada={setMesaSelecionada}
+              restaurantId={restaurantId}
+            />
             <ListaProdutos
               categoriaAtiva={categoriaAtiva}
               produtosFiltrados={produtosFiltrados}

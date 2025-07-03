@@ -12,7 +12,7 @@ export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
   const [mesaSelecionada, setMesaSelecionada] = useState("1");
-  const [categoriaAtiva, setCategoriaAtiva] = useState("");
+  const [categoriaAtiva, setCategoriaAtiva] = useState("all");
   const [observacaoAtual, setObservacaoAtual] = useState("");
   const [produtoSelecionado, setProdutoSelecionado] = useState<Product | null>(null);
   const [busca, setBusca] = useState("");

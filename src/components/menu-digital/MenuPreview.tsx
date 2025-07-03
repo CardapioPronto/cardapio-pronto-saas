@@ -29,7 +29,7 @@ export const MenuPreview = () => {
       return;
     }
 
-    // Abrir preview em nova aba
+    // Abrir preview em nova aba usando o ID do restaurante
     const previewUrl = `/cardapio/${user.restaurant_id}`;
     window.open(previewUrl, '_blank');
   };
