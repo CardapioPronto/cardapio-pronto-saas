@@ -25,6 +25,7 @@ import MenuDigital from '@/pages/MenuDigital';
 import Assinaturas from '@/pages/Assinaturas';
 import PagarmeConfig from '@/pages/PagarmeConfig';
 import IfoodIntegracao from '@/pages/IfoodIntegracao';
+import Relatorios from '@/pages/Relatorios';
 import Admin from '@/pages/Admin';
 import AdminSubscriptions from '@/pages/admin/AdminSubscriptions';
 import AdminSettings from '@/pages/admin/AdminSettings';
@@ -121,6 +122,11 @@ const AppRoutes = () => {
       <Route path="/categorias" element={
         <MainLayout>
           <Categorias />
+        </MainLayout>
+      } />
+      <Route path="/relatorios" element={
+        <MainLayout>
+          <Relatorios />
         </MainLayout>
       } />
       
