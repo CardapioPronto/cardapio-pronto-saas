@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { DollarSign, ShoppingCart, TrendingUp, Users, LucideIcon } from "lucide-react";
-import { calcularPercentual, formatarMoeda } from "@/utils/dashboardUtils";
+import { formatarMoeda } from "@/utils/dashboardUtils";
 
 interface StatItem {
   title: string;
@@ -43,51 +43,45 @@ export const useStatsData = () => {
     },
   ]);
 
-  const updateStats = (ordersData: any) => {
-    const { salesToday, ordersThisMonth, ordersLastMonth } = ordersData;
+  const updateStats = (dashboardStats: any) => {
+    const { 
+      totalPedidos, 
+      faturamento, 
+      produtosMaisVendidos, 
+      crescimentoPedidos, 
+      crescimentoFaturamento 
+    } = dashboardStats;
 
-    const pedidosAtual = ordersThisMonth?.length || 0;
-    const pedidosAnterior = ordersLastMonth?.length || 0;
-    const pedidosChange = calcularPercentual(pedidosAnterior, pedidosAtual);
-
-    const validCustomersThisMonth = ordersThisMonth?.filter((o: any) => o.customer_name !== null) || [];
-    const validCustomersLastMonth = ordersLastMonth?.filter((o: any) => o.customer_name !== null) || [];
-    
-    const clientesUnicos = new Set(validCustomersThisMonth.map((o: any) => o.customer_name)).size;
-    const clientesAnteriores = new Set(validCustomersLastMonth.map((o: any) => o.customer_name)).size;
-    const clientesChange = calcularPercentual(clientesAnteriores, clientesUnicos);
-
-    const faturamentoAtual = ordersThisMonth?.reduce((sum: number, o: any) => sum + (o.total || 0), 0) || 0;
-    const faturamentoAnterior = ordersLastMonth?.reduce((sum: number, o: any) => sum + (o.total || 0), 0) || 0;
-    const faturamentoChange = calcularPercentual(faturamentoAnterior, faturamentoAtual);
+    const pedidosChange = crescimentoPedidos > 0 ? `+${crescimentoPedidos.toFixed(0)}%` : `${crescimentoPedidos.toFixed(0)}%`;
+    const faturamentoChange = crescimentoFaturamento > 0 ? `+${crescimentoFaturamento.toFixed(0)}%` : `${crescimentoFaturamento.toFixed(0)}%`;
 
     setStats([
       {
-        title: "Vendas hoje",
-        value: formatarMoeda(salesToday),
-        change: "+0%",
-        icon: DollarSign,
-        color: "bg-green/10 text-green",
-      },
-      {
-        title: "Pedidos",
-        value: pedidosAtual.toString(),
+        title: "Pedidos (30 dias)",
+        value: totalPedidos.toString(),
         change: pedidosChange,
         icon: ShoppingCart,
         color: "bg-orange/10 text-orange",
       },
       {
-        title: "Clientes",
-        value: clientesUnicos.toString(),
-        change: clientesChange,
-        icon: Users,
+        title: "Faturamento (30 dias)",
+        value: formatarMoeda(faturamento),
+        change: faturamentoChange,
+        icon: DollarSign,
+        color: "bg-green/10 text-green",
+      },
+      {
+        title: "Produtos Vendidos",
+        value: produtosMaisVendidos.toString(),
+        change: "0%",
+        icon: TrendingUp,
         color: "bg-navy/10 text-navy",
       },
       {
-        title: "Faturamento mensal",
-        value: formatarMoeda(faturamentoAtual),
-        change: faturamentoChange,
-        icon: TrendingUp,
+        title: "Avaliação Média",
+        value: "4.5",
+        change: "0%",
+        icon: Users,
         color: "bg-beige/30 text-navy",
       },
     ]);
