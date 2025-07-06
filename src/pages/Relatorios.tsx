@@ -6,6 +6,7 @@ import { Calendar, Download, TrendingUp } from "lucide-react";
 import { RelatoriosAvancados } from "@/components/relatorios/RelatoriosAvancados";
 import { ExportacaoDados } from "@/components/relatorios/ExportacaoDados";
 import { AnalisePerformance } from "@/components/relatorios/AnalisePerformance";
+import { TestRelatorios } from "@/components/relatorios/TestRelatórios";
 
 const Relatorios = () => {
   return (
@@ -57,6 +58,7 @@ const Relatorios = () => {
             <TabsTrigger value="relatorios">Relatórios Avançados</TabsTrigger>
             <TabsTrigger value="exportacao">Exportação</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="test">🧪 Teste</TabsTrigger>
           </TabsList>
           
           <TabsContent value="relatorios" className="space-y-4">
@@ -69,6 +71,10 @@ const Relatorios = () => {
           
           <TabsContent value="performance" className="space-y-4">
             <AnalisePerformance />
+          </TabsContent>
+          
+          <TabsContent value="test" className="space-y-4">
+            <TestRelatorios />
           </TabsContent>
         </Tabs>
       </div>

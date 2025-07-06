@@ -124,6 +124,14 @@ const DashboardSidebar = () => {
               <BarChart3 className="mr-3 h-4 w-4" />
               Assinatura
             </Link>
+            <Link
+              to="/relatorios"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <BarChart3 className="mr-3 h-4 w-4" />
+              Relatórios
+            </Link>
           </div>
 
           <Separator className="my-4" />
