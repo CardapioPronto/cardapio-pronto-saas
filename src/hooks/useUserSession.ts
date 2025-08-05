@@ -25,9 +25,9 @@ export const useUserSession = (): UserSession => {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error || !data) throw error || new Error('Usuário não encontrado');
       
       // Garantir que o nome nunca seja null para compatibilidade
       return {

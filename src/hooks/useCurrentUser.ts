@@ -27,9 +27,9 @@ export function useCurrentUser() {
                 .from("users")
                 .select("id, email, name, restaurant_id, user_type, role")
                 .eq("id", authUser.id)
-                .single();
+                .maybeSingle();
 
-            if (userError) {
+            if (userError || !data) {
                 setError("Erro ao buscar dados do usuário.");
                 setUser(null);
             } else {
