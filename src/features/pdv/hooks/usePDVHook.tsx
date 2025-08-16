@@ -11,7 +11,7 @@ import {
 export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
-  const [mesaSelecionada, setMesaSelecionada] = useState("1");
+  const [mesaSelecionada, setMesaSelecionada] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState("all");
   const [observacaoAtual, setObservacaoAtual] = useState("");
   const [produtoSelecionado, setProdutoSelecionado] = useState<Product | null>(null);
@@ -114,6 +114,11 @@ export const usePDVHook = (restaurantId: string) => {
       return;
     }
     
+    if (!mesaSelecionada) {
+      toast.error("Selecione uma mesa para o pedido");
+      return;
+    }
+    
     if (!restaurantId) {
       toast.error("ID do restaurante não encontrado");
       return;
@@ -121,7 +126,7 @@ export const usePDVHook = (restaurantId: string) => {
     
     try {
       setSalvandoPedido(true);
-      const mesa = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : "Balcão";
+      const mesa = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : `Balcão - Mesa ${mesaSelecionada}`;
       
       const result = await salvarPedido(
         restaurantId,
@@ -134,6 +139,7 @@ export const usePDVHook = (restaurantId: string) => {
       if (result.success) {
         setItensPedido([]);
         setNomeCliente("");
+        setMesaSelecionada("");
         setVisualizacaoAtiva("historico");
         await carregarHistoricoPedidos();
       }
