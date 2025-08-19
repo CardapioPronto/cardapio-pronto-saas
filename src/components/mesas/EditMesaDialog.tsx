@@ -26,7 +26,7 @@ export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: Ed
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     number: "",
-    area_id: "",
+    area_id: "none",
     capacity: 4,
     status: "livre" as Mesa['status'],
   });
@@ -35,7 +35,7 @@ export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: Ed
     if (mesa) {
       setFormData({
         number: mesa.number,
-        area_id: mesa.area_id || "",
+        area_id: mesa.area_id || "none",
         capacity: mesa.capacity || 4,
         status: mesa.status,
       });
@@ -50,7 +50,7 @@ export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: Ed
     try {
       await onUpdate(mesa.id, {
         number: formData.number.trim(),
-        area_id: formData.area_id || undefined,
+        area_id: formData.area_id === "none" ? undefined : formData.area_id || undefined,
         capacity: formData.capacity,
         status: formData.status,
       });
@@ -94,7 +94,7 @@ export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: Ed
                 <SelectValue placeholder="Selecione uma área" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem área específica</SelectItem>
+                <SelectItem value="none">Sem área específica</SelectItem>
                 {areas.map((area) => (
                   <SelectItem key={area.id} value={area.id}>
                     {area.name}
