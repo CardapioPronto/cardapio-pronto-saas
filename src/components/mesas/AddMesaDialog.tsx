@@ -26,7 +26,7 @@ export function AddMesaDialog({ areas, onAdd }: AddMesaDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     number: "",
-    area_id: "",
+    area_id: "none",
     capacity: 4,
   });
 
@@ -38,11 +38,11 @@ export function AddMesaDialog({ areas, onAdd }: AddMesaDialogProps) {
     try {
       await onAdd({
         number: formData.number.trim(),
-        area_id: formData.area_id || undefined,
+        area_id: formData.area_id === "none" ? undefined : formData.area_id || undefined,
         capacity: formData.capacity,
       });
       
-      setFormData({ number: "", area_id: "", capacity: 4 });
+      setFormData({ number: "", area_id: "none", capacity: 4 });
       setOpen(false);
     } catch (error) {
       console.error("Erro ao adicionar mesa:", error);
@@ -88,7 +88,7 @@ export function AddMesaDialog({ areas, onAdd }: AddMesaDialogProps) {
                 <SelectValue placeholder="Selecione uma área" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem área específica</SelectItem>
+                <SelectItem value="none">Sem área específica</SelectItem>
                 {areas.map((area) => (
                   <SelectItem key={area.id} value={area.id}>
                     {area.name}
