@@ -13,12 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { CreateMesaData } from "@/types/mesa";
+import { CreateMesaData, Mesa } from "@/types/mesa";
 import { Area } from "@/types/area";
 
 interface AddMesaDialogProps {
   areas: Area[];
-  onAdd: (data: Omit<CreateMesaData, 'restaurant_id'>) => Promise<void>;
+  onAdd: (data: Omit<CreateMesaData, 'restaurant_id'>) => Promise<Mesa>;
 }
 
 export function AddMesaDialog({ areas, onAdd }: AddMesaDialogProps) {

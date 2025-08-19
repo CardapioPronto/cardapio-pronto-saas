@@ -15,7 +15,7 @@ export const mesasService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as Mesa[];
   },
 
   async getMesasByArea(areaId: string): Promise<Mesa[]> {
@@ -31,7 +31,7 @@ export const mesasService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as Mesa[];
   },
 
   async createMesa(mesaData: CreateMesaData): Promise<Mesa> {
@@ -46,7 +46,7 @@ export const mesasService = {
       throw error;
     }
 
-    return data;
+    return data as Mesa;
   },
 
   async updateMesa(id: string, updateData: UpdateMesaData): Promise<Mesa> {
@@ -62,7 +62,7 @@ export const mesasService = {
       throw error;
     }
 
-    return data;
+    return data as Mesa;
   },
 
   async updateMesaStatus(id: string, status: Mesa['status']): Promise<Mesa> {
@@ -93,6 +93,6 @@ export const mesasService = {
       return null;
     }
 
-    return data;
+    return data as Mesa;
   }
 };

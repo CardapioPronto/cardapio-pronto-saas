@@ -11,7 +11,7 @@ import { DeleteMesaDialog } from "./DeleteMesaDialog";
 interface MesasListProps {
   mesas: Mesa[];
   areas: Area[];
-  onUpdate: (id: string, data: any) => Promise<void>;
+  onUpdate: (id: string, data: any) => Promise<Mesa>;
   onDelete: (id: string) => Promise<void>;
   loading?: boolean;
 }
@@ -20,7 +20,7 @@ export function MesasList({ mesas, areas, onUpdate, onDelete, loading }: MesasLi
   const [editingMesa, setEditingMesa] = useState<Mesa | null>(null);
   const [deletingMesa, setDeletingMesa] = useState<Mesa | null>(null);
 
-  const getAreaName = (areaId: string | undefined) => {
+  const getAreaName = (areaId: string | null | undefined) => {
     if (!areaId) return "Sem área";
     const area = areas.find(a => a.id === areaId);
     return area?.name || "Área não encontrada";

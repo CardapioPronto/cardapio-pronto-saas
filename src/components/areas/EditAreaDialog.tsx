@@ -17,7 +17,7 @@ interface EditAreaDialogProps {
   area: Area | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (id: string, data: UpdateAreaData) => Promise<void>;
+  onUpdate: (id: string, data: UpdateAreaData) => Promise<Area>;
 }
 
 export function EditAreaDialog({ area, open, onOpenChange, onUpdate }: EditAreaDialogProps) {

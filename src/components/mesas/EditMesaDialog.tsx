@@ -19,7 +19,7 @@ interface EditMesaDialogProps {
   areas: Area[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (id: string, data: UpdateMesaData) => Promise<void>;
+  onUpdate: (id: string, data: UpdateMesaData) => Promise<Mesa>;
 }
 
 export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: EditMesaDialogProps) {
@@ -36,7 +36,7 @@ export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: Ed
       setFormData({
         number: mesa.number,
         area_id: mesa.area_id || "",
-        capacity: mesa.capacity,
+        capacity: mesa.capacity || 4,
         status: mesa.status,
       });
     }

@@ -25,7 +25,7 @@ export function MesaSelector({
 }: MesaSelectorProps) {
   const [areaFiltro, setAreaFiltro] = useState<string>("");
 
-  const getAreaName = (areaId: string | undefined) => {
+  const getAreaName = (areaId: string | null | undefined) => {
     if (!areaId) return "Sem área";
     const area = areas.find(a => a.id === areaId);
     return area?.name || "Área não encontrada";

@@ -9,7 +9,7 @@ import { DeleteAreaDialog } from "./DeleteAreaDialog";
 
 interface AreasListProps {
   areas: Area[];
-  onUpdate: (id: string, data: any) => Promise<void>;
+  onUpdate: (id: string, data: any) => Promise<Area>;
   onDelete: (id: string) => Promise<void>;
   loading?: boolean;
 }
