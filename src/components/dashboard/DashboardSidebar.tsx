@@ -13,6 +13,8 @@ import {
   X,
   Store,
   LogOut,
+  MapPin,
+  TableIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -115,6 +117,22 @@ const DashboardSidebar = () => {
             >
               <UserRound className="mr-3 h-4 w-4" />
               Funcionários
+            </Link>
+            <Link
+              to="/areas"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <MapPin className="mr-3 h-4 w-4" />
+              Áreas
+            </Link>
+            <Link
+              to="/mesas"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <TableIcon className="mr-3 h-4 w-4" />
+              Mesas
             </Link>
             <Link
               to="/assinaturas"

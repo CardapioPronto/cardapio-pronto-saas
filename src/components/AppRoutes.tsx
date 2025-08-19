@@ -26,6 +26,8 @@ import Assinaturas from '@/pages/Assinaturas';
 import PagarmeConfig from '@/pages/PagarmeConfig';
 import IfoodIntegracao from '@/pages/IfoodIntegracao';
 import Relatorios from '@/pages/Relatorios';
+import Areas from '@/pages/Areas';
+import Mesas from '@/pages/Mesas';
 import Admin from '@/pages/Admin';
 import AdminSubscriptions from '@/pages/admin/AdminSubscriptions';
 import AdminSettings from '@/pages/admin/AdminSettings';
@@ -127,6 +129,16 @@ const AppRoutes = () => {
       <Route path="/relatorios" element={
         <MainLayout>
           <Relatorios />
+        </MainLayout>
+      } />
+      <Route path="/areas" element={
+        <MainLayout>
+          <Areas />
+        </MainLayout>
+      } />
+      <Route path="/mesas" element={
+        <MainLayout>
+          <Mesas />
         </MainLayout>
       } />
       
