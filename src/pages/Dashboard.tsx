@@ -9,11 +9,11 @@ import { RecentSales as RecentSalesComponent } from "@/components/dashboard/Rece
 import { PopularProducts as PopularProductsComponent } from "@/components/dashboard/PopularProducts";
 
 const Dashboard = () => {
-  const { user } = useCurrentUser();
+  const { user, loading: userLoading } = useCurrentUser();
   const { stats, loading: statsLoading, recentSales, popularProducts } = useDashboardData(user?.restaurant_id || null);
   const { initialized, loading: initLoading } = useSystemInitialization();
 
-  if (statsLoading || initLoading || !initialized) {
+  if (userLoading || statsLoading || initLoading) {
     return (
       <DashboardLayout title="Dashboard">
         <div className="flex items-center justify-center min-h-[400px]">

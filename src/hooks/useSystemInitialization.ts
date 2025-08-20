@@ -12,8 +12,11 @@ export const useSystemInitialization = () => {
   useEffect(() => {
     if (user?.restaurant_id && !initialized) {
       initializeSystemConfigurations();
+    } else if (user && !user.restaurant_id) {
+      // Se o usuário existe mas não tem restaurant_id, marcar como inicializado
+      setInitialized(true);
     }
-  }, [user?.restaurant_id, initialized]);
+  }, [user?.restaurant_id, initialized, user]);
 
   const initializeSystemConfigurations = async () => {
     if (!user?.restaurant_id) return;
@@ -25,7 +28,7 @@ export const useSystemInitialization = () => {
         .from('system_configurations')
         .select('id')
         .eq('restaurant_id', user.restaurant_id)
-        .single();
+        .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
         console.error('Erro ao verificar configurações existentes:', checkError);
