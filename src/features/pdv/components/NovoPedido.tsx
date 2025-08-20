@@ -12,6 +12,7 @@ import { FiltroProdutos } from "./FiltroProdutos";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { useProdutos } from "@/hooks/useProdutos";
+import { useMesas } from "@/hooks/useMesas";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 
 export const NovoPedido: React.FC = () => {
@@ -32,12 +33,14 @@ export const NovoPedido: React.FC = () => {
     finalizarPedido: finalizarPedidoOriginal,
     tipoPedido,
     mesaSelecionada,
-    setMesaSelecionada
+    setMesaSelecionada,
+    nomeCliente,
+    setNomeCliente
   } = usePDVHook(restaurantId);
 
   const { produtos } = useProdutos(restaurantId);
+  const { mesas } = useMesas(restaurantId);
 
-  const [nomeCliente, setNomeCliente] = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [telefoneError, setTelefoneError] = useState("");
 
@@ -84,28 +87,31 @@ export const NovoPedido: React.FC = () => {
     }
 
     try {
-      // Call the original function without arguments since it expects 0 parameters
-      const pedidoId = await finalizarPedidoOriginal();
+      // Call the original function with customer data
+      await finalizarPedidoOriginal();
       
       // Tentar enviar notificação WhatsApp se telefone foi fornecido
-      if (telefoneCliente && pedidoId) {
+      if (telefoneCliente) {
         try {
-          await WhatsAppService.sendOrderConfirmation(
-            restaurantId,
-            telefoneCliente,
-            pedidoId
-          );
-          toast.success("Pedido finalizado e notificação WhatsApp enviada!");
+          // Buscar o último pedido criado para obter o ID
+          setTimeout(async () => {
+            try {
+              await WhatsAppService.sendOrderConfirmation(
+                restaurantId,
+                telefoneCliente,
+                'ultimo' // Indicar que é o último pedido
+              );
+              toast.success("Pedido finalizado e notificação WhatsApp enviada!");
+            } catch (error) {
+              console.error('Erro ao enviar WhatsApp:', error);
+            }
+          }, 1000);
         } catch (error) {
           console.error('Erro ao enviar WhatsApp:', error);
-          toast.success("Pedido finalizado! (Erro ao enviar WhatsApp)");
         }
-      } else {
-        toast.success("Pedido finalizado com sucesso!");
       }
 
       // Limpar campos após sucesso
-      setNomeCliente("");
       setTelefoneCliente("");
       setTelefoneError("");
       
@@ -189,6 +195,7 @@ export const NovoPedido: React.FC = () => {
           salvandoPedido={salvandoPedido}
           tipoPedido={tipoPedido}
           mesaSelecionada={mesaSelecionada}
+          mesas={mesas.map(mesa => ({ id: mesa.id, number: mesa.number }))}
         />
       </div>
     </div>

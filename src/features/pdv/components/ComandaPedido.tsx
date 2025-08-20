@@ -18,6 +18,7 @@ interface ComandaPedidoProps {
   salvandoPedido: boolean;
   nomeCliente?: string;
   setNomeCliente?: (nome: string) => void;
+  mesas?: Array<{id: string; number: string}>;
 }
 
 export const ComandaPedido = ({
@@ -31,9 +32,20 @@ export const ComandaPedido = ({
   salvandoPedido,
   nomeCliente = "",
   setNomeCliente,
+  mesas = [],
 }: ComandaPedidoProps) => {
-  const tituloComanda =
-    tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : "Balcão";
+  const getMesaDisplay = () => {
+    if (!mesaSelecionada) return tipoPedido === "mesa" ? "Mesa não selecionada" : "Balcão";
+    
+    const mesa = mesas.find(m => m.id === mesaSelecionada);
+    if (mesa) {
+      return tipoPedido === "mesa" ? `Mesa ${mesa.number}` : `Balcão - Mesa ${mesa.number}`;
+    }
+    
+    return tipoPedido === "mesa" ? "Mesa não encontrada" : "Balcão";
+  };
+
+  const tituloComanda = getMesaDisplay();
 
   return (
     <div className="sticky top-4">

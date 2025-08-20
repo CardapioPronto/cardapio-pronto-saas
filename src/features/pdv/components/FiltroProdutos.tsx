@@ -1,11 +1,13 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useMesas } from "@/hooks/useMesas";
 import { useAreas } from "@/hooks/useAreas";
-import { MesaSelector } from "@/components/pdv/MesaSelector";
-import { Search, XCircle } from "lucide-react";
+import { MesaSelectorModal } from "@/components/pdv/MesaSelectorModal";
+import { Search, XCircle, MapPin } from "lucide-react";
+import { useState } from "react";
 
 interface FiltroProdutosProps {
   categoriaAtiva: string;
@@ -31,18 +33,43 @@ export const FiltroProdutos = ({
   const { categorias, loading } = useCategorias();
   const { mesas } = useMesas(restaurantId);
   const { areas } = useAreas(restaurantId);
+  const [modalMesaOpen, setModalMesaOpen] = useState(false);
+
+  const getMesaInfo = (mesaId: string) => {
+    const mesa = mesas.find(m => m.id === mesaId);
+    return mesa ? `Mesa ${mesa.number}` : "Selecionar mesa";
+  };
 
   return (
     <div className="space-y-4">
-      {/* Seletor de mesas (apenas se for pedido de mesa ou balcão) */}
-      {(tipoPedido === "mesa" || tipoPedido === "balcao") && (
-        <MesaSelector
-          mesas={mesas}
-          areas={areas}
-          mesaSelecionada={mesaSelecionada}
-          onMesaChange={setMesaSelecionada}
-          tipoPedido={tipoPedido}
-        />
+      {/* Seletor de mesa via modal */}
+      {tipoPedido === "mesa" && (
+        <div className="space-y-2">
+          <Label>Mesa para o pedido</Label>
+          <Button
+            variant="outline"
+            onClick={() => setModalMesaOpen(true)}
+            className="w-full justify-start"
+          >
+            <MapPin className="mr-2 h-4 w-4" />
+            {mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Selecionar mesa"}
+          </Button>
+        </div>
+      )}
+
+      {/* Seletor para balcão - continua inline mas com menos espaço */}
+      {tipoPedido === "balcao" && (
+        <div className="space-y-2">
+          <Label>Mesa para controle interno</Label>
+          <Button
+            variant="outline"
+            onClick={() => setModalMesaOpen(true)}
+            className="w-full justify-start"
+          >
+            <MapPin className="mr-2 h-4 w-4" />
+            {mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Selecionar mesa"}
+          </Button>
+        </div>
       )}
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -96,6 +123,17 @@ export const FiltroProdutos = ({
           </div>
         </div>
       </div>
+
+      {/* Modal de seleção de mesa */}
+      <MesaSelectorModal
+        open={modalMesaOpen}
+        onOpenChange={setModalMesaOpen}
+        mesas={mesas}
+        areas={areas}
+        mesaSelecionada={mesaSelecionada}
+        onMesaChange={setMesaSelecionada}
+        tipoPedido={tipoPedido}
+      />
     </div>
   );
 };
