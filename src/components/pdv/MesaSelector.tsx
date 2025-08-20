@@ -23,7 +23,7 @@ export function MesaSelector({
   onMesaChange, 
   tipoPedido 
 }: MesaSelectorProps) {
-  const [areaFiltro, setAreaFiltro] = useState<string>("");
+  const [areaFiltro, setAreaFiltro] = useState<string>("all");
 
   const getAreaName = (areaId: string | null | undefined) => {
     if (!areaId) return "Sem área";
@@ -31,9 +31,9 @@ export function MesaSelector({
     return area?.name || "Área não encontrada";
   };
 
-  const mesasFiltradas = areaFiltro 
-    ? mesas.filter(mesa => mesa.area_id === areaFiltro)
-    : mesas;
+  const mesasFiltradas = areaFiltro === "all" 
+    ? mesas
+    : mesas.filter(mesa => mesa.area_id === areaFiltro);
 
   const mesasDisponiveis = mesasFiltradas.filter(mesa => 
     mesa.status === 'livre' || mesa.status === 'reservada'
@@ -55,7 +55,7 @@ export function MesaSelector({
                 <SelectValue placeholder="Todas as áreas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as áreas</SelectItem>
+                <SelectItem value="all">Todas as áreas</SelectItem>
                 {areas.map((area) => (
                   <SelectItem key={area.id} value={area.id}>
                     {area.name}
@@ -119,7 +119,7 @@ export function MesaSelector({
               <SelectValue placeholder="Todas as áreas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as áreas</SelectItem>
+              <SelectItem value="all">Todas as áreas</SelectItem>
               {areas.map((area) => (
                 <SelectItem key={area.id} value={area.id}>
                   {area.name}

@@ -133,7 +133,9 @@ export const usePDVHook = (restaurantId: string) => {
         mesa,
         itensPedido,
         totalPedido,
-        nomeCliente.trim() || undefined // Passa undefined se estiver vazio para usar o valor padrão
+        nomeCliente.trim() || undefined, // Passa undefined se estiver vazio para usar o valor padrão
+        undefined, // telefoneCliente não está sendo usado no hook
+        mesaSelecionada // Passar o ID da mesa para atualizar status
       );
       
       if (result.success) {
