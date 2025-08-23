@@ -4,6 +4,7 @@ import { PublicMenuBase } from '../PublicMenuBase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { QrCode } from 'lucide-react';
+import produtoPadrao from "@/assets/produto-padrao.jpg";
 
 interface ElegantThemeProps {
   data: MenuData;
@@ -13,7 +14,7 @@ export const ElegantTheme = ({ data }: ElegantThemeProps) => {
   const { restaurant, categories, theme } = data;
 
   const getProductImage = (imageUrl?: string) => {
-    return imageUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+    return imageUrl || produtoPadrao;
   };
 
   return (

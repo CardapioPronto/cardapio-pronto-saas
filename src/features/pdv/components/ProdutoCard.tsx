@@ -1,6 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Product } from "@/types";
+import produtoPadrao from "@/assets/produto-padrao.jpg";
 
 interface ProdutoCardProps {
   produto: Product;
@@ -9,7 +10,7 @@ interface ProdutoCardProps {
 
 export const ProdutoCard = ({ produto, onSelecionar }: ProdutoCardProps) => {
   const getProductImage = (imageUrl?: string) => {
-    return imageUrl || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+    return imageUrl || produtoPadrao;
   };
 
   return (
