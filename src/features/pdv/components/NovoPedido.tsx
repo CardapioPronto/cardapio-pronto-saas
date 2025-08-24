@@ -14,11 +14,54 @@ import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useMesas } from "@/hooks/useMesas";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
+import { Product } from "@/types";
 
-export const NovoPedido: React.FC = () => {
+export interface NovoPedidoProps {
+  categoriaAtiva?: string;
+  setCategoriaAtiva?: (categoria: string) => void;
+  busca?: string;
+  setBusca?: (valor: string) => void;
+  itensPedido?: any[];
+  totalPedido?: number;
+  salvandoPedido?: boolean;
+  adicionarProduto?: (produto: Product) => void;
+  alterarQuantidade?: (index: number, delta: number) => void;
+  removerItem?: (index: number) => void;
+  finalizarPedidoOriginal?: () => Promise<void> | void;
+  tipoPedido?: "mesa" | "balcao";
+  mesaSelecionada?: string;
+  setMesaSelecionada?: (mesaId: string) => void;
+  nomeCliente?: string;
+  setNomeCliente?: (nome: string) => void;
+}
+
+export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
   const { user } = useCurrentUser();
   const restaurantId = user?.restaurant_id || "";
   
+  // Hook interno como fallback quando props não são passadas
+  const hook = usePDVHook(restaurantId);
+
+  // Preferir props vindas do componente pai (PDV) para compartilhar o estado
+  const merged = {
+    categoriaAtiva: props.categoriaAtiva ?? hook.categoriaAtiva,
+    setCategoriaAtiva: props.setCategoriaAtiva ?? hook.setCategoriaAtiva,
+    busca: props.busca ?? hook.busca,
+    setBusca: props.setBusca ?? hook.setBusca,
+    itensPedido: props.itensPedido ?? hook.itensPedido,
+    totalPedido: props.totalPedido ?? hook.totalPedido,
+    salvandoPedido: props.salvandoPedido ?? hook.salvandoPedido,
+    adicionarProduto: props.adicionarProduto ?? hook.adicionarProduto,
+    alterarQuantidade: props.alterarQuantidade ?? hook.alterarQuantidade,
+    removerItem: props.removerItem ?? hook.removerItem,
+    finalizarPedidoOriginal: props.finalizarPedidoOriginal ?? hook.finalizarPedido,
+    tipoPedido: props.tipoPedido ?? hook.tipoPedido,
+    mesaSelecionada: props.mesaSelecionada ?? hook.mesaSelecionada,
+    setMesaSelecionada: props.setMesaSelecionada ?? hook.setMesaSelecionada,
+    nomeCliente: props.nomeCliente ?? hook.nomeCliente,
+    setNomeCliente: props.setNomeCliente ?? hook.setNomeCliente,
+  } as Required<NovoPedidoProps> & { finalizarPedidoOriginal: () => Promise<void> | void };
+
   const {
     categoriaAtiva,
     setCategoriaAtiva,
@@ -30,13 +73,13 @@ export const NovoPedido: React.FC = () => {
     adicionarProduto,
     alterarQuantidade,
     removerItem,
-    finalizarPedido: finalizarPedidoOriginal,
+    finalizarPedidoOriginal,
     tipoPedido,
     mesaSelecionada,
     setMesaSelecionada,
     nomeCliente,
-    setNomeCliente
-  } = usePDVHook(restaurantId);
+    setNomeCliente,
+  } = merged;
 
   const { produtos } = useProdutos(restaurantId);
   const { mesas } = useMesas(restaurantId);

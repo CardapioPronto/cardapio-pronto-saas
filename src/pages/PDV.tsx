@@ -55,7 +55,24 @@ const PDV = () => {
       />
 
       {visualizacaoAtiva === "novo" ? (
-        <NovoPedido />
+        <NovoPedido 
+          categoriaAtiva={categoriaAtiva}
+          setCategoriaAtiva={setCategoriaAtiva}
+          busca={busca}
+          setBusca={setBusca}
+          itensPedido={itensPedido}
+          totalPedido={totalPedido}
+          salvandoPedido={salvandoPedido}
+          adicionarProduto={adicionarProduto}
+          alterarQuantidade={alterarQuantidade}
+          removerItem={removerItem}
+          finalizarPedidoOriginal={finalizarPedido}
+          tipoPedido={tipoPedido}
+          mesaSelecionada={mesaSelecionada}
+          setMesaSelecionada={setMesaSelecionada}
+          nomeCliente={nomeCliente}
+          setNomeCliente={setNomeCliente}
+        />
       ) : (
         <HistoricoPedidos 
           pedidosHistorico={pedidosHistorico}
