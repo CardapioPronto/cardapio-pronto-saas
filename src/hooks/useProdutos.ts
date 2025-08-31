@@ -27,6 +27,7 @@ export const useProdutos = (restaurantId: string) => {
           description,
           price,
           available,
+          image_url,
           restaurant_id,
           category:categories!products_category_id_fkey (
             id,
@@ -70,6 +71,7 @@ export const useProdutos = (restaurantId: string) => {
           price: novoProduto.price,
           category_id: novoProduto.category?.id,
           available: novoProduto.available ?? true,
+          image_url: novoProduto.image_url,
           restaurant_id: restaurantId
         })
         .select(`
@@ -78,6 +80,7 @@ export const useProdutos = (restaurantId: string) => {
           description,
           price,
           available,
+          image_url,
           restaurant_id,
           category:categories!products_category_id_fkey (
             id,
@@ -116,7 +119,8 @@ export const useProdutos = (restaurantId: string) => {
           description: produtoAtualizado.description,
           price: produtoAtualizado.price,
           category_id: produtoAtualizado.category?.id,
-          available: produtoAtualizado.available
+          available: produtoAtualizado.available,
+          image_url: produtoAtualizado.image_url
         })
         .eq("id", produtoAtualizado.id);
       
@@ -176,8 +180,8 @@ export const useProdutos = (restaurantId: string) => {
     produtos,
     loading,
     adicionarProduto,
-    atualizarProduto: async (produto: Product) => true, // Implementação temporária
-    removerProduto: async (id: string) => true, // Implementação temporária
+    atualizarProduto,
+    removerProduto,
     fetchProdutos
   };
 };

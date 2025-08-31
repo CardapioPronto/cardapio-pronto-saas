@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImageUpload } from "./ImageUpload";
 
 interface ProdutoFormProps {
   produto: Partial<Product>;
@@ -73,6 +74,17 @@ export const ProdutoForm = ({
             }
           />
         </div>
+
+        <ImageUpload
+          currentImageUrl={produto.image_url}
+          onImageChange={(imageUrl) =>
+            onChangeProduto({
+              ...produto,
+              image_url: imageUrl || undefined,
+            })
+          }
+          restaurantId={restaurantId}
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">

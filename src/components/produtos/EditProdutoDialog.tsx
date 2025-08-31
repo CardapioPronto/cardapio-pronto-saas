@@ -16,7 +16,7 @@ import { useCategorias } from "@/hooks/useCategorias";
 
 interface EditProdutoDialogProps {
   produto: Product;
-  onSave: (produto: Product) => void;
+  onSave: (produto: Product) => Promise<boolean> | boolean;
   restaurantId: string;
 }
 
@@ -25,23 +25,17 @@ export const EditProdutoDialog = ({
   onSave,
   restaurantId,
 }: EditProdutoDialogProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [produtoEditando, setProdutoEditando] = useState<Product | null>(null);
+  const [isOpen, setIsOpen] = useState(true); // Sempre aberto quando o componente existe
+  const [produtoEditando, setProdutoEditando] = useState<Product>(produto);
 
-  const handleOpenDialog = () => {
-    setProdutoEditando({ ...produto });
-    setIsOpen(true);
-  };
-
-  const handleSave = () => {
-    if (produtoEditando) {
-      onSave(produtoEditando);
+  const handleSave = async () => {
+    const success = await onSave(produtoEditando);
+    if (success) {
       setIsOpen(false);
     }
   };
 
   const handleCancel = () => {
-    setProdutoEditando(null);
     setIsOpen(false);
   };
 
@@ -49,11 +43,6 @@ export const EditProdutoDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" onClick={handleOpenDialog}>
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
@@ -62,21 +51,19 @@ export const EditProdutoDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        {produtoEditando && (
-          <ProdutoForm
-            produto={produtoEditando}
-            onChangeProduto={(produto) =>
-              setProdutoEditando({ ...produtoEditando, ...produto })
-            }
-            onSave={handleSave}
-            onCancel={handleCancel}
-            title="Editar Produto"
-            saveButtonText="Salvar"
-            restaurantId={restaurantId}
-            categories={categorias}
-            loadingCategories={loading}
-          />
-        )}
+        <ProdutoForm
+          produto={produtoEditando}
+          onChangeProduto={(produtoData) => 
+            setProdutoEditando({ ...produtoEditando, ...produtoData })
+          }
+          onSave={handleSave}
+          onCancel={handleCancel}
+          title="Editar Produto"
+          saveButtonText="Salvar"
+          restaurantId={restaurantId}
+          categories={categorias}
+          loadingCategories={loading}
+        />
       </DialogContent>
     </Dialog>
   );

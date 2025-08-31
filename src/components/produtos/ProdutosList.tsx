@@ -15,6 +15,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { DeleteProdutoDialog } from "./DeleteProdutoDialog";
 import { useState } from "react";
 import { EditProdutoDialog } from "./EditProdutoDialog";
+import produtoPadrao from "@/assets/produto-padrao.jpg";
 
 interface ProdutosListProps {
   produtosFiltrados: Product[];
@@ -48,6 +49,7 @@ export function ProdutosList({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Imagem</TableHead>
             <TableHead>Nome</TableHead>
             <TableHead>Categoria</TableHead>
             <TableHead>Preço</TableHead>
@@ -58,6 +60,13 @@ export function ProdutosList({
         <TableBody>
           {produtosFiltrados.map((produto) => (
             <TableRow key={produto.id}>
+              <TableCell>
+                <img 
+                  src={produto.image_url || produtoPadrao} 
+                  alt={produto.name}
+                  className="w-12 h-12 object-cover rounded-md"
+                />
+              </TableCell>
               <TableCell className="font-medium">{produto.name}</TableCell>
               <TableCell>{produto.category?.name || "-"}</TableCell>
               <TableCell>{formatCurrency(produto.price)}</TableCell>
@@ -93,7 +102,13 @@ export function ProdutosList({
       {produtoToEdit && (
         <EditProdutoDialog
           produto={produtoToEdit}
-          onSave={onEditProduto}
+          onSave={async (produto) => {
+            const success = await onEditProduto(produto);
+            if (success) {
+              setProdutoToEdit(null);
+            }
+            return success;
+          }}
           restaurantId={restaurantId}
         />
       )}
@@ -101,7 +116,13 @@ export function ProdutosList({
       {produtoToDelete && (
         <DeleteProdutoDialog
           produto={produtoToDelete}
-          onDelete={onDeleteProduto}
+          onDelete={async (id) => {
+            const success = await onDeleteProduto(id);
+            if (success) {
+              setProdutoToDelete(null);
+            }
+            return success;
+          }}
         />
       )}
     </>
