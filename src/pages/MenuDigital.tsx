@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { MenuThemeSelector } from "@/components/menu-digital/MenuThemeSelector";
 import { MenuPreview } from "@/components/menu-digital/MenuPreview";
 import { QRCodeGenerator } from "@/components/menu-digital/QRCodeGenerator";
+import { QRCodeInstructions } from "@/components/menu-digital/QRCodeInstructions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -35,7 +36,10 @@ const MenuDigital = () => {
               </TabsContent>
 
               <TabsContent value="qrcode" className="space-y-4">
-                <QRCodeGenerator />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <QRCodeGenerator />
+                  <QRCodeInstructions />
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>

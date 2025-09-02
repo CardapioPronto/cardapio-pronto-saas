@@ -1,6 +1,7 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
+import { QRCodePromotionCard } from "@/components/dashboard/QRCodePromotionCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSystemInitialization } from "@/hooks/useSystemInitialization";
@@ -29,6 +30,8 @@ const Dashboard = () => {
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-6">
+        <QRCodePromotionCard />
+        
         <StatsGrid stats={stats} />
         
         <div className="grid gap-6 md:grid-cols-2">
