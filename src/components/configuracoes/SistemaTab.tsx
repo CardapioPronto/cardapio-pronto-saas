@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { ConfiguracoesSistema } from "@/services/configuracoes";
+import { PrintTestButton } from "@/components/impressao/PrintTestButton";
 
 interface SistemaTabProps {
   configuracoesSistema: ConfiguracoesSistema;
@@ -75,7 +76,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
           <div>
             <Label htmlFor="impressao-automatica">Impressão automática</Label>
             <p className="text-sm text-muted-foreground">
-              Imprimir pedidos automaticamente
+              Imprimir pedidos automaticamente quando finalizados
             </p>
           </div>
           <Switch
@@ -83,6 +84,16 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             checked={configuracoesSistema.auto_print}
             onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, auto_print: value})}
           />
+        </div>
+
+        <div className="flex items-center justify-between pt-4">
+          <div>
+            <Label>Testar Impressão</Label>
+            <p className="text-sm text-muted-foreground">
+              Teste a configuração de impressão com um pedido de exemplo
+            </p>
+          </div>
+          <PrintTestButton />
         </div>
         
         <div className="space-y-2">

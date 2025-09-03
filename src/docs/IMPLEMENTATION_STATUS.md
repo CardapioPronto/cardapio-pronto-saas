@@ -62,7 +62,7 @@
 ### PDV
 - [x] Interface básica
 - [x] Criação de pedidos
-- [ ] Impressão de pedidos
+- [x] Impressão de pedidos
 - [ ] Integração com formas de pagamento
 - [ ] Controle de mesas avançado
 

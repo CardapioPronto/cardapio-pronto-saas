@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ItemPedidoLinha } from "./ItemPedidoLinha";
 import { ItemPedido } from "../types";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePrint } from "@/hooks/usePrint";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
@@ -34,6 +36,8 @@ export const ComandaPedido = ({
   setNomeCliente,
   mesas = [],
 }: ComandaPedidoProps) => {
+  const { user } = useCurrentUser();
+  const { printOrder, printing } = usePrint();
   const getMesaDisplay = () => {
     if (!mesaSelecionada) return tipoPedido === "mesa" ? "Mesa não selecionada" : "Balcão";
     
@@ -46,6 +50,24 @@ export const ComandaPedido = ({
   };
 
   const tituloComanda = getMesaDisplay();
+
+  const handlePrintPreview = () => {
+    if (itensPedido.length === 0) return;
+    
+    // Criar um pedido temporário para visualização
+    const pedidoTemp = {
+      id: 'preview',
+      mesa: getMesaDisplay(),
+      cliente: nomeCliente || undefined,
+      itensPedido,
+      status: 'pendente' as const,
+      timestamp: new Date(),
+      total: totalPedido,
+    };
+
+    const restaurantName = 'Restaurante'; // Usar nome padrão por enquanto
+    printOrder(pedidoTemp, { restaurantName });
+  };
 
   return (
     <div className="sticky top-4">
@@ -103,6 +125,19 @@ export const ComandaPedido = ({
             <span>Total</span>
             <span>R$ {totalPedido.toFixed(2)}</span>
           </div>
+
+          {/* Botão de Visualizar Impressão */}
+          {itensPedido.length > 0 && (
+            <Button
+              onClick={handlePrintPreview}
+              variant="outline"
+              className="w-full mb-2"
+              disabled={printing}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              {printing ? 'Imprimindo...' : 'Visualizar Impressão'}
+            </Button>
+          )}
 
           <Button
             onClick={finalizarPedido}

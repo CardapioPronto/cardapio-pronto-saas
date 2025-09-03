@@ -2,7 +2,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pedido } from "../types";
-import { AlertCircle, CheckCircle, Clock, Package, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, Package, XCircle, Printer } from "lucide-react";
+import { usePrint } from "@/hooks/usePrint";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface PedidoHistoricoItemProps {
   pedido: Pedido;
@@ -13,6 +15,8 @@ export const PedidoHistoricoItem = ({
   pedido,
   alterarStatusPedido,
 }: PedidoHistoricoItemProps) => {
+  const { user } = useCurrentUser();
+  const { printOrder, printing } = usePrint();
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -58,6 +62,11 @@ export const PedidoHistoricoItem = ({
 
   const statusInfo = getStatusInfo(pedido.status);
 
+  const handlePrint = () => {
+    const restaurantName = 'Restaurante'; // Usar nome padrão por enquanto
+    printOrder(pedido, { restaurantName });
+  };
+
   return (
     <Card className={pedido.status === 'finalizado' ? 'bg-gray-50' : ''}>
       <CardHeader>
@@ -92,6 +101,17 @@ export const PedidoHistoricoItem = ({
           <span>Total</span>
           <span>R$ {pedido.total.toFixed(2)}</span>
         </div>
+
+        {/* Botão de Imprimir - sempre disponível */}
+        <Button 
+          variant="outline" 
+          onClick={handlePrint}
+          disabled={printing}
+          className="border-gray-500 text-gray-700 hover:bg-gray-50"
+        >
+          <Printer className="h-4 w-4 mr-1" />
+          {printing ? 'Imprimindo...' : 'Imprimir Comanda'}
+        </Button>
         
         {pedido.status === 'pendente' && (
           <Button 

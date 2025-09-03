@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
+import { usePrint } from "@/hooks/usePrint";
+import { useEffect } from "react";
 import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
 import { FiltroProdutos } from "./FiltroProdutos";
