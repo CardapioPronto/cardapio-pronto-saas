@@ -4,7 +4,7 @@ import LandingPage from '@/pages/LandingPage';
 import Dashboard from '@/pages/Dashboard';
 import Produtos from '@/pages/Produtos';
 import Pedidos from '@/pages/Pedidos';
-import Funcionarios from '@/pages/Funcionarios';
+import FuncionariosV2 from '@/pages/FuncionariosV2';
 import Categorias from '@/pages/Categorias';
 import Configuracoes from '@/pages/Configuracoes';
 import Login from '@/pages/Login';
@@ -98,7 +98,7 @@ const AppRoutes = () => {
       } />
       <Route path="/funcionarios" element={
         <MainLayout>
-          <Funcionarios />
+          <FuncionariosV2 />
         </MainLayout>
       } />
       <Route path="/assinaturas" element={

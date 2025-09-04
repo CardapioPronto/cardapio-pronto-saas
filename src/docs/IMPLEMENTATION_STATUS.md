@@ -49,7 +49,10 @@
 ### Sistema de Funcionários
 - [x] Estrutura da base de dados
 - [x] Interface de gerenciamento
-- [✅] **CORRIGIDO**: Criação de funcionários (era problema de permissões)
+- [✅] **CORRIGIDO**: Criação de funcionários 
+- [✅] **CORRIGIDO**: Relacionamento restaurante-funcionário-dono
+- [✅] **CORRIGIDO**: Segurança RLS e políticas 
+- [✅] **CORRIGIDO**: Hooks consolidados (removida duplicação)
 - [x] Sistema de permissões
 - [ ] Logs de atividades dos funcionários
 
@@ -75,10 +78,20 @@
 - [ ] Relatórios financeiros
 
 ### Cardápio Digital
-- [ ] Interface pública do cardápio
-- [ ] Customização visual do cardápio
-- [ ] Sistema de pedidos online
-- [ ] QR Code para acesso ao cardápio
+- [✅] **IMPLEMENTADO**: Interface pública do cardápio
+- [✅] **IMPLEMENTADO**: Sistema de temas personalizáveis
+- [✅] **IMPLEMENTADO**: QR Code para acesso ao cardápio  
+- [✅] **IMPLEMENTADO**: SEO otimizado para menus públicos
+- [ ] Sistema de pedidos online via cardápio
+- [ ] Customização avançada de cores e layout
+
+### Impressão de Pedidos
+- [✅] **IMPLEMENTADO**: Template otimizado para cozinha
+- [✅] **IMPLEMENTADO**: Hook de impressão customizado
+- [✅] **IMPLEMENTADO**: Integração com PDV
+- [✅] **IMPLEMENTADO**: Teste de impressão
+- [ ] Configuração de impressoras múltiplas
+- [ ] Templates customizáveis por setor
 
 ### Sistema de Delivery
 - [ ] Cálculo de taxa de entrega
@@ -120,25 +133,73 @@
 - [ ] Tradução da interface
 - [ ] Cardápios em diferentes idiomas
 
-## 🎯 Próximas Prioridades Sugeridas
+## 🎯 Próximas Prioridades Funcionais (Após as 3 Implementadas)
 
-### Prioridade Alta
-1. **Cardápio Digital Público** - Interface para clientes visualizarem o cardápio
-2. **Sistema de Pedidos Online** - Permitir pedidos via site/QR Code
-3. **Integração de Pagamentos** - PIX e cartão para pedidos online
-4. **Impressão de Pedidos** - Para cozinha e atendimento
+### 🚀 **Prioridade ALTA** (Próximas 4-6 semanas)
 
-### Prioridade Média
-1. **Sistema de Delivery** - Controle completo de entregas
-2. **Notificações WhatsApp** - Automação de mensagens
-3. **Sistema de Avaliações** - Feedback dos clientes
-4. **Relatórios Fiscais** - Integração com sistemas fiscais
+#### 1. **Sistema de Mesas Avançado** 
+- **Status**: Estrutura básica ✅ → Completar funcionalidades
+- **Implementar**: Controle de ocupação, transferência entre mesas, histórico
+- **Impacto**: Alto - Essential para restaurantes físicos
 
-### Prioridade Baixa
-1. **Controle de Estoque** - Gestão de ingredientes
-2. **Multi-idiomas** - Suporte internacional
-3. **Redes Sociais** - Automação de posts
-4. **Análises Avançadas** - BI e analytics
+#### 2. **Notificações WhatsApp Automáticas**
+- **Status**: Base de integração ✅ → Automatizar fluxos  
+- **Implementar**: Confirmação de pedidos, atualizações de status, promoções
+- **Impacto**: Alto - Aumenta satisfação do cliente e reduz trabalho manual
+
+#### 3. **Sistema de Delivery Completo**
+- **Status**: Não implementado ❌
+- **Implementar**: Cálculo de taxas, controle de endereços, tempo estimado
+- **Impacto**: Alto - Expande modelo de negócio
+
+#### 4. **Pagamentos Online (PIX/Cartão)**
+- **Status**: Base estrutural ✅ → Implementar processamento
+- **Implementar**: Gateway de pagamento, PIX automático, split de pagamento
+- **Impacto**: Crítico - Necessário para pedidos online
+
+### 🔧 **Prioridade MÉDIA** (1-2 meses)
+
+#### 5. **Controle de Estoque Inteligente**
+- **Status**: Não implementado ❌
+- **Implementar**: Ingredientes, receitas, alertas de baixo estoque
+- **Impacto**: Médio - Otimiza operações e reduz desperdício
+
+#### 6. **Sistema de Avaliações e Feedback**  
+- **Status**: Não implementado ❌
+- **Implementar**: Reviews de produtos, NPS, análise de satisfação
+- **Impacto**: Médio - Melhora qualidade e atração de clientes
+
+#### 7. **Relatórios Fiscais e Integração**
+- **Status**: Relatórios básicos ✅ → Compliance fiscal
+- **Implementar**: NFCe, integração com contabilidade, DRE automatizado
+- **Impacto**: Alto - Compliance obrigatório
+
+#### 8. **Multi-loja/Franquias**
+- **Status**: Estrutura permite ✅ → Interface de gestão  
+- **Implementar**: Dashboard consolidado, gestão centralizada
+- **Impacto**: Alto - Escalabilidade do negócio
+
+### 📱 **Prioridade BAIXA** (2-4 meses)
+
+#### 9. **App Mobile (React Native)**
+- **Status**: Não implementado ❌  
+- **Implementar**: PDV mobile, gestão mobile para proprietários
+- **Impacto**: Médio - Conveniência adicional
+
+#### 10. **Sistema de Fidelidade/Loyalty**
+- **Status**: Não implementado ❌
+- **Implementar**: Pontos, cashback, cupons personalizados
+- **Impacto**: Médio - Retenção de clientes
+
+#### 11. **IA para Análise Preditiva**
+- **Status**: Não implementado ❌  
+- **Implementar**: Previsão de demanda, sugestões de preços, otimização de cardápio
+- **Impacto**: Baixo - Nice to have, diferencial
+
+#### 12. **Multi-idiomas e Internacionalização**
+- **Status**: Não implementado ❌
+- **Implementar**: Suporte completo a idiomas, moedas, fusos
+- **Impacto**: Baixo - Expansão internacional
 
 ## 📝 Observações Técnicas
 

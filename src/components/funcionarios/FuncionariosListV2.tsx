@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Settings, User } from "lucide-react";
-import { useEmployeesV2 } from "@/hooks/useEmployeesV2";
+import { useEmployees } from "@/hooks/useEmployees";
 import { AddFuncionarioDialog } from "./AddFuncionarioDialog";
 import { EditPermissionsDialog } from "./EditPermissionsDialog";
 import { EmployeeWithPermissions } from "@/types/employee";
 
 export const FuncionariosListV2 = () => {
-  const { employees, loading, toggleEmployeeActive } = useEmployeesV2();
+  const { employees, loading, toggleEmployeeActive } = useEmployees();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeWithPermissions | null>(null);
 
