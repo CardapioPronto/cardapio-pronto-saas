@@ -141,8 +141,11 @@ export class SupabaseService<T extends TableNames> {
 // Função para verificar a conexão com o Supabase
 export async function checkSupabaseConnection(): Promise<{ connected: boolean; error?: string }> {
   try {
-    // Tenta fazer uma consulta simples para verificar a conexão
-    const { error } = await supabase.from('restaurants' as TableNames).select('count').limit(1);
+    // Usa uma tabela com leitura pública para o health-check, evitando políticas complexas (RLS)
+    const { error } = await supabase
+      .from('menu_themes' as TableNames)
+      .select('id')
+      .limit(1);
     
     if (error) {
       console.error('Erro na conexão com o Supabase:', error.message);
