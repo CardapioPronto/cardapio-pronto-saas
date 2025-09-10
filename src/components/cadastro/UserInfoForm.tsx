@@ -1,9 +1,7 @@
-
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 interface UserInfoFormProps {
   name: string;
@@ -14,11 +12,33 @@ interface UserInfoFormProps {
   setPassword: (value: string) => void;
 }
 
-// Email validation regex
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Security validation functions
+const validateEmail = (email: string): string | null => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email.trim()) return "Email é obrigatório";
+  if (!emailRegex.test(email)) return "Formato de email inválido";
+  if (email.length > 254) return "Email muito longo";
+  return null;
+};
 
-// Password validation - minimum 8 characters, at least one number and one special character
-const PASSWORD_REGEX = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/;
+const validatePassword = (password: string): string | null => {
+  if (!password) return "Senha é obrigatória";
+  if (password.length < 8) return "Senha deve ter pelo menos 8 caracteres";
+  if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    return "Senha deve conter pelo menos uma letra minúscula, maiúscula e um número";
+  }
+  if (password.length > 128) return "Senha muito longa";
+  return null;
+};
+
+const validateName = (name: string): string | null => {
+  if (!name.trim()) return "Nome é obrigatório";
+  if (name.length < 2) return "Nome deve ter pelo menos 2 caracteres";
+  if (name.length > 100) return "Nome muito longo";
+  // Basic XSS prevention
+  if (/<[^>]*>/.test(name)) return "Nome contém caracteres inválidos";
+  return null;
+};
 
 export function UserInfoForm({
   name,
@@ -28,9 +48,9 @@ export function UserInfoForm({
   password,
   setPassword,
 }: UserInfoFormProps) {
-  const isEmailValid = email === "" || EMAIL_REGEX.test(email);
-  const isPasswordValid = password === "" || PASSWORD_REGEX.test(password);
-  const isNameValid = name === "" || (name.length >= 2 && name.length <= 100);
+  const nameError = validateName(name);
+  const emailError = validateEmail(email);
+  const passwordError = validatePassword(password);
 
   return (
     <>
@@ -38,19 +58,14 @@ export function UserInfoForm({
         <Label>Seu Nome</Label>
         <Input
           value={name}
-          onChange={(e) => {
-            const sanitized = e.target.value.replace(/<[^>]*>/g, ''); // Basic XSS prevention
-            setName(sanitized);
-          }}
-          maxLength={100}
+          onChange={(e) => setName(e.target.value.slice(0, 100))} // Prevent overflow
           required
+          maxLength={100}
+          className={nameError && name ? "border-destructive" : ""}
         />
-        {!isNameValid && name && (
-          <Alert className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Nome deve ter entre 2 e 100 caracteres.
-            </AlertDescription>
+        {nameError && name && (
+          <Alert variant="destructive" className="mt-1 py-1">
+            <AlertDescription className="text-xs">{nameError}</AlertDescription>
           </Alert>
         )}
       </div>
@@ -59,19 +74,14 @@ export function UserInfoForm({
         <Input
           type="email"
           value={email}
-          onChange={(e) => {
-            const sanitized = e.target.value.replace(/<[^>]*>/g, ''); // Basic XSS prevention
-            setEmail(sanitized.toLowerCase());
-          }}
-          maxLength={254}
+          onChange={(e) => setEmail(e.target.value.slice(0, 254))} // Prevent overflow
           required
+          maxLength={254}
+          className={emailError && email ? "border-destructive" : ""}
         />
-        {!isEmailValid && email && (
-          <Alert className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Por favor, insira um email válido.
-            </AlertDescription>
+        {emailError && email && (
+          <Alert variant="destructive" className="mt-1 py-1">
+            <AlertDescription className="text-xs">{emailError}</AlertDescription>
           </Alert>
         )}
       </div>
@@ -80,15 +90,20 @@ export function UserInfoForm({
         <Input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          maxLength={128}
+          onChange={(e) => setPassword(e.target.value.slice(0, 128))} // Prevent overflow
           required
+          maxLength={128}
+          className={passwordError && password ? "border-destructive" : ""}
         />
-        {!isPasswordValid && password && (
-          <Alert className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Senha deve ter no mínimo 8 caracteres, incluindo pelo menos um número e um caractere especial (!@#$%^&*).
+        {passwordError && password && (
+          <Alert variant="destructive" className="mt-1 py-1">
+            <AlertDescription className="text-xs">{passwordError}</AlertDescription>
+          </Alert>
+        )}
+        {!passwordError && password && (
+          <Alert className="mt-1 py-1">
+            <AlertDescription className="text-xs text-muted-foreground">
+              Senha forte: inclui letras maiúsculas, minúsculas e números
             </AlertDescription>
           </Alert>
         )}
