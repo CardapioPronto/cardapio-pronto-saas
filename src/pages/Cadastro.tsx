@@ -98,16 +98,8 @@ export default function Cadastro() {
         setError("Erro ao vincular restaurante ao usuário.");
       }
 
-      // Cria assinatura padrão (exemplo)
-      const today = new Date().toISOString();
-      await supabase.from("subscriptions").insert([
-        {
-          restaurant_id: restaurantData.id,
-          plan_id: "starter",
-          status: "active",
-          start_date: today
-        },
-      ]);
+      // Note: Subscription creation is now handled securely by payment processing systems
+      // during the subscription flow to prevent fake subscriptions
 
       toast({
         title: "Cadastro realizado com sucesso!",
