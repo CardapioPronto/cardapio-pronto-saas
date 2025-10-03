@@ -993,13 +993,22 @@ export type Database = {
       }
       whatsapp_integration: {
         Row: {
+          ai_enabled: boolean | null
+          ai_provider: string | null
+          ai_system_prompt: string | null
           api_token: string | null
           auto_send_orders: boolean
           created_at: string
           is_enabled: boolean
+          n8n_enabled: boolean | null
+          n8n_webhook_url: string | null
           order_confirmation_message: string
           phone_number: string
+          provider: string | null
           restaurant_id: string
+          twilio_account_sid: string | null
+          twilio_auth_token: string | null
+          twilio_phone_number: string | null
           ultramsg_instance_id: string | null
           ultramsg_token: string | null
           updated_at: string
@@ -1007,13 +1016,22 @@ export type Database = {
           welcome_message: string
         }
         Insert: {
+          ai_enabled?: boolean | null
+          ai_provider?: string | null
+          ai_system_prompt?: string | null
           api_token?: string | null
           auto_send_orders?: boolean
           created_at?: string
           is_enabled?: boolean
+          n8n_enabled?: boolean | null
+          n8n_webhook_url?: string | null
           order_confirmation_message?: string
           phone_number: string
+          provider?: string | null
           restaurant_id: string
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
           ultramsg_instance_id?: string | null
           ultramsg_token?: string | null
           updated_at?: string
@@ -1021,13 +1039,22 @@ export type Database = {
           welcome_message?: string
         }
         Update: {
+          ai_enabled?: boolean | null
+          ai_provider?: string | null
+          ai_system_prompt?: string | null
           api_token?: string | null
           auto_send_orders?: boolean
           created_at?: string
           is_enabled?: boolean
+          n8n_enabled?: boolean | null
+          n8n_webhook_url?: string | null
           order_confirmation_message?: string
           phone_number?: string
+          provider?: string | null
           restaurant_id?: string
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
           ultramsg_instance_id?: string | null
           ultramsg_token?: string | null
           updated_at?: string

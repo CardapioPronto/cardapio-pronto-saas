@@ -59,5 +59,14 @@ port = 54328
 [functions.create-storage-buckets]
 verify_jwt = false
 
+[functions.send-twilio-message]
+verify_jwt = true
+
+[functions.twilio-webhook]
+verify_jwt = false
+
+[functions.generate-ai-response]
+verify_jwt = false
+
 [vector]
 enabled = false
