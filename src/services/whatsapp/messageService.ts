@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppMessage } from "./types";
 import { UltraMsgService, UltraMsgCredentials } from "./ultraMsgService";
+import { TwilioService, TwilioCredentials } from "./twilioService";
 import { WhatsAppIntegrationService } from "./integrationService";
 import { toast } from "sonner";
 
@@ -13,53 +14,86 @@ export class WhatsAppMessageService {
     orderId?: string
   ): Promise<boolean> {
     try {
-      // Buscar credenciais do restaurante
       const integration = await WhatsAppIntegrationService.getIntegration(restaurantId);
       
-      if (!integration || !integration.ultramsg_instance_id || !integration.ultramsg_token) {
-        console.error('Credenciais UltraMsg não configuradas para o restaurante');
-        toast.error('Configure as credenciais do UltraMsg primeiro');
+      if (!integration) {
+        console.error('Integração WhatsApp não configurada');
+        toast.error('Configure a integração WhatsApp primeiro');
         return false;
       }
 
-      // Validar número de telefone
-      if (!UltraMsgService.validatePhoneNumber(phoneNumber)) {
-        console.error('Número de telefone inválido:', phoneNumber);
-        toast.error('Número de telefone inválido');
-        return false;
+      const provider = integration.provider || 'ultramsg';
+      let result: { success?: boolean; sent?: boolean; error?: string; message?: string } = {};
+
+      if (provider === 'twilio') {
+        // Validar credenciais Twilio
+        if (!integration.twilio_account_sid || !integration.twilio_auth_token || !integration.twilio_phone_number) {
+          console.error('Credenciais Twilio não configuradas');
+          toast.error('Configure as credenciais do Twilio primeiro');
+          return false;
+        }
+
+        if (!TwilioService.validatePhoneNumber(phoneNumber)) {
+          console.error('Número de telefone inválido:', phoneNumber);
+          toast.error('Número de telefone inválido');
+          return false;
+        }
+
+        const credentials: TwilioCredentials = {
+          accountSid: integration.twilio_account_sid,
+          authToken: integration.twilio_auth_token,
+          phoneNumber: integration.twilio_phone_number
+        };
+
+        result = await TwilioService.sendMessage(credentials, phoneNumber, message);
+
+      } else {
+        // Legacy UltraMsg support
+        if (!integration.ultramsg_instance_id || !integration.ultramsg_token) {
+          console.error('Credenciais UltraMsg não configuradas');
+          toast.error('Configure as credenciais do UltraMsg primeiro');
+          return false;
+        }
+
+        if (!UltraMsgService.validatePhoneNumber(phoneNumber)) {
+          console.error('Número de telefone inválido:', phoneNumber);
+          toast.error('Número de telefone inválido');
+          return false;
+        }
+
+        const credentials: UltraMsgCredentials = {
+          instanceId: integration.ultramsg_instance_id,
+          token: integration.ultramsg_token
+        };
+
+        result = await UltraMsgService.sendMessage(credentials, phoneNumber, message);
       }
-
-      const credentials: UltraMsgCredentials = {
-        instanceId: integration.ultramsg_instance_id,
-        token: integration.ultramsg_token
-      };
-
-      // Enviar mensagem via UltraMsg
-      const result = await UltraMsgService.sendMessage(credentials, phoneNumber, message);
       
-      // Registrar log da mensagem no banco
+      const success = result.success || result.sent || false;
+
+      // Log message
       await this.logMessage({
         restaurant_id: restaurantId,
         order_id: orderId || null,
         phone_number: phoneNumber,
         message_type: 'outgoing',
         content: message,
-        status: result.sent ? 'sent' : 'failed'
+        status: success ? 'sent' : 'failed'
       });
 
-      if (result.sent) {
-        console.log('Mensagem WhatsApp enviada com sucesso via UltraMsg');
+      if (success) {
+        console.log(`Mensagem WhatsApp enviada com sucesso via ${provider}`);
         toast.success('Mensagem WhatsApp enviada com sucesso!');
         return true;
       } else {
-        console.error('Falha no envio via UltraMsg:', result.message);
-        toast.error(`Erro ao enviar mensagem: ${result.message || 'Falha desconhecida'}`);
+        const errorMsg = result.error || result.message || 'Falha desconhecida';
+        console.error(`Falha no envio via ${provider}:`, errorMsg);
+        toast.error(`Erro ao enviar mensagem: ${errorMsg}`);
         return false;
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem WhatsApp:', error);
       
-      // Registrar log de erro
       try {
         await this.logMessage({
           restaurant_id: restaurantId,

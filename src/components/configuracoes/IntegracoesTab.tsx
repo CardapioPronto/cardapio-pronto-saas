@@ -1,9 +1,9 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { WhatsAppConfigTab } from "@/components/whatsapp/WhatsAppConfigTab";
+import { TwilioConfigTab } from "@/components/whatsapp/TwilioConfigTab";
 import { WhatsAppMessages } from "@/components/whatsapp/WhatsAppMessages";
 
 export const IntegracoesTab: React.FC = () => {
@@ -54,7 +54,7 @@ export const IntegracoesTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* WhatsApp Integration */}
+      {/* WhatsApp Integration with Twilio */}
       <Tabs defaultValue="config" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="config">Configuração WhatsApp</TabsTrigger>
@@ -62,7 +62,7 @@ export const IntegracoesTab: React.FC = () => {
         </TabsList>
         
         <TabsContent value="config" className="mt-4">
-          <WhatsAppConfigTab />
+          <TwilioConfigTab />
         </TabsContent>
         
         <TabsContent value="messages" className="mt-4">

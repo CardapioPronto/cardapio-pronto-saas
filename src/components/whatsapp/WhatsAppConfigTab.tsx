@@ -20,10 +20,13 @@ export const WhatsAppConfigTab: React.FC = () => {
   const [config, setConfig] = useState<WhatsAppIntegration>({
     restaurant_id: "",
     phone_number: "",
+    provider: "ultramsg",
     ultramsg_instance_id: "",
     ultramsg_token: "",
     api_token: "",
     webhook_url: "",
+    n8n_enabled: false,
+    ai_enabled: false,
     is_enabled: false,
     auto_send_orders: true,
     welcome_message: "Olá! Bem-vindo ao nosso restaurante. Como posso ajudá-lo?",
