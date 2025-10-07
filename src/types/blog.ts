@@ -7,6 +7,7 @@ export interface BlogPost {
   cover_image_url: string | null;
   author_id: string | null;
   is_published: boolean;
+  is_featured: boolean;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -18,4 +19,5 @@ export interface BlogPostFormData {
   excerpt?: string;
   cover_image_url?: string;
   is_published: boolean;
+  is_featured?: boolean;
 }

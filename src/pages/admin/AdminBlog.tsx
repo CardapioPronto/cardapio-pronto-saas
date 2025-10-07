@@ -93,6 +93,7 @@ export default function AdminBlog() {
                   <TableRow>
                     <TableHead>Título</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Destaque</TableHead>
                     <TableHead>Data de Publicação</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -105,6 +106,14 @@ export default function AdminBlog() {
                         <Badge variant={post.is_published ? 'default' : 'secondary'}>
                           {post.is_published ? 'Publicado' : 'Rascunho'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {post.is_featured && (
+                          <Badge variant="outline" className="gap-1">
+                            <Eye className="h-3 w-3" />
+                            Destaque
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {post.published_at

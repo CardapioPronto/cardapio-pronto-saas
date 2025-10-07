@@ -68,5 +68,8 @@ verify_jwt = false
 [functions.generate-ai-response]
 verify_jwt = false
 
+[functions.seed-blog-posts]
+verify_jwt = false
+
 [vector]
 enabled = false

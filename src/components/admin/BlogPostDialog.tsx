@@ -28,6 +28,7 @@ const blogPostSchema = z.object({
   excerpt: z.string().max(500, 'Resumo muito longo').optional(),
   cover_image_url: z.string().url('URL inválida').optional().or(z.literal('')),
   is_published: z.boolean(),
+  is_featured: z.boolean(),
 });
 
 type BlogPostFormData = z.infer<typeof blogPostSchema>;
@@ -47,6 +48,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
       excerpt: '',
       cover_image_url: '',
       is_published: false,
+      is_featured: false,
     },
   });
 
@@ -58,6 +60,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
         excerpt: post.excerpt || '',
         cover_image_url: post.cover_image_url || '',
         is_published: post.is_published,
+        is_featured: post.is_featured,
       });
     } else {
       form.reset({
@@ -66,6 +69,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
         excerpt: '',
         cover_image_url: '',
         is_published: false,
+        is_featured: false,
       });
     }
   }, [post, form]);
@@ -173,6 +177,27 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
                     <FormLabel className="text-base">Publicar post</FormLabel>
                     <div className="text-sm text-muted-foreground">
                       O post ficará visível publicamente
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_featured"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Post em destaque</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      O post aparecerá na seção de destaques
                     </div>
                   </div>
                   <FormControl>
