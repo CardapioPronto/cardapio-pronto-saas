@@ -19,7 +19,7 @@ export class WhatsAppIntegrationService {
 
       if (!data.data) return null;
 
-      const record = data.data;
+      const record = data.data as any;
 
       return {
         restaurant_id: record.restaurant_id,
