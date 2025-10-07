@@ -34,6 +34,9 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminLogs from '@/pages/admin/AdminLogs';
 import AdminSuperAdmins from '@/pages/admin/AdminSuperAdmins';
 import AdminPlanos from '@/pages/admin/AdminPlanos';
+import AdminBlog from '@/pages/admin/AdminBlog';
+import Blog from '@/pages/Blog';
+import BlogPost from '@/pages/BlogPost';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
@@ -69,6 +72,8 @@ const AppRoutes = () => {
       <Route path="/gestao-completa" element={<GestaoCompleta />} />
       <Route path="/precos" element={<Precos />} />
       <Route path="/create-initial-admin" element={<CreateInitialAdmin />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
       
       {/* Rotas protegidas */}
       <Route path="/dashboard" element={
@@ -171,6 +176,11 @@ const AppRoutes = () => {
       <Route path="/admin/planos" element={
         <AdminProtectedRoute>
           <AdminPlanos />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/blog" element={
+        <AdminProtectedRoute>
+          <AdminBlog />
         </AdminProtectedRoute>
       } />
       

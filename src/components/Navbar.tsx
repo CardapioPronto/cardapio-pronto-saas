@@ -51,6 +51,9 @@ const Navbar = () => {
           <Link to="/precos" className="text-navy hover:text-orange transition-colors">
             Preços
           </Link>
+          <Link to="/blog" className="text-navy hover:text-orange transition-colors">
+            Blog
+          </Link>
           <Link to="/contato" className="text-navy hover:text-orange transition-colors">
             Contato
           </Link>
@@ -96,6 +99,9 @@ const Navbar = () => {
             </Link>
             <Link to="/precos" className="text-navy py-2 border-b border-beige">
               Preços
+            </Link>
+            <Link to="/blog" className="text-navy py-2 border-b border-beige">
+              Blog
             </Link>
             <Link to="/contato" className="text-navy py-2 border-b border-beige">
               Contato
