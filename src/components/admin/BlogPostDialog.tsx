@@ -21,12 +21,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const CATEGORIES = ['Tecnologia', 'Gestão', 'Inovação', 'Análise', 'Dicas', 'Marketing', 'Tendências'];
 
 const blogPostSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório').max(200, 'Título muito longo'),
   content: z.string().min(1, 'Conteúdo é obrigatório'),
   excerpt: z.string().max(500, 'Resumo muito longo').optional(),
   cover_image_url: z.string().url('URL inválida').optional().or(z.literal('')),
+  category: z.string().optional(),
   is_published: z.boolean(),
   is_featured: z.boolean(),
 });
@@ -47,6 +51,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
       content: '',
       excerpt: '',
       cover_image_url: '',
+      category: '',
       is_published: false,
       is_featured: false,
     },
@@ -59,6 +64,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
         content: post.content,
         excerpt: post.excerpt || '',
         cover_image_url: post.cover_image_url || '',
+        category: post.category || '',
         is_published: post.is_published,
         is_featured: post.is_featured,
       });
@@ -68,6 +74,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
         content: '',
         excerpt: '',
         cover_image_url: '',
+        category: '',
         is_published: false,
         is_featured: false,
       });
@@ -79,6 +86,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
       ...data,
       excerpt: data.excerpt || undefined,
       cover_image_url: data.cover_image_url || undefined,
+      category: data.category || undefined,
     };
 
     let success = false;
@@ -144,6 +152,31 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
                   <FormControl>
                     <Input {...field} placeholder="https://exemplo.com/imagem.jpg" />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria (opcional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CATEGORIES.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

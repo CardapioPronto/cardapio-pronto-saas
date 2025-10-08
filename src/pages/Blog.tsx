@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Calendar, ArrowRight, Star } from 'lucide-react';
+import { Calendar, ArrowRight, Tag } from 'lucide-react';
 import { useBlogPosts } from '@/hooks/useBlogPosts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,7 +11,8 @@ import Footer from '@/components/Footer';
 export default function Blog() {
   const { posts, loading } = useBlogPosts(false);
 
-  const featuredPosts = posts.filter(post => post.is_featured).slice(0, 3);
+  const featuredPost = posts.find(post => post.is_featured);
+  const otherFeaturedPosts = posts.filter(post => post.is_featured && post.id !== featuredPost?.id).slice(0, 2);
   const regularPosts = posts.filter(post => !post.is_featured);
 
   if (loading) {
@@ -69,22 +70,71 @@ export default function Blog() {
             </div>
           ) : (
             <>
-              {/* Featured Posts */}
-              {featuredPosts.length > 0 && (
-                <div className="mb-20">
-                  <div className="flex items-center gap-3 mb-8">
-                    <Star className="h-6 w-6 text-primary fill-primary" />
-                    <h2 className="text-3xl md:text-4xl font-bold">Posts em Destaque</h2>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {featuredPosts.map((post) => (
-                      <Card key={post.id} className="group overflow-hidden hover:shadow-2xl transition-all duration-300 border-primary/20 bg-card">
+              {/* Main Featured Post */}
+              {featuredPost && (
+                <div className="mb-16">
+                  <Card className="group overflow-hidden border-none shadow-2xl bg-card">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                      {featuredPost.cover_image_url && (
+                        <div className="aspect-[16/12] lg:aspect-auto overflow-hidden relative">
+                          <Badge className="absolute top-6 right-6 z-10 bg-primary text-primary-foreground px-4 py-2 text-sm">
+                            Destaque Principal
+                          </Badge>
+                          <img
+                            src={featuredPost.cover_image_url}
+                            alt={featuredPost.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                        </div>
+                      )}
+                      <div className="p-8 lg:p-12 flex flex-col justify-center">
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <time>
+                                {new Date(featuredPost.published_at || featuredPost.created_at).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </time>
+                            </div>
+                            {featuredPost.category && (
+                              <Badge variant="secondary" className="gap-1">
+                                <Tag className="h-3 w-3" />
+                                {featuredPost.category}
+                              </Badge>
+                            )}
+                          </div>
+                          <CardTitle className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight group-hover:text-primary transition-colors">
+                            <Link to={`/blog/${featuredPost.slug}`}>{featuredPost.title}</Link>
+                          </CardTitle>
+                          <CardDescription className="text-lg leading-relaxed">
+                            {featuredPost.excerpt || featuredPost.content.substring(0, 200) + '...'}
+                          </CardDescription>
+                          <Link to={`/blog/${featuredPost.slug}`}>
+                            <Button size="lg" className="mt-4 group/btn">
+                              Ler artigo completo
+                              <ArrowRight className="ml-2 h-5 w-5 group-hover/btn:translate-x-1 transition-transform" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Secondary Featured Posts */}
+              {otherFeaturedPosts.length > 0 && (
+                <div className="mb-16">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-8">Mais em Destaque</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {otherFeaturedPosts.map((post) => (
+                      <Card key={post.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 bg-card">
                         {post.cover_image_url && (
-                          <div className="aspect-[16/10] overflow-hidden relative">
-                            <Badge className="absolute top-4 right-4 z-10 bg-primary text-primary-foreground">
-                              <Star className="h-3 w-3 mr-1 fill-current" />
-                              Destaque
-                            </Badge>
+                          <div className="aspect-[16/10] overflow-hidden">
                             <img
                               src={post.cover_image_url}
                               alt={post.title}
@@ -93,15 +143,23 @@ export default function Blog() {
                           </div>
                         )}
                         <CardHeader className="space-y-3">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <time>
-                              {new Date(post.published_at || post.created_at).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric'
-                              })}
-                            </time>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <time>
+                                {new Date(post.published_at || post.created_at).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </time>
+                            </div>
+                            {post.category && (
+                              <Badge variant="secondary" className="gap-1">
+                                <Tag className="h-3 w-3" />
+                                {post.category}
+                              </Badge>
+                            )}
                           </div>
                           <CardTitle className="text-2xl line-clamp-2 group-hover:text-primary transition-colors">
                             <Link to={`/blog/${post.slug}`}>{post.title}</Link>
@@ -113,21 +171,21 @@ export default function Blog() {
                         <CardContent>
                           <Link to={`/blog/${post.slug}`}>
                             <Button variant="ghost" className="w-full group/btn">
-                              Ler artigo completo
+                              Ler mais
                               <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
                             </Button>
                           </Link>
                         </CardContent>
                       </Card>
                     ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
               {/* Regular Posts */}
               {regularPosts.length > 0 && (
                 <div>
-                  <h2 className="text-3xl md:text-4xl font-bold mb-8">Todos os Artigos</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-8">Todos os Artigos</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {regularPosts.map((post) => (
                       <Card key={post.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 bg-card">
@@ -141,15 +199,23 @@ export default function Blog() {
                           </div>
                         )}
                         <CardHeader className="space-y-3">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <time>
-                              {new Date(post.published_at || post.created_at).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric'
-                              })}
-                            </time>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <time>
+                                {new Date(post.published_at || post.created_at).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </time>
+                            </div>
+                            {post.category && (
+                              <Badge variant="secondary" className="gap-1">
+                                <Tag className="h-3 w-3" />
+                                {post.category}
+                              </Badge>
+                            )}
                           </div>
                           <CardTitle className="text-xl line-clamp-2 group-hover:text-primary transition-colors">
                             <Link to={`/blog/${post.slug}`}>{post.title}</Link>
