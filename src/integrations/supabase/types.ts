@@ -1242,6 +1242,10 @@ export type Database = {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
       }
+      get_user_restaurant_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_super_admin: {
         Args: { user_id: string }
         Returns: boolean
