@@ -80,7 +80,7 @@ const AppRoutes = () => {
       
       {/* Rotas protegidas */}
       <Route path="/dashboard" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredPermissions={["dashboard_view"]} redirectOnDenied="/pdv">
           <MainLayout>
             <Dashboard />
           </MainLayout>
@@ -129,7 +129,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/assinaturas" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredPermissions={["subscription_view"]}>
           <MainLayout>
             <Assinaturas />
           </MainLayout>

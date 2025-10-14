@@ -2,6 +2,8 @@
 export type UserType = 'owner' | 'employee';
 
 export type PermissionType = 
+  | 'dashboard_view'
+  | 'subscription_view'
   | 'pdv_access'
   | 'orders_view'
   | 'orders_manage'

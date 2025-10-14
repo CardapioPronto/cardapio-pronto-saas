@@ -11,12 +11,14 @@ interface ProtectedRouteProps {
   children: ReactNode;
   requiredPermissions?: PermissionType[];
   requireAny?: boolean; // Se true, precisa de apenas uma das permissões. Se false, precisa de todas
+  redirectOnDenied?: string; // Redirecionar quando não tiver permissão
 }
 
 export const ProtectedRoute = ({ 
   children, 
   requiredPermissions = [], 
-  requireAny = false 
+  requireAny = false,
+  redirectOnDenied
 }: ProtectedRouteProps) => {
   const { appUser, loading: sessionLoading } = useUserSession();
   const { hasPermission, hasAnyPermission, loading: permissionsLoading } = usePermissionsV2();
@@ -63,6 +65,9 @@ export const ProtectedRoute = ({
         userType: appUser?.user_type
       });
       
+      if (redirectOnDenied) {
+        return <Navigate to={redirectOnDenied} replace />;
+      }
       return (
         <div className="h-screen w-screen flex flex-col items-center justify-center p-4">
           <Card className="max-w-md w-full">

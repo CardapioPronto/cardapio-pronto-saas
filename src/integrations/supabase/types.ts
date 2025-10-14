@@ -1290,6 +1290,8 @@ export type Database = {
         | "settings_view"
         | "settings_manage"
         | "employees_manage"
+        | "dashboard_view"
+        | "subscription_view"
       user_type: "owner" | "employee"
     }
     CompositeTypes: {
@@ -1428,6 +1430,8 @@ export const Constants = {
         "settings_view",
         "settings_manage",
         "employees_manage",
+        "dashboard_view",
+        "subscription_view",
       ],
       user_type: ["owner", "employee"],
     },

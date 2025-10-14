@@ -24,6 +24,7 @@ export const usePermissionsV2 = () => {
       // Se for super admin, tem todas as permissões
       if (appUser.role === 'super_admin') {
         setUserPermissions([
+          'dashboard_view', 'subscription_view',
           'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
           'products_manage', 'reports_view', 'settings_view', 
           'settings_manage', 'employees_manage'
@@ -35,6 +36,7 @@ export const usePermissionsV2 = () => {
       // Se for dono do restaurante, tem todas as permissões
       if (appUser.user_type === 'owner') {
         setUserPermissions([
+          'dashboard_view', 'subscription_view',
           'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
           'products_manage', 'reports_view', 'settings_view', 
           'settings_manage', 'employees_manage'

@@ -111,7 +111,7 @@ export const useEmployees = () => {
       if (permissions.length > 0) {
         const permissionsToInsert = permissions.map(permission => ({
           employee_id: employeeId,
-          permission,
+          permission: permission as any, // cast para alinhar com enum do banco até os tipos serem atualizados
           granted_by: user.id
         }));
 

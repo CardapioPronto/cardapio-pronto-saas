@@ -20,11 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 
 const DashboardSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { isSuperAdmin } = useSuperAdmin();
   const { signOut } = useAuth();
+  const { hasPermission } = usePermissionsV2();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -70,14 +72,16 @@ const DashboardSidebar = () => {
           </div>
 
           <div className="space-y-1">
-            <Link
-              to="/dashboard"
-              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
-              onClick={() => setIsOpen(false)}
-            >
-              <Home className="mr-3 h-4 w-4" />
-              Dashboard
-            </Link>
+            {hasPermission('dashboard_view') && (
+              <Link
+                to="/dashboard"
+                className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+                onClick={() => setIsOpen(false)}
+              >
+                <Home className="mr-3 h-4 w-4" />
+                Dashboard
+              </Link>
+            )}
             <Link
               to="/pdv"
               className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
@@ -134,14 +138,16 @@ const DashboardSidebar = () => {
               <TableIcon className="mr-3 h-4 w-4" />
               Mesas
             </Link>
-            <Link
-              to="/assinaturas"
-              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
-              onClick={() => setIsOpen(false)}
-            >
-              <BarChart3 className="mr-3 h-4 w-4" />
-              Assinatura
-            </Link>
+            {hasPermission('subscription_view') && (
+              <Link
+                to="/assinaturas"
+                className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+                onClick={() => setIsOpen(false)}
+              >
+                <BarChart3 className="mr-3 h-4 w-4" />
+                Assinatura
+              </Link>
+            )}
             <Link
               to="/relatorios"
               className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"

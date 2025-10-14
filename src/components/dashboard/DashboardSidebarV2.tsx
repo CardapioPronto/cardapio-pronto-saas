@@ -27,13 +27,7 @@ const navigation = [
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
-    permissions: [] as PermissionType[]
-  },
-  {
-    name: "Produtos",
-    href: "/produtos",
-    icon: Package,
-    permissions: ['products_view'] as PermissionType[]
+    permissions: ['dashboard_view'] as PermissionType[]
   },
   {
     name: "Categorias",
@@ -76,6 +70,12 @@ const navigation = [
     href: "/configuracoes",
     icon: Settings,
     permissions: ['settings_view'] as PermissionType[]
+  },
+  {
+    name: "Assinatura",
+    href: "/assinaturas",
+    icon: CreditCard,
+    permissions: ['subscription_view'] as PermissionType[]
   }
 ];
 

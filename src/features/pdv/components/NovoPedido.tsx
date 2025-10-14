@@ -120,10 +120,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
       return;
     }
 
-    if (!nomeCliente.trim()) {
-      toast.error("Nome do cliente é obrigatório");
-      return;
-    }
+    // Nome do cliente é opcional; usamos um padrão se estiver vazio
 
     // Validar telefone se foi fornecido
     if (telefoneCliente && !validatePhone(telefoneCliente)) {
