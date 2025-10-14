@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/types";
 import { Pedido, ItemPedido } from "../types";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   salvarPedido, 
   listarPedidos, 
@@ -128,11 +129,20 @@ export const usePDVHook = (restaurantId: string) => {
       setSalvandoPedido(true);
       const mesa = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : `Balcão - Mesa ${mesaSelecionada}`;
       
+      // Obter o ID do usuário atual da sessão
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+      
       const result = await salvarPedido(
         restaurantId,
         mesa,
         itensPedido,
         totalPedido,
+        user.id, // ID do funcionário/usuário logado
         nomeCliente.trim() || undefined, // Passa undefined se estiver vazio para usar o valor padrão
         undefined, // telefoneCliente não está sendo usado no hook
         mesaSelecionada // Passar o ID da mesa para atualizar status

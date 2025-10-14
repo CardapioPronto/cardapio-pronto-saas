@@ -640,6 +640,7 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_phone: string | null
+          employee_id: string | null
           id: string
           ifood_id: string | null
           order_number: string
@@ -656,6 +657,7 @@ export type Database = {
           created_at?: string
           customer_name: string
           customer_phone?: string | null
+          employee_id?: string | null
           id?: string
           ifood_id?: string | null
           order_number?: string
@@ -672,6 +674,7 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string | null
+          employee_id?: string | null
           id?: string
           ifood_id?: string | null
           order_number?: string
@@ -685,6 +688,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_restaurant_id_fkey"
             columns: ["restaurant_id"]

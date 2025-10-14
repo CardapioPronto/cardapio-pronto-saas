@@ -9,6 +9,7 @@ export async function salvarPedido(
   mesaOuBalcao: string,
   itensPedido: ItemPedido[],
   totalPedido: number,
+  employeeId: string,
   nomeCliente?: string,
   telefoneCliente?: string,
   mesaId?: string
@@ -22,6 +23,7 @@ export async function salvarPedido(
       .from('orders')
       .insert({
         restaurant_id: restaurantId,
+        employee_id: employeeId,
         customer_name: nomeCliente || (isMesa ? 'Cliente local' : 'Cliente balcão'),
         customer_phone: telefoneCliente || null,
         order_type: isMesa ? 'mesa' : 'balcao',
