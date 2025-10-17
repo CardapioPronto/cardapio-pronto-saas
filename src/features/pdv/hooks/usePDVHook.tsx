@@ -115,7 +115,8 @@ export const usePDVHook = (restaurantId: string) => {
       return;
     }
     
-    if (!mesaSelecionada) {
+    // Validar mesa apenas para pedidos tipo "mesa"
+    if (tipoPedido === "mesa" && !mesaSelecionada) {
       toast.error("Selecione uma mesa para o pedido");
       return;
     }
@@ -127,7 +128,9 @@ export const usePDVHook = (restaurantId: string) => {
     
     try {
       setSalvandoPedido(true);
-      const mesa = tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : `Balcão - Mesa ${mesaSelecionada}`;
+      const mesa = mesaSelecionada 
+        ? (tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : `Balcão - Mesa ${mesaSelecionada}`)
+        : "Balcão";
       
       // Obter o ID do usuário atual da sessão
       const { data: { user } } = await supabase.auth.getUser();
@@ -143,9 +146,9 @@ export const usePDVHook = (restaurantId: string) => {
         itensPedido,
         totalPedido,
         user.id, // ID do funcionário/usuário logado
-        nomeCliente.trim() || undefined, // Passa undefined se estiver vazio para usar o valor padrão
-        undefined, // telefoneCliente não está sendo usado no hook
-        mesaSelecionada // Passar o ID da mesa para atualizar status
+        nomeCliente.trim() || undefined,
+        undefined,
+        mesaSelecionada || undefined // Mesa opcional para balcão
       );
       
       if (result.success) {

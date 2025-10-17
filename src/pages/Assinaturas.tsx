@@ -4,11 +4,14 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle } from "lucide-react";
 import PaymentForm from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
 import { fetchPlanos } from "@/services/planosService";
 import { useAssinatura } from "@/hooks/useAssinatura";
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { Plano } from "@/types/plano";
 import { PlanoFormatado } from "@/types/subscription";
 
@@ -24,6 +27,8 @@ const Assinaturas = () => {
     handleSubscriptionSuccess, 
     handleCancelSubscription 
   } = useAssinatura();
+  
+  const subscriptionStatus = useSubscriptionStatus();
 
   useEffect(() => {
     const loadPlanos = async () => {
@@ -76,6 +81,16 @@ const Assinaturas = () => {
   return (
     <DashboardLayout title="Assinaturas">
       <div className="space-y-6">
+        {subscriptionStatus.isInTrial && (
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Período de Teste Ativo</AlertTitle>
+            <AlertDescription>
+              Você tem <strong>{subscriptionStatus.daysLeftInTrial} dias</strong> restantes de teste gratuito do plano {subscriptionStatus.planName}.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs 
           value={selectedTab} 
           onValueChange={setSelectedTab} 

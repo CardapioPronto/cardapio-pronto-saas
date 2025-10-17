@@ -17,6 +17,7 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", href: "/admin" },
     { icon: CreditCard, label: "Assinaturas", href: "/admin/subscriptions" },
+    { icon: CreditCard, label: "PagarMe", href: "/admin/pagarme" },
     { icon: Users, label: "Clientes", href: "/admin/customers" },
     { icon: List, label: "Restaurantes", href: "/admin/restaurants" },
     { icon: Database, label: "Dados do Sistema", href: "/admin/data" },

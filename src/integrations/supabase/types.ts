@@ -704,6 +704,33 @@ export type Database = {
           },
         ]
       }
+      pagarme_config: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_live: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_live?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_live?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       plan_features: {
         Row: {
           feature: string
@@ -949,30 +976,36 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          is_trial: boolean | null
           plan_id: string
           restaurant_id: string
           start_date: string
           status: string
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_trial?: boolean | null
           plan_id: string
           restaurant_id: string
           start_date: string
           status: string
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_trial?: boolean | null
           plan_id?: string
           restaurant_id?: string
           start_date?: string
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: [

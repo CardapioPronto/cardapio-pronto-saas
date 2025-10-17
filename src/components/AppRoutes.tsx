@@ -39,6 +39,7 @@ import Blog from '@/pages/Blog';
 import BlogPost from '@/pages/BlogPost';
 import AdminContact from '@/pages/admin/AdminContact';
 import AdminContactRecipients from '@/pages/admin/AdminContactRecipients';
+import AdminPagarme from '@/pages/admin/AdminPagarme';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
@@ -229,6 +230,11 @@ const AppRoutes = () => {
       <Route path="/admin/contact-recipients" element={
         <AdminProtectedRoute>
           <AdminContactRecipients />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/pagarme" element={
+        <AdminProtectedRoute>
+          <AdminPagarme />
         </AdminProtectedRoute>
       } />
       
