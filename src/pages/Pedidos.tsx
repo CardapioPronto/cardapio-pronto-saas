@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
 import { Pedido } from "@/features/pdv/types";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 const Pedidos = () => {
   const { user } = useCurrentUser();
@@ -21,6 +22,9 @@ const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoDetalhes, setPedidoDetalhes] = useState<Pedido | null>(null);
   const [carregando, setCarregando] = useState(false);
+  
+  // ✅ Ref para evitar múltiplas subscrições
+  const subscriptionRef = useRef<any>(null);
   
   // Função para carregar pedidos do banco de dados
   const carregarPedidos = async () => {
@@ -42,19 +46,160 @@ const Pedidos = () => {
     }
   };
   
-  // Carregar pedidos ao iniciar
+  // ✅ Configurar real-time subscriptions
   useEffect(() => {
-    if (restaurantId) {
+    if (!restaurantId) return;
+    
+    // Carregar pedidos iniciais
+    carregarPedidos();
+    
+    // Configurar subscription para mudanças em tempo real
+    const setupRealtimeSubscription = () => {
+      // Limpar subscrição anterior se existir
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+      
+      const channel = supabase
+        .channel('orders-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `restaurant_id=eq.${restaurantId}`
+          },
+          (payload) => {
+            console.log('Order changed:', payload);
+            
+            if (payload.eventType === 'INSERT') {
+              // ✅ Novo pedido - buscar com detalhes completos
+              const novoPedido = payload.new as Pedido;
+              
+              // Buscar itens do pedido
+              supabase
+                .from('order_items')
+                .select(`
+                  *,
+                  product:products (
+                    id,
+                    name,
+                    price,
+                    image_url
+                  )
+                `)
+                .eq('order_id', String(novoPedido.id))
+                .then(({ data: items }) => {
+                  if (items) {
+                    const pedidoCompleto = {
+                      ...novoPedido,
+                      itensPedido: items.map((item: any) => ({
+                        id: item.id,
+                        quantidade: item.quantity,
+                        produto: {
+                          id: item.product.id,
+                          name: item.product.name,
+                          price: item.product.price,
+                          image_url: item.product.image_url
+                        },
+                        observacao: item.observations
+                      }))
+                    };
+                    
+                    setPedidos(prev => [pedidoCompleto, ...prev]);
+                    
+                    // ✅ Notificação sonora e visual
+                    const audio = new Audio('/notification.mp3');
+                    audio.play().catch(() => {
+                      console.log('Audio play blocked by browser');
+                    });
+                    
+                    toast.success('Novo pedido recebido!', {
+                      description: `Mesa: ${novoPedido.mesa || novoPedido.table_number || 'Balcão'} - Total: R$ ${novoPedido.total.toFixed(2)}`,
+                      duration: 5000
+                    });
+                  }
+                });
+                
+            } else if (payload.eventType === 'UPDATE') {
+              // ✅ Pedido atualizado
+              const pedidoAtualizado = payload.new as Pedido;
+              
+              setPedidos(prev =>
+                prev.map(pedido =>
+                  pedido.id === pedidoAtualizado.id
+                    ? { ...pedido, ...pedidoAtualizado }
+                    : pedido
+                )
+              );
+              
+              // Atualizar detalhes se estiver aberto
+              if (pedidoDetalhes && pedidoDetalhes.id === pedidoAtualizado.id) {
+                setPedidoDetalhes(prev => prev ? { ...prev, ...pedidoAtualizado } : null);
+              }
+              
+            } else if (payload.eventType === 'DELETE') {
+              // ✅ Pedido deletado
+              const pedidoDeletado = payload.old as Pedido;
+              
+              setPedidos(prev =>
+                prev.filter(pedido => pedido.id !== pedidoDeletado.id)
+              );
+              
+              // Fechar detalhes se estava aberto
+              if (pedidoDetalhes && pedidoDetalhes.id === pedidoDeletado.id) {
+                setPedidoDetalhes(null);
+              }
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('Subscription status:', status);
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Real-time subscription ativa para pedidos');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Erro na subscrição real-time');
+            toast.error('Erro na conexão em tempo real. Recarregue a página.');
+          }
+        });
+      
+      subscriptionRef.current = channel;
+    };
+    
+    setupRealtimeSubscription();
+    
+    // Cleanup
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [restaurantId]);
+  
+  // ✅ Auto-refresh a cada 30 segundos (fallback)
+  useEffect(() => {
+    if (!restaurantId) return;
+    
+    const intervalId = setInterval(() => {
       carregarPedidos();
-    }
+    }, 30000); // 30 segundos
+    
+    return () => clearInterval(intervalId);
   }, [restaurantId]);
   
   // Função para alterar status do pedido
-  const handleAlterarStatus = async (id: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => {
+  const handleAlterarStatus = async (
+    id: number | string, 
+    novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado'
+  ) => {
     try {
       const result = await alterarStatusPedido(String(id), novoStatus);
       if (result.success) {
-        // Atualizar o estado local
+        // Atualização local já será feita pelo real-time
+        // Mas mantemos para feedback imediato
         setPedidos(pedidos.map(pedido => 
           pedido.id === id ? { ...pedido, status: novoStatus } : pedido
         ));
