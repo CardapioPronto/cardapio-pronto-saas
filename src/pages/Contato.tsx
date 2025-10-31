@@ -18,18 +18,49 @@ const Contato = () => {
   const [assunto, setAssunto] = useState("suporte");
   const [mensagem, setMensagem] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Simulação de envio do formulário
-    setTimeout(() => {
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { data, error } = await supabase.functions.invoke("send-contact-email", {
+        body: {
+          name: nome,
+          email,
+          phone: telefone,
+          subject: assunto,
+          message: mensagem,
+        },
+      });
+
+      if (error) throw error;
+
       setEnviado(true);
       toast({
         title: "Mensagem enviada",
         description: "Recebemos sua mensagem e responderemos em breve!",
       });
-    }, 1000);
+      
+      // Limpar formulário
+      setNome("");
+      setEmail("");
+      setTelefone("");
+      setAssunto("suporte");
+      setMensagem("");
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Erro ao enviar mensagem",
+        description: "Ocorreu um erro ao enviar sua mensagem. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -160,8 +191,12 @@ const Contato = () => {
                       Ao enviar este formulário, você concorda com nossa política de privacidade.
                     </div>
 
-                    <Button type="submit" className="bg-green hover:bg-green-dark text-white">
-                      Enviar mensagem
+                    <Button 
+                      type="submit" 
+                      className="bg-green hover:bg-green-dark text-white"
+                      disabled={loading}
+                    >
+                      {loading ? "Enviando..." : "Enviar mensagem"}
                     </Button>
                   </form>
                 </CardContent>

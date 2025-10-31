@@ -58,6 +58,7 @@ A automação pode economizar horas de trabalho manual:
 
 A tecnologia não é mais um diferencial - é uma necessidade. Restaurantes que adotam soluções digitais conseguem operar de forma mais eficiente, reduzir custos e oferecer uma experiência superior aos clientes.`,
         cover_image_url: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+        category: "Tecnologia",
         is_published: true,
         is_featured: true,
         published_at: new Date().toISOString()
@@ -110,6 +111,7 @@ A experiência é tudo:
 
 Implementando essas estratégias, você verá um crescimento consistente nas suas vendas.`,
         cover_image_url: "https://images.unsplash.com/photo-1556742111-a301076d9d18",
+        category: "Gestão",
         is_published: true,
         is_featured: true,
         published_at: new Date(Date.now() - 86400000).toISOString() // 1 dia atrás
@@ -156,6 +158,7 @@ Seu cardápio digital deve ser:
 
 O cardápio digital com QR Code não é apenas uma tendência, é o futuro da experiência gastronômica.`,
         cover_image_url: "https://images.unsplash.com/photo-1556742212-5b321f3c261b",
+        category: "Inovação",
         is_published: true,
         is_featured: false,
         published_at: new Date(Date.now() - 172800000).toISOString() // 2 dias atrás
@@ -223,6 +226,7 @@ Acompanhe:
 
 A análise de dados transforma suposições em certezas, permitindo decisões mais acertadas.`,
         cover_image_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71",
+        category: "Análise",
         is_published: true,
         is_featured: false,
         published_at: new Date(Date.now() - 259200000).toISOString() // 3 dias atrás
@@ -299,6 +303,7 @@ A análise de dados transforma suposições em certezas, permitindo decisões ma
 
 Uma cozinha bem gerenciada entrega qualidade consistente e opera com máxima eficiência.`,
         cover_image_url: "https://images.unsplash.com/photo-1556910103-1c02745aae4d",
+        category: "Dicas",
         is_published: true,
         is_featured: true,
         published_at: new Date(Date.now() - 345600000).toISOString() // 4 dias atrás

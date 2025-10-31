@@ -71,5 +71,8 @@ verify_jwt = false
 [functions.seed-blog-posts]
 verify_jwt = false
 
+[functions.send-contact-email]
+verify_jwt = false
+
 [vector]
 enabled = false

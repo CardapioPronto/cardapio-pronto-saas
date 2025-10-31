@@ -32,6 +32,8 @@ export const usePermissions = () => {
       // Se for dono, tem todas as permissões
       if (userData.user_type === 'owner') {
         setUserPermissions([
+          'dashboard_view',
+          'subscription_view',
           'pdv_access',
           'orders_view',
           'orders_manage',

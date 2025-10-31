@@ -3,7 +3,7 @@ import React, { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 import { 
-  Users, Settings, CreditCard, Home, BarChart3, Shield, List, Database, Layers, BookOpen
+  Users, Settings, CreditCard, Home, BarChart3, Shield, List, Database, Layers, BookOpen, Mail, MailOpen
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -17,10 +17,13 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", href: "/admin" },
     { icon: CreditCard, label: "Assinaturas", href: "/admin/subscriptions" },
+    { icon: CreditCard, label: "PagarMe", href: "/admin/pagarme" },
     { icon: Users, label: "Clientes", href: "/admin/customers" },
     { icon: List, label: "Restaurantes", href: "/admin/restaurants" },
     { icon: Database, label: "Dados do Sistema", href: "/admin/data" },
     { icon: BookOpen, label: "Blog", href: "/admin/blog" },
+    { icon: Mail, label: "Mensagens", href: "/admin/contact" },
+    { icon: MailOpen, label: "Destinatários Email", href: "/admin/contact-recipients" },
     { icon: Settings, label: "Configurações", href: "/admin/settings" },
     { icon: BarChart3, label: "Logs e Métricas", href: "/admin/logs" },
     { icon: Shield, label: "Administradores", href: "/admin/admins" },

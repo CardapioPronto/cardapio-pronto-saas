@@ -57,17 +57,17 @@ export const FiltroProdutos = ({
         </div>
       )}
 
-      {/* Seletor para balcão - continua inline mas com menos espaço */}
+      {/* Seletor para balcão - opcional */}
       {tipoPedido === "balcao" && (
         <div className="space-y-2">
-          <Label>Mesa para controle interno</Label>
+          <Label>Mesa para controle interno (opcional)</Label>
           <Button
             variant="outline"
             onClick={() => setModalMesaOpen(true)}
             className="w-full justify-start"
           >
             <MapPin className="mr-2 h-4 w-4" />
-            {mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Selecionar mesa"}
+            {mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Nenhuma mesa selecionada"}
           </Button>
         </div>
       )}

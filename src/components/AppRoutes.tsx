@@ -37,9 +37,13 @@ import AdminPlanos from '@/pages/admin/AdminPlanos';
 import AdminBlog from '@/pages/admin/AdminBlog';
 import Blog from '@/pages/Blog';
 import BlogPost from '@/pages/BlogPost';
+import AdminContact from '@/pages/admin/AdminContact';
+import AdminContactRecipients from '@/pages/admin/AdminContactRecipients';
+import AdminPagarme from '@/pages/admin/AdminPagarme';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const AppRoutes = () => {
   return (
@@ -77,74 +81,109 @@ const AppRoutes = () => {
       
       {/* Rotas protegidas */}
       <Route path="/dashboard" element={
-        <MainLayout>
-          <Dashboard />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={["dashboard_view"]} redirectOnDenied="/pdv">
+          <MainLayout>
+            <Dashboard />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/pdv" element={
-        <MainLayout>
-          <PDV />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['pdv_access']}>
+          <MainLayout>
+            <PDV />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/menu-digital" element={
+        <ProtectedRoute requiredPermissions={['products_view']}>
+          <MainLayout>
+            <MenuDigital />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/cardapio" element={
-        <MainLayout>
-          <MenuDigital />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['products_view']}>
+          <MainLayout>
+            <MenuDigital />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/produtos" element={
-        <MainLayout>
-          <Produtos />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['products_view']}>
+          <MainLayout>
+            <Produtos />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/pedidos" element={
-        <MainLayout>
-          <Pedidos />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['orders_view']}>
+          <MainLayout>
+            <Pedidos />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/funcionarios" element={
-        <MainLayout>
-          <FuncionariosV2 />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['employees_manage']}>
+          <MainLayout>
+            <FuncionariosV2 />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/assinaturas" element={
-        <MainLayout>
-          <Assinaturas />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={["subscription_view"]}>
+          <MainLayout>
+            <Assinaturas />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/configuracoes" element={
-        <MainLayout>
-          <Configuracoes />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['settings_view']}>
+          <MainLayout>
+            <Configuracoes />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/pagarme-config" element={
-        <MainLayout>
-          <PagarmeConfig />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['settings_manage']}>
+          <MainLayout>
+            <PagarmeConfig />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/ifood-integracao" element={
-        <MainLayout>
-          <IfoodIntegracao />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['settings_manage']}>
+          <MainLayout>
+            <IfoodIntegracao />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/categorias" element={
-        <MainLayout>
-          <Categorias />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['products_view']}>
+          <MainLayout>
+            <Categorias />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/relatorios" element={
-        <MainLayout>
-          <Relatorios />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['reports_view']}>
+          <MainLayout>
+            <Relatorios />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/areas" element={
-        <MainLayout>
-          <Areas />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['settings_manage']}>
+          <MainLayout>
+            <Areas />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/mesas" element={
-        <MainLayout>
-          <Mesas />
-        </MainLayout>
+        <ProtectedRoute requiredPermissions={['settings_manage']}>
+          <MainLayout>
+            <Mesas />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       
       {/* Rotas de administração */}
@@ -181,6 +220,21 @@ const AppRoutes = () => {
       <Route path="/admin/blog" element={
         <AdminProtectedRoute>
           <AdminBlog />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/contact" element={
+        <AdminProtectedRoute>
+          <AdminContact />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/contact-recipients" element={
+        <AdminProtectedRoute>
+          <AdminContactRecipients />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/pagarme" element={
+        <AdminProtectedRoute>
+          <AdminPagarme />
         </AdminProtectedRoute>
       } />
       

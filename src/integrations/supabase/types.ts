@@ -77,6 +77,7 @@ export type Database = {
       blog_posts: {
         Row: {
           author_id: string | null
+          category: string | null
           content: string
           cover_image_url: string | null
           created_at: string
@@ -91,6 +92,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          category?: string | null
           content: string
           cover_image_url?: string | null
           created_at?: string
@@ -105,6 +107,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          category?: string | null
           content?: string
           cover_image_url?: string | null
           created_at?: string
@@ -150,6 +153,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          notes: string | null
+          phone: string | null
+          read_at: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          read_at?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          read_at?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: []
+      }
+      contact_recipients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       demos: {
         Row: {
@@ -571,6 +640,7 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_phone: string | null
+          employee_id: string | null
           id: string
           ifood_id: string | null
           order_number: string
@@ -587,6 +657,7 @@ export type Database = {
           created_at?: string
           customer_name: string
           customer_phone?: string | null
+          employee_id?: string | null
           id?: string
           ifood_id?: string | null
           order_number?: string
@@ -603,6 +674,7 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string | null
+          employee_id?: string | null
           id?: string
           ifood_id?: string | null
           order_number?: string
@@ -617,6 +689,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "orders_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
@@ -624,6 +703,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pagarme_config: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_live: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_live?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_live?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       plan_features: {
         Row: {
@@ -870,30 +976,36 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          is_trial: boolean | null
           plan_id: string
           restaurant_id: string
           start_date: string
           status: string
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_trial?: boolean | null
           plan_id: string
           restaurant_id: string
           start_date: string
           status: string
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_trial?: boolean | null
           plan_id?: string
           restaurant_id?: string
           start_date?: string
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1173,6 +1285,10 @@ export type Database = {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
       }
+      get_user_restaurant_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_super_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -1207,6 +1323,8 @@ export type Database = {
         | "settings_view"
         | "settings_manage"
         | "employees_manage"
+        | "dashboard_view"
+        | "subscription_view"
       user_type: "owner" | "employee"
     }
     CompositeTypes: {
@@ -1345,6 +1463,8 @@ export const Constants = {
         "settings_view",
         "settings_manage",
         "employees_manage",
+        "dashboard_view",
+        "subscription_view",
       ],
       user_type: ["owner", "employee"],
     },
