@@ -72,12 +72,12 @@ export async function salvarPedido(
     }
 
     // 4. Enviar notificação via WhatsApp se configurado e telefone fornecido
-    if (telefoneCliente) {
+    if (telefoneCliente && order?.id) {
       try {
         await WhatsAppService.sendOrderConfirmation(
           restaurantId,
           telefoneCliente,
-          order.id
+          String(order.id)
         );
       } catch (whatsappError) {
         console.error('Erro ao enviar notificação WhatsApp:', whatsappError);

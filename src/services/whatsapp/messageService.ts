@@ -114,11 +114,16 @@ export class WhatsAppMessageService {
 
   static async logMessage(message: WhatsAppMessage): Promise<void> {
     try {
+      // Validate order_id is a valid UUID if provided
+      const orderIdToInsert = message.order_id && this.isValidUUID(message.order_id) 
+        ? message.order_id 
+        : null;
+
       const { error } = await supabase
         .from('whatsapp_messages')
         .insert({
           restaurant_id: message.restaurant_id,
-          order_id: message.order_id,
+          order_id: orderIdToInsert,
           phone_number: message.phone_number,
           message_type: message.message_type,
           content: message.content,
@@ -131,6 +136,11 @@ export class WhatsAppMessageService {
     } catch (error) {
       console.error('Erro ao registrar mensagem:', error);
     }
+  }
+
+  private static isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 
   static async getMessages(restaurantId: string, limit: number = 50): Promise<WhatsAppMessage[]> {
