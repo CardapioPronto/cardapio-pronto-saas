@@ -36,7 +36,7 @@ export function MesaSelector({
     : mesas.filter(mesa => mesa.area_id === areaFiltro);
 
   const mesasDisponiveis = mesasFiltradas.filter(mesa => 
-    mesa.status === 'livre' || mesa.status === 'reservada'
+    mesa.status !== 'indisponivel'
   );
 
   if (tipoPedido === "balcao") {

@@ -21,6 +21,7 @@ export interface ItemPedido {
 export interface Pedido {
   id: number | string; // Allow both number and string types for id to handle API responses
   mesa: string;
+  table_number?: string | null; // Campo para número da mesa
   cliente?: string;
   clientName?: string; // Campo adicional para compatibilidade
   itensPedido: ItemPedido[];

@@ -22,7 +22,22 @@ export class WhatsAppMessageService {
         return false;
       }
 
-      const provider = integration.provider || 'ultramsg';
+      // Detectar provider baseado nas credenciais disponíveis
+      let provider: 'twilio' | 'ultramsg' = 'twilio'; // Default para Twilio agora
+      
+      // Se tiver credenciais Twilio, usar Twilio
+      if (integration.twilio_account_sid && integration.twilio_auth_token && integration.twilio_phone_number) {
+        provider = 'twilio';
+      }
+      // Se não tiver Twilio mas tiver UltraMsg, usar UltraMsg
+      else if (integration.ultramsg_instance_id && integration.ultramsg_token) {
+        provider = 'ultramsg';
+      }
+      // Se tiver ambos, preferir o que está configurado em integration.provider
+      else if (integration.provider) {
+        provider = integration.provider;
+      }
+
       let result: { success?: boolean; sent?: boolean; error?: string; message?: string } = {};
 
       if (provider === 'twilio') {
@@ -114,11 +129,16 @@ export class WhatsAppMessageService {
 
   static async logMessage(message: WhatsAppMessage): Promise<void> {
     try {
+      // Validate order_id is a valid UUID if provided
+      const orderIdToInsert = message.order_id && this.isValidUUID(message.order_id) 
+        ? message.order_id 
+        : null;
+
       const { error } = await supabase
         .from('whatsapp_messages')
         .insert({
           restaurant_id: message.restaurant_id,
-          order_id: message.order_id,
+          order_id: orderIdToInsert,
           phone_number: message.phone_number,
           message_type: message.message_type,
           content: message.content,
@@ -131,6 +151,11 @@ export class WhatsAppMessageService {
     } catch (error) {
       console.error('Erro ao registrar mensagem:', error);
     }
+  }
+
+  private static isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 
   static async getMessages(restaurantId: string, limit: number = 50): Promise<WhatsAppMessage[]> {
