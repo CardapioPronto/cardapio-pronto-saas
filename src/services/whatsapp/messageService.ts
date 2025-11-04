@@ -22,7 +22,22 @@ export class WhatsAppMessageService {
         return false;
       }
 
-      const provider = integration.provider || 'ultramsg';
+      // Detectar provider baseado nas credenciais disponíveis
+      let provider: 'twilio' | 'ultramsg' = 'twilio'; // Default para Twilio agora
+      
+      // Se tiver credenciais Twilio, usar Twilio
+      if (integration.twilio_account_sid && integration.twilio_auth_token && integration.twilio_phone_number) {
+        provider = 'twilio';
+      }
+      // Se não tiver Twilio mas tiver UltraMsg, usar UltraMsg
+      else if (integration.ultramsg_instance_id && integration.ultramsg_token) {
+        provider = 'ultramsg';
+      }
+      // Se tiver ambos, preferir o que está configurado em integration.provider
+      else if (integration.provider) {
+        provider = integration.provider;
+      }
+
       let result: { success?: boolean; sent?: boolean; error?: string; message?: string } = {};
 
       if (provider === 'twilio') {
