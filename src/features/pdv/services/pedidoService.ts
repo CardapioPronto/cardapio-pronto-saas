@@ -169,8 +169,8 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: string) 
       return { success: false, error };
     }
 
-    // Se o pedido foi finalizado e é de mesa, liberar a mesa
-    if (novoStatus === 'finalizado' && orderData.order_type === 'mesa' && orderData.table_number) {
+    // Se o pedido foi finalizado ou cancelado e é de mesa, liberar a mesa
+    if ((novoStatus === 'finalizado' || novoStatus === 'cancelado') && orderData.order_type === 'mesa' && orderData.table_number) {
       try {
         // Buscar a mesa pelo número da mesa
         const { data: mesa } = await supabase
