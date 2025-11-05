@@ -40,7 +40,7 @@ export const useExportacaoDados = () => {
             customer_phone,
             status,
             order_type,
-            table_number,
+            table_id,
             order_items (
               product_name,
               quantity,

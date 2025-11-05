@@ -116,7 +116,7 @@ const Pedidos = () => {
                     });
                     
                     toast.success('Novo pedido recebido!', {
-                      description: `Mesa: ${novoPedido.mesa || novoPedido.table_number || 'Balcão'} - Total: R$ ${novoPedido.total.toFixed(2)}`,
+                      description: `Mesa: ${novoPedido.mesa || novoPedido.table_id || 'Balcão'} - Total: R$ ${novoPedido.total.toFixed(2)}`,
                       duration: 5000
                     });
                   }

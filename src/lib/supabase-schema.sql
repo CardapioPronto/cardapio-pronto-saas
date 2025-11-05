@@ -34,7 +34,7 @@ create table public.orders (
     customer_name text not null,
     customer_phone text,
     order_type text not null,
-    table_number text,
+    table_id text,
     status text not null,
     total numeric not null,
     payment_method text,

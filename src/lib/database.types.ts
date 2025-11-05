@@ -76,7 +76,7 @@ export interface Database {
           customer_name: string;
           customer_phone: string | null;
           order_type: string;
-          table_number: string | null;
+          table_id: string | null;
           status: string;
           total: number;
           payment_method: string | null;
@@ -92,7 +92,7 @@ export interface Database {
           customer_name: string;
           customer_phone?: string | null;
           order_type: string;
-          table_number?: string | null;
+          table_id?: string | null;
           status: string;
           total: number;
           payment_method?: string | null;
@@ -108,7 +108,7 @@ export interface Database {
           customer_name?: string;
           customer_phone?: string | null;
           order_type?: string;
-          table_number?: string | null;
+          table_id?: string | null;
           status?: string;
           total?: number;
           payment_method?: string | null;

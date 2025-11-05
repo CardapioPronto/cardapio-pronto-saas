@@ -550,6 +550,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          name: string
           number: string
           restaurant_id: string
           status: string
@@ -561,6 +562,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          name: string
           number: string
           restaurant_id: string
           status?: string
@@ -572,6 +574,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          name?: string
           number?: string
           restaurant_id?: string
           status?: string
@@ -649,7 +652,7 @@ export type Database = {
           restaurant_id: string
           source: string | null
           status: string
-          table_number: string | null
+          table_id: string | null
           total: number
           updated_at: string
         }
@@ -666,7 +669,7 @@ export type Database = {
           restaurant_id: string
           source?: string | null
           status: string
-          table_number?: string | null
+          table_id?: string | null
           total: number
           updated_at?: string
         }
@@ -683,7 +686,7 @@ export type Database = {
           restaurant_id?: string
           source?: string | null
           status?: string
-          table_number?: string | null
+          table_id?: string | null
           total?: number
           updated_at?: string
         }
