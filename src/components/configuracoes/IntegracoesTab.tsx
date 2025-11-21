@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TwilioConfigTab } from "@/components/whatsapp/TwilioConfigTab";
 import { WhatsAppMessages } from "@/components/whatsapp/WhatsAppMessages";
+import { WhatsAppTemplatesTab } from "@/components/whatsapp/WhatsAppTemplatesTab";
 
 export const IntegracoesTab: React.FC = () => {
   return (
@@ -56,13 +57,18 @@ export const IntegracoesTab: React.FC = () => {
 
       {/* WhatsApp Integration with Twilio */}
       <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="config">Configuração WhatsApp</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="messages">Mensagens</TabsTrigger>
         </TabsList>
         
         <TabsContent value="config" className="mt-4">
           <TwilioConfigTab />
+        </TabsContent>
+        
+        <TabsContent value="templates" className="mt-4">
+          <WhatsAppTemplatesTab />
         </TabsContent>
         
         <TabsContent value="messages" className="mt-4">
