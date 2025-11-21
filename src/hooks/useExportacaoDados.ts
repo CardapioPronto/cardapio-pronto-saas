@@ -10,6 +10,21 @@ interface ExportParams {
   dados: string[];
 }
 
+interface ExportData {
+  vendas?: unknown[];
+  produtos?: unknown[];
+  clientes?: unknown[];
+  categorias?: unknown[];
+  funcionarios?: unknown[];
+  dashboard?: {
+    periodo: string;
+    totalVendas: number;
+    totalPedidos: number;
+    ticketMedio: number;
+    geradoEm: string;
+  };
+}
+
 export const useExportacaoDados = () => {
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +40,7 @@ export const useExportacaoDados = () => {
       const { dateFrom, dateTo, formato, dados } = params;
       
       // Buscar dados baseado nos tipos selecionados
-      const dadosParaExportar: any = {};
+      const dadosParaExportar: ExportData = {};
 
       // Vendas
       if (dados.includes('vendas')) {
@@ -53,7 +68,8 @@ export const useExportacaoDados = () => {
           .lte('created_at', dateTo.toISOString())
           .order('created_at', { ascending: false });
 
-        dadosParaExportar.vendas = orders;
+        // orders can be null from Supabase; coalesce to undefined so it matches ExportData type (unknown[] | undefined)
+        dadosParaExportar.vendas = orders ?? undefined;
       }
 
       // Produtos
@@ -71,7 +87,7 @@ export const useExportacaoDados = () => {
           `)
           .eq('restaurant_id', restaurantId);
 
-        dadosParaExportar.produtos = products;
+        dadosParaExportar.produtos = products ?? undefined;
       }
 
       // Clientes (dados de pedidos)
@@ -116,7 +132,7 @@ export const useExportacaoDados = () => {
           `)
           .eq('restaurant_id', restaurantId);
 
-        dadosParaExportar.categorias = categories;
+        dadosParaExportar.categorias = categories ?? undefined;
       }
 
       // Funcionários
@@ -134,7 +150,7 @@ export const useExportacaoDados = () => {
           `)
           .eq('restaurant_id', restaurantId);
 
-        dadosParaExportar.funcionarios = employees;
+        dadosParaExportar.funcionarios = employees ?? undefined;
       }
 
       // Dashboard
@@ -169,7 +185,7 @@ export const useExportacaoDados = () => {
     }
   };
 
-  const gerarExcel = async (dados: any, params: ExportParams) => {
+  const gerarExcel = async (dados: ExportData, params: ExportParams) => {
     // Implementar geração de Excel usando uma biblioteca como xlsx
     // Por agora, faremos download como JSON
     const dataStr = JSON.stringify(dados, null, 2);
@@ -183,7 +199,7 @@ export const useExportacaoDados = () => {
     URL.revokeObjectURL(url);
   };
 
-  const gerarPDF = async (dados: any, params: ExportParams) => {
+  const gerarPDF = async (dados: ExportData, params: ExportParams) => {
     // Implementar geração de PDF usando uma biblioteca como jsPDF
     // Por agora, faremos download como JSON
     const dataStr = JSON.stringify(dados, null, 2);
