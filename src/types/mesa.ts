@@ -1,6 +1,7 @@
 export interface Mesa {
   id: string;
   number: string;
+  name: string;
   area_id?: string | null;
   restaurant_id: string;
   capacity: number | null;
@@ -12,6 +13,7 @@ export interface Mesa {
 
 export interface CreateMesaData {
   number: string;
+  name: string;
   area_id?: string;
   restaurant_id: string;
   capacity?: number;
@@ -21,6 +23,7 @@ export interface CreateMesaData {
 
 export interface UpdateMesaData {
   number?: string;
+  name?: string;
   area_id?: string;
   capacity?: number;
   status?: Mesa['status'];

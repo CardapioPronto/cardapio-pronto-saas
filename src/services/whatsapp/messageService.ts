@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppMessage } from "./types";
-import { UltraMsgService, UltraMsgCredentials } from "./ultraMsgService";
 import { TwilioService, TwilioCredentials } from "./twilioService";
 import { WhatsAppIntegrationService } from "./integrationService";
 import { toast } from "sonner";
@@ -22,69 +21,29 @@ export class WhatsAppMessageService {
         return false;
       }
 
-      // Detectar provider baseado nas credenciais disponíveis
-      let provider: 'twilio' | 'ultramsg' = 'twilio'; // Default para Twilio agora
+      // Validar credenciais Twilio (único provider suportado)
+      if (!integration.twilio_account_sid || !integration.twilio_auth_token || !integration.twilio_phone_number) {
+        console.error('Credenciais Twilio não configuradas');
+        toast.error('Configure as credenciais do Twilio nas configurações de WhatsApp');
+        return false;
+      }
+
+      if (!TwilioService.validatePhoneNumber(phoneNumber)) {
+        console.error('Número de telefone inválido:', phoneNumber);
+        toast.error('Número de telefone inválido');
+        return false;
+      }
+
+      const credentials: TwilioCredentials = {
+        accountSid: integration.twilio_account_sid,
+        authToken: integration.twilio_auth_token,
+        phoneNumber: integration.twilio_phone_number
+      };
+
+      console.log('Enviando mensagem WhatsApp via Twilio');
+      const result = await TwilioService.sendMessage(credentials, phoneNumber, message);
       
-      // Se tiver credenciais Twilio, usar Twilio
-      if (integration.twilio_account_sid && integration.twilio_auth_token && integration.twilio_phone_number) {
-        provider = 'twilio';
-      }
-      // Se não tiver Twilio mas tiver UltraMsg, usar UltraMsg
-      else if (integration.ultramsg_instance_id && integration.ultramsg_token) {
-        provider = 'ultramsg';
-      }
-      // Se tiver ambos, preferir o que está configurado em integration.provider
-      else if (integration.provider) {
-        provider = integration.provider;
-      }
-
-      let result: { success?: boolean; sent?: boolean; error?: string; message?: string } = {};
-
-      if (provider === 'twilio') {
-        // Validar credenciais Twilio
-        if (!integration.twilio_account_sid || !integration.twilio_auth_token || !integration.twilio_phone_number) {
-          console.error('Credenciais Twilio não configuradas');
-          toast.error('Configure as credenciais do Twilio primeiro');
-          return false;
-        }
-
-        if (!TwilioService.validatePhoneNumber(phoneNumber)) {
-          console.error('Número de telefone inválido:', phoneNumber);
-          toast.error('Número de telefone inválido');
-          return false;
-        }
-
-        const credentials: TwilioCredentials = {
-          accountSid: integration.twilio_account_sid,
-          authToken: integration.twilio_auth_token,
-          phoneNumber: integration.twilio_phone_number
-        };
-
-        result = await TwilioService.sendMessage(credentials, phoneNumber, message);
-
-      } else {
-        // Legacy UltraMsg support
-        if (!integration.ultramsg_instance_id || !integration.ultramsg_token) {
-          console.error('Credenciais UltraMsg não configuradas');
-          toast.error('Configure as credenciais do UltraMsg primeiro');
-          return false;
-        }
-
-        if (!UltraMsgService.validatePhoneNumber(phoneNumber)) {
-          console.error('Número de telefone inválido:', phoneNumber);
-          toast.error('Número de telefone inválido');
-          return false;
-        }
-
-        const credentials: UltraMsgCredentials = {
-          instanceId: integration.ultramsg_instance_id,
-          token: integration.ultramsg_token
-        };
-
-        result = await UltraMsgService.sendMessage(credentials, phoneNumber, message);
-      }
-      
-      const success = result.success || result.sent || false;
+      const success = result.success || false;
 
       // Log message
       await this.logMessage({
@@ -97,12 +56,12 @@ export class WhatsAppMessageService {
       });
 
       if (success) {
-        console.log(`Mensagem WhatsApp enviada com sucesso via ${provider}`);
+        console.log('Mensagem WhatsApp enviada com sucesso via Twilio');
         toast.success('Mensagem WhatsApp enviada com sucesso!');
         return true;
       } else {
-        const errorMsg = result.error || result.message || 'Falha desconhecida';
-        console.error(`Falha no envio via ${provider}:`, errorMsg);
+        const errorMsg = result.error || 'Falha desconhecida';
+        console.error('Falha no envio via Twilio:', errorMsg);
         toast.error(`Erro ao enviar mensagem: ${errorMsg}`);
         return false;
       }
