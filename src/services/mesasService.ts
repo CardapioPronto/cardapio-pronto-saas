@@ -37,7 +37,7 @@ export const mesasService = {
   async createMesa(mesaData: CreateMesaData): Promise<Mesa> {
     const { data, error } = await supabase
       .from('mesas')
-      .insert(mesaData)
+      .insert([mesaData])
       .select()
       .single();
 
