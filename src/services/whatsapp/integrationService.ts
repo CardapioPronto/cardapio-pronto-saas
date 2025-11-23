@@ -6,20 +6,20 @@ import { toast } from "sonner";
 export class WhatsAppIntegrationService {
   static async getIntegration(restaurantId: string): Promise<WhatsAppIntegration | null> {
     try {
-      const data: any = await supabase
+      const { data, error } = await supabase
         .from('whatsapp_integration')
         .select('*')
         .eq('restaurant_id', restaurantId)
         .single();
 
-      if (data.error && data.error.code !== 'PGRST116') {
-        console.error('Erro ao buscar integração WhatsApp:', data.error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao buscar integração WhatsApp:', error);
         return null;
       }
 
-      if (!data.data) return null;
+      if (!data) return null;
 
-      const record = data.data as any;
+      const record = data as any;
 
       return {
         restaurant_id: record.restaurant_id,
