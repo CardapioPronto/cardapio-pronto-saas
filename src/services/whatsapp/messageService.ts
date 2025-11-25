@@ -28,7 +28,10 @@ export class WhatsAppMessageService {
         return false;
       }
 
-      if (!TwilioService.validatePhoneNumber(phoneNumber)) {
+      // Formatar o número primeiro (remove formatação e adiciona código do país)
+      const formattedPhone = TwilioService.formatPhoneNumber(phoneNumber);
+      
+      if (!TwilioService.validatePhoneNumber(formattedPhone)) {
         console.error('Número de telefone inválido:', phoneNumber);
         toast.error('Número de telefone inválido');
         return false;
@@ -40,16 +43,16 @@ export class WhatsAppMessageService {
         phoneNumber: integration.twilio_phone_number
       };
 
-      console.log('Enviando mensagem WhatsApp via Twilio');
-      const result = await TwilioService.sendMessage(credentials, phoneNumber, message);
+      console.log('Enviando mensagem WhatsApp via Twilio para:', formattedPhone);
+      const result = await TwilioService.sendMessage(credentials, formattedPhone, message);
       
       const success = result.success || false;
 
-      // Log message
+      // Log message com o número formatado
       await this.logMessage({
         restaurant_id: restaurantId,
         order_id: orderId || null,
-        phone_number: phoneNumber,
+        phone_number: formattedPhone,
         message_type: 'outgoing',
         content: message,
         status: success ? 'sent' : 'failed'
@@ -69,10 +72,12 @@ export class WhatsAppMessageService {
       console.error('Erro ao enviar mensagem WhatsApp:', error);
       
       try {
+        // Tentar formatar o número mesmo em caso de erro
+        const formattedPhone = TwilioService.formatPhoneNumber(phoneNumber);
         await this.logMessage({
           restaurant_id: restaurantId,
           order_id: orderId || null,
-          phone_number: phoneNumber,
+          phone_number: formattedPhone,
           message_type: 'outgoing',
           content: message,
           status: 'failed'
