@@ -1,5 +1,4 @@
-
-jyrfjvyeikhqpuwcvdff = "jyrfjvyeikhqpuwcvdff"
+project_id = "jyrfjvyeikhqpuwcvdff"
 
 [api]
 enabled = true
@@ -59,11 +58,8 @@ port = 54328
 [functions.create-storage-buckets]
 verify_jwt = false
 
-[functions.send-twilio-message]
+[functions.evolution-api]
 verify_jwt = true
-
-[functions.twilio-webhook]
-verify_jwt = false
 
 [functions.generate-ai-response]
 verify_jwt = false
@@ -72,6 +68,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-contact-email]
+verify_jwt = false
+
+[functions.create-employee]
+verify_jwt = true
+
+[functions.create-initial-admin]
 verify_jwt = false
 
 [vector]

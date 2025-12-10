@@ -1,99 +1,33 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppMessage } from "./types";
-import { TwilioService, TwilioCredentials } from "./twilioService";
-import { WhatsAppIntegrationService } from "./integrationService";
 import { toast } from "sonner";
 
 export class WhatsAppMessageService {
+  // Método legado - agora o WhatsApp usa Evolution API
   static async sendMessage(
     restaurantId: string,
     phoneNumber: string,
     message: string,
     orderId?: string
   ): Promise<boolean> {
-    try {
-      const integration = await WhatsAppIntegrationService.getIntegration(restaurantId);
-      
-      if (!integration) {
-        console.error('Integração WhatsApp não configurada');
-        toast.error('Configure a integração WhatsApp primeiro');
-        return false;
+    console.warn('WhatsApp messaging now uses Evolution API. See /whatsapp-ai');
+    return false;
+  }
+
+  static formatPhoneNumber(phoneNumber: string): string {
+    let cleaned = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    if (!cleaned.startsWith('+') && !cleaned.startsWith('55')) {
+      if (cleaned.startsWith('0')) {
+        cleaned = cleaned.substring(1);
       }
-
-      // Validar credenciais Twilio (único provider suportado)
-      if (!integration.twilio_account_sid || !integration.twilio_auth_token || !integration.twilio_phone_number) {
-        console.error('Credenciais Twilio não configuradas');
-        toast.error('Configure as credenciais do Twilio nas configurações de WhatsApp');
-        return false;
-      }
-
-      // Formatar o número primeiro (remove formatação e adiciona código do país)
-      const formattedPhone = TwilioService.formatPhoneNumber(phoneNumber);
-      
-      if (!TwilioService.validatePhoneNumber(formattedPhone)) {
-        console.error('Número de telefone inválido:', phoneNumber);
-        toast.error('Número de telefone inválido');
-        return false;
-      }
-
-      const credentials: TwilioCredentials = {
-        accountSid: integration.twilio_account_sid,
-        authToken: integration.twilio_auth_token,
-        phoneNumber: integration.twilio_phone_number
-      };
-
-      console.log('Enviando mensagem WhatsApp via Twilio para:', formattedPhone);
-      const result = await TwilioService.sendMessage(credentials, formattedPhone, message);
-      
-      const success = result.success || false;
-
-      // Log message com o número formatado
-      await this.logMessage({
-        restaurant_id: restaurantId,
-        order_id: orderId || null,
-        phone_number: formattedPhone,
-        message_type: 'outgoing',
-        content: message,
-        status: success ? 'sent' : 'failed'
-      });
-
-      if (success) {
-        console.log('Mensagem WhatsApp enviada com sucesso via Twilio');
-        toast.success('Mensagem WhatsApp enviada com sucesso!');
-        return true;
-      } else {
-        const errorMsg = result.error || 'Falha desconhecida';
-        console.error('Falha no envio via Twilio:', errorMsg);
-        toast.error(`Erro ao enviar mensagem: ${errorMsg}`);
-        return false;
-      }
-    } catch (error) {
-      console.error('Erro ao enviar mensagem WhatsApp:', error);
-      
-      try {
-        // Tentar formatar o número mesmo em caso de erro
-        const formattedPhone = TwilioService.formatPhoneNumber(phoneNumber);
-        await this.logMessage({
-          restaurant_id: restaurantId,
-          order_id: orderId || null,
-          phone_number: formattedPhone,
-          message_type: 'outgoing',
-          content: message,
-          status: 'failed'
-        });
-      } catch (logError) {
-        console.error('Erro ao registrar log de erro:', logError);
-      }
-      
-      toast.error('Erro ao enviar mensagem WhatsApp');
-      return false;
+      cleaned = '55' + cleaned;
     }
+    return cleaned;
   }
 
   static async logMessage(message: WhatsAppMessage): Promise<void> {
     try {
-      // Validate order_id is a valid UUID if provided
       const orderIdToInsert = message.order_id && this.isValidUUID(message.order_id) 
         ? message.order_id 
         : null;

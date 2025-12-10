@@ -2,10 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TwilioConfigTab } from "@/components/whatsapp/TwilioConfigTab";
-import { WhatsAppMessages } from "@/components/whatsapp/WhatsAppMessages";
-import { WhatsAppTemplatesTab } from "@/components/whatsapp/WhatsAppTemplatesTab";
+import { Bot } from "lucide-react";
 
 export const IntegracoesTab: React.FC = () => {
   return (
@@ -19,6 +16,23 @@ export const IntegracoesTab: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-500 rounded flex items-center justify-center text-white">
+                  <Bot className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-medium">WhatsApp AI</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Atendente virtual com IA via Evolution API
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => window.location.href = "/whatsapp-ai"}>Configurar</Button>
+            </div>
+          </div>
+
           <div className="border rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -54,27 +68,6 @@ export const IntegracoesTab: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* WhatsApp Integration with Twilio */}
-      <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="config">Configuração WhatsApp</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="messages">Mensagens</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="config" className="mt-4">
-          <TwilioConfigTab />
-        </TabsContent>
-        
-        <TabsContent value="templates" className="mt-4">
-          <WhatsAppTemplatesTab />
-        </TabsContent>
-        
-        <TabsContent value="messages" className="mt-4">
-          <WhatsAppMessages />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };

@@ -1158,6 +1158,116 @@ export type Database = {
           },
         ]
       }
+      whatsapp_ai_config: {
+        Row: {
+          active: boolean | null
+          additional_instructions: string | null
+          ai_persona: string | null
+          bot_name: string | null
+          created_at: string | null
+          id: string
+          instance_name: string
+          phone_connected: string | null
+          qrcode_base64: string | null
+          restaurant_id: string
+          status: string
+          updated_at: string | null
+          use_menu_knowledge: boolean | null
+        }
+        Insert: {
+          active?: boolean | null
+          additional_instructions?: string | null
+          ai_persona?: string | null
+          bot_name?: string | null
+          created_at?: string | null
+          id?: string
+          instance_name: string
+          phone_connected?: string | null
+          qrcode_base64?: string | null
+          restaurant_id: string
+          status?: string
+          updated_at?: string | null
+          use_menu_knowledge?: boolean | null
+        }
+        Update: {
+          active?: boolean | null
+          additional_instructions?: string | null
+          ai_persona?: string | null
+          bot_name?: string | null
+          created_at?: string | null
+          id?: string
+          instance_name?: string
+          phone_connected?: string | null
+          qrcode_base64?: string | null
+          restaurant_id?: string
+          status?: string
+          updated_at?: string | null
+          use_menu_knowledge?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_ai_config_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_chat_history: {
+        Row: {
+          config_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string
+          id: string
+          is_from_ai: boolean | null
+          message_content: string
+          message_type: string
+          remote_jid: string
+          restaurant_id: string
+        }
+        Insert: {
+          config_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone: string
+          id?: string
+          is_from_ai?: boolean | null
+          message_content: string
+          message_type: string
+          remote_jid: string
+          restaurant_id: string
+        }
+        Update: {
+          config_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string
+          id?: string
+          is_from_ai?: boolean | null
+          message_content?: string
+          message_type?: string
+          remote_jid?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_chat_history_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_ai_config"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_chat_history_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_integration: {
         Row: {
           ai_enabled: boolean | null
