@@ -38,7 +38,7 @@ export class TwilioService {
       if (cleaned.startsWith('0')) {
         cleaned = cleaned.substring(1);
       }
-      cleaned = '+55' + cleaned;
+      cleaned = '55' + cleaned;
     }
     
     return cleaned;
