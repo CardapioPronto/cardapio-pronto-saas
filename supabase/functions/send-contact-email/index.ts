@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailPromises = recipients.map(async (recipient) => {
       try {
         const emailResponse = await resend.emails.send({
-          from: "CardápioPronto <onboarding@resend.dev>",
+          from: "Pubfy <onboarding@resend.dev>",
           to: [recipient.email],
           subject: `Nova mensagem de contato: ${subject}`,
           html: `
