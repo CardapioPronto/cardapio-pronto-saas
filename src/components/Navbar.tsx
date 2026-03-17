@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
-import pubfyLogo from "@/assets/pubfy-logo.png";
+import pubfyLogo from "@/assets/pubfy-navbar-logo.png";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,9 +22,8 @@ const Navbar = () => {
       isScrolled ? "bg-offwhite/95 backdrop-blur-md shadow-sm py-2" : "bg-transparent py-4"
     }`}>
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3" aria-label="Pubfy">
-          <img src={pubfyLogo} alt="Pubfy" className="h-10 w-10 object-contain" />
-          <span className="text-navy text-2xl font-bold">Pubfy</span>
+        <Link to="/" className="flex items-center" aria-label="Pubfy">
+          <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain md:h-14" />
         </Link>
         
         {/* Desktop menu */}
