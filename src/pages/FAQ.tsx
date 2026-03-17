@@ -60,7 +60,7 @@ const FAQ = () => {
               Perguntas frequentes
             </h1>
             <p className="text-lg text-navy/70 mb-8">
-              Encontre respostas para as dúvidas mais comuns sobre o CardápioPronto.
+              Encontre respostas para as dúvidas mais comuns sobre o Pubfy.
             </p>
 
             <Accordion type="single" collapsible className="space-y-4">
