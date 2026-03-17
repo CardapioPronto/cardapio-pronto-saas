@@ -23,7 +23,7 @@ const CTA = () => {
                 Pronto para transformar seu negócio?
               </h2>
               <p className="text-white/80 text-lg mb-8">
-                Experimente o CardápioPronto gratuitamente por 14 dias. Sem compromisso, sem necessidade de cartão de crédito.
+                Experimente o Pubfy gratuitamente por 14 dias. Sem compromisso, sem necessidade de cartão de crédito.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/teste-gratis">
