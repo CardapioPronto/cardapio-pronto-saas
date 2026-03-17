@@ -24,7 +24,7 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center" aria-label="Pubfy">
-          <img src={pubfyLogo} alt="Pubfy" className="h-16 w-auto object-contain md:h-20" />
+          <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain md:h-14" />
         </Link>
 
         {/* Desktop menu */}
