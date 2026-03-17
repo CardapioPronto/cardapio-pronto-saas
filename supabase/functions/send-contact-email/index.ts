@@ -130,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send confirmation email to the sender
     try {
       await resend.emails.send({
-        from: "CardápioPronto <onboarding@resend.dev>",
+        from: "Pubfy <onboarding@resend.dev>",
         to: [email],
         subject: "Recebemos sua mensagem!",
         html: `
