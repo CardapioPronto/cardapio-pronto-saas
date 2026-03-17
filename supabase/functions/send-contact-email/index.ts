@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
               <hr style="border: 1px solid #e5e7eb; margin: 20px 0;">
               
               <p style="color: #6b7280; font-size: 14px;">
-                Esta mensagem foi enviada através do formulário de contato do CardápioPronto.
+                Esta mensagem foi enviada através do formulário de contato do Pubfy.
               </p>
             </div>
           `,
