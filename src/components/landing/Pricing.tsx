@@ -11,6 +11,7 @@ interface PlanFeature {
 }
 
 interface PricingPlan {
+  id: string;
   name: string;
   price: number;
   priceYearly: number;
@@ -32,7 +33,6 @@ const Pricing = () => {
         setPlans(plansData);
       } catch (error) {
         console.error("Erro ao carregar planos:", error);
-        // Fallback para dados estáticos em caso de erro
         setPlans([]);
       } finally {
         setLoading(false);
@@ -54,18 +54,34 @@ const Pricing = () => {
     );
   }
 
+  if (!plans.length) {
+    return (
+      <section id="pricing" className="py-16 md:py-24">
+        <div className="container mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
+              Planos indisponíveis no momento
+            </h2>
+            <p className="text-lg text-navy/70">
+              Nenhum plano ativo foi encontrado para exibição na landing page.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="pricing" className="py-16 md:py-24">
       <div className="container mx-auto px-6">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-            Planos para todos os tamanhos de negócio
+            Planos desenhados para cada fase da operação
           </h2>
           <p className="text-lg text-navy/70">
-            Escolha o plano ideal para o seu estabelecimento e comece a transformar sua operação hoje mesmo.
+            Exibimos apenas os planos ativos mais adequados para vender melhor, operar com eficiência e escalar com segurança.
           </p>
-          
-          {/* Toggle anual/mensal */}
+
           <div className="mt-8 inline-flex items-center bg-beige/30 p-1 rounded-lg">
             <button
               onClick={() => setAnnual(false)}
@@ -87,23 +103,23 @@ const Pricing = () => {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => (
-            <div 
-              key={index}
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
               className={`relative rounded-xl border ${
-                plan.popular 
-                  ? "border-green shadow-lg shadow-green/10 scale-105 lg:scale-110 z-10" 
+                plan.popular
+                  ? "border-green shadow-lg shadow-green/10 scale-105 lg:scale-110 z-10"
                   : "border-gray-200 shadow-sm"
               } bg-white overflow-hidden transition`}
             >
               {plan.popular && (
                 <div className="absolute top-0 right-0">
                   <div className="bg-green text-white text-xs font-bold py-1 px-4 transform rotate-45 translate-x-2 -translate-y-1">
-                    Popular
+                    Recomendado
                   </div>
                 </div>
               )}
-              
+
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-navy">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline">
@@ -113,13 +129,13 @@ const Pricing = () => {
                   <span className="ml-1 text-gray-500">/mês</span>
                 </div>
                 <p className="mt-2 text-sm text-navy/70">{plan.description}</p>
-                
+
                 <div className="mt-6">
                   <Link to="/teste-gratis">
-                    <Button 
+                    <Button
                       className={`w-full ${
-                        plan.popular 
-                          ? "bg-green hover:bg-green-dark text-white" 
+                        plan.popular
+                          ? "bg-green hover:bg-green-dark text-white"
                           : "bg-white border border-green text-navy hover:bg-green/10"
                       }`}
                     >
@@ -128,14 +144,14 @@ const Pricing = () => {
                   </Link>
                 </div>
               </div>
-              
+
               <div className="border-t border-gray-100 p-6">
                 <ul className="space-y-4">
                   {plan.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start">
-                      <CheckCircle2 
-                        className={`shrink-0 mr-2 mt-0.5 ${feature.included ? "text-green" : "text-gray-300"}`} 
-                        size={18} 
+                      <CheckCircle2
+                        className={`shrink-0 mr-2 mt-0.5 ${feature.included ? "text-green" : "text-gray-300"}`}
+                        size={18}
                       />
                       <span className={`text-sm ${feature.included ? "text-navy/80" : "text-navy/40"}`}>
                         {feature.feature}
@@ -147,8 +163,7 @@ const Pricing = () => {
             </div>
           ))}
         </div>
-        
-        {/* FAQ Link */}
+
         <div className="text-center mt-12">
           <p className="text-navy/70">
             Tem dúvidas sobre qual plano escolher?{" "}
