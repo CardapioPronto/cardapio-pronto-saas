@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     question: "Preciso instalar algum software no meu computador?",
-    answer: "Não, o CardápioPronto é uma aplicação web baseada em nuvem. Você só precisa de um navegador moderno e acesso à internet para utilizar todas as funcionalidades."
+    answer: "Não, o Pubfy é uma aplicação web baseada em nuvem. Você só precisa de um navegador moderno e acesso à internet para utilizar todas as funcionalidades."
   },
   {
     question: "Como funciona o cardápio digital via QR Code?",
