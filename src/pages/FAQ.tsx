@@ -25,7 +25,7 @@ const faqs = [
   },
   {
     question: "O sistema funciona offline?",
-    answer: "O PDV do CardápioPronto requer conexão com a internet para funcionar completamente. No entanto, estamos desenvolvendo um modo offline para operações básicas que sincronizará quando a conexão for restabelecida."
+    answer: "O PDV do Pubfy requer conexão com a internet para funcionar completamente. No entanto, estamos desenvolvendo um modo offline para operações básicas que sincronizará quando a conexão for restabelecida."
   },
   {
     question: "Quais métodos de pagamento são aceitos para a assinatura?",
