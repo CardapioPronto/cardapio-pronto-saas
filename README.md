@@ -1,9 +1,9 @@
 
-# CardápioPronto - Sistema de Gestão para Restaurantes
+# Pubfy - Sistema de Gestão para Restaurantes
 
 ## Visão Geral
 
-CardápioPronto é uma plataforma SaaS completa para gestão de restaurantes, incluindo cardápio digital, PDV, controle de pedidos e integração com serviços de delivery.
+Pubfy é uma plataforma SaaS completa para gestão de restaurantes, incluindo cardápio digital, PDV, controle de pedidos e integração com serviços de delivery.
 
 **URL do Projeto**: https://lovable.dev/projects/168abcc8-16cf-4537-856f-fe5725db5710
 

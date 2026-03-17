@@ -151,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p style="margin-top: 30px;">
               Atenciosamente,<br>
-              <strong>Equipe CardápioPronto</strong>
+              <strong>Equipe Pubfy</strong>
             </p>
           </div>
         `,

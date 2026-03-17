@@ -105,7 +105,7 @@ const FAQ = () => {
 
             <div className="text-center">
               <h2 className="text-xl font-semibold text-navy mb-4">
-                Veja o CardápioPronto em ação
+                Veja o Pubfy em ação
               </h2>
               <p className="text-navy/70 mb-6">
                 A melhor forma de conhecer nossa plataforma é experimentando.
