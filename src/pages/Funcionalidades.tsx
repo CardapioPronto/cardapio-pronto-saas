@@ -144,7 +144,7 @@ const Funcionalidades = () => {
                 Tudo que você precisa para gerenciar seu estabelecimento
               </h1>
               <p className="text-lg text-navy/70 mb-8">
-                O CardápioPronto oferece uma solução completa para restaurantes, bares, cafeterias e outros estabelecimentos do setor alimentício.
+                O Pubfy oferece uma solução completa para restaurantes, bares, cafeterias e outros estabelecimentos do setor alimentício.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/demonstracao">
@@ -198,7 +198,7 @@ const Funcionalidades = () => {
                   </h2>
                   <p className="text-navy/70 mb-6">
                     Acesso completo a todas as ferramentas por 14 dias, sem necessidade de cartão de crédito.
-                    Veja como o CardápioPronto pode transformar seu negócio.
+                    Veja como o Pubfy pode transformar seu negócio.
                   </p>
                   <Link to="/teste-gratis">
                     <Button size="lg" className="bg-orange hover:bg-orange/90 text-white px-8">

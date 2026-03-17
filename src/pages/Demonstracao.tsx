@@ -97,7 +97,7 @@ const Demonstracao = () => {
               Agende uma demonstração gratuita
             </h1>
             <p className="text-lg text-navy/70 mb-8">
-              Veja em primeira mão como o CardápioPronto pode transformar o dia
+              Veja em primeira mão como o Pubfy pode transformar o dia
               a dia do seu estabelecimento.
             </p>
 

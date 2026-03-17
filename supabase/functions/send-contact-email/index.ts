@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailPromises = recipients.map(async (recipient) => {
       try {
         const emailResponse = await resend.emails.send({
-          from: "CardápioPronto <onboarding@resend.dev>",
+          from: "Pubfy <onboarding@resend.dev>",
           to: [recipient.email],
           subject: `Nova mensagem de contato: ${subject}`,
           html: `
@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
               <hr style="border: 1px solid #e5e7eb; margin: 20px 0;">
               
               <p style="color: #6b7280; font-size: 14px;">
-                Esta mensagem foi enviada através do formulário de contato do CardápioPronto.
+                Esta mensagem foi enviada através do formulário de contato do Pubfy.
               </p>
             </div>
           `,
@@ -130,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send confirmation email to the sender
     try {
       await resend.emails.send({
-        from: "CardápioPronto <onboarding@resend.dev>",
+        from: "Pubfy <onboarding@resend.dev>",
         to: [email],
         subject: "Recebemos sua mensagem!",
         html: `
@@ -151,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p style="margin-top: 30px;">
               Atenciosamente,<br>
-              <strong>Equipe CardápioPronto</strong>
+              <strong>Equipe Pubfy</strong>
             </p>
           </div>
         `,

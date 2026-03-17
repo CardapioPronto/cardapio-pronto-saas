@@ -9,11 +9,11 @@ import Footer from "@/components/Footer";
 const faqs = [
   {
     question: "Quanto tempo dura o período de teste grátis?",
-    answer: "O período de teste grátis do CardápioPronto dura 14 dias, sem necessidade de cartão de crédito. Durante este período, você tem acesso completo a todas as funcionalidades da plataforma."
+    answer: "O período de teste grátis do Pubfy dura 14 dias, sem necessidade de cartão de crédito. Durante este período, você tem acesso completo a todas as funcionalidades da plataforma."
   },
   {
     question: "Preciso instalar algum software no meu computador?",
-    answer: "Não, o CardápioPronto é uma aplicação web baseada em nuvem. Você só precisa de um navegador moderno e acesso à internet para utilizar todas as funcionalidades."
+    answer: "Não, o Pubfy é uma aplicação web baseada em nuvem. Você só precisa de um navegador moderno e acesso à internet para utilizar todas as funcionalidades."
   },
   {
     question: "Como funciona o cardápio digital via QR Code?",
@@ -21,11 +21,11 @@ const faqs = [
   },
   {
     question: "Posso personalizar as cores e logo do meu cardápio digital?",
-    answer: "Sim! O CardápioPronto permite personalizar as cores do seu cardápio digital e adicionar sua logo, mantendo a identidade visual do seu estabelecimento."
+    answer: "Sim! O Pubfy permite personalizar as cores do seu cardápio digital e adicionar sua logo, mantendo a identidade visual do seu estabelecimento."
   },
   {
     question: "O sistema funciona offline?",
-    answer: "O PDV do CardápioPronto requer conexão com a internet para funcionar completamente. No entanto, estamos desenvolvendo um modo offline para operações básicas que sincronizará quando a conexão for restabelecida."
+    answer: "O PDV do Pubfy requer conexão com a internet para funcionar completamente. No entanto, estamos desenvolvendo um modo offline para operações básicas que sincronizará quando a conexão for restabelecida."
   },
   {
     question: "Quais métodos de pagamento são aceitos para a assinatura?",
@@ -37,7 +37,7 @@ const faqs = [
   },
   {
     question: "O sistema se integra com impressoras térmicas?",
-    answer: "Sim, o CardápioPronto se integra com a maioria das impressoras térmicas compatíveis com ESC/POS. Nos planos Profissional e Enterprise, oferecemos suporte para configuração das impressoras."
+    answer: "Sim, o Pubfy se integra com a maioria das impressoras térmicas compatíveis com ESC/POS. Nos planos Profissional e Enterprise, oferecemos suporte para configuração das impressoras."
   },
   {
     question: "É possível controlar o estoque dos produtos?",
@@ -60,7 +60,7 @@ const FAQ = () => {
               Perguntas frequentes
             </h1>
             <p className="text-lg text-navy/70 mb-8">
-              Encontre respostas para as dúvidas mais comuns sobre o CardápioPronto.
+              Encontre respostas para as dúvidas mais comuns sobre o Pubfy.
             </p>
 
             <Accordion type="single" collapsible className="space-y-4">
@@ -105,7 +105,7 @@ const FAQ = () => {
 
             <div className="text-center">
               <h2 className="text-xl font-semibold text-navy mb-4">
-                Veja o CardápioPronto em ação
+                Veja o Pubfy em ação
               </h2>
               <p className="text-navy/70 mb-6">
                 A melhor forma de conhecer nossa plataforma é experimentando.

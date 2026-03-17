@@ -1,5 +1,5 @@
 
-# Status de Implementação do Sistema CardápioPronto
+# Status de Implementação do Sistema Pubfy
 
 ## ✅ Funcionalidades Implementadas
 

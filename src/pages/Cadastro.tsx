@@ -129,7 +129,7 @@ export default function Cadastro() {
           <div className="flex justify-center mb-4">
             <Link to="/" className="flex items-center">
               <span className="text-navy text-2xl font-bold">
-                Cardápio<span className="text-orange">Pronto</span>
+                Pubfy
               </span>
             </Link>
           </div>

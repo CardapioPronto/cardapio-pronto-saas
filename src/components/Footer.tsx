@@ -11,7 +11,7 @@ const Footer = () => {
           {/* Logo e informações */}
           <div className="lg:col-span-2">
             <Link to="/" className="inline-block">
-              <span className="text-white text-2xl font-bold">Cardápio<span className="text-orange">Pronto</span></span>
+              <span className="text-white text-2xl font-bold">Pubfy</span>
             </Link>
             <p className="mt-4 text-gray-300 max-w-xs">
               Sistema completo para bares, restaurantes e lanchonetes. Cardápio digital, PDV online e gestão completa.
@@ -122,7 +122,7 @@ const Footer = () => {
         
         <div className="mt-12 pt-8 border-t border-gray-700 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-300 text-sm">
-            &copy; {currentYear} CardápioPronto. Todos os direitos reservados.
+            &copy; {currentYear} Pubfy. Todos os direitos reservados.
           </p>
           <div className="mt-4 md:mt-0 flex space-x-6">
             <Link to="/termos" className="text-gray-300 hover:text-white transition-colors text-sm">

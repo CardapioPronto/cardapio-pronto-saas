@@ -97,7 +97,7 @@ export const DefaultTheme = ({ data }: DefaultThemeProps) => {
       >
         <div className="flex justify-center items-center text-sm opacity-60">
           <QrCode className="h-4 w-4 mr-1" />
-          <span>Cardápio Digital por <strong>CardápioPronto</strong></span>
+          <span>Cardápio Digital por <strong>Pubfy</strong></span>
         </div>
       </div>
     </PublicMenuBase>

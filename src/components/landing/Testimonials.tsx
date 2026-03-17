@@ -11,7 +11,7 @@ import {
 const testimonials = [
   {
     id: 1,
-    quote: "O CardápioPronto transformou completamente nosso restaurante. Reduziu erros nos pedidos e aumentou nossas vendas em 30%.",
+    quote: "O Pubfy transformou completamente nosso restaurante. Reduziu erros nos pedidos e aumentou nossas vendas em 30%.",
     author: "Maria Silva",
     role: "Proprietária, Restaurante Sabor Caseiro",
     image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&h=150&q=80"
@@ -25,7 +25,7 @@ const testimonials = [
   },
   {
     id: 3,
-    quote: "Implementamos o CardápioPronto há 3 meses e já notamos uma diferença significativa na eficiência do nosso atendimento.",
+    quote: "Implementamos o Pubfy há 3 meses e já notamos uma diferença significativa na eficiência do nosso atendimento.",
     author: "Ana Costa",
     role: "Proprietária, Café Aroma",
     image: "https://images.unsplash.com/photo-1629747490241-624f07d70e1e?auto=format&fit=crop&w=150&h=150&q=80"
@@ -48,7 +48,7 @@ const Testimonials = () => {
             Nossos clientes aprovam
           </h2>
           <p className="text-lg text-navy/70">
-            Descubra como o CardápioPronto tem ajudado estabelecimentos como o seu a crescer e melhorar sua operação.
+            Descubra como o Pubfy tem ajudado estabelecimentos como o seu a crescer e melhorar sua operação.
           </p>
         </div>
 

@@ -151,7 +151,7 @@ export const ElegantTheme = ({ data }: ElegantThemeProps) => {
       >
         <div className="flex justify-center items-center text-xs opacity-50 tracking-wider uppercase">
           <QrCode className="h-3 w-3 mr-2" />
-          <span>Digital Menu by <strong>CardápioPronto</strong></span>
+          <span>Digital Menu by <strong>Pubfy</strong></span>
         </div>
       </div>
     </PublicMenuBase>

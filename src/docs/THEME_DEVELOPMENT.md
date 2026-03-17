@@ -1,5 +1,5 @@
 
-# Guia de Desenvolvimento de Temas - CardápioPronto
+# Guia de Desenvolvimento de Temas - Pubfy
 
 Este guia explica como criar novos temas para o Cardápio Digital Público sem precisar conhecer profundamente toda a base de código.
 

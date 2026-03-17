@@ -118,7 +118,7 @@ export const ModernTheme = ({ data }: ModernThemeProps) => {
       >
         <div className="flex justify-center items-center text-sm opacity-60">
           <QrCode className="h-4 w-4 mr-2" />
-          <span>Powered by <strong>CardápioPronto</strong></span>
+          <span>Powered by <strong>Pubfy</strong></span>
         </div>
       </div>
     </PublicMenuBase>

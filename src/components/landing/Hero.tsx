@@ -62,7 +62,7 @@ const Hero = () => {
                 <div className="w-64 md:w-80 h-auto rounded-3xl border-8 border-navy shadow-xl overflow-hidden">
                   <img 
                     src="https://images.unsplash.com/photo-1526069631228-723c945bea6b?auto=format&fit=crop&w=800&q=80" 
-                    alt="Cardápio digital do CardápioPronto" 
+                    alt="Cardápio digital do Pubfy" 
                     className="w-full h-auto"
                   />
                 </div>
