@@ -42,7 +42,7 @@ const CTA = () => {
             <div className="flex justify-center md:justify-end">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-sm">
                 <h3 className="text-xl font-semibold text-white mb-4">
-                  Por que escolher o CardápioPronto?
+                  Por que escolher o Pubfy?
                 </h3>
                 <ul className="space-y-3">
                   <li className="flex items-start">

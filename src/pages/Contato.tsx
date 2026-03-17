@@ -85,7 +85,7 @@ const Contato = () => {
                     <Mail className="h-6 w-6 text-green" />
                   </div>
                   <h3 className="font-semibold text-navy mb-2">Email</h3>
-                  <p className="text-navy/70 mb-4">contato@cardapiopronto.com.br</p>
+                  <p className="text-navy/70 mb-4">contato@pubfy.com.br</p>
                   <p className="text-sm text-navy/60">Resposta em até 24 horas</p>
                 </CardContent>
               </Card>

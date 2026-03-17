@@ -22,7 +22,7 @@ const Navbar = () => {
     }`}>
       <div className="container mx-auto px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <span className="text-navy text-2xl font-bold">Cardápio<span className="text-orange">Pronto</span></span>
+          <span className="text-navy text-2xl font-bold">Pubfy</span>
         </Link>
         
         {/* Desktop menu */}

@@ -28,7 +28,7 @@ const SubscriptionOverview = ({
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Escolha um plano para começar a utilizar todos os recursos do CardápioPronto.
+            Escolha um plano para começar a utilizar todos os recursos do Pubfy.
           </p>
         </CardContent>
         <CardFooter>

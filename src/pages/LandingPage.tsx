@@ -13,7 +13,7 @@ const LandingPage = () => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
     // Set page title
-    document.title = "CardápioPronto | Sistema para bares e restaurantes";
+    document.title = "Pubfy | Cardápio Digital";
   }, []);
 
   return (

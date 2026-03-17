@@ -19,7 +19,7 @@ export const QRCodePromotionCard = () => {
             </div>
             
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              QR Code do Cardápio Pronto!
+              QR Code do Pubfy!
             </h3>
             
             <p className="text-gray-700 text-sm mb-4">

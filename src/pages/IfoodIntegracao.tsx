@@ -396,7 +396,7 @@ const IfoodIntegracao = () => {
                     <h3 className="text-lg font-medium">Como funciona</h3>
                     <p className="text-muted-foreground">
                       A integração com o iFood permite que você receba pedidos feitos no aplicativo
-                      diretamente no sistema CardápioPronto, sem precisar de equipamentos adicionais.
+                      diretamente no sistema Pubfy, sem precisar de equipamentos adicionais.
                     </p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">

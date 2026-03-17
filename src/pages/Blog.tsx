@@ -52,7 +52,7 @@ export default function Blog() {
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto">
               <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Blog CardápioPronto
+                Blog Pubfy
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground">
                 Novidades, dicas e insights sobre gestão de restaurantes, tecnologia e inovação

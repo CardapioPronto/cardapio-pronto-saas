@@ -25,7 +25,7 @@ const testimonials = [
   },
   {
     id: 3,
-    quote: "Implementamos o CardápioPronto há 3 meses e já notamos uma diferença significativa na eficiência do nosso atendimento.",
+    quote: "Implementamos o Pubfy há 3 meses e já notamos uma diferença significativa na eficiência do nosso atendimento.",
     author: "Ana Costa",
     role: "Proprietária, Café Aroma",
     image: "https://images.unsplash.com/photo-1629747490241-624f07d70e1e?auto=format&fit=crop&w=150&h=150&q=80"
