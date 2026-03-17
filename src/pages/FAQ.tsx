@@ -37,7 +37,7 @@ const faqs = [
   },
   {
     question: "O sistema se integra com impressoras térmicas?",
-    answer: "Sim, o CardápioPronto se integra com a maioria das impressoras térmicas compatíveis com ESC/POS. Nos planos Profissional e Enterprise, oferecemos suporte para configuração das impressoras."
+    answer: "Sim, o Pubfy se integra com a maioria das impressoras térmicas compatíveis com ESC/POS. Nos planos Profissional e Enterprise, oferecemos suporte para configuração das impressoras."
   },
   {
     question: "É possível controlar o estoque dos produtos?",
