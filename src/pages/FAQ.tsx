@@ -9,7 +9,7 @@ import Footer from "@/components/Footer";
 const faqs = [
   {
     question: "Quanto tempo dura o período de teste grátis?",
-    answer: "O período de teste grátis do CardápioPronto dura 14 dias, sem necessidade de cartão de crédito. Durante este período, você tem acesso completo a todas as funcionalidades da plataforma."
+    answer: "O período de teste grátis do Pubfy dura 14 dias, sem necessidade de cartão de crédito. Durante este período, você tem acesso completo a todas as funcionalidades da plataforma."
   },
   {
     question: "Preciso instalar algum software no meu computador?",
