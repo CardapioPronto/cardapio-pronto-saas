@@ -48,7 +48,7 @@ const Testimonials = () => {
             Nossos clientes aprovam
           </h2>
           <p className="text-lg text-navy/70">
-            Descubra como o CardápioPronto tem ajudado estabelecimentos como o seu a crescer e melhorar sua operação.
+            Descubra como o Pubfy tem ajudado estabelecimentos como o seu a crescer e melhorar sua operação.
           </p>
         </div>
 
