@@ -11,7 +11,7 @@ import {
 const testimonials = [
   {
     id: 1,
-    quote: "O CardápioPronto transformou completamente nosso restaurante. Reduziu erros nos pedidos e aumentou nossas vendas em 30%.",
+    quote: "O Pubfy transformou completamente nosso restaurante. Reduziu erros nos pedidos e aumentou nossas vendas em 30%.",
     author: "Maria Silva",
     role: "Proprietária, Restaurante Sabor Caseiro",
     image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&h=150&q=80"
