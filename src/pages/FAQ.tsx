@@ -21,7 +21,7 @@ const faqs = [
   },
   {
     question: "Posso personalizar as cores e logo do meu cardápio digital?",
-    answer: "Sim! O CardápioPronto permite personalizar as cores do seu cardápio digital e adicionar sua logo, mantendo a identidade visual do seu estabelecimento."
+    answer: "Sim! O Pubfy permite personalizar as cores do seu cardápio digital e adicionar sua logo, mantendo a identidade visual do seu estabelecimento."
   },
   {
     question: "O sistema funciona offline?",
