@@ -11,7 +11,7 @@ const Footer = () => {
           {/* Logo e informações */}
           <div className="lg:col-span-2">
             <Link to="/" className="inline-block">
-              <span className="text-white text-2xl font-bold">Cardápio<span className="text-orange">Pronto</span></span>
+              <span className="text-white text-2xl font-bold">Pubfy</span>
             </Link>
             <p className="mt-4 text-gray-300 max-w-xs">
               Sistema completo para bares, restaurantes e lanchonetes. Cardápio digital, PDV online e gestão completa.
