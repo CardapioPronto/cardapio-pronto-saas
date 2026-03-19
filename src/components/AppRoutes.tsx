@@ -19,7 +19,6 @@ import CardapioDigital from '@/pages/CardapioDigital';
 import PDVOnline from '@/pages/PDVOnline';
 import GestaoCompleta from '@/pages/GestaoCompleta';
 import Precos from '@/pages/Precos';
-import CreateInitialAdmin from '@/pages/CreateInitialAdmin';
 import PDV from '@/pages/PDV';
 import MenuDigital from '@/pages/MenuDigital';
 import Assinaturas from '@/pages/Assinaturas';
@@ -76,7 +75,6 @@ const AppRoutes = () => {
       <Route path="/pdv-online" element={<PDVOnline />} />
       <Route path="/gestao-completa" element={<GestaoCompleta />} />
       <Route path="/precos" element={<Precos />} />
-      <Route path="/create-initial-admin" element={<CreateInitialAdmin />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogPost />} />
       
