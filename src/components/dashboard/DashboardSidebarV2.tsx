@@ -16,7 +16,8 @@ import {
   Tags,
   Smartphone,
   CreditCard,
-  Shield
+  Shield,
+  Headphones
 } from "lucide-react";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
