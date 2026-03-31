@@ -40,6 +40,7 @@ import AdminContact from '@/pages/admin/AdminContact';
 import AdminContactRecipients from '@/pages/admin/AdminContactRecipients';
 import AdminPagarme from '@/pages/admin/AdminPagarme';
 import WhatsAppAI from '@/pages/WhatsAppAI';
+import Atendimento from '@/pages/Atendimento';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
