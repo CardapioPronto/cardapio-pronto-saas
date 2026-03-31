@@ -12,7 +12,8 @@ export type PermissionType =
   | 'reports_view'
   | 'settings_view'
   | 'settings_manage'
-  | 'employees_manage';
+  | 'employees_manage'
+  | 'whatsapp_manage';
 
 export interface Employee {
   id: string;
