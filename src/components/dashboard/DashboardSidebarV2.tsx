@@ -73,6 +73,12 @@ const navigation = [
     permissions: ['settings_view'] as PermissionType[]
   },
   {
+    name: "Atendimento WhatsApp",
+    href: "/atendimento",
+    icon: Headphones,
+    permissions: ['whatsapp_manage'] as PermissionType[]
+  },
+  {
     name: "Assinatura",
     href: "/assinaturas",
     icon: CreditCard,

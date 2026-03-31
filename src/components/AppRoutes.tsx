@@ -192,6 +192,13 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/atendimento" element={
+        <ProtectedRoute requiredPermissions={['whatsapp_manage']}>
+          <MainLayout>
+            <Atendimento />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       
       {/* Rotas de administração */}
       <Route path="/admin" element={
