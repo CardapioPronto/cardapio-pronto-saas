@@ -1,9 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppInstance, CreateInstanceInput } from "@/types/atendimento";
 
+// Helper for new tables not yet in generated Supabase types
+const db = supabase as any;
+
 export const InstancesService = {
   async list(restaurantId: string): Promise<WhatsAppInstance[]> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('whatsapp_instances')
       .select('*')
       .eq('restaurant_id', restaurantId)
@@ -14,7 +17,7 @@ export const InstancesService = {
   },
 
   async getById(id: string): Promise<WhatsAppInstance | null> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('whatsapp_instances')
       .select('*')
       .eq('id', id)
@@ -25,7 +28,7 @@ export const InstancesService = {
   },
 
   async create(input: CreateInstanceInput): Promise<WhatsAppInstance> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('whatsapp_instances')
       .insert({
         instance_name: input.instance_name,
@@ -37,8 +40,7 @@ export const InstancesService = {
 
     if (error) throw error;
 
-    // Log event
-    await supabase.from('whatsapp_instance_events').insert({
+    await db.from('whatsapp_instance_events').insert({
       instance_id: data.id,
       event_type: 'created',
       created_by: input.created_by,
@@ -49,7 +51,7 @@ export const InstancesService = {
   },
 
   async update(id: string, updates: Partial<WhatsAppInstance>): Promise<WhatsAppInstance> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('whatsapp_instances')
       .update(updates)
       .eq('id', id)
@@ -61,14 +63,13 @@ export const InstancesService = {
   },
 
   async remove(id: string, userId: string): Promise<void> {
-    // Log event before deletion
-    await supabase.from('whatsapp_instance_events').insert({
+    await db.from('whatsapp_instance_events').insert({
       instance_id: id,
       event_type: 'deleted',
       created_by: userId,
     });
 
-    const { error } = await supabase
+    const { error } = await db
       .from('whatsapp_instances')
       .delete()
       .eq('id', id);
@@ -76,7 +77,6 @@ export const InstancesService = {
     if (error) throw error;
   },
 
-  // Server-side actions (prepared for Edge Function consumption)
   async connectInstance(instanceId: string, restaurantId: string): Promise<{ qrcode?: string }> {
     const instance = await this.getById(instanceId);
     if (!instance) throw new Error('Instância não encontrada');
@@ -92,10 +92,7 @@ export const InstancesService = {
     if (error) throw error;
 
     if (data?.base64) {
-      await this.update(instanceId, {
-        status: 'QRCODE',
-        qrcode_base64: data.base64,
-      } as Partial<WhatsAppInstance>);
+      await this.update(instanceId, { status: 'QRCODE', qrcode_base64: data.base64 });
     }
 
     return { qrcode: data?.base64 };
@@ -113,10 +110,7 @@ export const InstancesService = {
       },
     });
 
-    await this.update(instanceId, {
-      status: 'DISCONNECTED',
-      qrcode_base64: null,
-    } as Partial<WhatsAppInstance>);
+    await this.update(instanceId, { status: 'DISCONNECTED', qrcode_base64: null });
   },
 
   async getInstanceStatus(instanceId: string, restaurantId: string): Promise<string> {
@@ -134,7 +128,7 @@ export const InstancesService = {
     if (error) throw error;
     
     const newStatus = data?.state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
-    await this.update(instanceId, { status: newStatus } as Partial<WhatsAppInstance>);
+    await this.update(instanceId, { status: newStatus });
     
     return newStatus;
   },

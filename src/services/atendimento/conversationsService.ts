@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ConversationThread, ConversationMessage, ConversationNote, ConversationAssignment, ThreadStatus } from "@/types/atendimento";
 
+// Helper for new tables not yet in generated Supabase types
+const db = supabase as any;
+
 export const ConversationsService = {
   async listThreads(restaurantId: string, filters?: {
     status?: ThreadStatus;
@@ -8,7 +11,7 @@ export const ConversationsService = {
     assignedTo?: string;
     search?: string;
   }): Promise<ConversationThread[]> {
-    let query = supabase
+    let query = db
       .from('conversation_threads')
       .select('*')
       .eq('restaurant_id', restaurantId)
@@ -27,7 +30,7 @@ export const ConversationsService = {
   },
 
   async getThread(threadId: string): Promise<ConversationThread | null> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('conversation_threads')
       .select('*')
       .eq('id', threadId)
@@ -38,7 +41,7 @@ export const ConversationsService = {
   },
 
   async getMessages(threadId: string): Promise<ConversationMessage[]> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('conversation_messages')
       .select('*')
       .eq('thread_id', threadId)
@@ -56,7 +59,7 @@ export const ConversationsService = {
     senderId: string;
     isInternal?: boolean;
   }): Promise<ConversationMessage> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('conversation_messages')
       .insert({
         thread_id: params.threadId,
@@ -72,8 +75,7 @@ export const ConversationsService = {
 
     if (error) throw error;
 
-    // Update thread's last message
-    await supabase
+    await db
       .from('conversation_threads')
       .update({
         last_message_at: new Date().toISOString(),
@@ -85,12 +87,12 @@ export const ConversationsService = {
   },
 
   async assignToHuman(threadId: string, userId: string, assignedBy?: string): Promise<void> {
-    await supabase
+    await db
       .from('conversation_threads')
       .update({ status: 'human_active', assigned_to: userId })
       .eq('id', threadId);
 
-    await supabase.from('conversation_assignments').insert({
+    await db.from('conversation_assignments').insert({
       thread_id: threadId,
       assigned_to: userId,
       assigned_by: assignedBy || userId,
@@ -99,12 +101,12 @@ export const ConversationsService = {
   },
 
   async releaseToBot(threadId: string, userId: string): Promise<void> {
-    await supabase
+    await db
       .from('conversation_threads')
       .update({ status: 'bot_active', assigned_to: null })
       .eq('id', threadId);
 
-    await supabase.from('conversation_assignments').insert({
+    await db.from('conversation_assignments').insert({
       thread_id: threadId,
       assigned_to: userId,
       assigned_by: userId,
@@ -113,22 +115,21 @@ export const ConversationsService = {
   },
 
   async closeThread(threadId: string): Promise<void> {
-    await supabase
+    await db
       .from('conversation_threads')
       .update({ status: 'closed', assigned_to: null })
       .eq('id', threadId);
   },
 
   async markAsRead(threadId: string): Promise<void> {
-    await supabase
+    await db
       .from('conversation_threads')
       .update({ unread_count: 0 })
       .eq('id', threadId);
   },
 
-  // Notes
   async getNotes(threadId: string): Promise<ConversationNote[]> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('conversation_notes')
       .select('*')
       .eq('thread_id', threadId)
@@ -139,7 +140,7 @@ export const ConversationsService = {
   },
 
   async addNote(threadId: string, userId: string, content: string): Promise<ConversationNote> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('conversation_notes')
       .insert({ thread_id: threadId, user_id: userId, content })
       .select()
@@ -150,16 +151,15 @@ export const ConversationsService = {
   },
 
   async deleteNote(noteId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await db
       .from('conversation_notes')
       .delete()
       .eq('id', noteId);
     if (error) throw error;
   },
 
-  // Assignments history
   async getAssignments(threadId: string): Promise<ConversationAssignment[]> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('conversation_assignments')
       .select('*')
       .eq('thread_id', threadId)
@@ -169,7 +169,6 @@ export const ConversationsService = {
     return (data || []) as ConversationAssignment[];
   },
 
-  // Realtime subscription
   subscribeToMessages(threadId: string, callback: (msg: ConversationMessage) => void) {
     return supabase
       .channel(`messages-${threadId}`)

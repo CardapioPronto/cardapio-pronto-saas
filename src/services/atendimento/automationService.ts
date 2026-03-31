@@ -1,12 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AutomationSettings, AIHandoffRule, UpdateAutomationInput, HandoffRuleType } from "@/types/atendimento";
 
-// Helper to access new tables not yet in generated types
-const db = () => supabase as any;
+// Helper for new tables not yet in generated Supabase types
+const db = supabase as any;
 
 export const AutomationService = {
   async getSettings(instanceId: string): Promise<AutomationSettings | null> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('automation_settings')
       .select('*')
       .eq('instance_id', instanceId)
@@ -17,7 +17,7 @@ export const AutomationService = {
   },
 
   async upsertSettings(instanceId: string, restaurantId: string, updates: UpdateAutomationInput): Promise<AutomationSettings> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('automation_settings')
       .upsert({
         instance_id: instanceId,
@@ -32,7 +32,7 @@ export const AutomationService = {
   },
 
   async getHandoffRules(instanceId: string): Promise<AIHandoffRule[]> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('ai_handoff_rules')
       .select('*')
       .eq('instance_id', instanceId)
@@ -49,7 +49,7 @@ export const AutomationService = {
     ruleValue: string;
     priority?: number;
   }): Promise<AIHandoffRule> {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('ai_handoff_rules')
       .insert({
         instance_id: params.instanceId,
@@ -66,7 +66,7 @@ export const AutomationService = {
   },
 
   async updateHandoffRule(id: string, updates: Partial<AIHandoffRule>): Promise<void> {
-    const { error } = await supabase
+    const { error } = await db
       .from('ai_handoff_rules')
       .update(updates)
       .eq('id', id);
@@ -75,7 +75,7 @@ export const AutomationService = {
   },
 
   async deleteHandoffRule(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await db
       .from('ai_handoff_rules')
       .delete()
       .eq('id', id);
