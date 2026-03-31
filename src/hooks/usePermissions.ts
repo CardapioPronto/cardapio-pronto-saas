@@ -42,7 +42,8 @@ export const usePermissions = () => {
           'reports_view',
           'settings_view',
           'settings_manage',
-          'employees_manage'
+          'employees_manage',
+          'whatsapp_manage'
         ]);
       } else {
         // Se for funcionário, buscar permissões específicas
