@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Wifi, WifiOff, QrCode, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, Wifi, WifiOff, QrCode, Trash2, RefreshCw, Loader2, Smartphone } from "lucide-react";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { WhatsAppInstance } from "@/types/atendimento";
 
