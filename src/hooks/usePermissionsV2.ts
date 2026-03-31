@@ -27,7 +27,7 @@ export const usePermissionsV2 = () => {
           'dashboard_view', 'subscription_view',
           'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
           'products_manage', 'reports_view', 'settings_view', 
-          'settings_manage', 'employees_manage'
+          'settings_manage', 'employees_manage', 'whatsapp_manage'
         ]);
         setLoading(false);
         return;
@@ -39,7 +39,7 @@ export const usePermissionsV2 = () => {
           'dashboard_view', 'subscription_view',
           'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
           'products_manage', 'reports_view', 'settings_view', 
-          'settings_manage', 'employees_manage'
+          'settings_manage', 'employees_manage', 'whatsapp_manage'
         ]);
         setLoading(false);
         return;
