@@ -16,6 +16,7 @@ import {
   MapPin,
   TableIcon,
   Bot,
+  Headphones,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -163,12 +164,20 @@ const DashboardSidebar = () => {
 
           <div className="space-y-1">
             <Link
+              to="/atendimento"
+              className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
+              onClick={() => setIsOpen(false)}
+            >
+              <Headphones className="mr-3 h-4 w-4" />
+              Atendimento WhatsApp
+            </Link>
+            <Link
               to="/whatsapp-ai"
               className="flex items-center px-3 py-2 text-sm rounded-md text-navy hover:bg-beige/20"
               onClick={() => setIsOpen(false)}
             >
               <Bot className="mr-3 h-4 w-4" />
-              WhatsApp AI
+              WhatsApp AI (Legado)
             </Link>
             <Link
               to="/configuracoes"

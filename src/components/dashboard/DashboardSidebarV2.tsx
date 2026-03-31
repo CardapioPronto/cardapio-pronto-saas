@@ -16,7 +16,8 @@ import {
   Tags,
   Smartphone,
   CreditCard,
-  Shield
+  Shield,
+  Headphones
 } from "lucide-react";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -70,6 +71,12 @@ const navigation = [
     href: "/configuracoes",
     icon: Settings,
     permissions: ['settings_view'] as PermissionType[]
+  },
+  {
+    name: "Atendimento WhatsApp",
+    href: "/atendimento",
+    icon: Headphones,
+    permissions: ['whatsapp_manage'] as PermissionType[]
   },
   {
     name: "Assinatura",

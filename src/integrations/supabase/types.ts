@@ -44,6 +44,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_handoff_rules: {
+        Row: {
+          created_at: string | null
+          id: string
+          instance_id: string
+          is_active: boolean | null
+          priority: number | null
+          restaurant_id: string
+          rule_type: string
+          rule_value: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instance_id: string
+          is_active?: boolean | null
+          priority?: number | null
+          restaurant_id: string
+          rule_type: string
+          rule_value?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instance_id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          restaurant_id?: string
+          rule_type?: string
+          rule_value?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_handoff_rules_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_handoff_rules_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       areas: {
         Row: {
           created_at: string
@@ -73,6 +124,75 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      automation_settings: {
+        Row: {
+          additional_instructions: string | null
+          ai_enabled: boolean | null
+          ai_persona: string | null
+          auto_handoff_confidence_threshold: number | null
+          auto_handoff_enabled: boolean | null
+          bot_name: string | null
+          business_hours: Json | null
+          business_hours_only: boolean | null
+          created_at: string | null
+          id: string
+          instance_id: string
+          restaurant_id: string
+          updated_at: string | null
+          use_menu_knowledge: boolean | null
+          welcome_message: string | null
+        }
+        Insert: {
+          additional_instructions?: string | null
+          ai_enabled?: boolean | null
+          ai_persona?: string | null
+          auto_handoff_confidence_threshold?: number | null
+          auto_handoff_enabled?: boolean | null
+          bot_name?: string | null
+          business_hours?: Json | null
+          business_hours_only?: boolean | null
+          created_at?: string | null
+          id?: string
+          instance_id: string
+          restaurant_id: string
+          updated_at?: string | null
+          use_menu_knowledge?: boolean | null
+          welcome_message?: string | null
+        }
+        Update: {
+          additional_instructions?: string | null
+          ai_enabled?: boolean | null
+          ai_persona?: string | null
+          auto_handoff_confidence_threshold?: number | null
+          auto_handoff_enabled?: boolean | null
+          bot_name?: string | null
+          business_hours?: Json | null
+          business_hours_only?: boolean | null
+          created_at?: string | null
+          id?: string
+          instance_id?: string
+          restaurant_id?: string
+          updated_at?: string | null
+          use_menu_knowledge?: boolean | null
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_settings_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: true
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blog_posts: {
         Row: {
@@ -219,6 +339,202 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      conversation_assignments: {
+        Row: {
+          action: string
+          assigned_by: string | null
+          assigned_to: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          thread_id: string
+        }
+        Insert: {
+          action: string
+          assigned_by?: string | null
+          assigned_to: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          thread_id: string
+        }
+        Update: {
+          action?: string
+          assigned_by?: string | null
+          assigned_to?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_assignments_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          media_url: string | null
+          message_type: string | null
+          metadata: Json | null
+          restaurant_id: string
+          sender_id: string | null
+          sender_type: string
+          thread_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          media_url?: string | null
+          message_type?: string | null
+          metadata?: Json | null
+          restaurant_id: string
+          sender_id?: string | null
+          sender_type: string
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          media_url?: string | null
+          message_type?: string | null
+          metadata?: Json | null
+          restaurant_id?: string
+          sender_id?: string | null
+          sender_type?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_notes: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          thread_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          thread_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          thread_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_notes_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_threads: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string
+          id: string
+          instance_id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          metadata: Json | null
+          remote_jid: string
+          restaurant_id: string
+          status: string
+          unread_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone: string
+          id?: string
+          instance_id: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          metadata?: Json | null
+          remote_jid: string
+          restaurant_id: string
+          status?: string
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string
+          id?: string
+          instance_id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          metadata?: Json | null
+          remote_jid?: string
+          restaurant_id?: string
+          status?: string
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_threads_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_threads_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demos: {
         Row: {
@@ -1268,6 +1584,94 @@ export type Database = {
           },
         ]
       }
+      whatsapp_instance_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          instance_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          instance_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          instance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instance_events_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_instances: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          evolution_instance_id: string | null
+          id: string
+          instance_name: string
+          is_active: boolean | null
+          phone_number: string | null
+          qrcode_base64: string | null
+          restaurant_id: string
+          status: string
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          evolution_instance_id?: string | null
+          id?: string
+          instance_name: string
+          is_active?: boolean | null
+          phone_number?: string | null
+          qrcode_base64?: string | null
+          restaurant_id: string
+          status?: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          evolution_instance_id?: string | null
+          id?: string
+          instance_name?: string
+          is_active?: boolean | null
+          phone_number?: string | null
+          qrcode_base64?: string | null
+          restaurant_id?: string
+          status?: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_integration: {
         Row: {
           ai_enabled: boolean | null
@@ -1483,6 +1887,7 @@ export type Database = {
         | "employees_manage"
         | "dashboard_view"
         | "subscription_view"
+        | "whatsapp_manage"
       user_type: "owner" | "employee"
     }
     CompositeTypes: {
@@ -1623,6 +2028,7 @@ export const Constants = {
         "employees_manage",
         "dashboard_view",
         "subscription_view",
+        "whatsapp_manage",
       ],
       user_type: ["owner", "employee"],
     },
