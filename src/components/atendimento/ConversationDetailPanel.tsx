@@ -1,17 +1,17 @@
 import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Send, Bot, User, HandMetal, ArrowLeftRight, XCircle, 
-  StickyNote, Loader2, Phone, MessageSquare
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Send, Bot, User, HandMetal, ArrowLeftRight, XCircle,
+  StickyNote, Loader2, Phone, MessageSquare, AlertTriangle,
+  UserCheck, ArrowRightLeft
 } from "lucide-react";
-import { ConversationThread, ConversationMessage, ConversationNote } from "@/types/atendimento";
+import { ConversationThread, ConversationMessage, ConversationNote, ThreadStatus } from "@/types/atendimento";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,6 +26,8 @@ interface ConversationDetailPanelProps {
   closeConversation: () => Promise<void>;
   addNote: (content: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
+  canManage?: boolean;
+  isOwnerOrAdmin?: boolean;
 }
 
 function MessageBubble({ message }: { message: ConversationMessage }) {
@@ -33,33 +35,75 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   const isBot = message.sender_type === 'bot';
   const isInternal = message.is_internal;
 
+  const senderLabel = isCustomer ? 'Cliente' : isBot ? 'IA' : isInternal ? 'Nota interna' : 'Atendente';
+  const senderIcon = isBot ? <Bot className="h-3 w-3" /> : !isCustomer ? <User className="h-3 w-3" /> : null;
+
   return (
-    <div className={`flex ${isCustomer ? 'justify-start' : 'justify-end'} mb-2`}>
-      <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+    <div className={`flex ${isCustomer ? 'justify-start' : 'justify-end'} mb-3`}>
+      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
         isInternal
-          ? 'bg-yellow-50 border border-yellow-200 text-yellow-900'
+          ? 'bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-200'
           : isCustomer
             ? 'bg-muted text-foreground'
             : isBot
-              ? 'bg-blue-50 border border-blue-100 text-blue-900'
+              ? 'bg-blue-50 border border-blue-100 text-blue-900 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-200'
               : 'bg-primary text-primary-foreground'
       }`}>
         <div className="flex items-center gap-1 mb-0.5">
-          {isBot && <Bot className="h-3 w-3" />}
-          {!isCustomer && !isBot && <User className="h-3 w-3" />}
           {isInternal && <StickyNote className="h-3 w-3" />}
-          <span className="text-[10px] font-medium opacity-70">
-            {isCustomer ? 'Cliente' : isBot ? 'IA' : isInternal ? 'Nota interna' : 'Atendente'}
-          </span>
+          {!isInternal && senderIcon}
+          <span className="text-[10px] font-medium opacity-70">{senderLabel}</span>
         </div>
-        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        <span className="text-[10px] opacity-50 mt-1 block">
+        <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        <span className="text-[10px] opacity-50 mt-1 block text-right">
           {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
         </span>
       </div>
     </div>
   );
 }
+
+function DateSeparator({ date }: { date: string }) {
+  return (
+    <div className="flex items-center gap-3 my-4">
+      <div className="flex-1 border-t border-border/50" />
+      <span className="text-[11px] text-muted-foreground font-medium px-2">
+        {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
+      </span>
+      <div className="flex-1 border-t border-border/50" />
+    </div>
+  );
+}
+
+function groupMessagesByDate(messages: ConversationMessage[]) {
+  const groups: { date: string; messages: ConversationMessage[] }[] = [];
+  let currentDate = '';
+
+  for (const msg of messages) {
+    const msgDate = format(new Date(msg.created_at), 'yyyy-MM-dd');
+    if (msgDate !== currentDate) {
+      currentDate = msgDate;
+      groups.push({ date: msg.created_at, messages: [msg] });
+    } else {
+      groups[groups.length - 1].messages.push(msg);
+    }
+  }
+  return groups;
+}
+
+const statusColor: Record<ThreadStatus, string> = {
+  bot_active: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  waiting_human: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  human_active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  closed: "bg-muted text-muted-foreground",
+};
+
+const statusLabel: Record<ThreadStatus, string> = {
+  bot_active: "IA ativa",
+  waiting_human: "Aguardando humano",
+  human_active: "Atendimento humano",
+  closed: "Encerrada",
+};
 
 const ConversationDetailPanel = ({
   thread,
@@ -72,6 +116,8 @@ const ConversationDetailPanel = ({
   closeConversation,
   addNote,
   deleteNote,
+  canManage = true,
+  isOwnerOrAdmin = false,
 }: ConversationDetailPanelProps) => {
   const [messageText, setMessageText] = useState("");
   const [noteText, setNoteText] = useState("");
@@ -86,18 +132,21 @@ const ConversationDetailPanel = ({
 
   if (loading || !thread) {
     return (
-      <Card className="h-full flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </Card>
+      </div>
     );
   }
 
   const handleSend = async () => {
     if (!messageText.trim()) return;
     setSending(true);
-    await sendMessage(messageText.trim());
-    setMessageText("");
-    setSending(false);
+    try {
+      await sendMessage(messageText.trim());
+      setMessageText("");
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleAddNote = async () => {
@@ -106,89 +155,118 @@ const ConversationDetailPanel = ({
     setNoteText("");
   };
 
-  const statusColor: Record<string, string> = {
-    bot_active: "bg-blue-100 text-blue-800",
-    waiting_human: "bg-yellow-100 text-yellow-800",
-    human_active: "bg-green-100 text-green-800",
-    closed: "bg-gray-100 text-gray-600",
-  };
-
-  const statusLabel: Record<string, string> = {
-    bot_active: "IA ativa",
-    waiting_human: "Aguardando humano",
-    human_active: "Atendimento humano",
-    closed: "Encerrada",
-  };
+  const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <Card className="h-full flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <CardHeader className="pb-3 border-b">
+      <div className="px-4 py-3 border-b bg-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Phone className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <h3 className="font-semibold text-sm">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm text-foreground truncate">
                 {thread.customer_name || thread.customer_phone}
               </h3>
               <p className="text-xs text-muted-foreground">{thread.customer_phone}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${statusColor[thread.status]}`}>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {thread.assigned_to && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <UserCheck className="h-3.5 w-3.5" />
+                <span>Atribuída</span>
+              </div>
+            )}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColor[thread.status]}`}>
               {statusLabel[thread.status]}
             </span>
           </div>
         </div>
+
         {/* Action buttons */}
-        <div className="flex gap-2 mt-2 flex-wrap">
-          {(thread.status === 'bot_active' || thread.status === 'waiting_human') && (
-            <Button size="sm" onClick={assumeConversation} className="gap-1 text-xs">
-              <HandMetal className="h-3 w-3" />
-              Assumir Atendimento
-            </Button>
-          )}
-          {thread.status === 'human_active' && (
-            <Button size="sm" variant="outline" onClick={releaseToBot} className="gap-1 text-xs">
-              <ArrowLeftRight className="h-3 w-3" />
-              Devolver para IA
-            </Button>
-          )}
-          {thread.status !== 'closed' && (
-            <Button size="sm" variant="secondary" onClick={closeConversation} className="gap-1 text-xs">
-              <XCircle className="h-3 w-3" />
-              Encerrar
-            </Button>
-          )}
-        </div>
-      </CardHeader>
+        {canManage && (
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {(thread.status === 'bot_active' || thread.status === 'waiting_human') && (
+              <Button size="sm" onClick={assumeConversation} className="gap-1.5 text-xs h-8">
+                <HandMetal className="h-3.5 w-3.5" />
+                Assumir Atendimento
+              </Button>
+            )}
+            {thread.status === 'waiting_human' && isOwnerOrAdmin && (
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                Transferir
+              </Button>
+            )}
+            {thread.status === 'human_active' && (
+              <Button size="sm" variant="outline" onClick={releaseToBot} className="gap-1.5 text-xs h-8">
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+                Devolver para IA
+              </Button>
+            )}
+            {thread.status !== 'closed' && (
+              <Button size="sm" variant="ghost" onClick={closeConversation} className="gap-1.5 text-xs h-8 text-destructive hover:text-destructive">
+                <XCircle className="h-3.5 w-3.5" />
+                Encerrar
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Human active warning */}
+      {thread.status === 'human_active' && (
+        <Alert className="mx-3 mt-2 border-green-200 bg-green-50/80 dark:bg-green-900/10 dark:border-green-800/30">
+          <AlertTriangle className="h-4 w-4 text-green-700 dark:text-green-400" />
+          <AlertDescription className="text-xs text-green-800 dark:text-green-300">
+            IA pausada durante atendimento humano. Devolva para a IA quando finalizar.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {thread.status === 'waiting_human' && (
+        <Alert className="mx-3 mt-2 border-yellow-200 bg-yellow-50/80 dark:bg-yellow-900/10 dark:border-yellow-800/30">
+          <AlertTriangle className="h-4 w-4 text-yellow-700 dark:text-yellow-400" />
+          <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-300">
+            Cliente aguardando atendimento humano. Assuma a conversa para responder.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Content area with tabs */}
       <Tabs defaultValue="messages" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-3 mt-2 w-auto">
-          <TabsTrigger value="messages" className="gap-1 text-xs">
-            <MessageSquare className="h-3 w-3" />
+        <TabsList className="mx-3 mt-2 w-auto self-start">
+          <TabsTrigger value="messages" className="gap-1.5 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" />
             Mensagens
           </TabsTrigger>
-          <TabsTrigger value="notes" className="gap-1 text-xs">
-            <StickyNote className="h-3 w-3" />
+          <TabsTrigger value="notes" className="gap-1.5 text-xs">
+            <StickyNote className="h-3.5 w-3.5" />
             Notas ({notes.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="messages" className="flex-1 flex flex-col min-h-0 m-0">
-          {/* Messages */}
+          {/* Messages timeline */}
           <ScrollArea className="flex-1 px-4 py-2" ref={scrollRef}>
             <div className="space-y-1">
               {messages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Nenhuma mensagem ainda</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">Nenhuma mensagem ainda</p>
+                  <p className="text-xs mt-1">As mensagens aparecerão aqui em tempo real</p>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <MessageBubble key={msg.id} message={msg} />
+                messageGroups.map((group, i) => (
+                  <div key={i}>
+                    <DateSeparator date={group.date} />
+                    {group.messages.map((msg) => (
+                      <MessageBubble key={msg.id} message={msg} />
+                    ))}
+                  </div>
                 ))
               )}
             </div>
@@ -196,24 +274,30 @@ const ConversationDetailPanel = ({
 
           {/* Message input */}
           {thread.status !== 'closed' && (
-            <div className="p-3 border-t">
-              <div className="flex gap-2">
-                <Input
-                  placeholder={thread.status === 'human_active' ? "Digite sua mensagem..." : "Assuma a conversa para responder"}
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                  disabled={thread.status !== 'human_active' || sending}
-                  className="text-sm"
-                />
-                <Button 
-                  size="icon" 
-                  onClick={handleSend} 
-                  disabled={thread.status !== 'human_active' || !messageText.trim() || sending}
-                >
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
-              </div>
+            <div className="p-3 border-t bg-card">
+              {thread.status === 'human_active' ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite sua mensagem..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                    disabled={sending}
+                    className="text-sm"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleSend}
+                    disabled={!messageText.trim() || sending}
+                  >
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-2 text-xs text-muted-foreground">
+                  Assuma a conversa para enviar mensagens
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
@@ -222,21 +306,23 @@ const ConversationDetailPanel = ({
           <ScrollArea className="flex-1 px-4 py-2">
             <div className="space-y-2">
               {notes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Nenhuma nota interna</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">Nenhuma nota interna</p>
+                  <p className="text-xs mt-1">Adicione notas para a equipe sobre esta conversa</p>
                 </div>
               ) : (
                 notes.map((note) => (
-                  <div key={note.id} className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-                    <p className="text-sm">{note.content}</p>
+                  <div key={note.id} className="p-3 bg-yellow-50 rounded-lg border border-yellow-100 dark:bg-yellow-900/10 dark:border-yellow-800/30">
+                    <p className="text-sm text-foreground">{note.content}</p>
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-[10px] text-muted-foreground">
-                        {format(new Date(note.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                        {format(new Date(note.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                       </span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-xs text-destructive"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-destructive hover:text-destructive"
                         onClick={() => deleteNote(note.id)}
                       >
                         Remover
@@ -247,22 +333,22 @@ const ConversationDetailPanel = ({
               )}
             </div>
           </ScrollArea>
-          <div className="p-3 border-t">
+          <div className="p-3 border-t bg-card">
             <div className="flex gap-2">
               <Textarea
-                placeholder="Adicionar nota interna..."
+                placeholder="Adicionar nota interna para a equipe..."
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                className="text-sm min-h-[60px]"
+                className="text-sm min-h-[60px] resize-none"
               />
-              <Button size="sm" onClick={handleAddNote} disabled={!noteText.trim()}>
+              <Button size="sm" onClick={handleAddNote} disabled={!noteText.trim()} className="self-end">
                 Salvar
               </Button>
             </div>
           </div>
         </TabsContent>
       </Tabs>
-    </Card>
+    </div>
   );
 };
 
