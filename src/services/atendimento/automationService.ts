@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AutomationSettings, AIHandoffRule, UpdateAutomationInput, HandoffRuleType } from "@/types/atendimento";
 
+// Helper to access new tables not yet in generated types
+const db = () => supabase as any;
+
 export const AutomationService = {
   async getSettings(instanceId: string): Promise<AutomationSettings | null> {
     const { data, error } = await supabase
