@@ -1888,6 +1888,11 @@ export type Database = {
         | "dashboard_view"
         | "subscription_view"
         | "whatsapp_manage"
+        | "whatsapp_manage_instances"
+        | "whatsapp_take_conversations"
+        | "whatsapp_reply_as_human"
+        | "whatsapp_view_all_conversations"
+        | "whatsapp_configure_automation"
       user_type: "owner" | "employee"
     }
     CompositeTypes: {
@@ -2029,6 +2034,11 @@ export const Constants = {
         "dashboard_view",
         "subscription_view",
         "whatsapp_manage",
+        "whatsapp_manage_instances",
+        "whatsapp_take_conversations",
+        "whatsapp_reply_as_human",
+        "whatsapp_view_all_conversations",
+        "whatsapp_configure_automation",
       ],
       user_type: ["owner", "employee"],
     },
