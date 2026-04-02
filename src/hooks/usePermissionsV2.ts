@@ -27,7 +27,10 @@ export const usePermissionsV2 = () => {
           'dashboard_view', 'subscription_view',
           'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
           'products_manage', 'reports_view', 'settings_view', 
-          'settings_manage', 'employees_manage', 'whatsapp_manage'
+          'settings_manage', 'employees_manage', 'whatsapp_manage',
+          'whatsapp_manage_instances', 'whatsapp_take_conversations',
+          'whatsapp_reply_as_human', 'whatsapp_view_all_conversations',
+          'whatsapp_configure_automation'
         ]);
         setLoading(false);
         return;
