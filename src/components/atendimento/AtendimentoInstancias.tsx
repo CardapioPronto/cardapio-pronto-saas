@@ -68,7 +68,7 @@ function InstanceCard({ instance, onConnect, onDisconnect, onDelete, canManage }
       </CardHeader>
       <CardContent className="space-y-3">
         {/* QR Code display */}
-        {(instance.status === 'QRCODE' || instance.status === 'connecting') && instance.qrcode_base64 && (
+        {(instance.status === 'QRCODE' || instance.status === 'CONNECTING') && instance.qrcode_base64 && (
           <div className="flex justify-center p-2 bg-muted/30 rounded-lg">
             <img 
               src={instance.qrcode_base64.startsWith('data:') ? instance.qrcode_base64 : `data:image/png;base64,${instance.qrcode_base64}`}
