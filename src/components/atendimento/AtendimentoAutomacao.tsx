@@ -559,10 +559,10 @@ const AtendimentoAutomacao = () => {
                     <Switch checked={allowManualReturn} onCheckedChange={setAllowManualReturn} />
                   </div>
 
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                      <div className="text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                      <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                      <div className="text-xs text-muted-foreground space-y-1">
                         <p className="font-medium">Regras de status da conversa:</p>
                         <ul className="list-disc pl-4 space-y-0.5">
                           <li><strong>bot_active</strong> → IA responde normalmente</li>
