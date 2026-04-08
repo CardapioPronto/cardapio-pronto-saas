@@ -1,4 +1,4 @@
-export type InstanceStatus = 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'QRCODE';
+export type InstanceStatus = 'CREATED' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
 
 export type ThreadStatus = 'bot_active' | 'waiting_human' | 'human_active' | 'closed';
 
@@ -18,6 +18,8 @@ export interface WhatsAppInstance {
   evolution_instance_id: string | null;
   webhook_url: string | null;
   is_active: boolean;
+  automation_enabled: boolean;
+  last_connection_update_at: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
