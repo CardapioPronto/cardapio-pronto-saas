@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppInstance, CreateInstanceInput } from "@/types/atendimento";
 
-// Helper for new tables not yet in generated Supabase types
+// Cast to any until Supabase types are regenerated with new columns
 const db = supabase as any;
 
 export const InstancesService = {
@@ -34,12 +34,14 @@ export const InstancesService = {
         instance_name: input.instance_name,
         restaurant_id: input.restaurant_id,
         created_by: input.created_by,
+        status: 'CREATED',
       })
       .select()
       .single();
 
     if (error) throw error;
 
+    // Log creation event
     await db.from('whatsapp_instance_events').insert({
       instance_id: data.id,
       event_type: 'created',
@@ -63,6 +65,7 @@ export const InstancesService = {
   },
 
   async remove(id: string, userId: string): Promise<void> {
+    // Log deletion event before removing
     await db.from('whatsapp_instance_events').insert({
       instance_id: id,
       event_type: 'deleted',
@@ -75,6 +78,10 @@ export const InstancesService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  async toggleAutomation(id: string, enabled: boolean): Promise<WhatsAppInstance> {
+    return this.update(id, { automation_enabled: enabled } as any);
   },
 
   async connectInstance(instanceId: string, restaurantId: string): Promise<{ qrcode?: string }> {
@@ -92,7 +99,11 @@ export const InstancesService = {
     if (error) throw error;
 
     if (data?.base64) {
-      await this.update(instanceId, { status: 'QRCODE', qrcode_base64: data.base64 });
+      await this.update(instanceId, {
+        status: 'CONNECTING',
+        qrcode_base64: data.base64,
+        last_connection_update_at: new Date().toISOString(),
+      } as any);
     }
 
     return { qrcode: data?.base64 };
@@ -110,10 +121,14 @@ export const InstancesService = {
       },
     });
 
-    await this.update(instanceId, { status: 'DISCONNECTED', qrcode_base64: null });
+    await this.update(instanceId, {
+      status: 'DISCONNECTED',
+      qrcode_base64: null,
+      last_connection_update_at: new Date().toISOString(),
+    } as any);
   },
 
-  async getInstanceStatus(instanceId: string, restaurantId: string): Promise<string> {
+  async refreshStatus(instanceId: string, restaurantId: string): Promise<InstanceStatus> {
     const instance = await this.getById(instanceId);
     if (!instance) throw new Error('Instância não encontrada');
 
@@ -126,10 +141,31 @@ export const InstancesService = {
     });
 
     if (error) throw error;
-    
-    const newStatus = data?.state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
-    await this.update(instanceId, { status: newStatus });
-    
+
+    const newStatus: InstanceStatus = data?.state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
+    await this.update(instanceId, {
+      status: newStatus,
+      last_connection_update_at: new Date().toISOString(),
+      ...(newStatus === 'CONNECTED' && data?.phoneNumber ? { phone_number: data.phoneNumber } : {}),
+    } as any);
+
     return newStatus;
   },
+
+  async configureWebhook(instanceId: string, restaurantId: string): Promise<void> {
+    const instance = await this.getById(instanceId);
+    if (!instance) throw new Error('Instância não encontrada');
+
+    const { error } = await supabase.functions.invoke('evolution-api', {
+      body: {
+        action: 'set_webhook',
+        instanceName: instance.instance_name,
+        restaurantId,
+      },
+    });
+
+    if (error) throw error;
+  },
 };
+
+type InstanceStatus = WhatsAppInstance['status'];

@@ -2,81 +2,79 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Wifi, WifiOff, QrCode, Trash2, RefreshCw, Loader2, Smartphone, AlertCircle, Clock, User, ShieldAlert } from "lucide-react";
+import { Plus, Wifi, WifiOff, QrCode, Trash2, RefreshCw, Loader2, Smartphone, AlertCircle, Clock, User, ShieldAlert, Bot } from "lucide-react";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
-import { WhatsAppInstance } from "@/types/atendimento";
+import { WhatsAppInstance, InstanceStatus } from "@/types/atendimento";
+import { InstancesService } from "@/services/atendimento/instancesService";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
-type DisplayStatus = 'created' | 'connecting' | 'connected' | 'disconnected' | 'error' | 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'QRCODE';
-
-const normalizeStatus = (status: string): string => {
-  const map: Record<string, string> = {
-    CONNECTED: 'connected',
-    DISCONNECTED: 'disconnected',
-    CONNECTING: 'connecting',
-    QRCODE: 'connecting',
-    created: 'created',
-    connecting: 'connecting',
-    connected: 'connected',
-    disconnected: 'disconnected',
-    error: 'error',
-  };
-  return map[status] || 'disconnected';
+const statusConfig: Record<InstanceStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; color: string }> = {
+  CREATED: { label: "Criada", variant: "outline", icon: <Clock className="h-3 w-3" />, color: "text-muted-foreground" },
+  CONNECTING: { label: "Conectando...", variant: "secondary", icon: <Loader2 className="h-3 w-3 animate-spin" />, color: "text-yellow-600" },
+  CONNECTED: { label: "Conectado", variant: "default", icon: <Wifi className="h-3 w-3" />, color: "text-green-600" },
+  DISCONNECTED: { label: "Desconectado", variant: "outline", icon: <WifiOff className="h-3 w-3" />, color: "text-muted-foreground" },
+  ERROR: { label: "Erro", variant: "destructive", icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive" },
 };
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; color: string }> = {
-  created: { label: "Criada", variant: "outline", icon: <Clock className="h-3 w-3" />, color: "text-muted-foreground" },
-  connecting: { label: "Conectando...", variant: "secondary", icon: <Loader2 className="h-3 w-3 animate-spin" />, color: "text-yellow-600" },
-  connected: { label: "Conectado", variant: "default", icon: <Wifi className="h-3 w-3" />, color: "text-green-600" },
-  disconnected: { label: "Desconectado", variant: "destructive", icon: <WifiOff className="h-3 w-3" />, color: "text-destructive" },
-  error: { label: "Erro", variant: "destructive", icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive" },
-};
-
-function InstanceCard({ instance, onConnect, onDisconnect, onDelete, canManage }: {
+function InstanceCard({ instance, canManage, onConnect, onDisconnect, onDelete, onRefresh, onToggleAutomation }: {
   instance: WhatsAppInstance;
+  canManage: boolean;
   onConnect: (id: string) => void;
   onDisconnect: (id: string) => void;
   onDelete: (id: string) => void;
-  canManage: boolean;
+  onRefresh: (id: string) => void;
+  onToggleAutomation: (id: string, enabled: boolean) => void;
 }) {
-  const normalized = normalizeStatus(instance.status);
-  const status = statusConfig[normalized] || statusConfig.disconnected;
+  const cfg = statusConfig[instance.status] || statusConfig.DISCONNECTED;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{instance.instance_name}</CardTitle>
-          <Badge variant={status.variant} className="gap-1">
-            {status.icon}
-            {status.label}
+          <CardTitle className="text-lg truncate">{instance.instance_name}</CardTitle>
+          <Badge variant={cfg.variant} className="gap-1 shrink-0">
+            {cfg.icon}
+            {cfg.label}
           </Badge>
         </div>
-        <CardDescription className="space-y-1">
-          <span className="flex items-center gap-1">
-            <Smartphone className="h-3 w-3" />
-            {instance.phone_number ? instance.phone_number : "Número não conectado"}
-          </span>
+        <CardDescription className="flex items-center gap-1">
+          <Smartphone className="h-3 w-3" />
+          {instance.phone_number || "Número não conectado"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* QR Code display */}
-        {(instance.status === 'QRCODE' || instance.status === 'CONNECTING') && instance.qrcode_base64 && (
-          <div className="flex justify-center p-2 bg-muted/30 rounded-lg">
-            <img 
+      <CardContent className="space-y-4">
+        {/* QR Code */}
+        {instance.status === 'CONNECTING' && instance.qrcode_base64 && (
+          <div className="flex justify-center p-3 bg-muted/30 rounded-lg">
+            <img
               src={instance.qrcode_base64.startsWith('data:') ? instance.qrcode_base64 : `data:image/png;base64,${instance.qrcode_base64}`}
-              alt="QR Code para conexão" 
+              alt="QR Code para conexão"
               className="w-48 h-48 rounded-lg border"
             />
           </div>
         )}
+
+        {/* Automation toggle */}
+        <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Automação IA</span>
+          </div>
+          <Switch
+            checked={instance.automation_enabled}
+            onCheckedChange={(checked) => onToggleAutomation(instance.id, checked)}
+            disabled={!canManage}
+          />
+        </div>
 
         {/* Metadata */}
         <div className="text-xs text-muted-foreground space-y-1">
@@ -88,29 +86,37 @@ function InstanceCard({ instance, onConnect, onDisconnect, onDelete, canManage }
             <Clock className="h-3 w-3" />
             <span>Atualizado: {instance.updated_at ? format(new Date(instance.updated_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}</span>
           </div>
+          {instance.last_connection_update_at && (
+            <div className="flex items-center gap-1">
+              <Wifi className="h-3 w-3" />
+              <span>Conexão: {format(new Date(instance.last_connection_update_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex gap-2 flex-wrap pt-1">
           {canManage ? (
             <>
-              {(normalized === 'disconnected' || normalized === 'created') && (
+              {(instance.status === 'DISCONNECTED' || instance.status === 'CREATED' || instance.status === 'ERROR') && (
                 <Button size="sm" onClick={() => onConnect(instance.id)} className="gap-1">
                   <QrCode className="h-4 w-4" />
                   Conectar
                 </Button>
               )}
-              {normalized === 'connected' && (
+              {instance.status === 'CONNECTED' && (
                 <Button size="sm" variant="outline" onClick={() => onDisconnect(instance.id)} className="gap-1">
                   <WifiOff className="h-4 w-4" />
                   Desconectar
                 </Button>
               )}
+              <Button size="sm" variant="ghost" onClick={() => onRefresh(instance.id)} className="gap-1">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="destructive" className="gap-1">
+                  <Button size="sm" variant="destructive" className="gap-1 ml-auto">
                     <Trash2 className="h-4 w-4" />
-                    Remover
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -122,9 +128,7 @@ function InstanceCard({ instance, onConnect, onDisconnect, onDelete, canManage }
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(instance.id)}>
-                      Remover
-                    </AlertDialogAction>
+                    <AlertDialogAction onClick={() => onDelete(instance.id)}>Remover</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -151,7 +155,7 @@ function InstanceCard({ instance, onConnect, onDisconnect, onDelete, canManage }
 }
 
 const AtendimentoInstancias = () => {
-  const { instances, loading, createInstance, deleteInstance, connectInstance, disconnectInstance, refetch } = useWhatsAppInstances();
+  const { instances, loading, restaurantId, createInstance, deleteInstance, connectInstance, disconnectInstance, refetch } = useWhatsAppInstances();
   const { hasPermission, isOwner, isSuperAdmin } = usePermissionsV2();
   const [newName, setNewName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -168,6 +172,27 @@ const AtendimentoInstancias = () => {
       setDialogOpen(false);
     }
     setCreating(false);
+  };
+
+  const handleRefresh = async (id: string) => {
+    if (!restaurantId) return;
+    try {
+      await InstancesService.refreshStatus(id, restaurantId);
+      await refetch();
+      toast.success("Status atualizado");
+    } catch {
+      toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handleToggleAutomation = async (id: string, enabled: boolean) => {
+    try {
+      await InstancesService.toggleAutomation(id, enabled);
+      await refetch();
+      toast.success(enabled ? "Automação ativada" : "Automação desativada");
+    } catch {
+      toast.error("Erro ao alterar automação");
+    }
   };
 
   return (
@@ -196,7 +221,7 @@ const AtendimentoInstancias = () => {
                 <DialogHeader>
                   <DialogTitle>Criar Nova Instância</DialogTitle>
                   <DialogDescription>
-                    Crie uma nova conexão WhatsApp para o seu estabelecimento.
+                    O nome da instância deve ser único e será usado como identificador no sistema.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -204,17 +229,18 @@ const AtendimentoInstancias = () => {
                     <Label htmlFor="instance-name">Nome da instância</Label>
                     <Input
                       id="instance-name"
-                      placeholder="Ex: Atendimento Principal"
+                      placeholder="Ex: atendimento-principal"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Este nome será usado para identificação no n8n e Evolution API.
+                    </p>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancelar
-                  </Button>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
                   <Button onClick={handleCreate} disabled={creating || !newName.trim()}>
                     {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Criar
@@ -250,10 +276,12 @@ const AtendimentoInstancias = () => {
             <InstanceCard
               key={instance.id}
               instance={instance}
+              canManage={canManage}
               onConnect={connectInstance}
               onDisconnect={disconnectInstance}
               onDelete={deleteInstance}
-              canManage={canManage}
+              onRefresh={handleRefresh}
+              onToggleAutomation={handleToggleAutomation}
             />
           ))}
         </div>
