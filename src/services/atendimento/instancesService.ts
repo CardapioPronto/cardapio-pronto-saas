@@ -28,6 +28,7 @@ export const InstancesService = {
   },
 
   async create(input: CreateInstanceInput): Promise<WhatsAppInstance> {
+    // 1. Insert into database first
     const { data, error } = await db
       .from('whatsapp_instances')
       .insert({
@@ -41,13 +42,40 @@ export const InstancesService = {
 
     if (error) throw error;
 
-    // Log creation event
+    // 2. Log creation event
     await db.from('whatsapp_instance_events').insert({
       instance_id: data.id,
       event_type: 'created',
       created_by: input.created_by,
       event_data: { instance_name: input.instance_name },
     });
+
+    // 3. Call Evolution API to create instance on the server
+    try {
+      const { data: evoResult, error: evoError } = await supabase.functions.invoke('evolution-api', {
+        body: {
+          action: 'create_instance',
+          instanceName: input.instance_name,
+          restaurantId: input.restaurant_id,
+        },
+      });
+
+      if (evoError) {
+        console.error('Evolution API create error:', evoError);
+      } else if (evoResult?.instance) {
+        // Update DB with Evolution instance ID
+        await db
+          .from('whatsapp_instances')
+          .update({
+            evolution_instance_id: evoResult.instance?.instanceName || null,
+            status: 'CREATED',
+          })
+          .eq('id', data.id);
+      }
+    } catch (evoErr) {
+      console.error('Failed to create instance on Evolution API:', evoErr);
+      // Don't throw - instance is saved in DB, Evolution can be retried
+    }
 
     return data as WhatsAppInstance;
   },
