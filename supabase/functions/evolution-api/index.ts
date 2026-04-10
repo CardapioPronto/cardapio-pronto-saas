@@ -27,7 +27,18 @@ serve(async (req) => {
     console.log(`Evolution API action: ${action} for instance: ${instanceName}`);
 
     if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      throw new Error('Evolution API não configurada. Verifique as variáveis de ambiente.');
+      console.error('Missing env vars:', { 
+        hasUrl: !!EVOLUTION_API_URL, 
+        hasKey: !!EVOLUTION_API_KEY,
+        urlValue: EVOLUTION_API_URL?.substring(0, 20),
+      });
+      throw new Error('Evolution API não configurada. Verifique EVOLUTION_API_URL e EVOLUTION_API_KEY.');
+    }
+
+    // Validate that EVOLUTION_API_URL looks like a URL
+    const baseUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      throw new Error(`EVOLUTION_API_URL inválida: deve começar com http:// ou https://. Valor atual: ${baseUrl.substring(0, 30)}`);
     }
 
     const headers = {
@@ -39,9 +50,10 @@ serve(async (req) => {
     let result;
 
     switch (action) {
-      case 'create_instance':
-        // Cria uma nova instância
-        response = await fetch(`${EVOLUTION_API_URL}/instance/create`, {
+      case 'create_instance': {
+        const createUrl = `${baseUrl}/instance/create`;
+        console.log('Creating instance at:', createUrl);
+        response = await fetch(createUrl, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -51,85 +63,91 @@ serve(async (req) => {
           }),
         });
         result = await response.json();
-        console.log('Create instance result:', result);
+        console.log('Create instance result:', JSON.stringify(result));
 
-        if (result.instance) {
-          // Configura webhook automaticamente após criar a instância
-          await fetch(`${EVOLUTION_API_URL}/webhook/set/${instanceName}`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              url: N8N_WEBHOOK_URL,
-              webhookByEvents: false,
-              webhookBase64: false,
-              events: [
-                'MESSAGES_UPSERT',
-                'MESSAGES_UPDATE',
-                'CONNECTION_UPDATE',
-                'QRCODE_UPDATED',
-              ],
-            }),
-          });
-          console.log('Webhook configured for instance:', instanceName);
+        // Configure webhook automatically after creation
+        if (result.instance && N8N_WEBHOOK_URL) {
+          try {
+            const webhookUrl = `${baseUrl}/webhook/set/${instanceName}`;
+            console.log('Setting webhook at:', webhookUrl);
+            await fetch(webhookUrl, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                url: N8N_WEBHOOK_URL,
+                webhookByEvents: false,
+                webhookBase64: false,
+                events: [
+                  'MESSAGES_UPSERT',
+                  'MESSAGES_UPDATE',
+                  'CONNECTION_UPDATE',
+                  'QRCODE_UPDATED',
+                ],
+              }),
+            });
+            console.log('Webhook configured for instance:', instanceName);
+          } catch (whErr) {
+            console.error('Failed to set webhook:', whErr);
+          }
         }
         break;
+      }
 
-      case 'connect':
-        // Conecta a instância (gera QR Code)
-        response = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
+      case 'connect': {
+        const connectUrl = `${baseUrl}/instance/connect/${instanceName}`;
+        console.log('Connecting at:', connectUrl);
+        response = await fetch(connectUrl, {
           method: 'GET',
           headers,
         });
         result = await response.json();
-        console.log('Connect result:', result);
+        console.log('Connect result:', JSON.stringify(result));
         break;
+      }
 
-      case 'get_qrcode':
-        // Obtém o QR Code atual
-        response = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
+      case 'get_qrcode': {
+        response = await fetch(`${baseUrl}/instance/connect/${instanceName}`, {
           method: 'GET',
           headers,
         });
         result = await response.json();
-        console.log('Get QRCode result:', result);
         break;
+      }
 
-      case 'get_status':
-        // Verifica status da conexão
-        response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
+      case 'get_status': {
+        response = await fetch(`${baseUrl}/instance/connectionState/${instanceName}`, {
           method: 'GET',
           headers,
         });
         result = await response.json();
-        console.log('Status result:', result);
+        console.log('Status result:', JSON.stringify(result));
         break;
+      }
 
-      case 'disconnect':
-        // Desconecta (logout) da instância
-        response = await fetch(`${EVOLUTION_API_URL}/instance/logout/${instanceName}`, {
+      case 'disconnect': {
+        response = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
           method: 'DELETE',
           headers,
         });
         result = await response.json();
-        console.log('Disconnect result:', result);
         break;
+      }
 
-      case 'delete_instance':
-        // Deleta a instância completamente
-        response = await fetch(`${EVOLUTION_API_URL}/instance/delete/${instanceName}`, {
+      case 'delete_instance': {
+        response = await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
           method: 'DELETE',
           headers,
         });
         result = await response.json();
-        console.log('Delete instance result:', result);
+        console.log('Delete instance result:', JSON.stringify(result));
         break;
+      }
 
-      case 'set_webhook':
-        // Configura webhook
+      case 'set_webhook': {
         if (!N8N_WEBHOOK_URL) {
           throw new Error('N8N Webhook URL não configurada');
         }
-        response = await fetch(`${EVOLUTION_API_URL}/webhook/set/${instanceName}`, {
+        response = await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -138,57 +156,74 @@ serve(async (req) => {
             webhookBase64: false,
             events: [
               'MESSAGES_UPSERT',
-              'MESSAGES_UPDATE', 
+              'MESSAGES_UPDATE',
               'CONNECTION_UPDATE',
               'QRCODE_UPDATED',
             ],
           }),
         });
         result = await response.json();
-        console.log('Set webhook result:', result);
         break;
+      }
 
       default:
         throw new Error(`Ação desconhecida: ${action}`);
     }
 
-    // Atualiza status no banco de dados
+    // Update whatsapp_instances table (not whatsapp_ai_config)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (action === 'get_status' && result?.state) {
-      const status = result.state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
+    if (action === 'create_instance' && result?.instance) {
       await supabase
-        .from('whatsapp_ai_config')
-        .update({ 
-          status,
-          phone_connected: result.state === 'open' ? result.instance?.phoneConnected : null,
-          updated_at: new Date().toISOString()
+        .from('whatsapp_instances')
+        .update({
+          evolution_instance_id: result.instance.instanceName || instanceName,
+          webhook_url: N8N_WEBHOOK_URL || null,
+          status: 'CREATED',
+          last_connection_update_at: new Date().toISOString(),
         })
+        .eq('instance_name', instanceName)
+        .eq('restaurant_id', restaurantId);
+    }
+
+    if (action === 'get_status' && result?.instance) {
+      const state = result.instance?.state || result.state;
+      const status = state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
+      await supabase
+        .from('whatsapp_instances')
+        .update({
+          status,
+          phone_number: state === 'open' ? (result.instance?.phoneNumber || null) : null,
+          last_connection_update_at: new Date().toISOString(),
+        })
+        .eq('instance_name', instanceName)
         .eq('restaurant_id', restaurantId);
     }
 
     if (action === 'connect' && result?.base64) {
       await supabase
-        .from('whatsapp_ai_config')
-        .update({ 
+        .from('whatsapp_instances')
+        .update({
           qrcode_base64: result.base64,
-          status: 'QRCODE',
-          updated_at: new Date().toISOString()
+          status: 'CONNECTING',
+          last_connection_update_at: new Date().toISOString(),
         })
+        .eq('instance_name', instanceName)
         .eq('restaurant_id', restaurantId);
     }
 
     if (action === 'disconnect' || action === 'delete_instance') {
       await supabase
-        .from('whatsapp_ai_config')
-        .update({ 
+        .from('whatsapp_instances')
+        .update({
           status: 'DISCONNECTED',
           qrcode_base64: null,
-          phone_connected: null,
-          updated_at: new Date().toISOString()
+          phone_number: null,
+          last_connection_update_at: new Date().toISOString(),
         })
+        .eq('instance_name', instanceName)
         .eq('restaurant_id', restaurantId);
     }
 
@@ -200,9 +235,9 @@ serve(async (req) => {
     console.error('Evolution API error:', error);
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
