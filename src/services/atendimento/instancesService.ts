@@ -93,6 +93,23 @@ export const InstancesService = {
   },
 
   async remove(id: string, userId: string): Promise<void> {
+    const instance = await this.getById(id);
+
+    // Call Evolution API to delete instance
+    if (instance) {
+      try {
+        await supabase.functions.invoke('evolution-api', {
+          body: {
+            action: 'delete_instance',
+            instanceName: instance.instance_name,
+            restaurantId: instance.restaurant_id,
+          },
+        });
+      } catch (evoErr) {
+        console.error('Failed to delete instance on Evolution API:', evoErr);
+      }
+    }
+
     // Log deletion event before removing
     await db.from('whatsapp_instance_events').insert({
       instance_id: id,
