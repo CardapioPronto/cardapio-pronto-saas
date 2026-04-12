@@ -59,7 +59,7 @@ port = 54328
 verify_jwt = false
 
 [functions.evolution-api]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-ai-response]
 verify_jwt = false
