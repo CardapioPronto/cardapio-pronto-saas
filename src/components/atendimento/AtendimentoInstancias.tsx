@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,8 @@ import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { WhatsAppInstance, InstanceStatus } from "@/types/atendimento";
 import { InstancesService } from "@/services/atendimento/instancesService";
+import { QRCodeConnectModal } from "./QRCodeConnectModal";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -25,9 +27,10 @@ const statusConfig: Record<InstanceStatus, { label: string; variant: "default" |
   ERROR: { label: "Erro", variant: "destructive", icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive" },
 };
 
-function InstanceCard({ instance, canManage, onConnect, onDisconnect, onDelete, onRefresh, onToggleAutomation }: {
+function InstanceCard({ instance, canManage, creatorName, onConnect, onDisconnect, onDelete, onRefresh, onToggleAutomation }: {
   instance: WhatsAppInstance;
   canManage: boolean;
+  creatorName: string;
   onConnect: (id: string) => void;
   onDisconnect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -52,17 +55,6 @@ function InstanceCard({ instance, canManage, onConnect, onDisconnect, onDelete, 
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* QR Code */}
-        {instance.status === 'CONNECTING' && instance.qrcode_base64 && (
-          <div className="flex justify-center p-3 bg-muted/30 rounded-lg">
-            <img
-              src={instance.qrcode_base64.startsWith('data:') ? instance.qrcode_base64 : `data:image/png;base64,${instance.qrcode_base64}`}
-              alt="QR Code para conexão"
-              className="w-48 h-48 rounded-lg border"
-            />
-          </div>
-        )}
-
         {/* Automation toggle */}
         <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
           <div className="flex items-center gap-2">
@@ -80,7 +72,7 @@ function InstanceCard({ instance, canManage, onConnect, onDisconnect, onDelete, 
         <div className="text-xs text-muted-foreground space-y-1">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span>Criado por: {instance.created_by?.slice(0, 8)}...</span>
+            <span>Criado por: {creatorName}</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -102,6 +94,12 @@ function InstanceCard({ instance, canManage, onConnect, onDisconnect, onDelete, 
                 <Button size="sm" onClick={() => onConnect(instance.id)} className="gap-1">
                   <QrCode className="h-4 w-4" />
                   Conectar
+                </Button>
+              )}
+              {instance.status === 'CONNECTING' && (
+                <Button size="sm" onClick={() => onConnect(instance.id)} className="gap-1">
+                  <QrCode className="h-4 w-4" />
+                  Ver QR Code
                 </Button>
               )}
               {instance.status === 'CONNECTED' && (
@@ -160,8 +158,35 @@ const AtendimentoInstancias = () => {
   const [newName, setNewName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
+  
+  // QR Code modal state
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [selectedInstance, setSelectedInstance] = useState<WhatsAppInstance | null>(null);
 
   const canManage = isOwner() || isSuperAdmin() || hasPermission('whatsapp_manage_instances');
+
+  // Fetch creator names for all instances
+  useEffect(() => {
+    const uniqueCreatorIds = [...new Set(instances.map(i => i.created_by).filter(Boolean))];
+    if (uniqueCreatorIds.length === 0) return;
+
+    const fetchNames = async () => {
+      const { data } = await (supabase as any)
+        .from('users')
+        .select('id, name, email')
+        .in('id', uniqueCreatorIds);
+
+      if (data) {
+        const names: Record<string, string> = {};
+        for (const user of data) {
+          names[user.id] = user.name || user.email || 'Desconhecido';
+        }
+        setCreatorNames(names);
+      }
+    };
+    fetchNames();
+  }, [instances]);
 
   const handleCreate = async () => {
     if (!newName.trim() || !canManage) return;
@@ -172,6 +197,14 @@ const AtendimentoInstancias = () => {
       setDialogOpen(false);
     }
     setCreating(false);
+  };
+
+  const handleConnect = (id: string) => {
+    const instance = instances.find(i => i.id === id);
+    if (instance) {
+      setSelectedInstance(instance);
+      setQrModalOpen(true);
+    }
   };
 
   const handleRefresh = async (id: string) => {
@@ -277,7 +310,8 @@ const AtendimentoInstancias = () => {
               key={instance.id}
               instance={instance}
               canManage={canManage}
-              onConnect={connectInstance}
+              creatorName={creatorNames[instance.created_by] || 'Carregando...'}
+              onConnect={handleConnect}
               onDisconnect={disconnectInstance}
               onDelete={deleteInstance}
               onRefresh={handleRefresh}
@@ -285,6 +319,21 @@ const AtendimentoInstancias = () => {
             />
           ))}
         </div>
+      )}
+
+      {/* QR Code Connect Modal */}
+      {selectedInstance && (
+        <QRCodeConnectModal
+          open={qrModalOpen}
+          onOpenChange={setQrModalOpen}
+          instanceId={selectedInstance.id}
+          instanceName={selectedInstance.instance_name}
+          restaurantId={restaurantId}
+          onConnected={() => {
+            refetch();
+            setSelectedInstance(null);
+          }}
+        />
       )}
     </div>
   );
