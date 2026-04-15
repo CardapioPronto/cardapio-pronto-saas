@@ -78,12 +78,6 @@ function InstanceCard({ instance, canManage, creatorName, onConnect, onDisconnec
             <Clock className="h-3 w-3" />
             <span>Atualizado: {instance.updated_at ? format(new Date(instance.updated_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}</span>
           </div>
-          {instance.last_connection_update_at && (
-            <div className="flex items-center gap-1">
-              <Wifi className="h-3 w-3" />
-              <span>Conexão: {format(new Date(instance.last_connection_update_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-            </div>
-          )}
         </div>
 
         {/* Actions */}
