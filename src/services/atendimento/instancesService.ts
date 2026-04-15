@@ -147,7 +147,6 @@ export const InstancesService = {
       await this.update(instanceId, {
         status: 'CONNECTING',
         qrcode_base64: data.base64,
-        last_connection_update_at: new Date().toISOString(),
       } as any);
     }
 
@@ -169,7 +168,6 @@ export const InstancesService = {
     await this.update(instanceId, {
       status: 'DISCONNECTED',
       qrcode_base64: null,
-      last_connection_update_at: new Date().toISOString(),
     } as any);
   },
 
@@ -190,7 +188,6 @@ export const InstancesService = {
     const newStatus: InstanceStatus = data?.state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
     await this.update(instanceId, {
       status: newStatus,
-      last_connection_update_at: new Date().toISOString(),
       ...(newStatus === 'CONNECTED' && data?.phoneNumber ? { phone_number: data.phoneNumber } : {}),
     } as any);
 
