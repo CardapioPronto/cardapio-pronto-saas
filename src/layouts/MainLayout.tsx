@@ -1,34 +1,32 @@
 
 import { ReactNode } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useUserSession } from '@/hooks/useUserSession';
+import { Loader2 } from 'lucide-react';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
-  const { user, loading } = useAuth();
+  const { authUser, loading } = useUserSession();
+  const location = useLocation();
 
   if (loading) {
     return (
       <div className="grid h-screen place-items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary text-4xl text-primary animate-spin">
-          🍕
-        </div>
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (!authUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto">
-        {children}
-      </main>
+      <main className="mx-auto">{children}</main>
     </div>
   );
 };

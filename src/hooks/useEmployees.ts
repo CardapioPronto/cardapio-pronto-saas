@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUserV2 } from "./useCurrentUserV2";
+import { useCurrentUser } from "./useCurrentUser";
 import { Employee, EmployeeWithPermissions, PermissionType } from "@/types/employee";
 import { toast } from "sonner";
 
 export const useEmployees = () => {
-  const { user } = useCurrentUserV2();
+  const { user } = useCurrentUser();
   const [employees, setEmployees] = useState<EmployeeWithPermissions[]>([]);
   const [loading, setLoading] = useState(false);
 
