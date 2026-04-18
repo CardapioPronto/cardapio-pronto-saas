@@ -4,6 +4,28 @@ import { supabase } from "@/lib/supabase";
 import { useUserSession } from "./useUserSession";
 import { PermissionType } from "@/types/employee";
 
+const ALL_PERMISSIONS: PermissionType[] = [
+  'dashboard_view', 'subscription_view',
+  'pdv_access', 'orders_view', 'orders_manage',
+  'products_view', 'products_manage',
+  'reports_view', 'settings_view', 'settings_manage',
+  'employees_manage',
+  'whatsapp_manage', 'whatsapp_manage_instances',
+  'whatsapp_take_conversations', 'whatsapp_reply_as_human',
+  'whatsapp_view_all_conversations', 'whatsapp_configure_automation',
+];
+
+// Gerente: tudo, exceto financeiro/equipe (que ficam só para o dono).
+const MANAGER_PERMISSIONS: PermissionType[] = [
+  'dashboard_view',
+  'pdv_access', 'orders_view', 'orders_manage',
+  'products_view', 'products_manage',
+  'reports_view', 'settings_view',
+  'whatsapp_manage', 'whatsapp_manage_instances',
+  'whatsapp_take_conversations', 'whatsapp_reply_as_human',
+  'whatsapp_view_all_conversations', 'whatsapp_configure_automation',
+];
+
 export const usePermissionsV2 = () => {
   const { appUser, loading: sessionLoading } = useUserSession();
   const [userPermissions, setUserPermissions] = useState<PermissionType[]>([]);
@@ -21,47 +43,60 @@ export const usePermissionsV2 = () => {
     setError(null);
 
     try {
-      // Se for super admin, tem todas as permissões
+      // Super admin: tudo
       if (appUser.role === 'super_admin') {
-        setUserPermissions([
-          'dashboard_view', 'subscription_view',
-          'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
-          'products_manage', 'reports_view', 'settings_view', 
-          'settings_manage', 'employees_manage', 'whatsapp_manage',
-          'whatsapp_manage_instances', 'whatsapp_take_conversations',
-          'whatsapp_reply_as_human', 'whatsapp_view_all_conversations',
-          'whatsapp_configure_automation'
-        ]);
+        setUserPermissions(ALL_PERMISSIONS);
         setLoading(false);
         return;
       }
 
-      // Se for dono do restaurante, tem todas as permissões
+      // Dono: tudo
       if (appUser.user_type === 'owner') {
-        setUserPermissions([
-          'dashboard_view', 'subscription_view',
-          'pdv_access', 'orders_view', 'orders_manage', 'products_view', 
-          'products_manage', 'reports_view', 'settings_view', 
-          'settings_manage', 'employees_manage', 'whatsapp_manage',
-          'whatsapp_manage_instances', 'whatsapp_take_conversations',
-          'whatsapp_reply_as_human', 'whatsapp_view_all_conversations',
-          'whatsapp_configure_automation'
-        ]);
+        setUserPermissions(ALL_PERMISSIONS);
         setLoading(false);
         return;
       }
 
-      // Se for funcionário, buscar permissões específicas do banco
+      // Gerente: preset operacional. Se tiver permissões extras gravadas
+      // na tabela employee_permissions, são adicionadas (união).
+      if (appUser.user_type === 'manager') {
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', appUser.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        let extra: PermissionType[] = [];
+        if (emp?.id) {
+          const { data: permsData } = await supabase
+            .from('employee_permissions')
+            .select('permission')
+            .eq('employee_id', emp.id);
+          extra = (permsData || []).map(p => p.permission as PermissionType);
+        }
+
+        setUserPermissions(Array.from(new Set([...MANAGER_PERMISSIONS, ...extra])));
+        setLoading(false);
+        return;
+      }
+
+      // Funcionário: só o que estiver explicitamente atribuído
       if (appUser.user_type === 'employee') {
         const { data: employeeData, error: employeeError } = await supabase
           .from('employees')
           .select('id')
           .eq('user_id', appUser.id)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
 
-        if (employeeError || !employeeData) {
-          throw new Error('Funcionário não encontrado ou inativo');
+        if (employeeError) throw employeeError;
+
+        if (!employeeData) {
+          setUserPermissions([]);
+          setError('Sua conta de funcionário foi desativada. Entre em contato com o administrador.');
+          setLoading(false);
+          return;
         }
 
         const { data: permissionsData, error: permissionsError } = await supabase
@@ -69,9 +104,7 @@ export const usePermissionsV2 = () => {
           .select('permission')
           .eq('employee_id', employeeData.id);
 
-        if (permissionsError) {
-          throw permissionsError;
-        }
+        if (permissionsError) throw permissionsError;
 
         setUserPermissions(permissionsData?.map(p => p.permission as PermissionType) || []);
       } else {
@@ -86,31 +119,27 @@ export const usePermissionsV2 = () => {
     }
   };
 
-  const hasPermission = (permission: PermissionType): boolean => {
-    return userPermissions.includes(permission);
-  };
+  const hasPermission = (permission: PermissionType): boolean =>
+    userPermissions.includes(permission);
 
-  const hasAnyPermission = (permissions: PermissionType[]): boolean => {
-    return permissions.some(permission => userPermissions.includes(permission));
-  };
+  const hasAnyPermission = (permissions: PermissionType[]): boolean =>
+    permissions.some(p => userPermissions.includes(p));
 
-  const isOwner = (): boolean => {
-    return appUser?.user_type === 'owner';
-  };
+  const hasAllPermissions = (permissions: PermissionType[]): boolean =>
+    permissions.every(p => userPermissions.includes(p));
 
-  const isEmployee = (): boolean => {
-    return appUser?.user_type === 'employee';
-  };
-
-  const isSuperAdmin = (): boolean => {
-    return appUser?.role === 'super_admin';
-  };
+  const isOwner = (): boolean => appUser?.user_type === 'owner';
+  const isManager = (): boolean => appUser?.user_type === 'manager';
+  const isEmployee = (): boolean => appUser?.user_type === 'employee';
+  const isOwnerOrManager = (): boolean =>
+    appUser?.user_type === 'owner' || appUser?.user_type === 'manager';
+  const isSuperAdmin = (): boolean => appUser?.role === 'super_admin';
 
   useEffect(() => {
     if (!sessionLoading) {
       fetchUserPermissions();
     }
-  }, [appUser?.id, sessionLoading]);
+  }, [appUser?.id, appUser?.user_type, sessionLoading]);
 
   return {
     userPermissions,
@@ -119,9 +148,12 @@ export const usePermissionsV2 = () => {
     error,
     hasPermission,
     hasAnyPermission,
+    hasAllPermissions,
     isOwner,
+    isManager,
     isEmployee,
+    isOwnerOrManager,
     isSuperAdmin,
-    refetch: fetchUserPermissions
+    refetch: fetchUserPermissions,
   };
 };
