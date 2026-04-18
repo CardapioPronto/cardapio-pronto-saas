@@ -1893,7 +1893,7 @@ export type Database = {
         | "whatsapp_reply_as_human"
         | "whatsapp_view_all_conversations"
         | "whatsapp_configure_automation"
-      user_type: "owner" | "employee"
+      user_type: "owner" | "employee" | "manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2040,7 +2040,7 @@ export const Constants = {
         "whatsapp_view_all_conversations",
         "whatsapp_configure_automation",
       ],
-      user_type: ["owner", "employee"],
+      user_type: ["owner", "employee", "manager"],
     },
   },
 } as const
