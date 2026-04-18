@@ -1856,9 +1856,29 @@ export type Database = {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
       }
+      get_user_basic_info: {
+        Args: { _user_id: string }
+        Returns: {
+          email: string
+          id: string
+          name: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }[]
+      }
       get_user_restaurant_id: { Args: never; Returns: string }
+      get_users_basic_info: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          email: string
+          id: string
+          name: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }[]
+      }
+      is_owner_or_manager: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_super_admin_v2: { Args: { user_id: string }; Returns: boolean }
+      is_user_active: { Args: { _user_id: string }; Returns: boolean }
       log_admin_activity: {
         Args: {
           action: string
