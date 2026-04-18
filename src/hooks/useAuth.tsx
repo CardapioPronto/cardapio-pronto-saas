@@ -1,8 +1,8 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, getCurrentUser } from '@/lib/supabase';
+import { createContext, useContext, ReactNode } from 'react';
+import { useUserSession } from './useUserSession';
+import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   session: Session | null;
@@ -16,53 +16,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Fonte única da verdade: useUserSession já gerencia getSession + onAuthStateChange.
+  const { session, authUser, loading } = useUserSession();
 
-  useEffect(() => {
-    // Checar sessão atual
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        console.log("Auth state changed:", _event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Funções de autenticação
   const signIn = async (email: string, password: string) => {
-    console.log("Attempting login for:", email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (!error && data.user) {
-      console.log("Login successful for:", data.user.email);
-      console.log("User metadata:", data.user.user_metadata);
-    } else {
-      console.error("Login error:", error);
+    if (error) {
+      console.error('Login error:', error);
     }
-    
     return { error };
   };
 
   const signUp = async (email: string, password: string, userData: any) => {
-    const { error } = await supabase.auth.signUp({ 
-      email, 
+    const redirectUrl = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signUp({
+      email,
       password,
       options: {
-        data: userData
-      }
+        data: userData,
+        emailRedirectTo: redirectUrl,
+      },
     });
     return { error };
   };
@@ -72,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ session, user: authUser, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
