@@ -1,5 +1,5 @@
 
-export type UserType = 'owner' | 'employee';
+export type UserType = 'owner' | 'manager' | 'employee';
 
 export type User = {
     id: string;
