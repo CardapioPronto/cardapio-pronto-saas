@@ -536,6 +536,143 @@ export type Database = {
           },
         ]
       }
+      delivery_order_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          delivery_order_id: string
+          id: string
+          new_status: string
+          notes: string | null
+          previous_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          delivery_order_id: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          previous_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          delivery_order_id?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_order_status_history_delivery_order_id_fkey"
+            columns: ["delivery_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_orders: {
+        Row: {
+          change_for: number | null
+          city: string
+          complement: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          delivery_fee: number
+          estimated_delivery_minutes: number | null
+          id: string
+          neighborhood: string
+          notes: string | null
+          number: string
+          order_id: string | null
+          payment_method: string | null
+          reference_point: string | null
+          restaurant_id: string
+          state: string
+          status: string
+          street: string
+          subtotal: number
+          total: number
+          updated_at: string
+          whatsapp_message_id: string | null
+          whatsapp_sent_at: string | null
+          zip_code: string
+        }
+        Insert: {
+          change_for?: number | null
+          city: string
+          complement?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          delivery_fee?: number
+          estimated_delivery_minutes?: number | null
+          id?: string
+          neighborhood: string
+          notes?: string | null
+          number: string
+          order_id?: string | null
+          payment_method?: string | null
+          reference_point?: string | null
+          restaurant_id: string
+          state: string
+          status?: string
+          street: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          whatsapp_message_id?: string | null
+          whatsapp_sent_at?: string | null
+          zip_code: string
+        }
+        Update: {
+          change_for?: number | null
+          city?: string
+          complement?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          delivery_fee?: number
+          estimated_delivery_minutes?: number | null
+          id?: string
+          neighborhood?: string
+          notes?: string | null
+          number?: string
+          order_id?: string | null
+          payment_method?: string | null
+          reference_point?: string | null
+          restaurant_id?: string
+          state?: string
+          status?: string
+          street?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          whatsapp_message_id?: string | null
+          whatsapp_sent_at?: string | null
+          zip_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demos: {
         Row: {
           created_at: string | null
@@ -908,6 +1045,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          addons: Json | null
           created_at: string
           id: string
           observations: string | null
@@ -918,6 +1056,7 @@ export type Database = {
           quantity: number
         }
         Insert: {
+          addons?: Json | null
           created_at?: string
           id?: string
           observations?: string | null
@@ -928,6 +1067,7 @@ export type Database = {
           quantity: number
         }
         Update: {
+          addons?: Json | null
           created_at?: string
           id?: string
           observations?: string | null
@@ -1247,6 +1387,7 @@ export type Database = {
         Row: {
           active: boolean
           address: string | null
+          banner_url: string | null
           business_hours: string | null
           category: string | null
           cnpj: string | null
@@ -1264,6 +1405,7 @@ export type Database = {
         Insert: {
           active?: boolean
           address?: string | null
+          banner_url?: string | null
           business_hours?: string | null
           category?: string | null
           cnpj?: string | null
@@ -1281,6 +1423,7 @@ export type Database = {
         Update: {
           active?: boolean
           address?: string | null
+          banner_url?: string | null
           business_hours?: string | null
           category?: string | null
           cnpj?: string | null
