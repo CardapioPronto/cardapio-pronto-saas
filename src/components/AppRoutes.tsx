@@ -13,6 +13,7 @@ import EsqueciSenha from '@/pages/EsqueciSenha';
 import ResetPassword from '@/pages/ResetPassword';
 import NotFound from '@/pages/NotFound';
 import CardapioPublico from '@/pages/CardapioPublico';
+import AcompanharPedido from '@/pages/AcompanharPedido';
 import FAQ from '@/pages/FAQ';
 import Demonstracao from '@/pages/Demonstracao';
 import Funcionalidades from '@/pages/Funcionalidades';
@@ -80,6 +81,7 @@ const AppRoutes = () => {
       } />
       <Route path="/menu/:id" element={<CardapioPublico />} />
       <Route path="/cardapio/:slug" element={<CardapioPublico />} />
+      <Route path="/pedido/:id" element={<AcompanharPedido />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/demonstracao" element={<Demonstracao />} />
       <Route path="/funcionalidades" element={<Funcionalidades />} />
