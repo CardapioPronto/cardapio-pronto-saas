@@ -55,6 +55,7 @@ export const useEmployees = () => {
     employee_email: string;
     password: string;
     permissions?: PermissionType[];
+    user_type?: 'employee' | 'manager';
   }) => {
     if (!user?.restaurant_id || !user?.id) return { success: false };
 
@@ -67,6 +68,7 @@ export const useEmployees = () => {
           password: employeeData.password,
           restaurant_id: user.restaurant_id,
           created_by: user.id,
+          user_type: employeeData.user_type || 'employee',
           permissions: employeeData.permissions || [
             'pdv_access',
             'orders_view', 
