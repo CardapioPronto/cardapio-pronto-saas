@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { MenuTheme, RestaurantMenuConfig } from '@/types/menuTheme';
+import { MenuTheme, RestaurantMenuConfig, DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
 
 export const menuThemeService = {
   // Buscar todos os temas disponíveis
@@ -11,7 +11,6 @@ export const menuThemeService = {
       const { data, error } = await supabase
         .from('menu_themes')
         .select('*')
-        .eq('is_active', true)
         .order('name');
 
       if (error) {
@@ -20,49 +19,61 @@ export const menuThemeService = {
       }
       
       console.log('Temas encontrados:', data);
-      
-      // Se não há temas no banco, retornar temas padrão
-      if (!data || data.length === 0) {
-        console.log('Nenhum tema encontrado no banco, retornando temas padrão');
-        return [
-          {
-            id: 'default',
-            name: 'default',
-            display_name: 'Tema Padrão',
-            description: 'Tema limpo e moderno',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'elegant',
-            name: 'elegant',
-            display_name: 'Tema Elegante',
-            description: 'Tema sofisticado para restaurantes refinados',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'modern',
-            name: 'modern',
-            display_name: 'Tema Moderno',
-            description: 'Design contemporâneo e minimalista',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
-      }
-      
-      // Transformar null em undefined para compatibilidade com TypeScript
-      const themes = data.map(theme => ({
+
+      const fallbackThemes: MenuTheme[] = [
+        {
+          id: 'delivery',
+          name: 'delivery',
+          display_name: 'Delivery Moderno',
+          description: 'Tema moderno focado em delivery, com checkout completo e acompanhamento em tempo real',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 'default',
+          name: 'default',
+          display_name: 'Tema Padrão (em breve)',
+          description: 'Tema clássico — em redesenho',
+          is_active: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 'modern',
+          name: 'modern',
+          display_name: 'Moderno (em breve)',
+          description: 'Design contemporâneo — em redesenho',
+          is_active: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 'elegant',
+          name: 'elegant',
+          display_name: 'Elegante (em breve)',
+          description: 'Tema sofisticado — em redesenho',
+          is_active: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      const dbThemes = (data || []).map(theme => ({
         ...theme,
         description: theme.description || undefined,
-        preview_image_url: theme.preview_image_url || undefined
+        preview_image_url: theme.preview_image_url || undefined,
       }));
-      
-      return themes;
+
+      // Garantir que todos os temas conhecidos apareçam (mescla DB + fallback por name)
+      const merged = [...fallbackThemes];
+      dbThemes.forEach(t => {
+        const idx = merged.findIndex(m => m.name === t.name);
+        if (idx >= 0) merged[idx] = { ...merged[idx], ...t };
+        else merged.push(t);
+      });
+      // Apenas o "delivery" fica ativo
+      return merged.map(t => ({ ...t, is_active: t.name === 'delivery' }));
     } catch (error) {
       console.error('Erro na função getAvailableThemes:', error);
       throw error;
@@ -118,7 +129,7 @@ export const menuThemeService = {
       // Buscar restaurante pelo slug ou ID
       const { data: restaurant, error: restaurantError } = await supabase
         .from('restaurants')
-        .select('id, name, logo_url, slug')
+        .select('id, name, logo_url, banner_url, slug, address, phone, phone_whatsapp, business_hours, category')
         .or(`slug.eq.${slug},id.eq.${slug}`)
         .eq('active', true)
         .single();
@@ -142,7 +153,8 @@ export const menuThemeService = {
             description,
             price,
             image_url,
-            available
+            available,
+            category_id
           )
         `)
         .eq('restaurant_id', restaurant.id)
@@ -158,11 +170,20 @@ export const menuThemeService = {
       // Buscar configuração do tema
       const config = await this.getRestaurantMenuConfig(restaurant.id);
       console.log('Config found:', config);
+
+      // Buscar configuração de delivery (restaurant_settings)
+      const deliveryConfig = await this.getDeliveryConfig(restaurant.id);
       
       // Transformar os dados para o formato esperado
       const transformedRestaurant = {
         ...restaurant,
         logo_url: restaurant.logo_url || undefined,
+        banner_url: restaurant.banner_url || undefined,
+        address: restaurant.address || undefined,
+        phone: restaurant.phone || undefined,
+        phone_whatsapp: restaurant.phone_whatsapp || undefined,
+        business_hours: restaurant.business_hours || undefined,
+        category: restaurant.category || undefined,
         slug: restaurant.slug || restaurant.id // fallback se slug for null
       };
 
@@ -170,22 +191,96 @@ export const menuThemeService = {
         .filter(cat => cat.products && cat.products.length > 0)
         .map(category => ({
           ...category,
-          products: category.products.map(product => ({
-            ...product,
-            description: product.description || undefined,
-            image_url: product.image_url || undefined
-          }))
+          products: category.products
+            .filter((p: any) => p.available !== false)
+            .map((product: any) => ({
+              ...product,
+              description: product.description || undefined,
+              image_url: product.image_url || undefined,
+            })),
         }));
       
       return {
         restaurant: transformedRestaurant,
         categories: transformedCategories,
-        config
+        config,
+        deliveryConfig,
       };
     } catch (error) {
       console.error('Erro na função getPublicMenuData:', error);
       throw error;
     }
+  },
+
+  // Buscar configuração de delivery do restaurante
+  async getDeliveryConfig(restaurantId: string): Promise<DeliveryConfig> {
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_settings')
+        .select('setting_value')
+        .eq('restaurant_id', restaurantId)
+        .eq('setting_key', 'delivery_config')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Erro ao buscar delivery_config:', error);
+        return DEFAULT_DELIVERY_CONFIG;
+      }
+      if (!data) return DEFAULT_DELIVERY_CONFIG;
+      return { ...DEFAULT_DELIVERY_CONFIG, ...((data.setting_value as Partial<DeliveryConfig>) || {}) };
+    } catch (e) {
+      console.warn('Falha em getDeliveryConfig', e);
+      return DEFAULT_DELIVERY_CONFIG;
+    }
+  },
+
+  // Salvar config de delivery
+  async saveDeliveryConfig(restaurantId: string, config: DeliveryConfig) {
+    const { error } = await supabase
+      .from('restaurant_settings')
+      .upsert(
+        {
+          restaurant_id: restaurantId,
+          setting_key: 'delivery_config',
+          setting_value: config as any,
+        },
+        { onConflict: 'restaurant_id,setting_key' }
+      );
+    if (error) throw error;
+    return config;
+  },
+
+  // Atualizar dados do restaurante (banner, logo, etc.)
+  async updateRestaurantInfo(restaurantId: string, updates: {
+    banner_url?: string | null;
+    logo_url?: string | null;
+    name?: string;
+    address?: string;
+    phone?: string;
+    phone_whatsapp?: string;
+    business_hours?: string;
+    category?: string;
+  }) {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .update(updates)
+      .eq('id', restaurantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  // Upload de asset (banner ou logo)
+  async uploadRestaurantAsset(restaurantId: string, file: File, kind: 'banner' | 'logo'): Promise<string> {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const path = `${restaurantId}/${kind}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from('restaurant-assets')
+      .upload(path, file, { upsert: true, cacheControl: '3600' });
+    if (upErr) throw upErr;
+    const { data } = supabase.storage.from('restaurant-assets').getPublicUrl(path);
+    return data.publicUrl;
   },
 
   // Atualizar configuração do tema de um restaurante

@@ -50,7 +50,13 @@ export interface MenuData {
     id: string;
     name: string;
     logo_url?: string;
+    banner_url?: string;
     slug: string;
+    address?: string;
+    phone?: string;
+    phone_whatsapp?: string;
+    business_hours?: string;
+    category?: string;
   };
   categories: Array<{
     id: string;
@@ -62,7 +68,29 @@ export interface MenuData {
       price: number;
       image_url?: string;
       available: boolean;
+      category_id?: string;
     }>;
   }>;
   theme: ThemeConfig;
+  deliveryConfig?: DeliveryConfig;
 }
+
+export interface DeliveryConfig {
+  delivery_enabled: boolean;
+  delivery_fee: number;
+  min_order_value: number;
+  estimated_delivery_minutes: number;
+  delivery_radius_km: number;
+  payment_methods: string[]; // 'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito'
+  pickup_enabled: boolean;
+}
+
+export const DEFAULT_DELIVERY_CONFIG: DeliveryConfig = {
+  delivery_enabled: true,
+  delivery_fee: 0,
+  min_order_value: 0,
+  estimated_delivery_minutes: 45,
+  delivery_radius_km: 5,
+  payment_methods: ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito'],
+  pickup_enabled: true,
+};

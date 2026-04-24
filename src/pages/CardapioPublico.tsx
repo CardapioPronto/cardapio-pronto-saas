@@ -31,7 +31,7 @@ const CardapioPublico = () => {
         console.log('Menu data loaded:', data);
         
         // Determinar o tema
-        let selectedTheme = 'default';
+        let selectedTheme = 'delivery';
         let customColors = {};
         
         if (data.config) {
@@ -49,7 +49,8 @@ const CardapioPublico = () => {
         setMenuData({
           restaurant: data.restaurant,
           categories: data.categories,
-          theme: themeConfig
+          theme: themeConfig,
+          deliveryConfig: data.deliveryConfig,
         });
         
         setThemeName(selectedTheme);
