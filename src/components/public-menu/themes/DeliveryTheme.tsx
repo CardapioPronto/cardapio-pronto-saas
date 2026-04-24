@@ -21,7 +21,7 @@ const DeliveryLayout = ({ data }: Props) => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const { count } = useCart();
 
   const primary = data.theme.colors.primary;
