@@ -126,15 +126,25 @@ export const MenuThemeSelector = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {themes.map((theme) => {
             const isActive = config?.theme_id === theme.id;
+            const isComingSoon = !theme.is_active;
             
             return (
               <Card 
                 key={theme.id} 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  isActive ? 'ring-2 ring-primary' : ''
-                } ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
-                onClick={() => handleThemeSelect(theme.id)}
+                className={`relative transition-all ${
+                  isComingSoon
+                    ? 'opacity-70 cursor-not-allowed'
+                    : 'cursor-pointer hover:shadow-md'
+                } ${isActive ? 'ring-2 ring-primary' : ''} ${
+                  isUpdating && !isComingSoon ? 'opacity-50 pointer-events-none' : ''
+                }`}
+                onClick={() => !isComingSoon && handleThemeSelect(theme.id)}
               >
+                {isComingSoon && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <Badge variant="secondary">Em breve</Badge>
+                  </div>
+                )}
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     {theme.preview_image_url && (
@@ -153,7 +163,7 @@ export const MenuThemeSelector = () => {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">{theme.display_name}</h4>
-                        {isActive && (
+                        {isActive && !isComingSoon && (
                           <Badge variant="default">Ativo</Badge>
                         )}
                       </div>
@@ -169,13 +179,15 @@ export const MenuThemeSelector = () => {
                       variant={isActive ? "default" : "outline"}
                       size="sm" 
                       className="w-full"
-                      disabled={isUpdating}
+                      disabled={isUpdating || isComingSoon}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleThemeSelect(theme.id);
+                        if (!isComingSoon) handleThemeSelect(theme.id);
                       }}
                     >
-                      {isUpdating ? (
+                      {isComingSoon ? (
+                        'Em breve'
+                      ) : isUpdating ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Aplicando...

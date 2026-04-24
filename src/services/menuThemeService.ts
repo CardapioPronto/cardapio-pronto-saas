@@ -26,14 +26,16 @@ export const menuThemeService = {
         preview_image_url: theme.preview_image_url || undefined,
       }));
 
-      // Mostrar apenas temas ativos (atualmente apenas "delivery")
-      // Os outros temas estão desativados no banco enquanto passam por redesenho
-      const activeThemes = dbThemes.filter(t => t.is_active);
+      // Retorna todos os temas; o seletor exibirá os inativos como "Em breve"
+      // Reordenar: ativos primeiro, e dentro dos ativos, "delivery" primeiro
+      dbThemes.sort((a, b) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        if (a.name === 'delivery') return -1;
+        if (b.name === 'delivery') return 1;
+        return a.display_name.localeCompare(b.display_name);
+      });
 
-      // Reordenar: delivery primeiro
-      activeThemes.sort((a, b) => (a.name === 'delivery' ? -1 : b.name === 'delivery' ? 1 : 0));
-
-      return activeThemes;
+      return dbThemes;
     } catch (error) {
       console.error('Erro na função getAvailableThemes:', error);
       throw error;
