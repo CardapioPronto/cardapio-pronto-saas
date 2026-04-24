@@ -14,6 +14,7 @@ interface EmployeeRequest {
   restaurant_id: string;
   created_by: string;
   permissions: string[];
+  user_type?: 'employee' | 'manager';
 }
 
 serve(async (req) => {
@@ -27,7 +28,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { employee_name, employee_email, password, restaurant_id, created_by, permissions } = await req.json() as EmployeeRequest;
+    const { employee_name, employee_email, password, restaurant_id, created_by, permissions, user_type: requestedType } = await req.json() as EmployeeRequest;
+    const userType: 'employee' | 'manager' = requestedType === 'manager' ? 'manager' : 'employee';
 
     console.log('Creating employee:', { employee_name, employee_email, restaurant_id });
 
@@ -79,7 +81,7 @@ serve(async (req) => {
         email_confirm: true,
         user_metadata: {
           name: employee_name,
-          user_type: 'employee'
+          user_type: userType
         }
       });
 
@@ -126,8 +128,8 @@ serve(async (req) => {
           email: employee_email,
           name: employee_name,
           restaurant_id: restaurant_id,
-          user_type: 'employee',
-          role: 'employee'
+          user_type: userType,
+          role: userType
         });
 
       if (userError) {
@@ -143,8 +145,8 @@ serve(async (req) => {
         .from('users')
         .update({
           restaurant_id: restaurant_id,
-          user_type: 'employee',
-          role: 'employee'
+          user_type: userType,
+          role: userType
         })
         .eq('id', authUserId);
 
@@ -166,7 +168,7 @@ serve(async (req) => {
         employee_name: employee_name,
         employee_email: employee_email,
         created_by: created_by,
-        user_type: 'employee'
+        user_type: userType
       })
       .select()
       .single();
