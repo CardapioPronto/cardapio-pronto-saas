@@ -5,6 +5,7 @@ import { MenuThemeSelector } from "@/components/menu-digital/MenuThemeSelector";
 import { MenuPreview } from "@/components/menu-digital/MenuPreview";
 import { QRCodeGenerator } from "@/components/menu-digital/QRCodeGenerator";
 import { QRCodeInstructions } from "@/components/menu-digital/QRCodeInstructions";
+import { PersonalizacaoTab } from "@/components/menu-digital/PersonalizacaoTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -21,14 +22,19 @@ const MenuDigital = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="themes" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="themes">Temas</TabsTrigger>
+                <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
                 <TabsTrigger value="preview">Visualizar</TabsTrigger>
                 <TabsTrigger value="qrcode">QR Code</TabsTrigger>
               </TabsList>
               
               <TabsContent value="themes" className="space-y-4">
                 <MenuThemeSelector />
+              </TabsContent>
+
+              <TabsContent value="personalizacao" className="space-y-4">
+                <PersonalizacaoTab />
               </TabsContent>
               
               <TabsContent value="preview" className="space-y-4">
