@@ -20,60 +20,20 @@ export const menuThemeService = {
       
       console.log('Temas encontrados:', data);
 
-      const fallbackThemes: MenuTheme[] = [
-        {
-          id: 'delivery',
-          name: 'delivery',
-          display_name: 'Delivery Moderno',
-          description: 'Tema moderno focado em delivery, com checkout completo e acompanhamento em tempo real',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'default',
-          name: 'default',
-          display_name: 'Tema Padrão (em breve)',
-          description: 'Tema clássico — em redesenho',
-          is_active: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'modern',
-          name: 'modern',
-          display_name: 'Moderno (em breve)',
-          description: 'Design contemporâneo — em redesenho',
-          is_active: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'elegant',
-          name: 'elegant',
-          display_name: 'Elegante (em breve)',
-          description: 'Tema sofisticado — em redesenho',
-          is_active: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ];
-
-      const dbThemes = (data || []).map(theme => ({
+      const dbThemes: MenuTheme[] = (data || []).map(theme => ({
         ...theme,
         description: theme.description || undefined,
         preview_image_url: theme.preview_image_url || undefined,
       }));
 
-      // Garantir que todos os temas conhecidos apareçam (mescla DB + fallback por name)
-      const merged = [...fallbackThemes];
-      dbThemes.forEach(t => {
-        const idx = merged.findIndex(m => m.name === t.name);
-        if (idx >= 0) merged[idx] = { ...merged[idx], ...t };
-        else merged.push(t);
-      });
-      // Apenas o "delivery" fica ativo
-      return merged.map(t => ({ ...t, is_active: t.name === 'delivery' }));
+      // Mostrar apenas temas ativos (atualmente apenas "delivery")
+      // Os outros temas estão desativados no banco enquanto passam por redesenho
+      const activeThemes = dbThemes.filter(t => t.is_active);
+
+      // Reordenar: delivery primeiro
+      activeThemes.sort((a, b) => (a.name === 'delivery' ? -1 : b.name === 'delivery' ? 1 : 0));
+
+      return activeThemes;
     } catch (error) {
       console.error('Erro na função getAvailableThemes:', error);
       throw error;
