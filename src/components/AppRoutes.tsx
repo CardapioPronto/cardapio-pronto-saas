@@ -9,6 +9,8 @@ import Categorias from '@/pages/Categorias';
 import Configuracoes from '@/pages/Configuracoes';
 import Login from '@/pages/Login';
 import Cadastro from '@/pages/Cadastro';
+import EsqueciSenha from '@/pages/EsqueciSenha';
+import ResetPassword from '@/pages/ResetPassword';
 import NotFound from '@/pages/NotFound';
 import CardapioPublico from '@/pages/CardapioPublico';
 import FAQ from '@/pages/FAQ';
@@ -59,6 +61,16 @@ const AppRoutes = () => {
       <Route path="/cadastro" element={
         <AuthLayout>
           <Cadastro />
+        </AuthLayout>
+      } />
+      <Route path="/esqueci-senha" element={
+        <AuthLayout>
+          <EsqueciSenha />
+        </AuthLayout>
+      } />
+      <Route path="/reset-password" element={
+        <AuthLayout>
+          <ResetPassword />
         </AuthLayout>
       } />
       <Route path="/teste-gratis" element={
