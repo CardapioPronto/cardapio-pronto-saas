@@ -16,8 +16,10 @@ import {
   Phone,
   MapPin,
   Wifi,
+  Share2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type StatusKey =
   | 'pending'
@@ -69,6 +71,41 @@ export default function AcompanharPedido() {
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const trackingUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/pedido/${id}` : '';
+
+  async function handleShare() {
+    const shortId = (id || '').substring(0, 8).toUpperCase();
+    const shareText = `Acompanhe seu pedido #${shortId} em tempo real:\n${trackingUrl}`;
+
+    // 1) Web Share API (mobile)
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: `Pedido #${shortId}`,
+          text: shareText,
+          url: trackingUrl,
+        });
+        return;
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return; // usuário cancelou
+      }
+    }
+
+    // 2) Fallback: abre WhatsApp Web/app com a mensagem pronta
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    const win = window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+    // 3) Copia o link como conveniência adicional
+    try {
+      await navigator.clipboard.writeText(trackingUrl);
+      if (!win) toast.success('Link copiado! Cole no WhatsApp para compartilhar.');
+      else toast.success('Link também copiado para a área de transferência.');
+    } catch {
+      if (!win) toast.error('Não foi possível abrir o WhatsApp. Copie o link manualmente.');
+    }
+  }
 
   // Carga inicial
   useEffect(() => {
@@ -195,10 +232,22 @@ export default function AcompanharPedido() {
               <h1 className="font-semibold truncate">{restaurant?.name || 'Restaurante'}</h1>
             </div>
           </div>
-          <Badge variant={live ? 'default' : 'secondary'} className="gap-1">
-            <Wifi className="h-3 w-3" />
-            {live ? 'Ao vivo' : 'Conectando…'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={live ? 'default' : 'secondary'} className="gap-1">
+              <Wifi className="h-3 w-3" />
+              {live ? 'Ao vivo' : 'Conectando…'}
+            </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleShare}
+              className="gap-2"
+              aria-label="Compartilhar link do pedido no WhatsApp"
+            >
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Compartilhar</span>
+            </Button>
+          </div>
         </div>
       </header>
 
