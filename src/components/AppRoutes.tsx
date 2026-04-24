@@ -172,28 +172,31 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/areas" element={
-        <ProtectedRoute requiredPermissions={['settings_manage']}>
+        <ProtectedRoute requiredPermissions={['orders_manage', 'settings_view']} requireAny>
           <MainLayout>
             <Areas />
           </MainLayout>
         </ProtectedRoute>
       } />
       <Route path="/mesas" element={
-        <ProtectedRoute requiredPermissions={['settings_manage']}>
+        <ProtectedRoute requiredPermissions={['orders_manage', 'pdv_access']} requireAny>
           <MainLayout>
             <Mesas />
           </MainLayout>
         </ProtectedRoute>
       } />
       <Route path="/whatsapp-ai" element={
-        <ProtectedRoute requiredPermissions={['settings_manage']}>
+        <ProtectedRoute requiredPermissions={['whatsapp_configure_automation', 'whatsapp_manage']} requireAny>
           <MainLayout>
             <WhatsAppAI />
           </MainLayout>
         </ProtectedRoute>
       } />
       <Route path="/atendimento" element={
-        <ProtectedRoute requiredPermissions={['whatsapp_manage']}>
+        <ProtectedRoute
+          requiredPermissions={['whatsapp_manage', 'whatsapp_take_conversations', 'whatsapp_view_all_conversations']}
+          requireAny
+        >
           <MainLayout>
             <Atendimento />
           </MainLayout>
