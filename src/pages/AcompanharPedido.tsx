@@ -195,10 +195,7 @@ export default function AcompanharPedido() {
               <h1 className="font-semibold truncate">{restaurant?.name || 'Restaurante'}</h1>
             </div>
           </div>
-          <Badge
-            variant={live ? 'default' : 'secondary'}
-            className={cn('gap-1', live && 'bg-emerald-500 hover:bg-emerald-500')}
-          >
+          <Badge variant={live ? 'default' : 'secondary'} className="gap-1">
             <Wifi className="h-3 w-3" />
             {live ? 'Ao vivo' : 'Conectando…'}
           </Badge>
@@ -211,11 +208,7 @@ export default function AcompanharPedido() {
           <div
             className={cn(
               'h-2',
-              isCancelled
-                ? 'bg-destructive'
-                : currentStatus === 'delivered'
-                ? 'bg-emerald-500'
-                : 'bg-primary',
+              isCancelled ? 'bg-destructive' : 'bg-primary',
             )}
           />
           <CardContent className="p-6 space-y-1">
