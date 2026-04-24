@@ -1,66 +1,120 @@
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useEmployees } from "@/hooks/useEmployees";
-import { PermissionType } from "@/types/employee";
+import { EmployeeRole, PermissionType, ROLE_PRESETS } from "@/types/employee";
 
 interface AddFuncionarioDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+type PermissionGroup = {
+  label: string;
+  description: string;
+  permissions: { value: PermissionType; label: string; hint?: string }[];
+};
+
+const PERMISSION_GROUPS: PermissionGroup[] = [
+  {
+    label: "Visão Geral",
+    description: "Acesso a dashboards e relatórios",
+    permissions: [
+      { value: "dashboard_view", label: "Ver Dashboard" },
+      { value: "reports_view", label: "Ver Relatórios" },
+    ],
+  },
+  {
+    label: "PDV e Pedidos",
+    description: "Operação de venda e atendimento",
+    permissions: [
+      { value: "pdv_access", label: "Acesso ao PDV" },
+      { value: "orders_view", label: "Ver Pedidos" },
+      { value: "orders_manage", label: "Gerenciar Pedidos" },
+    ],
+  },
+  {
+    label: "Produtos",
+    description: "Catálogo e cardápio",
+    permissions: [
+      { value: "products_view", label: "Ver Produtos" },
+      { value: "products_manage", label: "Gerenciar Produtos" },
+    ],
+  },
+  {
+    label: "WhatsApp / Atendimento",
+    description: "Conversas, instâncias e automação",
+    permissions: [
+      { value: "whatsapp_manage", label: "Gerenciar WhatsApp" },
+      { value: "whatsapp_manage_instances", label: "Gerenciar Instâncias" },
+      { value: "whatsapp_take_conversations", label: "Assumir Conversas" },
+      { value: "whatsapp_reply_as_human", label: "Responder como Humano" },
+      { value: "whatsapp_view_all_conversations", label: "Ver Todas as Conversas" },
+      { value: "whatsapp_configure_automation", label: "Configurar Automação" },
+    ],
+  },
+  {
+    label: "Configurações",
+    description: "Ajustes do estabelecimento e sistema",
+    permissions: [
+      { value: "settings_view", label: "Ver Configurações" },
+      { value: "settings_manage", label: "Gerenciar Configurações" },
+    ],
+  },
+];
+
 export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialogProps) => {
   const { createEmployee } = useEmployees();
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<EmployeeRole>("cashier");
   const [formData, setFormData] = useState({
-    employee_name: '',
-    employee_email: '',
-    password: '',
-    permissions: [] as PermissionType[]
+    employee_name: "",
+    employee_email: "",
+    password: "",
+    permissions: ROLE_PRESETS.find((p) => p.id === "cashier")?.permissions ?? [] as PermissionType[],
   });
 
-  const permissionOptions = [
-    { value: 'pdv_access' as const, label: 'Acesso ao PDV' },
-    { value: 'orders_view' as const, label: 'Ver Pedidos' },
-    { value: 'orders_manage' as const, label: 'Gerenciar Pedidos' },
-    { value: 'products_view' as const, label: 'Ver Produtos' },
-    { value: 'products_manage' as const, label: 'Gerenciar Produtos' },
-    { value: 'reports_view' as const, label: 'Ver Relatórios' },
-    { value: 'settings_view' as const, label: 'Ver Configurações' },
-    { value: 'settings_manage' as const, label: 'Gerenciar Configurações' }
-  ];
+  const currentPreset = useMemo(
+    () => ROLE_PRESETS.find((p) => p.id === selectedRole) ?? ROLE_PRESETS[0],
+    [selectedRole]
+  );
 
-  const defaultPermissions: PermissionType[] = [
-    'pdv_access',
-    'orders_view',
-    'orders_manage',
-    'products_view'
-  ];
+  const handleRoleChange = (role: EmployeeRole) => {
+    setSelectedRole(role);
+    const preset = ROLE_PRESETS.find((p) => p.id === role);
+    if (preset && role !== "custom") {
+      setFormData((prev) => ({ ...prev, permissions: [...preset.permissions] }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const permissionsToUse = formData.permissions.length > 0 
-        ? formData.permissions 
-        : defaultPermissions;
-
       const result = await createEmployee({
-        ...formData,
-        permissions: permissionsToUse
+        employee_name: formData.employee_name,
+        employee_email: formData.employee_email,
+        password: formData.password,
+        permissions: formData.permissions,
+        user_type: currentPreset.user_type,
       });
 
       if (result.success) {
+        setSelectedRole("cashier");
         setFormData({
-          employee_name: '',
-          employee_email: '',
-          password: '',
-          permissions: []
+          employee_name: "",
+          employee_email: "",
+          password: "",
+          permissions: ROLE_PRESETS.find((p) => p.id === "cashier")?.permissions ?? [],
         });
         onOpenChange(false);
       }
@@ -70,59 +124,50 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
   };
 
   const handlePermissionChange = (permission: PermissionType, checked: boolean) => {
-    if (checked) {
-      setFormData(prev => ({
-        ...prev,
-        permissions: [...prev.permissions, permission]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        permissions: prev.permissions.filter(p => p !== permission)
-      }));
-    }
-  };
-
-  const setDefaultPermissions = () => {
-    setFormData(prev => ({
+    setSelectedRole("custom");
+    setFormData((prev) => ({
       ...prev,
-      permissions: defaultPermissions
+      permissions: checked
+        ? [...prev.permissions, permission]
+        : prev.permissions.filter((p) => p !== permission),
     }));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Adicionar Funcionário</DialogTitle>
+          <DialogTitle>Adicionar Funcionário ou Gerente</DialogTitle>
           <DialogDescription>
-            Crie uma conta para um novo funcionário e defina suas permissões
+            Escolha um cargo predefinido ou personalize as permissões individualmente.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4">
-            <div>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <ScrollArea className="flex-1 pr-4 -mr-4">
+            <div className="grid gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
               <Label htmlFor="employee_name">Nome do Funcionário</Label>
               <Input
                 id="employee_name"
                 value={formData.employee_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, employee_name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, employee_name: e.target.value }))}
                 placeholder="Nome completo"
                 required
               />
-            </div>
-
-            <div>
+              </div>
+              <div>
               <Label htmlFor="employee_email">Email</Label>
               <Input
                 id="employee_email"
                 type="email"
                 value={formData.employee_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, employee_email: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, employee_email: e.target.value }))}
                 placeholder="email@exemplo.com"
                 required
               />
+              </div>
             </div>
 
             <div>
@@ -131,51 +176,81 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
                 id="password"
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="Senha para acesso inicial"
+                onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                placeholder="Mínimo 6 caracteres"
                 required
                 minLength={6}
               />
             </div>
 
+            <Separator />
+
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label>Permissões</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={setDefaultPermissions}
-                >
-                  Usar Padrão (Salão/Caixa)
-                </Button>
+              <Label>Cargo</Label>
+              <Select value={selectedRole} onValueChange={(v) => handleRoleChange(v as EmployeeRole)}>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{preset.label}</span>
+                        {preset.user_type === "manager" && (
+                          <Badge variant="secondary" className="text-xs">Gerente</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1.5">{currentPreset.description}</p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Permissões {selectedRole === "custom" && <span className="text-xs text-muted-foreground">(personalizado)</span>}</Label>
+                <Badge variant="outline">{formData.permissions.length} selecionada(s)</Badge>
               </div>
-              <div className="space-y-3">
-                {permissionOptions.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={option.value}
-                      checked={formData.permissions.includes(option.value)}
-                      onCheckedChange={(checked) => 
-                        handlePermissionChange(option.value, checked as boolean)
-                      }
-                    />
-                    <Label htmlFor={option.value}>{option.label}</Label>
+              <div className="space-y-4 rounded-md border p-3 bg-muted/30">
+                {PERMISSION_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <div className="mb-2">
+                      <p className="text-sm font-semibold">{group.label}</p>
+                      <p className="text-xs text-muted-foreground">{group.description}</p>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-2 pl-1">
+                      {group.permissions.map((option) => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={option.value}
+                            checked={formData.permissions.includes(option.value)}
+                            onCheckedChange={(checked) =>
+                              handlePermissionChange(option.value, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={option.value} className="text-sm font-normal cursor-pointer">
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Se nenhuma permissão for selecionada, serão aplicadas as permissões padrão para funcionários de salão/caixa.
+              <p className="text-xs text-muted-foreground mt-2">
+                Cargos pré-definidos aplicam permissões automaticamente. Marcar/desmarcar manualmente troca para "Personalizado".
               </p>
             </div>
-          </div>
+            </div>
+          </ScrollArea>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Criando...' : 'Criar Funcionário'}
+              {loading ? "Criando..." : `Criar ${currentPreset.user_type === "manager" ? "Gerente" : "Funcionário"}`}
             </Button>
           </DialogFooter>
         </form>
