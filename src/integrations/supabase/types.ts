@@ -598,7 +598,10 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string
+          whatsapp_last_attempt_at: string | null
+          whatsapp_last_error: string | null
           whatsapp_message_id: string | null
+          whatsapp_send_attempts: number
           whatsapp_sent_at: string | null
           zip_code: string
         }
@@ -625,7 +628,10 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
+          whatsapp_last_attempt_at?: string | null
+          whatsapp_last_error?: string | null
           whatsapp_message_id?: string | null
+          whatsapp_send_attempts?: number
           whatsapp_sent_at?: string | null
           zip_code: string
         }
@@ -652,7 +658,10 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
+          whatsapp_last_attempt_at?: string | null
+          whatsapp_last_error?: string | null
           whatsapp_message_id?: string | null
+          whatsapp_send_attempts?: number
           whatsapp_sent_at?: string | null
           zip_code?: string
         }
