@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MenuData } from '@/types/menuTheme';
 import { CartProvider, useCart, formatBRL } from '../cart/CartContext';
 import { CheckoutFlow } from '../checkout/CheckoutFlow';
+import { AddItemModal, AddItemModalProduct } from './AddItemModal';
 import { Search, ShoppingBag, MapPin, Clock, Phone, Plus, Minus, Home, Tag, ClipboardList, ChevronRight, X } from 'lucide-react';
 
 interface Props {
@@ -21,8 +22,9 @@ const DeliveryLayout = ({ data }: Props) => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<AddItemModalProduct | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const { count } = useCart();
+  const { count, addItem } = useCart();
 
   const primary = data.theme.colors.primary;
 
@@ -151,7 +153,18 @@ const DeliveryLayout = ({ data }: Props) => {
                   <h2 className="text-xl font-bold mb-3">{cat.name}</h2>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {cat.products.map(p => (
-                      <ProductCard key={p.id} product={p} primary={primary} />
+                      <ProductCard
+                        key={p.id}
+                        product={p}
+                        primary={primary}
+                        onAdd={() => setSelectedProduct({
+                          id: p.id,
+                          name: p.name,
+                          price: p.price,
+                          description: p.description,
+                          image_url: p.image_url,
+                        })}
+                      />
                     ))}
                   </div>
                 </section>
@@ -218,6 +231,25 @@ const DeliveryLayout = ({ data }: Props) => {
           onClose={() => setCheckoutOpen(false)}
         />
       )}
+
+      {/* Modal de adicionar item com observações */}
+      <AddItemModal
+        product={selectedProduct}
+        primaryColor={primary}
+        onClose={() => setSelectedProduct(null)}
+        onConfirm={({ quantity, observations }) => {
+          if (!selectedProduct) return;
+          addItem({
+            product_id: selectedProduct.id,
+            name: selectedProduct.name,
+            price: selectedProduct.price,
+            image_url: selectedProduct.image_url,
+            quantity,
+            observations,
+          });
+          setSelectedProduct(null);
+        }}
+      />
     </div>
   );
 };
@@ -235,8 +267,15 @@ const HeaderTab = ({ icon, label, active }: { icon: React.ReactNode; label: stri
   </button>
 );
 
-const ProductCard = ({ product, primary }: { product: MenuData['categories'][number]['products'][number]; primary: string }) => {
-  const { addItem } = useCart();
+const ProductCard = ({
+  product,
+  primary,
+  onAdd,
+}: {
+  product: MenuData['categories'][number]['products'][number];
+  primary: string;
+  onAdd: () => void;
+}) => {
   return (
     <div className="bg-card rounded-xl p-3 flex gap-3 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex-1 min-w-0">
@@ -249,14 +288,7 @@ const ProductCard = ({ product, primary }: { product: MenuData['categories'][num
             {formatBRL(product.price)}
           </span>
           <button
-            onClick={() =>
-              addItem({
-                product_id: product.id,
-                name: product.name,
-                price: product.price,
-                image_url: product.image_url,
-              })
-            }
+            onClick={onAdd}
             className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:opacity-90 transition"
             style={{ backgroundColor: primary }}
           >
