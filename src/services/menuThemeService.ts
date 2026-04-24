@@ -179,6 +179,11 @@ export const menuThemeService = {
         ...restaurant,
         logo_url: restaurant.logo_url || undefined,
         banner_url: restaurant.banner_url || undefined,
+        address: restaurant.address || undefined,
+        phone: restaurant.phone || undefined,
+        phone_whatsapp: restaurant.phone_whatsapp || undefined,
+        business_hours: restaurant.business_hours || undefined,
+        category: restaurant.category || undefined,
         slug: restaurant.slug || restaurant.id // fallback se slug for null
       };
 
