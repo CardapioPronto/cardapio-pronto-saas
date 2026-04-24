@@ -1,6 +1,31 @@
 
 import { ThemeConfig } from '@/types/menuTheme';
 
+// Tema Delivery (novo - moderno, baseado em iFood/Rappi)
+export const deliveryTheme: ThemeConfig = {
+  colors: {
+    primary: '#C8102E',     // vermelho vibrante (header)
+    secondary: '#FFFFFF',
+    background: '#F5F5F5',
+    text: '#1F2937',
+    accent: '#FEF2F2',
+  },
+  fonts: {
+    heading: 'Inter, system-ui, sans-serif',
+    body: 'Inter, system-ui, sans-serif',
+  },
+  spacing: {
+    container: 'w-full',
+    section: 'space-y-4',
+    card: 'p-4',
+  },
+  borderRadius: 'rounded-xl',
+  shadows: {
+    card: 'shadow-sm hover:shadow-md transition-shadow',
+    header: 'shadow-md',
+  },
+};
+
 // Tema Padrão
 export const defaultTheme: ThemeConfig = {
   colors: {
@@ -78,6 +103,7 @@ export const elegantTheme: ThemeConfig = {
 
 // Registro de temas - facilita adicionar novos temas
 export const themeRegistry = {
+  delivery: deliveryTheme,
   default: defaultTheme,
   modern: modernTheme,
   elegant: elegantTheme
@@ -86,7 +112,7 @@ export const themeRegistry = {
 export type ThemeName = keyof typeof themeRegistry;
 
 export function getThemeConfig(themeName: string, customColors?: Record<string, string>): ThemeConfig {
-  const baseTheme = themeRegistry[themeName as ThemeName] || defaultTheme;
+  const baseTheme = themeRegistry[themeName as ThemeName] || deliveryTheme;
   
   if (!customColors || Object.keys(customColors).length === 0) {
     return baseTheme;
