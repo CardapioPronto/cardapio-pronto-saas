@@ -88,17 +88,38 @@ export const menuThemeService = {
     console.log('Getting public menu data for slug:', slug);
     
     try {
-      // Buscar restaurante pelo slug ou ID
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from('restaurants')
-        .select('id, name, logo_url, banner_url, slug, address, phone, phone_whatsapp, business_hours, category')
-        .or(`slug.eq.${slug},id.eq.${slug}`)
-        .eq('active', true)
-        .single();
+      // Detectar se é UUID (id) ou slug textual
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      const columns = 'id, name, logo_url, banner_url, slug, address, phone, phone_whatsapp, business_hours, category, active';
+
+      let restaurant: any = null;
+      let restaurantError: any = null;
+
+      if (isUuid) {
+        const res = await supabase
+          .from('restaurants')
+          .select(columns)
+          .eq('id', slug)
+          .maybeSingle();
+        restaurant = res.data;
+        restaurantError = res.error;
+      } else {
+        const res = await supabase
+          .from('restaurants')
+          .select(columns)
+          .eq('slug', slug)
+          .maybeSingle();
+        restaurant = res.data;
+        restaurantError = res.error;
+      }
 
       if (restaurantError) {
         console.error('Restaurant error:', restaurantError);
         throw new Error(`Erro ao buscar restaurante: ${restaurantError.message}`);
+      }
+
+      if (!restaurant) {
+        throw new Error('Restaurante não encontrado. Verifique o link do cardápio.');
       }
 
       console.log('Restaurant found:', restaurant);
