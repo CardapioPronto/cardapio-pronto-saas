@@ -38,7 +38,6 @@ const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Areas = lazy(() => import('@/pages/Areas'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
-const WhatsAppAI = lazy(() => import('@/pages/WhatsAppAI'));
 const Atendimento = lazy(() => import('@/pages/Atendimento'));
 const Admin = lazy(() => import('@/pages/Admin'));
 const AdminSubscriptions = lazy(() => import('@/pages/admin/AdminSubscriptions'));
@@ -205,13 +204,6 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['orders_manage', 'pdv_access']} requireAny>
           <MainLayout>
             <Mesas />
-          </MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/whatsapp-ai" element={
-        <ProtectedRoute requiredPermissions={['whatsapp_configure_automation', 'whatsapp_manage']} requireAny>
-          <MainLayout>
-            <WhatsAppAI />
           </MainLayout>
         </ProtectedRoute>
       } />

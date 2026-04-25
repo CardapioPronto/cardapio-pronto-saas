@@ -23,13 +23,13 @@ export const IntegracoesTab: React.FC = () => {
                   <Bot className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-medium">WhatsApp AI</h3>
+                  <h3 className="font-medium">WhatsApp</h3>
                   <p className="text-sm text-muted-foreground">
                     Atendente virtual com IA via Evolution API
                   </p>
                 </div>
               </div>
-              <Button onClick={() => window.location.href = "/whatsapp-ai"}>Configurar</Button>
+              <Button onClick={() => window.location.href = "/atendimento"}>Configurar</Button>
             </div>
           </div>
 
