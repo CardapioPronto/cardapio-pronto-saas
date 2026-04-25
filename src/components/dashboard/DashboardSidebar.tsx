@@ -30,6 +30,7 @@ import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useUserSession } from "@/hooks/useUserSession";
 import { PermissionType } from "@/types/employee";
 import { cn } from "@/lib/utils";
+import pubfyLogo from "@/assets/pubfy-navbar-logo.png";
 
 type NavItem = {
   to: string;
@@ -140,7 +141,8 @@ const DashboardSidebar = () => {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <Link to="/" className="flex items-center">
-              <span className="text-foreground text-2xl font-bold">Pubfy</span>
+              {/* <span className="text-foreground text-2xl font-bold">Pubfy</span> */}
+              <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain md:h-14" />
             </Link>
             <Button
               variant="ghost"

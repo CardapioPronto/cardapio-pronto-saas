@@ -4,19 +4,19 @@ import { WhatsAppMessage } from "./types";
 import { toast } from "sonner";
 
 export class WhatsAppMessageService {
-  // Método legado - agora o WhatsApp usa Evolution API
+  // Método legado - agora o envio operacional usa Atendimento WhatsApp/n8n.
   static async sendMessage(
     restaurantId: string,
     phoneNumber: string,
     message: string,
     orderId?: string
   ): Promise<boolean> {
-    console.warn('WhatsApp messaging now uses Evolution API. See /whatsapp-ai');
+    console.warn('WhatsApp messaging now uses Atendimento WhatsApp/n8n.');
     return false;
   }
 
   static formatPhoneNumber(phoneNumber: string): string {
-    let cleaned = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    let cleaned = phoneNumber.replace(/[\s\-()]/g, '');
     if (!cleaned.startsWith('+') && !cleaned.startsWith('55')) {
       if (cleaned.startsWith('0')) {
         cleaned = cleaned.substring(1);
