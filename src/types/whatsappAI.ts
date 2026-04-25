@@ -1,9 +1,12 @@
 export type EvolutionAction =
   | "create"
+  | "create_instance"
   | "connect"
   | "status"
+  | "get_status"
   | "disconnect"
   | "delete"
+  | "delete_instance"
   | "qrcode"
   | "send";
 
@@ -55,10 +58,11 @@ export interface WhatsAppChatMessage {
 }
 
 export interface ChatConversation {
-  remote_jid: string;
-  customer_phone: string;
-  customer_name?: string | null;
+  remoteJid: string;
+  customerPhone: string;
+  customerName?: string | null;
+  lastMessage?: string;
+  lastMessageAt?: string | null;
+  unreadCount?: number;
   messages: WhatsAppChatMessage[];
-  last_message_at?: string | null;
-  last_message_preview?: string;
 }
