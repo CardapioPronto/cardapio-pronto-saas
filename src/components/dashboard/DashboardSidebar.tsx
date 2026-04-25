@@ -54,7 +54,6 @@ const operationalLinks: NavItem[] = [
 
 const communicationLinks: NavItem[] = [
   { to: "/atendimento", label: "Atendimento WhatsApp", icon: Headphones, permissions: ["whatsapp_manage"] },
-  { to: "/whatsapp-ai", label: "WhatsApp AI (Legado)", icon: Bot, permissions: ["whatsapp_configure_automation"] },
 ];
 
 const adminLinks: NavItem[] = [
