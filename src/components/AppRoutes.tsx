@@ -1,57 +1,66 @@
 
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import LandingPage from '@/pages/LandingPage';
-import Dashboard from '@/pages/Dashboard';
-import Produtos from '@/pages/Produtos';
-import Pedidos from '@/pages/Pedidos';
-import FuncionariosV2 from '@/pages/FuncionariosV2';
-import Categorias from '@/pages/Categorias';
-import Configuracoes from '@/pages/Configuracoes';
-import Login from '@/pages/Login';
-import Cadastro from '@/pages/Cadastro';
-import EsqueciSenha from '@/pages/EsqueciSenha';
-import ResetPassword from '@/pages/ResetPassword';
-import NotFound from '@/pages/NotFound';
-import CardapioPublico from '@/pages/CardapioPublico';
-import AcompanharPedido from '@/pages/AcompanharPedido';
-import FAQ from '@/pages/FAQ';
-import Demonstracao from '@/pages/Demonstracao';
-import Funcionalidades from '@/pages/Funcionalidades';
-import Contato from '@/pages/Contato';
-import CardapioDigital from '@/pages/CardapioDigital';
-import PDVOnline from '@/pages/PDVOnline';
-import GestaoCompleta from '@/pages/GestaoCompleta';
-import Precos from '@/pages/Precos';
-import PDV from '@/pages/PDV';
-import MenuDigital from '@/pages/MenuDigital';
-import Assinaturas from '@/pages/Assinaturas';
-import PagarmeConfig from '@/pages/PagarmeConfig';
-import IfoodIntegracao from '@/pages/IfoodIntegracao';
-import Relatorios from '@/pages/Relatorios';
-import Areas from '@/pages/Areas';
-import Mesas from '@/pages/Mesas';
-import Admin from '@/pages/Admin';
-import AdminSubscriptions from '@/pages/admin/AdminSubscriptions';
-import AdminSettings from '@/pages/admin/AdminSettings';
-import AdminLogs from '@/pages/admin/AdminLogs';
-import AdminSuperAdmins from '@/pages/admin/AdminSuperAdmins';
-import AdminPlanos from '@/pages/admin/AdminPlanos';
-import AdminBlog from '@/pages/admin/AdminBlog';
-import Blog from '@/pages/Blog';
-import BlogPost from '@/pages/BlogPost';
-import AdminContact from '@/pages/admin/AdminContact';
-import AdminContactRecipients from '@/pages/admin/AdminContactRecipients';
-import AdminPagarme from '@/pages/admin/AdminPagarme';
-import WhatsAppAI from '@/pages/WhatsAppAI';
-import Atendimento from '@/pages/Atendimento';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Produtos = lazy(() => import('@/pages/Produtos'));
+const Pedidos = lazy(() => import('@/pages/Pedidos'));
+const FuncionariosV2 = lazy(() => import('@/pages/FuncionariosV2'));
+const Categorias = lazy(() => import('@/pages/Categorias'));
+const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
+const Login = lazy(() => import('@/pages/Login'));
+const Cadastro = lazy(() => import('@/pages/Cadastro'));
+const EsqueciSenha = lazy(() => import('@/pages/EsqueciSenha'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
+const CardapioPublico = lazy(() => import('@/pages/CardapioPublico'));
+const AcompanharPedido = lazy(() => import('@/pages/AcompanharPedido'));
+const FAQ = lazy(() => import('@/pages/FAQ'));
+const Demonstracao = lazy(() => import('@/pages/Demonstracao'));
+const Funcionalidades = lazy(() => import('@/pages/Funcionalidades'));
+const Contato = lazy(() => import('@/pages/Contato'));
+const CardapioDigital = lazy(() => import('@/pages/CardapioDigital'));
+const PDVOnline = lazy(() => import('@/pages/PDVOnline'));
+const GestaoCompleta = lazy(() => import('@/pages/GestaoCompleta'));
+const Precos = lazy(() => import('@/pages/Precos'));
+const Blog = lazy(() => import('@/pages/Blog'));
+const BlogPost = lazy(() => import('@/pages/BlogPost'));
+const PDV = lazy(() => import('@/pages/PDV'));
+const MenuDigital = lazy(() => import('@/pages/MenuDigital'));
+const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
+const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
+const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
+const Relatorios = lazy(() => import('@/pages/Relatorios'));
+const Areas = lazy(() => import('@/pages/Areas'));
+const Mesas = lazy(() => import('@/pages/Mesas'));
+const WhatsAppAI = lazy(() => import('@/pages/WhatsAppAI'));
+const Atendimento = lazy(() => import('@/pages/Atendimento'));
+const Admin = lazy(() => import('@/pages/Admin'));
+const AdminSubscriptions = lazy(() => import('@/pages/admin/AdminSubscriptions'));
+const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
+const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'));
+const AdminSuperAdmins = lazy(() => import('@/pages/admin/AdminSuperAdmins'));
+const AdminPlanos = lazy(() => import('@/pages/admin/AdminPlanos'));
+const AdminBlog = lazy(() => import('@/pages/admin/AdminBlog'));
+const AdminContact = lazy(() => import('@/pages/admin/AdminContact'));
+const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactRecipients'));
+const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
+
+const RouteFallback = () => (
+  <div className="min-h-screen w-full flex items-center justify-center bg-background">
+    <span className="text-sm text-muted-foreground">Carregando...</span>
+  </div>
+);
+
 const AppRoutes = () => {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       {/* Rotas públicas */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={
@@ -270,7 +279,8 @@ const AppRoutes = () => {
       } />
       
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 
