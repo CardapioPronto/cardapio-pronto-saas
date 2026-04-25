@@ -1,6 +1,7 @@
 
 import React from 'react';
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+// cache-bust: refresh dynamic import after dev server restart
 import { MenuThemeSelector } from "@/components/menu-digital/MenuThemeSelector";
 import { MenuPreview } from "@/components/menu-digital/MenuPreview";
 import { QRCodeGenerator } from "@/components/menu-digital/QRCodeGenerator";
