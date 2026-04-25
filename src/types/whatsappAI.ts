@@ -54,15 +54,15 @@ export interface WhatsAppChatMessage {
   message_content: string;
   message_type: string;
   is_from_ai?: boolean | null;
-  created_at?: string | null;
+  created_at: string;
 }
 
 export interface ChatConversation {
   remoteJid: string;
   customerPhone: string;
   customerName?: string | null;
-  lastMessage?: string;
-  lastMessageAt?: string | null;
-  unreadCount?: number;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
   messages: WhatsAppChatMessage[];
 }
