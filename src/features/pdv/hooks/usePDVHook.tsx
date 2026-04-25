@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/types";
-import { Pedido, ItemPedido } from "../types";
+import { Pedido, ItemPedido, DadosClientePedido } from "../types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -109,21 +109,21 @@ export const usePDVHook = (restaurantId: string) => {
   );
 
   // Finalizar pedido
-  const finalizarPedido = async () => {
+  const finalizarPedido = async (dadosCliente: DadosClientePedido = {}) => {
     if (itensPedido.length === 0) {
       toast.error("Adicione pelo menos um item ao pedido");
-      return;
+      return false;
     }
     
     // Validar mesa apenas para pedidos tipo "mesa"
     if (tipoPedido === "mesa" && !mesaSelecionada) {
       toast.error("Selecione uma mesa para o pedido");
-      return;
+      return false;
     }
     
     if (!restaurantId) {
       toast.error("ID do restaurante não encontrado");
-      return;
+      return false;
     }
     
     try {
@@ -137,8 +137,11 @@ export const usePDVHook = (restaurantId: string) => {
       
       if (!user) {
         toast.error("Usuário não autenticado");
-        return;
+        return false;
       }
+
+      const nomeClientePedido = dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined;
+      const telefoneClientePedido = dadosCliente.telefoneCliente?.trim() || undefined;
       
       const result = await salvarPedido(
         restaurantId,
@@ -146,8 +149,8 @@ export const usePDVHook = (restaurantId: string) => {
         itensPedido,
         totalPedido,
         user.id, // ID do funcionário/usuário logado
-        nomeCliente.trim() || undefined,
-        undefined,
+        nomeClientePedido,
+        telefoneClientePedido,
         mesaSelecionada || undefined // Mesa opcional para balcão
       );
       
@@ -158,9 +161,12 @@ export const usePDVHook = (restaurantId: string) => {
         setVisualizacaoAtiva("historico");
         await carregarHistoricoPedidos();
       }
+
+      return result.success;
     } catch (error) {
       console.error("Erro ao finalizar pedido:", error);
       toast.error("Ocorreu um erro ao finalizar o pedido");
+      return false;
     } finally {
       setSalvandoPedido(false);
     }

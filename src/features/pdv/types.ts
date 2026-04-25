@@ -1,5 +1,5 @@
 
-import { Product } from "@/types";
+import { Product, Category } from "@/types";
 
 // Create a simplified product type for database responses
 export interface ProdutoSimplificado {
@@ -8,7 +8,7 @@ export interface ProdutoSimplificado {
   price: number;
   description?: string;
   available?: boolean;
-  category?: any;
+  category?: Category | null;
   restaurant_id?: string;
 }
 
@@ -16,6 +16,11 @@ export interface ItemPedido {
   produto: Product | ProdutoSimplificado; // Allow both full Product and simplified product format
   quantidade: number;
   observacao?: string | null;  // Allow null values from database responses
+}
+
+export interface DadosClientePedido {
+  nomeCliente?: string;
+  telefoneCliente?: string;
 }
 
 export interface Pedido {

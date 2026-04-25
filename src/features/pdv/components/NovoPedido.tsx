@@ -1,35 +1,32 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
-import { usePrint } from "@/hooks/usePrint";
-import { useEffect } from "react";
 import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
 import { FiltroProdutos } from "./FiltroProdutos";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useMesas } from "@/hooks/useMesas";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 import { Product } from "@/types";
+import { DadosClientePedido, ItemPedido } from "../types";
 
 export interface NovoPedidoProps {
   categoriaAtiva?: string;
   setCategoriaAtiva?: (categoria: string) => void;
   busca?: string;
   setBusca?: (valor: string) => void;
-  itensPedido?: any[];
+  itensPedido?: ItemPedido[];
   totalPedido?: number;
   salvandoPedido?: boolean;
   adicionarProduto?: (produto: Product) => void;
   alterarQuantidade?: (index: number, delta: number) => void;
   removerItem?: (index: number) => void;
-  finalizarPedidoOriginal?: () => Promise<void> | void;
+  finalizarPedidoOriginal?: (dadosCliente?: DadosClientePedido) => Promise<boolean | void> | boolean | void;
   tipoPedido?: "mesa" | "balcao";
   mesaSelecionada?: string;
   setMesaSelecionada?: (mesaId: string) => void;
@@ -62,7 +59,9 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
     setMesaSelecionada: props.setMesaSelecionada ?? hook.setMesaSelecionada,
     nomeCliente: props.nomeCliente ?? hook.nomeCliente,
     setNomeCliente: props.setNomeCliente ?? hook.setNomeCliente,
-  } as Required<NovoPedidoProps> & { finalizarPedidoOriginal: () => Promise<void> | void };
+  } as Required<NovoPedidoProps> & {
+    finalizarPedidoOriginal: (dadosCliente?: DadosClientePedido) => Promise<boolean | void> | boolean | void;
+  };
 
   const {
     categoriaAtiva,
@@ -129,28 +128,13 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
     }
 
     try {
-      // Call the original function with customer data
-      await finalizarPedidoOriginal();
-      
-      // Tentar enviar notificação WhatsApp se telefone foi fornecido
-      if (telefoneCliente) {
-        try {
-          // Buscar o último pedido criado para obter o ID
-          setTimeout(async () => {
-            try {
-              await WhatsAppService.sendOrderConfirmation(
-                restaurantId,
-                telefoneCliente,
-                'ultimo' // Indicar que é o último pedido
-              );
-              toast.success("Pedido finalizado e notificação WhatsApp enviada!");
-            } catch (error) {
-              console.error('Erro ao enviar WhatsApp:', error);
-            }
-          }, 1000);
-        } catch (error) {
-          console.error('Erro ao enviar WhatsApp:', error);
-        }
+      const pedidoFinalizado = await finalizarPedidoOriginal({
+        nomeCliente,
+        telefoneCliente: telefoneCliente || undefined,
+      });
+
+      if (pedidoFinalizado === false) {
+        return;
       }
 
       // Limpar campos após sucesso
