@@ -29,9 +29,13 @@ export const MenuPreview = () => {
       return;
     }
 
-    // Abrir preview em nova aba usando o ID do restaurante
-    const previewUrl = `/cardapio/${user.restaurant_id}`;
-    window.open(previewUrl, '_blank');
+    // Abrir preview em nova aba usando o ID do restaurante.
+    // Cache-bust: anexa timestamp para forçar o navegador/Vite a recarregar
+    // os módulos dinâmicos após restart do dev server, evitando o erro
+    // "Failed to fetch dynamically imported module".
+    const cacheBust = Date.now();
+    const previewUrl = `/cardapio/${user.restaurant_id}?preview=${cacheBust}`;
+    window.open(previewUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleCopyLink = () => {
