@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Smartphone, Settings2, BarChart3 } from "lucide-react";
@@ -10,11 +11,8 @@ const Atendimento = () => {
   const [activeTab, setActiveTab] = useState("conversas");
 
   return (
-    <div className="space-y-6">
+    <DashboardLayout title="Atendimento WhatsApp">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Atendimento WhatsApp
-        </h1>
         <p className="text-muted-foreground">
           Gerencie instâncias, conversas e automações do WhatsApp
         </p>
@@ -53,7 +51,7 @@ const Atendimento = () => {
           <AtendimentoMetricas />
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardLayout>
   );
 };
 
