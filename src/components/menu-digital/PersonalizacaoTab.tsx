@@ -484,3 +484,5 @@ export const PersonalizacaoTab = () => {
     </div>
   );
 };
+
+export default PersonalizacaoTab;
