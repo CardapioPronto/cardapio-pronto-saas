@@ -1,4 +1,5 @@
 
+import { memo } from "react";
 import { StatCard } from "./StatCard";
 import { LucideIcon } from "lucide-react";
 
@@ -14,7 +15,7 @@ interface StatsGridProps {
   stats: Stat[];
 }
 
-export const StatsGrid = ({ stats }: StatsGridProps) => {
+const StatsGridBase = ({ stats }: StatsGridProps) => {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, index) => (
@@ -30,3 +31,5 @@ export const StatsGrid = ({ stats }: StatsGridProps) => {
     </div>
   );
 };
+
+export const StatsGrid = memo(StatsGridBase);

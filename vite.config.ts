@@ -24,6 +24,17 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    build: {
+      target: 'es2020',
+      minify: 'esbuild',
+      cssCodeSplit: true,
+      sourcemap: false,
+      chunkSizeWarningLimit: 1200,
+    },
+    esbuild: {
+      // Remove console/debugger em produção para reduzir bundle e ruído
+      drop: mode === 'production' ? ['console', 'debugger'] : [],
+    },
     // Disponibiliza variáveis de ambiente para o cliente
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL || ''),

@@ -1,4 +1,5 @@
 
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Product } from "@/types";
 import produtoPadrao from "@/assets/produto-padrao.jpg";
@@ -8,10 +9,8 @@ interface ProdutoCardProps {
   onSelecionar: (produto: Product) => void;
 }
 
-export const ProdutoCard = ({ produto, onSelecionar }: ProdutoCardProps) => {
-  const getProductImage = (imageUrl?: string) => {
-    return imageUrl || produtoPadrao;
-  };
+const ProdutoCardBase = ({ produto, onSelecionar }: ProdutoCardProps) => {
+  const imageSrc = produto.image_url || produtoPadrao;
 
   return (
     <Card 
@@ -22,8 +21,10 @@ export const ProdutoCard = ({ produto, onSelecionar }: ProdutoCardProps) => {
       <CardContent className="p-4">
         <div className="w-full h-32 mb-2 overflow-hidden rounded-md">
           <img 
-            src={getProductImage(produto.image_url)} 
+            src={imageSrc}
             alt={produto.name} 
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         </div>
@@ -43,3 +44,5 @@ export const ProdutoCard = ({ produto, onSelecionar }: ProdutoCardProps) => {
     </Card>
   );
 };
+
+export const ProdutoCard = memo(ProdutoCardBase);

@@ -21,11 +21,12 @@ export const useDashboardData = (restaurantId: string | null) => {
       setLoading(true);
       
       try {
-        const statsData = await getDashboardStats();
+        const [statsData] = await Promise.all([
+          getDashboardStats(),
+          loadRecentSales(),
+          loadPopularProducts(),
+        ]);
         updateStats(statsData);
-        
-        await loadRecentSales();
-        await loadPopularProducts();
       } catch (error) {
         console.error("Erro ao buscar dados do dashboard:", error);
       } finally {
