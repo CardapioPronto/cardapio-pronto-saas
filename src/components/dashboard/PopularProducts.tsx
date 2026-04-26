@@ -1,4 +1,5 @@
 
+import { memo, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -12,11 +13,12 @@ interface PopularProductsProps {
   products: PopularProduct[];
 }
 
-export function PopularProducts({ products }: PopularProductsProps) {
+function PopularProductsBase({ products }: PopularProductsProps) {
   // Calculate maximum sales to normalize popularity percentages
-  const maxSales = products.length > 0 
-    ? Math.max(...products.map(product => product.sales)) 
-    : 1;
+  const maxSales = useMemo(
+    () => (products.length > 0 ? Math.max(...products.map((p) => p.sales)) : 1),
+    [products]
+  );
 
   return (
     <Card>
@@ -57,3 +59,5 @@ export function PopularProducts({ products }: PopularProductsProps) {
     </Card>
   );
 }
+
+export const PopularProducts = memo(PopularProductsBase);

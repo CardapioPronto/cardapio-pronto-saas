@@ -1,4 +1,5 @@
 
+import { memo } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +13,7 @@ interface RecentSalesProps {
   sales: RecentSale[];
 }
 
-export function RecentSales({ sales }: RecentSalesProps) {
+function RecentSalesBase({ sales }: RecentSalesProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -47,3 +48,5 @@ export function RecentSales({ sales }: RecentSalesProps) {
     </Card>
   );
 }
+
+export const RecentSales = memo(RecentSalesBase);

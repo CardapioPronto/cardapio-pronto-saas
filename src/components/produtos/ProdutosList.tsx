@@ -64,6 +64,8 @@ export function ProdutosList({
                 <img 
                   src={produto.image_url || produtoPadrao} 
                   alt={produto.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 object-cover rounded-md"
                 />
               </TableCell>
