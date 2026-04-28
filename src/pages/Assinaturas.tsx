@@ -5,7 +5,7 @@ import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import PaymentForm from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
@@ -82,14 +82,36 @@ const Assinaturas = () => {
     <DashboardLayout title="Assinaturas">
       <div className="space-y-6">
         {subscriptionStatus.isInTrial && (
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertTitle>Período de Teste Ativo</AlertTitle>
+          <Alert className="border-orange/40 bg-orange/5">
+            <Clock className="h-4 w-4 text-orange" />
+            <AlertTitle>Você está no período de teste gratuito (14 dias)</AlertTitle>
             <AlertDescription>
-              Você tem <strong>{subscriptionStatus.daysLeftInTrial} dias</strong> restantes de teste gratuito do plano {subscriptionStatus.planName}.
+              Restam <strong>{subscriptionStatus.daysLeftInTrial} dia(s)</strong> de teste. Ative seu plano para continuar usando o Pubfy sem interrupção.
             </AlertDescription>
           </Alert>
         )}
+        {!subscriptionStatus.isLoading &&
+          !subscriptionStatus.isInTrial &&
+          !subscriptionStatus.hasActiveSubscription && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Plano expirado ou inativo</AlertTitle>
+              <AlertDescription>
+                Ative o Plano Pubfy para voltar a usar todos os recursos.
+              </AlertDescription>
+            </Alert>
+          )}
+        {!subscriptionStatus.isLoading &&
+          subscriptionStatus.hasActiveSubscription &&
+          !subscriptionStatus.isInTrial && (
+            <Alert className="border-green/40 bg-green/5">
+              <CheckCircle className="h-4 w-4 text-green" />
+              <AlertTitle>Plano ativo</AlertTitle>
+              <AlertDescription>
+                Sua assinatura do {subscriptionStatus.planName ?? "Plano Pubfy"} está em dia.
+              </AlertDescription>
+            </Alert>
+          )}
         
         <Tabs 
           value={selectedTab} 
