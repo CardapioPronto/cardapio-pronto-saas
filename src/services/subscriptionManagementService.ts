@@ -89,7 +89,11 @@ export const checkTrialExpiration = async (restaurantId: string) => {
 export const convertTrialToPaid = async (
   restaurantId: string,
   planId: string,
-  paymentData: any
+  paymentData: {
+    pagarmeSubscriptionId?: string;
+    pagarmeCustomerId?: string;
+    nextBilling?: Date | string;
+  } = {}
 ) => {
   try {
     // Cancelar trial atual
@@ -108,6 +112,11 @@ export const convertTrialToPaid = async (
         status: 'active',
         is_trial: false,
         start_date: new Date().toISOString(),
+        pagarme_subscription_id: paymentData.pagarmeSubscriptionId ?? null,
+        pagarme_customer_id: paymentData.pagarmeCustomerId ?? null,
+        next_billing_at: paymentData.nextBilling
+          ? new Date(paymentData.nextBilling).toISOString()
+          : null,
       })
       .select()
       .single();
