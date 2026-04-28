@@ -49,6 +49,7 @@ const AdminBlog = lazy(() => import('@/pages/admin/AdminBlog'));
 const AdminContact = lazy(() => import('@/pages/admin/AdminContact'));
 const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactRecipients'));
 const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
+const AdminPagarmeWebhooks = lazy(() => import('@/pages/admin/AdminPagarmeWebhooks'));
 
 const RouteFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -267,6 +268,11 @@ const AppRoutes = () => {
       <Route path="/admin/pagarme" element={
         <AdminProtectedRoute>
           <AdminPagarme />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/pagarme-webhooks" element={
+        <AdminProtectedRoute>
+          <AdminPagarmeWebhooks />
         </AdminProtectedRoute>
       } />
       
