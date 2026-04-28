@@ -33,6 +33,8 @@ export interface SubscriptionResponse {
     name: string;
     price: number;
   };
+  pagarmeSubscriptionId?: string;
+  pagarmeCustomerId?: string;
 }
 
 export interface PagarmeConfig {

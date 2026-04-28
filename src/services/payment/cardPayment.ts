@@ -76,7 +76,9 @@ export const processCardPayment = async (subscriptionData: SubscriptionRequest):
       planInfo: {
         name: getPlanName(subscriptionData.planId),
         price: getPlanPrice(subscriptionData.planId, subscriptionData.billingType)
-      }
+      },
+      pagarmeSubscriptionId: subscriptionResponse.id,
+      pagarmeCustomerId: customerResponse.id,
     };
   } catch (error) {
     console.error('[Pagar.me] Erro ao processar pagamento com cartão:', error);
