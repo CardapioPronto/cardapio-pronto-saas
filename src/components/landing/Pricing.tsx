@@ -1,175 +1,130 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Sparkles, ShoppingBag, MessageCircle, LayoutGrid, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-import { fetchPlanosForLanding } from "@/services/planosService";
 
-interface PlanFeature {
-  feature: string;
-  included: boolean;
-}
-
-interface PricingPlan {
-  id: string;
-  name: string;
-  price: number;
-  priceYearly: number;
-  description: string;
-  popular?: boolean;
-  features: PlanFeature[];
-  buttonText: string;
-}
+const benefits = [
+  { icon: ShoppingBag, text: "Venda mais com cardápio digital profissional" },
+  { icon: MessageCircle, text: "Automatize pedidos pelo WhatsApp" },
+  { icon: LayoutGrid, text: "Organize seu negócio com mais controle" },
+  { icon: Zap, text: "Tudo em um só lugar, simples de usar" },
+];
 
 const Pricing = () => {
   const [annual, setAnnual] = useState(false);
-  const [plans, setPlans] = useState<PricingPlan[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadPlans = async () => {
-      try {
-        const plansData = await fetchPlanosForLanding();
-        setPlans(plansData);
-      } catch (error) {
-        console.error("Erro ao carregar planos:", error);
-        setPlans([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const monthlyPrice = 59.9;
+  const yearlyPerMonth = 49.9;
+  const yearlyTotal = 599;
 
-    loadPlans();
-  }, []);
-
-  if (loading) {
-    return (
-      <section id="pricing" className="py-16 md:py-24">
-        <div className="container mx-auto px-6">
-          <div className="text-center">
-            <p className="text-lg text-navy/70">Carregando planos...</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (!plans.length) {
-    return (
-      <section id="pricing" className="py-16 md:py-24">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-              Planos indisponíveis no momento
-            </h2>
-            <p className="text-lg text-navy/70">
-              Nenhum plano ativo foi encontrado para exibição na landing page.
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const displayPrice = annual ? yearlyPerMonth : monthlyPrice;
 
   return (
-    <section id="pricing" className="py-16 md:py-24">
+    <section id="pricing" className="py-16 md:py-24 bg-offwhite">
       <div className="container mx-auto px-6">
-        <div className="text-center max-w-3xl mx-auto mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-            Planos desenhados para cada fase da operação
+            Um plano. Tudo o que seu restaurante precisa.
           </h2>
           <p className="text-lg text-navy/70">
-            Exibimos apenas os planos ativos mais adequados para vender melhor, operar com eficiência e escalar com segurança.
+            Comece grátis por 14 dias. Sem cartão. Sem complicação.
           </p>
 
-          <div className="mt-8 inline-flex items-center bg-beige/30 p-1 rounded-lg">
+          <div className="mt-8 inline-flex items-center bg-white border border-gray-200 p-1 rounded-full shadow-sm">
             <button
               onClick={() => setAnnual(false)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                !annual ? "bg-white shadow-sm text-navy" : "text-navy/70"
+              className={`px-5 py-2 rounded-full text-sm font-medium transition ${
+                !annual ? "bg-navy text-white shadow-sm" : "text-navy/70"
               }`}
             >
               Mensal
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                annual ? "bg-white shadow-sm text-navy" : "text-navy/70"
+              className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                annual ? "bg-navy text-white shadow-sm" : "text-navy/70"
               }`}
             >
-              Anual <span className="text-xs text-green font-bold">-20%</span>
+              Anual
+              <span className="text-[10px] bg-green text-white font-bold px-2 py-0.5 rounded-full">
+                -17%
+              </span>
             </button>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative rounded-xl border ${
-                plan.popular
-                  ? "border-green shadow-lg shadow-green/10 scale-105 lg:scale-110 z-10"
-                  : "border-gray-200 shadow-sm"
-              } bg-white overflow-hidden transition`}
-            >
-              {plan.popular && (
-                <div className="absolute top-0 right-0">
-                  <div className="bg-green text-white text-xs font-bold py-1 px-4 transform rotate-45 translate-x-2 -translate-y-1">
-                    Recomendado
-                  </div>
-                </div>
+        <div className="max-w-md mx-auto">
+          <div className="relative rounded-3xl bg-white border-2 border-green shadow-2xl shadow-green/10 overflow-hidden">
+            <div className="absolute -top-px left-1/2 -translate-x-1/2 bg-green text-white text-xs font-bold py-1.5 px-5 rounded-b-xl flex items-center gap-1.5">
+              <Sparkles size={12} /> PLANO RECOMENDADO
+            </div>
+
+            <div className="p-8 pt-12 text-center">
+              <h3 className="text-2xl font-bold text-navy">Plano Pubfy</h3>
+              <p className="mt-2 text-sm text-navy/60">
+                Tudo que você precisa para vender mais
+              </p>
+
+              <div className="mt-6 flex items-baseline justify-center">
+                <span className="text-2xl font-medium text-navy/60">R$</span>
+                <span className="text-6xl font-bold text-navy mx-1">
+                  {displayPrice.toFixed(2).replace(".", ",")}
+                </span>
+                <span className="text-navy/60">/mês</span>
+              </div>
+
+              {annual ? (
+                <p className="mt-2 text-sm text-navy/60">
+                  Cobrado <strong>R$ {yearlyTotal},00/ano</strong>
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-navy/60">
+                  ou <strong>R$ 49,90/mês</strong> no plano anual
+                </p>
               )}
 
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-navy">{plan.name}</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-bold text-navy">
-                    R${annual ? plan.priceYearly.toFixed(2) : plan.price.toFixed(2)}
-                  </span>
-                  <span className="ml-1 text-gray-500">/mês</span>
-                </div>
-                <p className="mt-2 text-sm text-navy/70">{plan.description}</p>
-
-                <div className="mt-6">
-                  <Link to="/teste-gratis">
-                    <Button
-                      className={`w-full ${
-                        plan.popular
-                          ? "bg-green hover:bg-green-dark text-white"
-                          : "bg-white border border-green text-navy hover:bg-green/10"
-                      }`}
-                    >
-                      {plan.buttonText}
-                    </Button>
-                  </Link>
-                </div>
+              <div className="mt-6 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-full">
+                <Sparkles size={14} />
+                <span className="text-sm font-semibold">14 dias grátis</span>
               </div>
+              <p className="mt-2 text-xs text-navy/60">
+                Teste completo, sem compromisso. Não pedimos cartão.
+              </p>
 
-              <div className="border-t border-gray-100 p-6">
-                <ul className="space-y-4">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start">
-                      <CheckCircle2
-                        className={`shrink-0 mr-2 mt-0.5 ${feature.included ? "text-green" : "text-gray-300"}`}
-                        size={18}
-                      />
-                      <span className={`text-sm ${feature.included ? "text-navy/80" : "text-navy/40"}`}>
-                        {feature.feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-8 space-y-3">
+                <Link to="/teste-gratis" className="block">
+                  <Button className="w-full h-12 bg-green hover:bg-green-dark text-white text-base font-semibold rounded-xl">
+                    Começar teste grátis
+                  </Button>
+                </Link>
+                <Link to="/contato" className="block">
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 border-navy/20 text-navy hover:bg-navy/5 rounded-xl"
+                  >
+                    Falar com especialista
+                  </Button>
+                </Link>
               </div>
             </div>
-          ))}
-        </div>
 
-        <div className="text-center mt-12">
-          <p className="text-navy/70">
-            Tem dúvidas sobre qual plano escolher?{" "}
-            <a href="/faq" className="text-green hover:underline">
-              Consulte nossas perguntas frequentes
-            </a>
+            <div className="border-t border-gray-100 bg-beige/20 p-6">
+              <ul className="space-y-3">
+                {benefits.map((b, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="shrink-0 w-7 h-7 rounded-lg bg-green/10 text-green flex items-center justify-center">
+                      <b.icon size={15} />
+                    </span>
+                    <span className="text-sm text-navy/80 pt-0.5">{b.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <p className="text-center mt-6 text-sm text-navy/60">
+            Sem burocracia. Cancele quando quiser.
           </p>
         </div>
       </div>
