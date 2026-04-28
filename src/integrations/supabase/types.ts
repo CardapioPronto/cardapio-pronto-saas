@@ -1206,6 +1206,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pagarme_webhook_events: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          event_type: string
+          id: string
+          pagarme_customer_id: string | null
+          pagarme_subscription_id: string | null
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+          processing_error: string | null
+          signature_valid: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          event_type: string
+          id?: string
+          pagarme_customer_id?: string | null
+          pagarme_subscription_id?: string | null
+          payload: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          signature_valid?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          pagarme_customer_id?: string | null
+          pagarme_subscription_id?: string | null
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          signature_valid?: boolean | null
+        }
+        Relationships: []
+      }
       plan_features: {
         Row: {
           feature: string
@@ -1455,6 +1497,11 @@ export type Database = {
           end_date: string | null
           id: string
           is_trial: boolean | null
+          last_payment_at: string | null
+          last_payment_status: string | null
+          next_billing_at: string | null
+          pagarme_customer_id: string | null
+          pagarme_subscription_id: string | null
           plan_id: string
           restaurant_id: string
           start_date: string
@@ -1467,6 +1514,11 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_trial?: boolean | null
+          last_payment_at?: string | null
+          last_payment_status?: string | null
+          next_billing_at?: string | null
+          pagarme_customer_id?: string | null
+          pagarme_subscription_id?: string | null
           plan_id: string
           restaurant_id: string
           start_date: string
@@ -1479,6 +1531,11 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_trial?: boolean | null
+          last_payment_at?: string | null
+          last_payment_status?: string | null
+          next_billing_at?: string | null
+          pagarme_customer_id?: string | null
+          pagarme_subscription_id?: string | null
           plan_id?: string
           restaurant_id?: string
           start_date?: string
