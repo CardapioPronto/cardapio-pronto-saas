@@ -78,3 +78,5 @@ verify_jwt = false
 
 [vector]
 enabled = false
+[functions.pagarme-webhook]
+verify_jwt = false
