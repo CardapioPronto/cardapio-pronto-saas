@@ -9,9 +9,11 @@ import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import PaymentForm from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
+import MySubscriptionsList from "@/components/assinaturas/MySubscriptionsList";
 import { fetchPlanos } from "@/services/planosService";
 import { useAssinatura } from "@/hooks/useAssinatura";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
+import { useMySubscriptions } from "@/hooks/useMySubscriptions";
 import { Plano } from "@/types/plano";
 import { PlanoFormatado } from "@/types/subscription";
 
@@ -29,6 +31,12 @@ const Assinaturas = () => {
   } = useAssinatura();
   
   const subscriptionStatus = useSubscriptionStatus();
+  const {
+    subscriptions: mySubscriptions,
+    loading: mySubsLoading,
+    error: mySubsError,
+    refetch: refetchMySubs,
+  } = useMySubscriptions();
 
   useEffect(() => {
     const loadPlanos = async () => {
@@ -118,8 +126,9 @@ const Assinaturas = () => {
           onValueChange={setSelectedTab} 
           className="w-full"
         >
-          <TabsList className="w-full md:w-auto grid grid-cols-2 md:inline-flex mb-4">
+          <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex mb-4">
             <TabsTrigger value="overview">Visão geral</TabsTrigger>
+            <TabsTrigger value="my-subscriptions">Minhas assinaturas</TabsTrigger>
             <TabsTrigger value="plans">Planos disponíveis</TabsTrigger>
           </TabsList>
           
@@ -131,7 +140,17 @@ const Assinaturas = () => {
               onViewPlans={() => setSelectedTab("plans")}
             />
           </TabsContent>
-          
+
+          <TabsContent value="my-subscriptions">
+            <MySubscriptionsList
+              subscriptions={mySubscriptions}
+              loading={mySubsLoading}
+              error={mySubsError}
+              onRefetch={refetchMySubs}
+              onViewPlans={() => setSelectedTab("plans")}
+            />
+          </TabsContent>
+
           <TabsContent value="plans">
             <PlansGrid
               planos={planos}
