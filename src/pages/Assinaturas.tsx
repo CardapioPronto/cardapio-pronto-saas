@@ -10,10 +10,11 @@ import PaymentForm from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
 import MySubscriptionsList from "@/components/assinaturas/MySubscriptionsList";
+import ManageSubscriptionDialog from "@/components/assinaturas/ManageSubscriptionDialog";
 import { fetchPlanos } from "@/services/planosService";
 import { useAssinatura } from "@/hooks/useAssinatura";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
-import { useMySubscriptions } from "@/hooks/useMySubscriptions";
+import { useMySubscriptions, MySubscription } from "@/hooks/useMySubscriptions";
 import { Plano } from "@/types/plano";
 import { PlanoFormatado } from "@/types/subscription";
 
@@ -37,6 +38,7 @@ const Assinaturas = () => {
     error: mySubsError,
     refetch: refetchMySubs,
   } = useMySubscriptions();
+  const [manageSub, setManageSub] = useState<MySubscription | null>(null);
 
   useEffect(() => {
     const loadPlanos = async () => {
@@ -148,6 +150,7 @@ const Assinaturas = () => {
               error={mySubsError}
               onRefetch={refetchMySubs}
               onViewPlans={() => setSelectedTab("plans")}
+              onManage={(sub) => setManageSub(sub)}
             />
           </TabsContent>
 
@@ -175,6 +178,13 @@ const Assinaturas = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <ManageSubscriptionDialog
+        open={manageSub !== null}
+        subscription={manageSub}
+        onClose={() => setManageSub(null)}
+        onUpdated={() => refetchMySubs()}
+      />
     </DashboardLayout>
   );
 };
