@@ -23,6 +23,13 @@ export const usePlanos = () => {
                 is_active: item.is_active || false,
                 created_at: item.created_at || undefined,
                 updated_at: item.updated_at || undefined,
+                description: (item as any).description ?? null,
+                trial_days: (item as any).trial_days ?? 14,
+                pagarme_plan_id_monthly: (item as any).pagarme_plan_id_monthly ?? null,
+                pagarme_plan_id_yearly: (item as any).pagarme_plan_id_yearly ?? null,
+                pagarme_synced_at: (item as any).pagarme_synced_at ?? null,
+                pagarme_sync_status: (item as any).pagarme_sync_status ?? 'pending',
+                pagarme_sync_error: (item as any).pagarme_sync_error ?? null,
                 features: item.plan_features?.map(f => ({
                     feature: f.feature,
                     is_enabled: f.is_enabled || false
