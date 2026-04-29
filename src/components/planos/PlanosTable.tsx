@@ -24,10 +24,16 @@ interface PlanosTableProps {
   syncingId?: string | null;
 }
 
+function dateTimeToMinute(value: string): number {
+  const date = new Date(value);
+  date.setSeconds(0, 0);
+  return date.getTime();
+}
+
 export function needsSync(p: Plano): boolean {
   if (p.pagarme_sync_status !== "synced") return true;
   if (!p.pagarme_synced_at) return true;
-  if (p.updated_at && new Date(p.updated_at) > new Date(p.pagarme_synced_at)) return true;
+  if (p.updated_at && dateTimeToMinute(p.updated_at) > dateTimeToMinute(p.pagarme_synced_at)) return true;
   if (!p.pagarme_plan_id_monthly || !p.pagarme_plan_id_yearly) return true;
   return false;
 }

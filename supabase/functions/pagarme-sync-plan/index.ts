@@ -191,14 +191,26 @@ Deno.serve(async (req) => {
 
     const { data: plan, error: planErr } = await admin
       .from("plans")
-      .select(
-        "id, name, description, price_monthly, price_yearly, trial_days, is_active, pagarme_payment_methods, pagarme_plan_id_monthly, pagarme_plan_id_yearly",
-      )
+      .select("*")
       .eq("id", plan_id)
       .maybeSingle();
 
-    if (planErr || !plan) {
-      return new Response(JSON.stringify({ error: "Plan not found" }), {
+    if (planErr) {
+      return new Response(
+        JSON.stringify({
+          error: "Failed to load local plan",
+          details: planErr.message,
+          plan_id,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (!plan) {
+      return new Response(JSON.stringify({ error: "Plan not found", plan_id }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
