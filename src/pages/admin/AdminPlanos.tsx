@@ -52,7 +52,23 @@ export default function Planos() {
           const { data, error } = await sb.functions.invoke("pagarme-sync-plan", {
             body: { plan_id: plano.id },
           });
-          if (error) throw error;
+          if (error) {
+            const context = (error as any).context;
+            let details = "";
+            if (context?.clone) {
+              try {
+                const payload = await context.clone().json();
+                details = payload?.error || payload?.message || JSON.stringify(payload);
+              } catch {
+                try {
+                  details = await context.clone().text();
+                } catch {
+                  details = "";
+                }
+              }
+            }
+            throw new Error(details || error.message);
+          }
           if (data?.success === false) throw new Error(data.error || "Falha ao sincronizar");
           toast.success("Plano sincronizado com o Pagar.me");
           await fetchPlanos();
