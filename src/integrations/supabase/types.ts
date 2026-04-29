@@ -1514,7 +1514,10 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_cycle: string | null
           created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
           end_date: string | null
           id: string
           is_trial: boolean | null
@@ -1528,10 +1531,14 @@ export type Database = {
           start_date: string
           status: string
           trial_ends_at: string | null
+          trial_start: string | null
           updated_at: string
         }
         Insert: {
+          billing_cycle?: string | null
           created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
           end_date?: string | null
           id?: string
           is_trial?: boolean | null
@@ -1545,10 +1552,14 @@ export type Database = {
           start_date: string
           status: string
           trial_ends_at?: string | null
+          trial_start?: string | null
           updated_at?: string
         }
         Update: {
+          billing_cycle?: string | null
           created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
           end_date?: string | null
           id?: string
           is_trial?: boolean | null
@@ -1562,6 +1573,7 @@ export type Database = {
           start_date?: string
           status?: string
           trial_ends_at?: string | null
+          trial_start?: string | null
           updated_at?: string
         }
         Relationships: [
