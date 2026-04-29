@@ -109,15 +109,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           phone: values.phone,
         },
         paymentMethod: {
-          type: values.paymentMethod,
-          ...(values.paymentMethod === "credit_card" && {
-            cardDetails: {
-              number: values.cardNumber || "",
-              name: values.cardName || "",
-              expiry: values.cardExpiry || "",
-              cvc: values.cardCvc || "",
-            }
-          })
+          type: values.paymentMethod as "boleto" | "pix",
         },
         billingType: values.billingType,
       };
