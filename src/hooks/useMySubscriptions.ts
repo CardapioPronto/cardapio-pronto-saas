@@ -30,7 +30,7 @@ export interface MySubscription {
   } | null;
 }
 
-const ALIVE_STATUSES = ["active", "trialing", "past_due"];
+const VISIBLE_STATUSES = ["active", "trialing", "past_due", "canceled"];
 
 export const useMySubscriptions = () => {
   const { user } = useCurrentUser();
@@ -60,7 +60,7 @@ export const useMySubscriptions = () => {
           )
         `)
         .eq("restaurant_id", user.restaurant_id)
-        .in("status", ALIVE_STATUSES)
+        .in("status", VISIBLE_STATUSES)
         .order("created_at", { ascending: false });
 
       if (fetchError) {
@@ -69,7 +69,7 @@ export const useMySubscriptions = () => {
           .from("subscriptions")
           .select("*")
           .eq("restaurant_id", user.restaurant_id)
-          .in("status", ALIVE_STATUSES)
+          .in("status", VISIBLE_STATUSES)
           .order("created_at", { ascending: false });
 
         if (fallbackErr) throw fallbackErr;

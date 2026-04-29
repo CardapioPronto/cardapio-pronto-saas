@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, CreditCard, RefreshCw, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Calendar, CreditCard, RefreshCw, Clock, CheckCircle2, AlertTriangle, XCircle, Settings } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
 
 interface MySubscriptionsListProps {
@@ -10,6 +10,7 @@ interface MySubscriptionsListProps {
   error: string | null;
   onRefetch: () => void;
   onViewPlans: () => void;
+  onManage: (subscription: MySubscription) => void;
 }
 
 const formatDate = (value: string | null | undefined) => {
@@ -37,6 +38,7 @@ const STATUS_META: Record<
   active: { label: "Ativa", variant: "default", icon: CheckCircle2, className: "bg-green text-white hover:bg-green-dark" },
   trialing: { label: "Em teste", variant: "secondary", icon: Clock, className: "bg-orange/15 text-orange border-orange/30" },
   past_due: { label: "Em atraso", variant: "destructive", icon: AlertTriangle },
+  canceled: { label: "Cancelada", variant: "outline", icon: XCircle, className: "bg-muted text-muted-foreground" },
 };
 
 const BILLING_CYCLE_LABEL: Record<string, string> = {
@@ -50,6 +52,7 @@ const MySubscriptionsList = ({
   error,
   onRefetch,
   onViewPlans,
+  onManage,
 }: MySubscriptionsListProps) => {
   if (loading) {
     return (
@@ -135,10 +138,16 @@ const MySubscriptionsList = ({
                     {sub.plan?.description ?? "Assinatura Pubfy"}
                   </CardDescription>
                 </div>
-                <Badge className={statusMeta.className} variant={statusMeta.variant}>
-                  <StatusIcon className="h-3.5 w-3.5 mr-1" />
-                  {statusMeta.label}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={statusMeta.className} variant={statusMeta.variant}>
+                    <StatusIcon className="h-3.5 w-3.5 mr-1" />
+                    {statusMeta.label}
+                  </Badge>
+                  <Button size="sm" variant="outline" onClick={() => onManage(sub)}>
+                    <Settings className="h-4 w-4 mr-1" />
+                    Gerenciar
+                  </Button>
+                </div>
               </div>
             </CardHeader>
 
