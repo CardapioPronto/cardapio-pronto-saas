@@ -88,6 +88,11 @@ async function processEvent(event: any): Promise<void> {
     };
     if (subscription.next_billing_at) update.next_billing_at = subscription.next_billing_at;
     if (subscription.customer?.id) update.pagarme_customer_id = subscription.customer.id;
+    if (subscription.current_period_start) update.current_period_start = subscription.current_period_start;
+    if (subscription.current_period_end) update.current_period_end = subscription.current_period_end;
+    if (subscription.interval === "month") update.billing_cycle = "monthly";
+    else if (subscription.interval === "year") update.billing_cycle = "yearly";
+    if (newStatus === "canceled") update.end_date = new Date().toISOString();
 
     await supabase
       .from("subscriptions")
