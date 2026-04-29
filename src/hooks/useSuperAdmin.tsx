@@ -1,15 +1,34 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/lib/supabase';
+
+const ADMIN_CHECK_TIMEOUT_MS = 10000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error(`${label} demorou para responder`));
+    }, timeoutMs);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => window.clearTimeout(timeout));
+  });
+}
 
 export function useSuperAdmin() {
   const { user } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    let active = true;
+
     async function checkSuperAdminStatus() {
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       
       if (!user) {
@@ -22,18 +41,27 @@ export function useSuperAdmin() {
         console.log("Checking super admin status for user:", user.id);
         
         // First check the RPC function
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('is_super_admin', { user_id: user.id });
+        const { data: rpcData, error: rpcError } = await withTimeout(
+          supabase.rpc('is_super_admin', { user_id: user.id }),
+          ADMIN_CHECK_TIMEOUT_MS,
+          'Verificação de super admin',
+        );
+        if (!active || requestId !== requestIdRef.current) return;
         
         if (rpcError) {
           console.error('Erro ao verificar status de super admin via RPC:', rpcError);
           
           // Fallback: direct query of the system_admins table
-          const { data: adminData, error: adminError } = await supabase
-            .from('system_admins')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
+          const { data: adminData, error: adminError } = await withTimeout(
+            supabase
+              .from('system_admins')
+              .select('user_id')
+              .eq('user_id', user.id)
+              .maybeSingle(),
+            ADMIN_CHECK_TIMEOUT_MS,
+            'Consulta de super admin',
+          );
+          if (!active || requestId !== requestIdRef.current) return;
             
           if (adminError) {
             console.error('Erro ao verificar status de super admin via tabela:', adminError);
@@ -48,14 +76,31 @@ export function useSuperAdmin() {
           setIsSuperAdmin(!!rpcData);
         }
       } catch (error) {
+        if (!active || requestId !== requestIdRef.current) return;
         console.error('Erro ao verificar status de super admin:', error);
         setIsSuperAdmin(false);
       } finally {
-        setLoading(false);
+        if (active && requestId === requestIdRef.current) setLoading(false);
       }
     }
 
     checkSuperAdminStatus();
+
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') {
+        checkSuperAdminStatus();
+      }
+    };
+    const handleFocus = () => checkSuperAdminStatus();
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisible);
+
+    return () => {
+      active = false;
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
   }, [user]);
 
   return { isSuperAdmin, loading };
