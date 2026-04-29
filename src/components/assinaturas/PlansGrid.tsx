@@ -25,9 +25,12 @@ const PlansGrid = ({ planos, assinatura, onSelectPlan }: PlansGridProps) => {
   // Plano único: usa o primeiro plano ativo retornado, com fallback estático
   const plano = planos[0];
   const monthly = plano?.price_monthly ?? 59.9;
-  const yearlyMonthly = plano?.price_yearly ?? 49.9;
+  const yearlyMonthly = plano?.price_yearly ?? 49.0;
   const yearlyTotal = Math.round(yearlyMonthly * 12);
   const displayPrice = annual ? yearlyMonthly : monthly;
+  const planName = plano?.name ?? "Plano Pubfy";
+  const trialDays = (plano as any)?.trial_days ?? 14;
+  const discountPct = monthly > 0 ? Math.round((1 - yearlyMonthly / monthly) * 100) : 0;
   const isAtivo = plano && assinatura.planoId === plano.id && assinatura.status === "ativa";
 
   return (
@@ -49,9 +52,11 @@ const PlansGrid = ({ planos, assinatura, onSelectPlan }: PlansGridProps) => {
             }`}
           >
             Anual
-            <span className="text-[10px] bg-green text-white font-bold px-2 py-0.5 rounded-full">
-              -17%
-            </span>
+            {discountPct > 0 && (
+              <span className="text-[10px] bg-green text-white font-bold px-2 py-0.5 rounded-full">
+                -{discountPct}%
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -62,7 +67,7 @@ const PlansGrid = ({ planos, assinatura, onSelectPlan }: PlansGridProps) => {
         </div>
 
         <div className="p-8 pt-12 text-center">
-          <h3 className="text-2xl font-bold">Plano Pubfy</h3>
+          <h3 className="text-2xl font-bold">{planName}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
             Tudo o que seu restaurante precisa
           </p>
@@ -77,13 +82,18 @@ const PlansGrid = ({ planos, assinatura, onSelectPlan }: PlansGridProps) => {
 
           {annual ? (
             <p className="mt-2 text-sm text-muted-foreground">
-              Cobrado <strong>R$ {yearlyTotal},00/ano</strong>
+              Cobrado <strong>R$ {yearlyTotal.toFixed(2).replace(".", ",")}/ano</strong>
             </p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
               ou <strong>R$ {yearlyMonthly.toFixed(2).replace(".", ",")}/mês</strong> no plano anual
             </p>
           )}
+
+          <div className="mt-4 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-full">
+            <Sparkles size={14} />
+            <span className="text-sm font-semibold">{trialDays} dias grátis</span>
+          </div>
 
           <div className="mt-8">
             {isAtivo ? (

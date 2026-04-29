@@ -1,8 +1,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Sparkles, ShoppingBag, MessageCircle, LayoutGrid, Zap } from "lucide-react";
+import { Sparkles, ShoppingBag, MessageCircle, LayoutGrid, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const benefits = [
   { icon: ShoppingBag, text: "Venda mais com cardápio digital profissional" },
@@ -13,10 +15,16 @@ const benefits = [
 
 const Pricing = () => {
   const [annual, setAnnual] = useState(false);
+  const { plan, loading } = useActivePlan();
 
-  const monthlyPrice = 59.9;
-  const yearlyPerMonth = 49.9;
-  const yearlyTotal = 599;
+  const monthlyPrice = plan?.price_monthly ?? 59.9;
+  const yearlyPerMonth = plan?.price_yearly ?? 49.0;
+  const yearlyTotal = yearlyPerMonth * 12;
+  const trialDays = plan?.trial_days ?? 14;
+  const planName = plan?.name ?? "Plano Pubfy";
+  const discountPct = monthlyPrice > 0
+    ? Math.round((1 - yearlyPerMonth / monthlyPrice) * 100)
+    : 0;
 
   const displayPrice = annual ? yearlyPerMonth : monthlyPrice;
 
@@ -28,7 +36,7 @@ const Pricing = () => {
             Um plano. Tudo o que seu restaurante precisa.
           </h2>
           <p className="text-lg text-navy/70">
-            Comece grátis por 14 dias. Sem cartão. Sem complicação.
+            Comece grátis por {trialDays} dias. Sem cartão. Sem complicação.
           </p>
 
           <div className="mt-8 inline-flex items-center bg-white border border-gray-200 p-1 rounded-full shadow-sm">
@@ -47,9 +55,11 @@ const Pricing = () => {
               }`}
             >
               Anual
-              <span className="text-[10px] bg-green text-white font-bold px-2 py-0.5 rounded-full">
-                -17%
-              </span>
+              {discountPct > 0 && (
+                <span className="text-[10px] bg-green text-white font-bold px-2 py-0.5 rounded-full">
+                  -{discountPct}%
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -61,32 +71,38 @@ const Pricing = () => {
             </div>
 
             <div className="p-8 pt-12 text-center">
-              <h3 className="text-2xl font-bold text-navy">Plano Pubfy</h3>
+              <h3 className="text-2xl font-bold text-navy">{planName}</h3>
               <p className="mt-2 text-sm text-navy/60">
                 Tudo que você precisa para vender mais
               </p>
 
               <div className="mt-6 flex items-baseline justify-center">
-                <span className="text-2xl font-medium text-navy/60">R$</span>
-                <span className="text-6xl font-bold text-navy mx-1">
-                  {displayPrice.toFixed(2).replace(".", ",")}
-                </span>
-                <span className="text-navy/60">/mês</span>
+                {loading ? (
+                  <Skeleton className="h-16 w-40" />
+                ) : (
+                  <>
+                    <span className="text-2xl font-medium text-navy/60">R$</span>
+                    <span className="text-6xl font-bold text-navy mx-1">
+                      {displayPrice.toFixed(2).replace(".", ",")}
+                    </span>
+                    <span className="text-navy/60">/mês</span>
+                  </>
+                )}
               </div>
 
               {annual ? (
                 <p className="mt-2 text-sm text-navy/60">
-                  Cobrado <strong>R$ {yearlyTotal},00/ano</strong>
+                  Cobrado <strong>R$ {yearlyTotal.toFixed(2).replace(".", ",")}/ano</strong>
                 </p>
               ) : (
                 <p className="mt-2 text-sm text-navy/60">
-                  ou <strong>R$ 49,90/mês</strong> no plano anual
+                  ou <strong>R$ {yearlyPerMonth.toFixed(2).replace(".", ",")}/mês</strong> no plano anual
                 </p>
               )}
 
               <div className="mt-6 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-full">
                 <Sparkles size={14} />
-                <span className="text-sm font-semibold">14 dias grátis</span>
+                <span className="text-sm font-semibold">{trialDays} dias grátis</span>
               </div>
               <p className="mt-2 text-xs text-navy/60">
                 Teste completo, sem compromisso. Não pedimos cartão.

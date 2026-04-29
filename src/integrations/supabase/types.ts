@@ -1280,29 +1280,50 @@ export type Database = {
       plans: {
         Row: {
           created_at: string | null
+          description: string | null
           id: string
           is_active: boolean | null
           name: string
+          pagarme_plan_id_monthly: string | null
+          pagarme_plan_id_yearly: string | null
+          pagarme_sync_error: string | null
+          pagarme_sync_status: string
+          pagarme_synced_at: string | null
           price_monthly: number
           price_yearly: number
+          trial_days: number
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          pagarme_plan_id_monthly?: string | null
+          pagarme_plan_id_yearly?: string | null
+          pagarme_sync_error?: string | null
+          pagarme_sync_status?: string
+          pagarme_synced_at?: string | null
           price_monthly: number
           price_yearly: number
+          trial_days?: number
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          pagarme_plan_id_monthly?: string | null
+          pagarme_plan_id_yearly?: string | null
+          pagarme_sync_error?: string | null
+          pagarme_sync_status?: string
+          pagarme_synced_at?: string | null
           price_monthly?: number
           price_yearly?: number
+          trial_days?: number
           updated_at?: string | null
         }
         Relationships: []

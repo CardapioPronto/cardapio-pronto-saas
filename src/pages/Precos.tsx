@@ -4,8 +4,16 @@ import Footer from "@/components/Footer";
 import Pricing from "@/components/landing/Pricing";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useActivePlan } from "@/hooks/useActivePlan";
 
 const Precos = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? 14;
+  const yearlyPerMonth = plan?.price_yearly ?? 49.0;
+  const yearlyTotal = (yearlyPerMonth * 12).toFixed(2).replace(".", ",");
+  const monthly = plan?.price_monthly ?? 59.9;
+  const discountPct = monthly > 0 ? Math.round((1 - yearlyPerMonth / monthly) * 100) : 0;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -31,7 +39,7 @@ const Precos = () => {
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-navy mb-2">Preciso de cartão para testar?</h3>
-                <p className="text-navy/70">Não. Você experimenta o Pubfy por 14 dias grátis sem informar dados de pagamento.</p>
+                <p className="text-navy/70">Não. Você experimenta o Pubfy por {trialDays} dias grátis sem informar dados de pagamento.</p>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-navy mb-2">Existe período de fidelidade?</h3>
@@ -39,7 +47,10 @@ const Precos = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-navy mb-2">Quanto economizo no plano anual?</h3>
-                <p className="text-navy/70">No anual o valor sai por R$ 49,90/mês (cobrado R$ 599/ano), uma economia de cerca de 17% comparado ao mensal.</p>
+                <p className="text-navy/70">
+                  No anual o valor sai por R$ {yearlyPerMonth.toFixed(2).replace(".", ",")}/mês
+                  (cobrado R$ {yearlyTotal}/ano){discountPct > 0 ? `, uma economia de cerca de ${discountPct}% comparado ao mensal` : ""}.
+                </p>
               </div>
             </div>
             <div className="mt-10 text-center">
