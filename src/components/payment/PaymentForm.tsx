@@ -9,8 +9,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createSubscription } from "@/services/paymentService";
-import { createPagarmeSubscription } from "@/services/pagarmeSubscriptionService";
+import {
+  createPagarmeSubscription,
+  createPagarmeBoletoPix,
+} from "@/services/pagarmeSubscriptionService";
 import { Loader2, CreditCard, QrCode, FileText } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
@@ -99,24 +101,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         return;
       }
 
-      // Boleto / PIX → fluxo antigo (a ser migrado em fase futura)
-      const subscriptionRequest = {
-        planId,
+      // Boleto / PIX → Edge Function dedicada (server-side, plano sincronizado)
+      const result = await createPagarmeBoletoPix({
+        local_plan_id: planId,
+        billing_cycle: values.billingType,
+        payment_method: values.paymentMethod as "boleto" | "pix",
         customer: {
           name: values.name,
           email: values.email,
           document: values.document,
           phone: values.phone,
         },
-        paymentMethod: {
-          type: values.paymentMethod as "boleto" | "pix",
-        },
-        billingType: values.billingType,
-      };
-
-      const response = await createSubscription(subscriptionRequest);
+      });
       toast.success(`Assinatura ${planName} criada com sucesso!`);
-      onSuccess(response);
+      onSuccess(result);
     } catch (error: any) {
       console.error("Error creating subscription:", error);
       toast.error(error?.message || "Erro ao processar pagamento. Tente novamente.");
