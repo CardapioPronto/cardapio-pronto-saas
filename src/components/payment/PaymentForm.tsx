@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createSubscription } from "@/services/paymentService";
+import { createPagarmeSubscription } from "@/services/pagarmeSubscriptionService";
 import { Loader2, CreditCard, QrCode, FileText } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
@@ -69,8 +70,36 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
   async function onSubmit(values: z.infer<typeof paymentFormSchema>) {
     setIsSubmitting(true);
-    
+
     try {
+      // Cartão de crédito → fluxo via Edge Function (server-side, plano sincronizado no Pagar.me)
+      if (values.paymentMethod === "credit_card") {
+        const expParts = (values.cardExpiry || "").split("/");
+        const expMonth = expParts[0]?.padStart(2, "0") ?? "";
+        const expYearRaw = expParts[1] ?? "";
+        const result = await createPagarmeSubscription({
+          local_plan_id: planId,
+          billing_cycle: values.billingType,
+          customer: {
+            name: values.name,
+            email: values.email,
+            document: values.document,
+            phone: values.phone,
+          },
+          card: {
+            number: values.cardNumber || "",
+            holder_name: values.cardName || values.name,
+            exp_month: expMonth,
+            exp_year: expYearRaw,
+            cvv: values.cardCvc || "",
+          },
+        });
+        toast.success(`Assinatura ${planName} criada com sucesso!`);
+        onSuccess(result);
+        return;
+      }
+
+      // Boleto / PIX → fluxo antigo (a ser migrado em fase futura)
       const subscriptionRequest = {
         planId,
         customer: {
@@ -96,9 +125,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       const response = await createSubscription(subscriptionRequest);
       toast.success(`Assinatura ${planName} criada com sucesso!`);
       onSuccess(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating subscription:", error);
-      toast.error("Erro ao processar pagamento. Tente novamente.");
+      toast.error(error?.message || "Erro ao processar pagamento. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
