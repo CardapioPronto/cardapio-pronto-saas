@@ -11,8 +11,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { PagarmePaymentMethod } from "@/types/plano";
+
+const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string }> = [
+  { value: "credit_card", label: "Cartão de crédito" },
+  { value: "debit_card", label: "Cartão de débito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "cash", label: "Dinheiro" },
+];
 
 interface AddPlanoDialogProps {
   open: boolean;
@@ -30,11 +39,27 @@ export function AddPlanoDialog({
   const [monthly, setMonthly] = useState("");
   const [yearly, setYearly] = useState("");
   const [trialDays, setTrialDays] = useState("14");
+  const [paymentMethods, setPaymentMethods] = useState<PagarmePaymentMethod[]>([
+    "credit_card",
+    "boleto",
+  ]);
   const [saving, setSaving] = useState(false);
+
+  const togglePaymentMethod = (method: PagarmePaymentMethod) => {
+    setPaymentMethods((current) =>
+      current.includes(method)
+        ? current.filter((item) => item !== method)
+        : [...current, method],
+    );
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Informe o nome do plano");
+      return;
+    }
+    if (paymentMethods.length === 0) {
+      toast.error("Selecione pelo menos um método de pagamento");
       return;
     }
     setSaving(true);
@@ -44,6 +69,7 @@ export function AddPlanoDialog({
       price_monthly: Number(monthly),
       price_yearly: Number(yearly),
       trial_days: Number(trialDays) || 0,
+      pagarme_payment_methods: paymentMethods,
       is_active: true,
       pagarme_sync_status: "pending",
     });
@@ -58,6 +84,7 @@ export function AddPlanoDialog({
       setMonthly("");
       setYearly("");
       setTrialDays("14");
+      setPaymentMethods(["credit_card", "boleto"]);
     } else {
       toast.error("Erro ao criar plano: " + error.message);
     }
@@ -112,6 +139,20 @@ export function AddPlanoDialog({
               value={trialDays}
               onChange={(e) => setTrialDays(e.target.value)}
             />
+          </div>
+          <div className="space-y-2 rounded-md border p-3">
+            <Label>Métodos de pagamento no Pagar.me</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PAYMENT_METHOD_OPTIONS.map((option) => (
+                <label key={option.value} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={paymentMethods.includes(option.value)}
+                    onCheckedChange={() => togglePaymentMethod(option.value)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full">
             {saving ? "Salvando..." : "Salvar"}

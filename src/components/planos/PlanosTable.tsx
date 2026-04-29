@@ -7,6 +7,13 @@ import { formatCurrency } from "@/lib/utils";
 import { Plano } from "@/types/plano";
 import { DeletePlanoDialog } from "./DeletePlanoDialog";
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  credit_card: "Crédito",
+  debit_card: "Débito",
+  boleto: "Boleto",
+  cash: "Dinheiro",
+};
+
 interface PlanosTableProps {
   data: Plano[] | null;
   isLoading: boolean;
@@ -50,6 +57,13 @@ export const PlanosTable = ({
     {
       header: "Trial",
       accessorKey: (row: Plano) => `${row.trial_days ?? 14} dias`,
+    },
+    {
+      header: "Pagamento",
+      accessorKey: (row: Plano) =>
+        (row.pagarme_payment_methods?.length ? row.pagarme_payment_methods : ["credit_card", "boleto"])
+          .map((method) => PAYMENT_METHOD_LABELS[method] ?? method)
+          .join(", "),
     },
     {
       header: "Ativo",

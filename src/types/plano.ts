@@ -14,8 +14,11 @@ export type Plano = {
     pagarme_synced_at?: string | null;
     pagarme_sync_status?: 'pending' | 'synced' | 'error';
     pagarme_sync_error?: string | null;
+    pagarme_payment_methods?: PagarmePaymentMethod[];
     features?: {
         feature: string;
         is_enabled: boolean;
     }[];
 };
+
+export type PagarmePaymentMethod = 'credit_card' | 'debit_card' | 'cash' | 'boleto';

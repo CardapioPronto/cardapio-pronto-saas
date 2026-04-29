@@ -11,12 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Plano } from "@/types/plano";
+import { PagarmePaymentMethod, Plano } from "@/types/plano";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
+
+const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string }> = [
+  { value: "credit_card", label: "Cartão de crédito" },
+  { value: "debit_card", label: "Cartão de débito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "cash", label: "Dinheiro" },
+];
 
 interface EditPlanoDialogProps {
   open: boolean;
@@ -37,6 +45,10 @@ export const EditPlanoDialog = ({
   const [yearly, setYearly] = useState("");
   const [trialDays, setTrialDays] = useState("14");
   const [isActive, setIsActive] = useState(true);
+  const [paymentMethods, setPaymentMethods] = useState<PagarmePaymentMethod[]>([
+    "credit_card",
+    "boleto",
+  ]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -47,11 +59,24 @@ export const EditPlanoDialog = ({
       setYearly(String(plano.price_yearly));
       setTrialDays(String(plano.trial_days ?? 14));
       setIsActive(plano.is_active);
+      setPaymentMethods(plano.pagarme_payment_methods?.length ? plano.pagarme_payment_methods : ["credit_card", "boleto"]);
     }
   }, [plano]);
 
+  const togglePaymentMethod = (method: PagarmePaymentMethod) => {
+    setPaymentMethods((current) =>
+      current.includes(method)
+        ? current.filter((item) => item !== method)
+        : [...current, method],
+    );
+  };
+
   const handleUpdate = async () => {
     if (!plano) return;
+    if (paymentMethods.length === 0) {
+      toast.error("Selecione pelo menos um método de pagamento");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("plans")
@@ -61,6 +86,7 @@ export const EditPlanoDialog = ({
         price_monthly: Number(monthly),
         price_yearly: Number(yearly),
         trial_days: Number(trialDays) || 0,
+        pagarme_payment_methods: paymentMethods,
         is_active: isActive,
       })
       .eq("id", plano.id);
@@ -130,6 +156,20 @@ export const EditPlanoDialog = ({
               value={trialDays}
               onChange={(e) => setTrialDays(e.target.value)}
             />
+          </div>
+          <div className="space-y-2 rounded-md border p-3">
+            <Label>Métodos de pagamento no Pagar.me</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PAYMENT_METHOD_OPTIONS.map((option) => (
+                <label key={option.value} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={paymentMethods.includes(option.value)}
+                    onCheckedChange={() => togglePaymentMethod(option.value)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>

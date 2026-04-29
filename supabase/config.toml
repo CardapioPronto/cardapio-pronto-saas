@@ -51,10 +51,6 @@ client_id = ""
 secret = ""
 redirect_uri = ""
 
-[functions]
-enabled = true
-port = 54328
-
 [functions.create-storage-buckets]
 verify_jwt = false
 
@@ -76,7 +72,5 @@ verify_jwt = true
 [functions.create-initial-admin]
 verify_jwt = false
 
-[vector]
-enabled = false
 [functions.pagarme-webhook]
 verify_jwt = false

@@ -30,6 +30,7 @@ export const usePlanos = () => {
                 pagarme_synced_at: (item as any).pagarme_synced_at ?? null,
                 pagarme_sync_status: (item as any).pagarme_sync_status ?? 'pending',
                 pagarme_sync_error: (item as any).pagarme_sync_error ?? null,
+                pagarme_payment_methods: (item as any).pagarme_payment_methods ?? ['credit_card', 'boleto'],
                 features: item.plan_features?.map(f => ({
                     feature: f.feature,
                     is_enabled: f.is_enabled || false
