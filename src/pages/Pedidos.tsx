@@ -5,30 +5,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw, CalendarDays, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
-import { Pedido, PedidoStatus, ProdutoSimplificado } from "@/features/pdv/types";
+import {
+  HistoricoPedidosFiltros,
+  HistoricoPedidosResumo,
+  HistoricoPeriodoFiltro,
+  HistoricoStatusFiltro,
+  Pedido,
+  PedidoStatus,
+} from "@/features/pdv/types";
+import {
+  getDateRangeByPeriod,
+  getInitialHistoricoFiltros,
+  toEndOfDayIso,
+  toStartOfDayIso,
+} from "@/features/pdv/utils/historicoPedidos";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-
-type OrderItemWithProduct = {
-  id: string;
-  product_id: string | null;
-  quantity: number;
-  price: number;
-  observations: string | null;
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    image_url: string | null;
-  } | null;
-};
 
 const Pedidos = () => {
   const { user } = useCurrentUser();
@@ -37,10 +39,19 @@ const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoDetalhes, setPedidoDetalhes] = useState<Pedido | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [filtros, setFiltros] = useState<HistoricoPedidosFiltros>(getInitialHistoricoFiltros);
+  const [totalPedidos, setTotalPedidos] = useState(0);
+  const [resumo, setResumo] = useState<HistoricoPedidosResumo>({
+    totalPedidos: 0,
+    totalVendido: 0,
+    pedidosAbertos: 0,
+    cancelados: 0,
+  });
   
   // ✅ Ref para evitar múltiplas subscrições
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
   const pedidoDetalhesRef = useRef<Pedido | null>(null);
+  const recarregarRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     pedidoDetalhesRef.current = pedidoDetalhes;
@@ -52,9 +63,17 @@ const Pedidos = () => {
     
     setCarregando(true);
     try {
-      const result = await listarPedidos(restaurantId);
+      const result = await listarPedidos(restaurantId, {
+        dataInicio: toStartOfDayIso(filtros.dataInicio),
+        dataFim: toEndOfDayIso(filtros.dataFim),
+        status: filtros.status,
+        pagina: filtros.pagina,
+        itensPorPagina: filtros.itensPorPagina,
+      });
       if (result.success) {
         setPedidos(result.pedidos || []);
+        setTotalPedidos(result.total);
+        setResumo(result.resumo);
       } else {
         toast.error("Erro ao carregar pedidos");
       }
@@ -64,7 +83,64 @@ const Pedidos = () => {
     } finally {
       setCarregando(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, filtros]);
+
+  useEffect(() => {
+    recarregarRef.current = () => {
+      void carregarPedidos();
+    };
+  }, [carregarPedidos]);
+
+  const setPeriodo = useCallback((periodo: HistoricoPeriodoFiltro) => {
+    const range = periodo === "personalizado" ? {} : getDateRangeByPeriod(periodo);
+    setFiltros((filtrosAtuais) => ({
+      ...filtrosAtuais,
+      periodo,
+      ...range,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setStatus = useCallback((status: HistoricoStatusFiltro) => {
+    setFiltros((filtrosAtuais) => ({
+      ...filtrosAtuais,
+      status,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setDataInicio = useCallback((dataInicio: string) => {
+    setFiltros((filtrosAtuais) => ({
+      ...filtrosAtuais,
+      periodo: "personalizado",
+      dataInicio,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setDataFim = useCallback((dataFim: string) => {
+    setFiltros((filtrosAtuais) => ({
+      ...filtrosAtuais,
+      periodo: "personalizado",
+      dataFim,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setPagina = useCallback((pagina: number) => {
+    setFiltros((filtrosAtuais) => ({
+      ...filtrosAtuais,
+      pagina,
+    }));
+  }, []);
+
+  const setItensPorPagina = useCallback((itensPorPagina: number) => {
+    setFiltros((filtrosAtuais) => ({
+      ...filtrosAtuais,
+      itensPorPagina,
+      pagina: 1,
+    }));
+  }, []);
   
   // ✅ Configurar real-time subscriptions
   useEffect(() => {
@@ -92,66 +168,23 @@ const Pedidos = () => {
           },
           (payload) => {
             if (payload.eventType === 'INSERT') {
-              // ✅ Novo pedido - buscar com detalhes completos
               const novoPedido = payload.new as Pedido;
-              
-              // Buscar itens do pedido
-              supabase
-                .from('order_items')
-                .select(`
-                  *,
-                  product:products (
-                    id,
-                    name,
-                    price,
-                    image_url
-                  )
-                `)
-                .eq('order_id', String(novoPedido.id))
-                .then(({ data: items }) => {
-                  if (items) {
-                    const typedItems = items as OrderItemWithProduct[];
-                    const pedidoCompleto: Pedido = {
-                      ...novoPedido,
-                      itensPedido: typedItems.map((item) => ({
-                        quantidade: item.quantity,
-                        produto: {
-                          id: item.product?.id || item.product_id || item.id,
-                          name: item.product?.name || "Produto removido",
-                          price: item.product?.price ?? item.price,
-                          image_url: item.product?.image_url || undefined,
-                          description: "",
-                          available: true,
-                          restaurant_id: restaurantId,
-                        } as ProdutoSimplificado,
-                        observacao: item.observations
-                      }))
-                    };
-                    
-                    setPedidos(prev => [pedidoCompleto, ...prev]);
-                    
-                    // ✅ Notificação sonora e visual
-                    const audio = new Audio('/notification.mp3');
-                    audio.play().catch(() => undefined);
-                    
-                    toast.success('Novo pedido recebido!', {
-                      description: `Mesa: ${novoPedido.mesa || novoPedido.table_id || 'Balcão'} - Total: R$ ${novoPedido.total.toFixed(2)}`,
-                      duration: 5000
-                    });
-                  }
-                });
-                
+
+              recarregarRef.current();
+
+              // ✅ Notificação sonora e visual
+              const audio = new Audio('/notification.mp3');
+              audio.play().catch(() => undefined);
+
+              toast.success('Novo pedido recebido!', {
+                description: `Total: R$ ${Number(novoPedido.total || 0).toFixed(2)}`,
+                duration: 5000
+              });
             } else if (payload.eventType === 'UPDATE') {
               // ✅ Pedido atualizado
               const pedidoAtualizado = payload.new as Pedido;
               
-              setPedidos(prev =>
-                prev.map(pedido =>
-                  pedido.id === pedidoAtualizado.id
-                    ? { ...pedido, ...pedidoAtualizado }
-                    : pedido
-                )
-              );
+              recarregarRef.current();
               
               // Atualizar detalhes se estiver aberto
               if (pedidoDetalhesRef.current && pedidoDetalhesRef.current.id === pedidoAtualizado.id) {
@@ -162,9 +195,7 @@ const Pedidos = () => {
               // ✅ Pedido deletado
               const pedidoDeletado = payload.old as Pedido;
               
-              setPedidos(prev =>
-                prev.filter(pedido => pedido.id !== pedidoDeletado.id)
-              );
+              recarregarRef.current();
               
               // Fechar detalhes se estava aberto
               if (pedidoDetalhesRef.current && pedidoDetalhesRef.current.id === pedidoDeletado.id) {
@@ -269,23 +300,145 @@ const Pedidos = () => {
     }
   };
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+
+  const totalPaginas = Math.max(1, Math.ceil(totalPedidos / filtros.itensPorPagina));
+  const inicioPagina = totalPedidos === 0 ? 0 : (filtros.pagina - 1) * filtros.itensPorPagina + 1;
+  const fimPagina = Math.min(totalPedidos, filtros.pagina * filtros.itensPorPagina);
+
   return (
     <DashboardLayout title="Pedidos">
       {/* Lista de pedidos do iFood */}
       <IfoodOrdersList />
+
+      <div className="mb-4 grid gap-3 md:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Receipt className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">Pedidos</p>
+              <p className="text-lg font-semibold">{resumo.totalPedidos}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">Vendido</p>
+              <p className="text-lg font-semibold">{formatCurrency(resumo.totalVendido)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">Abertos</p>
+              <p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <XCircle className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">Cancelados</p>
+              <p className="text-lg font-semibold">{resumo.cancelados}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Histórico de Pedidos</CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={carregarPedidos}
-            disabled={carregando}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${carregando ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <CardTitle>Histórico de Pedidos</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={carregarPedidos}
+              disabled={carregando}
+              className="w-full lg:w-auto"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${carregando ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <div className="space-y-2 xl:col-span-2">
+              <Label>Período</Label>
+              <Select value={filtros.periodo} onValueChange={(value) => setPeriodo(value as HistoricoPeriodoFiltro)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hoje">Hoje</SelectItem>
+                  <SelectItem value="ontem">Ontem</SelectItem>
+                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="mes">Este mês</SelectItem>
+                  <SelectItem value="personalizado">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pedidos-data-inicio">Data inicial</Label>
+              <Input
+                id="pedidos-data-inicio"
+                type="date"
+                value={filtros.dataInicio}
+                max={filtros.dataFim}
+                onChange={(event) => setDataInicio(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pedidos-data-fim">Data final</Label>
+              <Input
+                id="pedidos-data-fim"
+                type="date"
+                value={filtros.dataFim}
+                min={filtros.dataInicio}
+                onChange={(event) => setDataFim(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={filtros.status} onValueChange={(value) => setStatus(value as HistoricoStatusFiltro)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="preparo">Em preparo</SelectItem>
+                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Por página</Label>
+              <Select value={String(filtros.itensPorPagina)} onValueChange={(value) => setItensPorPagina(Number(value))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 pedidos</SelectItem>
+                  <SelectItem value="20">20 pedidos</SelectItem>
+                  <SelectItem value="50">50 pedidos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -440,6 +593,35 @@ const Pedidos = () => {
               )}
             </TableBody>
           </Table>
+
+          <div className="mt-4 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {inicioPagina}-{fimPagina} de {totalPedidos} pedidos
+            </p>
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPagina(Math.max(1, filtros.pagina - 1))}
+                disabled={filtros.pagina <= 1 || carregando}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Anterior
+              </Button>
+              <span className="min-w-24 text-center text-sm text-muted-foreground">
+                Página {filtros.pagina} de {totalPaginas}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPagina(Math.min(totalPaginas, filtros.pagina + 1))}
+                disabled={filtros.pagina >= totalPaginas || carregando}
+              >
+                Próxima
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </DashboardLayout>
