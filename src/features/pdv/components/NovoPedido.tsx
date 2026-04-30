@@ -1,14 +1,12 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
 import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
 import { FiltroProdutos } from "./FiltroProdutos";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useMesas } from "@/hooks/useMesas";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
@@ -16,83 +14,69 @@ import { Product } from "@/types";
 import { DadosClientePedido, ItemPedido } from "../types";
 
 export interface NovoPedidoProps {
-  categoriaAtiva?: string;
-  setCategoriaAtiva?: (categoria: string) => void;
-  busca?: string;
-  setBusca?: (valor: string) => void;
-  itensPedido?: ItemPedido[];
-  totalPedido?: number;
-  salvandoPedido?: boolean;
-  adicionarProduto?: (produto: Product) => void;
-  alterarQuantidade?: (index: number, delta: number) => void;
-  removerItem?: (index: number) => void;
-  finalizarPedidoOriginal?: (dadosCliente?: DadosClientePedido) => Promise<boolean | void> | boolean | void;
-  tipoPedido?: "mesa" | "balcao";
-  mesaSelecionada?: string;
-  setMesaSelecionada?: (mesaId: string) => void;
-  nomeCliente?: string;
-  setNomeCliente?: (nome: string) => void;
+  restaurantId: string;
+  restaurantName: string;
+  categoriaAtiva: string;
+  setCategoriaAtiva: (categoria: string) => void;
+  busca: string;
+  setBusca: (valor: string) => void;
+  itensPedido: ItemPedido[];
+  totalPedido: number;
+  salvandoPedido: boolean;
+  adicionarProduto: (produto: Product) => void;
+  alterarQuantidade: (index: number, delta: number) => void;
+  removerItem: (index: number) => void;
+  finalizarPedidoOriginal: (dadosCliente?: DadosClientePedido) => Promise<boolean | void> | boolean | void;
+  tipoPedido: "mesa" | "balcao";
+  mesaSelecionada: string;
+  setMesaSelecionada: (mesaId: string) => void;
+  nomeCliente: string;
+  setNomeCliente: (nome: string) => void;
 }
 
-export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
-  const { user } = useCurrentUser();
-  const restaurantId = user?.restaurant_id || "";
-  
-  // Hook interno como fallback quando props não são passadas
-  const hook = usePDVHook(restaurantId);
-
-  // Preferir props vindas do componente pai (PDV) para compartilhar o estado
-  const merged = {
-    categoriaAtiva: props.categoriaAtiva ?? hook.categoriaAtiva,
-    setCategoriaAtiva: props.setCategoriaAtiva ?? hook.setCategoriaAtiva,
-    busca: props.busca ?? hook.busca,
-    setBusca: props.setBusca ?? hook.setBusca,
-    itensPedido: props.itensPedido ?? hook.itensPedido,
-    totalPedido: props.totalPedido ?? hook.totalPedido,
-    salvandoPedido: props.salvandoPedido ?? hook.salvandoPedido,
-    adicionarProduto: props.adicionarProduto ?? hook.adicionarProduto,
-    alterarQuantidade: props.alterarQuantidade ?? hook.alterarQuantidade,
-    removerItem: props.removerItem ?? hook.removerItem,
-    finalizarPedidoOriginal: props.finalizarPedidoOriginal ?? hook.finalizarPedido,
-    tipoPedido: props.tipoPedido ?? hook.tipoPedido,
-    mesaSelecionada: props.mesaSelecionada ?? hook.mesaSelecionada,
-    setMesaSelecionada: props.setMesaSelecionada ?? hook.setMesaSelecionada,
-    nomeCliente: props.nomeCliente ?? hook.nomeCliente,
-    setNomeCliente: props.setNomeCliente ?? hook.setNomeCliente,
-  } as Required<NovoPedidoProps> & {
-    finalizarPedidoOriginal: (dadosCliente?: DadosClientePedido) => Promise<boolean | void> | boolean | void;
-  };
-
+export const NovoPedido: React.FC<NovoPedidoProps> = ({
+  restaurantId,
+  restaurantName,
+  categoriaAtiva,
+  setCategoriaAtiva,
+  busca,
+  setBusca,
+  itensPedido,
+  totalPedido,
+  salvandoPedido,
+  adicionarProduto,
+  alterarQuantidade,
+  removerItem,
+  finalizarPedidoOriginal,
+  tipoPedido,
+  mesaSelecionada,
+  setMesaSelecionada,
+  nomeCliente,
+  setNomeCliente,
+}) => {
   const {
-    categoriaAtiva,
-    setCategoriaAtiva,
-    busca,
-    setBusca,
-    itensPedido,
-    totalPedido,
-    salvandoPedido,
-    adicionarProduto,
-    alterarQuantidade,
-    removerItem,
-    finalizarPedidoOriginal,
-    tipoPedido,
-    mesaSelecionada,
-    setMesaSelecionada,
-    nomeCliente,
-    setNomeCliente,
-  } = merged;
-
-  const { produtos } = useProdutos(restaurantId);
-  const { mesas } = useMesas(restaurantId);
+    produtos,
+    loading: produtosLoading,
+    isFetching: produtosFetching,
+  } = useProdutos(restaurantId);
+  const { mesas, loading: mesasLoading, loadMesas } = useMesas(restaurantId);
 
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [telefoneError, setTelefoneError] = useState("");
+  const [mesaError, setMesaError] = useState("");
+
+  useEffect(() => {
+    if (tipoPedido !== "mesa" || mesaSelecionada) {
+      setMesaError("");
+    }
+  }, [tipoPedido, mesaSelecionada]);
 
   // Filter products based on search and category
   const produtosFiltrados = produtos.filter((produto) => {
+    const termoBusca = busca.toLowerCase().trim();
     const matchesSearch = busca === "" || 
-      produto.name.toLowerCase().includes(busca.toLowerCase()) ||
-      produto.description.toLowerCase().includes(busca.toLowerCase());
+      produto.name.toLowerCase().includes(termoBusca) ||
+      (produto.description ?? "").toLowerCase().includes(termoBusca);
     
     const matchesCategory = categoriaAtiva === "" || categoriaAtiva === "all" || 
       produto.category?.id === categoriaAtiva;
@@ -119,7 +103,12 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
       return;
     }
 
-    // Nome do cliente é opcional; usamos um padrão se estiver vazio
+    if (tipoPedido === "mesa" && !mesaSelecionada) {
+      const mensagem = "Selecione uma mesa ou altere o tipo do pedido para balcão.";
+      setMesaError(mensagem);
+      toast.error(mensagem);
+      return;
+    }
 
     // Validar telefone se foi fornecido
     if (telefoneCliente && !validatePhone(telefoneCliente)) {
@@ -136,6 +125,8 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
       if (pedidoFinalizado === false) {
         return;
       }
+
+      await loadMesas();
 
       // Limpar campos após sucesso
       setTelefoneCliente("");
@@ -165,11 +156,15 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
               mesaSelecionada={mesaSelecionada}
               setMesaSelecionada={setMesaSelecionada}
               restaurantId={restaurantId}
+              mesaError={mesaError}
+              mesas={mesas}
+              mesasLoading={mesasLoading}
+              onRefreshMesas={loadMesas}
             />
             <ListaProdutos
-              categoriaAtiva={categoriaAtiva}
               produtosFiltrados={produtosFiltrados}
               onSelecionarProduto={adicionarProduto}
+              loading={produtosLoading || produtosFetching}
             />
           </CardContent>
         </Card>
@@ -183,13 +178,12 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="nomeCliente">Nome do Cliente *</Label>
+              <Label htmlFor="nomeCliente">Nome do Cliente</Label>
               <Input
                 id="nomeCliente"
                 value={nomeCliente}
                 onChange={(e) => setNomeCliente(e.target.value)}
-                placeholder="Digite o nome do cliente"
-                className={!nomeCliente.trim() && itensPedido.length > 0 ? "border-red-500" : ""}
+                placeholder="Opcional"
               />
             </div>
             
@@ -221,7 +215,10 @@ export const NovoPedido: React.FC<NovoPedidoProps> = (props) => {
           salvandoPedido={salvandoPedido}
           tipoPedido={tipoPedido}
           mesaSelecionada={mesaSelecionada}
-          mesas={mesas.map(mesa => ({ id: mesa.id, number: mesa.number }))}
+          mesas={mesas.map(mesa => ({ id: mesa.id, number: mesa.number, status: mesa.status }))}
+          nomeCliente={nomeCliente}
+          restaurantName={restaurantName}
+          mesaError={mesaError}
         />
       </div>
     </div>

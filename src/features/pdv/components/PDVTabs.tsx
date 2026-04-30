@@ -17,7 +17,7 @@ export const PDVTabs = ({
   showPedidoTabs
 }: PDVTabsProps) => {
   return (
-    <div className="mb-4 flex justify-between items-center">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <Tabs value={visualizacaoAtiva} onValueChange={(v) => onChangeVisualizacao(v as "novo" | "historico")}>
           <TabsList>

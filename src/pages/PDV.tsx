@@ -1,17 +1,19 @@
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ObservacaoModal } from "@/features/pdv/components/ObservacaoModal";
 import { HistoricoPedidos } from "@/features/pdv/components/HistoricoPedidos";
 import { NovoPedido } from "@/features/pdv/components/NovoPedido";
 import { PDVTabs } from "@/features/pdv/components/PDVTabs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
+import { supabase } from "@/integrations/supabase/client";
 
-const PDV = () => {
+export default function PDV() {
   // Obter o usuário atual e ID do restaurante
   const { user } = useCurrentUser();
   const restaurantId = user?.restaurant_id || "";
+  const [restaurantName, setRestaurantName] = useState("Pubfy");
   
   // Usar o hook refatorado que contém toda a lógica
   const {
@@ -26,7 +28,7 @@ const PDV = () => {
     busca,
     setBusca,
     tipoPedido,
-    setTipoPedido,
+    trocarTipoPedido,
     pedidosHistorico,
     visualizacaoAtiva,
     setVisualizacaoAtiva,
@@ -44,18 +46,48 @@ const PDV = () => {
     setNomeCliente
   } = usePDVHook(restaurantId);
 
+  useEffect(() => {
+    let active = true;
+
+    const carregarNomeRestaurante = async () => {
+      if (!restaurantId) {
+        setRestaurantName("Pubfy");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("restaurants")
+        .select("name")
+        .eq("id", restaurantId)
+        .maybeSingle();
+
+      if (!active) return;
+      if (!error && data?.name) {
+        setRestaurantName(data.name);
+      }
+    };
+
+    carregarNomeRestaurante();
+
+    return () => {
+      active = false;
+    };
+  }, [restaurantId]);
+
   return (
     <DashboardLayout title="PDV - Ponto de Venda">
       <PDVTabs 
         visualizacaoAtiva={visualizacaoAtiva}
         onChangeVisualizacao={setVisualizacaoAtiva}
         tipoPedido={tipoPedido}
-        onChangeTipoPedido={setTipoPedido}
+        onChangeTipoPedido={trocarTipoPedido}
         showPedidoTabs={visualizacaoAtiva === "novo"}
       />
 
       {visualizacaoAtiva === "novo" ? (
         <NovoPedido 
+          restaurantId={restaurantId}
+          restaurantName={restaurantName}
           categoriaAtiva={categoriaAtiva}
           setCategoriaAtiva={setCategoriaAtiva}
           busca={busca}
@@ -78,6 +110,7 @@ const PDV = () => {
           pedidosHistorico={pedidosHistorico}
           alterarStatusPedido={handleAlterarStatusPedido}
           onAtualizar={carregarHistoricoPedidos}
+          restaurantName={restaurantName}
         />
       )}
 
@@ -91,6 +124,4 @@ const PDV = () => {
       />
     </DashboardLayout>
   );
-};
-
-export default PDV;
+}

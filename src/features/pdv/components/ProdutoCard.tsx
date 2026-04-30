@@ -15,7 +15,7 @@ const ProdutoCardBase = ({ produto, onSelecionar }: ProdutoCardProps) => {
   return (
     <Card 
       key={produto.id} 
-      className="cursor-pointer hover:bg-gray-50 transition-colors" 
+      className="cursor-pointer transition-colors hover:bg-muted/50" 
       onClick={() => onSelecionar(produto)}
     >
       <CardContent className="p-4">
@@ -28,9 +28,9 @@ const ProdutoCardBase = ({ produto, onSelecionar }: ProdutoCardProps) => {
             className="w-full h-full object-cover"
           />
         </div>
-        <div className="font-medium">{produto.name}</div>
+        <div className="font-medium leading-tight">{produto.name}</div>
         <div className="text-sm text-muted-foreground line-clamp-2">
-          {produto.description}
+          {produto.description || "Sem descrição"}
         </div>
         <div className="text-green font-bold mt-1">
           R$ {produto.price.toFixed(2)}

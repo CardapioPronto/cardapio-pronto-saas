@@ -3,11 +3,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useCategorias } from "@/hooks/useCategorias";
-import { useMesas } from "@/hooks/useMesas";
 import { useAreas } from "@/hooks/useAreas";
 import { MesaSelectorModal } from "@/components/pdv/MesaSelectorModal";
-import { Search, XCircle, MapPin } from "lucide-react";
+import { AlertCircle, Search, XCircle, MapPin } from "lucide-react";
 import { useState } from "react";
+import { Mesa } from "@/types/mesa";
 
 interface FiltroProdutosProps {
   categoriaAtiva: string;
@@ -18,6 +18,10 @@ interface FiltroProdutosProps {
   mesaSelecionada: string;
   setMesaSelecionada: (mesa: string) => void;
   restaurantId: string;
+  mesaError?: string;
+  mesas: Mesa[];
+  mesasLoading?: boolean;
+  onRefreshMesas?: () => Promise<void> | void;
 }
 
 export const FiltroProdutos = ({
@@ -29,9 +33,12 @@ export const FiltroProdutos = ({
   mesaSelecionada,
   setMesaSelecionada,
   restaurantId,
+  mesaError,
+  mesas,
+  mesasLoading = false,
+  onRefreshMesas,
 }: FiltroProdutosProps) => {
   const { categorias, loading } = useCategorias();
-  const { mesas } = useMesas(restaurantId);
   const { areas } = useAreas(restaurantId);
   const [modalMesaOpen, setModalMesaOpen] = useState(false);
 
@@ -40,35 +47,57 @@ export const FiltroProdutos = ({
     return mesa ? `Mesa ${mesa.number}` : "Selecionar mesa";
   };
 
+  const abrirSeletorMesa = async () => {
+    await onRefreshMesas?.();
+    setModalMesaOpen(true);
+  };
+
+  const limparMesaSelecionada = () => {
+    setMesaSelecionada("");
+  };
+
   return (
     <div className="space-y-4">
       {/* Seletor de mesa via modal */}
       {tipoPedido === "mesa" && (
         <div className="space-y-2">
           <Label>Mesa para o pedido</Label>
-          <Button
-            variant="outline"
-            onClick={() => setModalMesaOpen(true)}
-            className="w-full justify-start"
-          >
-            <MapPin className="mr-2 h-4 w-4" />
-            {mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Selecionar mesa"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={abrirSeletorMesa}
+              className={`min-w-0 flex-1 justify-start ${mesaError ? "border-destructive text-destructive hover:text-destructive" : ""}`}
+              aria-invalid={Boolean(mesaError)}
+            >
+              <MapPin className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {mesasLoading ? "Atualizando mesas..." : mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Selecionar mesa"}
+              </span>
+            </Button>
+            {mesaSelecionada && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={limparMesaSelecionada}
+                aria-label="Remover mesa selecionada"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {mesaError && (
+            <p className="flex items-center gap-1.5 text-xs text-destructive">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {mesaError}
+            </p>
+          )}
         </div>
       )}
 
-      {/* Seletor para balcão - opcional */}
       {tipoPedido === "balcao" && (
-        <div className="space-y-2">
-          <Label>Mesa para controle interno (opcional)</Label>
-          <Button
-            variant="outline"
-            onClick={() => setModalMesaOpen(true)}
-            className="w-full justify-start"
-          >
-            <MapPin className="mr-2 h-4 w-4" />
-            {mesaSelecionada ? getMesaInfo(mesaSelecionada) : "Nenhuma mesa selecionada"}
-          </Button>
+        <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+          Pedido de balcão sem mesa vinculada.
         </div>
       )}
 
@@ -132,6 +161,7 @@ export const FiltroProdutos = ({
         areas={areas}
         mesaSelecionada={mesaSelecionada}
         onMesaChange={setMesaSelecionada}
+        onClearMesa={limparMesaSelecionada}
         tipoPedido={tipoPedido}
       />
     </div>

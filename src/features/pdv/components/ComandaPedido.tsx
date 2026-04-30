@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ItemPedidoLinha } from "./ItemPedidoLinha";
 import { ItemPedido } from "../types";
-import { Loader2, Printer } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AlertCircle, Loader2, Printer } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { MesaStatus } from "@/types/mesa";
 
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
@@ -18,9 +16,10 @@ interface ComandaPedidoProps {
   removerItem: (index: number) => void;
   finalizarPedido: () => void;
   salvandoPedido: boolean;
-  nomeCliente?: string;
-  setNomeCliente?: (nome: string) => void;
-  mesas?: Array<{id: string; number: string}>;
+  nomeCliente: string;
+  restaurantName: string;
+  mesaError?: string;
+  mesas?: Array<{id: string; number: string; status: MesaStatus}>;
 }
 
 export const ComandaPedido = ({
@@ -32,24 +31,26 @@ export const ComandaPedido = ({
   removerItem,
   finalizarPedido,
   salvandoPedido,
-  nomeCliente = "",
-  setNomeCliente,
+  nomeCliente,
+  restaurantName,
+  mesaError,
   mesas = [],
 }: ComandaPedidoProps) => {
-  const { user } = useCurrentUser();
   const { printOrder, printing } = usePrint();
+  const mesaAtual = mesas.find(m => m.id === mesaSelecionada);
+
   const getMesaDisplay = () => {
     if (!mesaSelecionada) return tipoPedido === "mesa" ? "Mesa não selecionada" : "Balcão";
     
-    const mesa = mesas.find(m => m.id === mesaSelecionada);
-    if (mesa) {
-      return tipoPedido === "mesa" ? `Mesa ${mesa.number}` : `Balcão - Mesa ${mesa.number}`;
+    if (mesaAtual) {
+      return tipoPedido === "mesa" ? `Mesa ${mesaAtual.number}` : `Balcão - Mesa ${mesaAtual.number}`;
     }
     
     return tipoPedido === "mesa" ? "Mesa não encontrada" : "Balcão";
   };
 
   const tituloComanda = getMesaDisplay();
+  const precisaMesa = tipoPedido === "mesa" && !mesaSelecionada;
 
   const handlePrintPreview = () => {
     if (itensPedido.length === 0) return;
@@ -64,8 +65,6 @@ export const ComandaPedido = ({
       timestamp: new Date(),
       total: totalPedido,
     };
-
-    const restaurantName = 'Restaurante'; // Usar nome padrão por enquanto
     printOrder(pedidoTemp, { restaurantName });
   };
 
@@ -102,25 +101,25 @@ export const ComandaPedido = ({
               ))}
             </div>
           )}
-          
-          {/* Campo opcional para nome do cliente */}
-          {setNomeCliente && (
-            <div className="pt-4">
-              <Label htmlFor="nome-cliente" className="text-sm">
-                Nome do cliente (opcional)
-              </Label>
-              <Input
-                id="nome-cliente"
-                placeholder="Informe o nome do cliente"
-                value={nomeCliente}
-                onChange={(e) => setNomeCliente(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          )}
         </CardContent>
 
         <CardFooter className="flex-col pt-4">
+          {precisaMesa && itensPedido.length > 0 && (
+            <div className="mb-4 flex w-full items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {mesaError || "Selecione uma mesa para finalizar este pedido ou altere o tipo para balcão."}
+              </span>
+            </div>
+          )}
+
+          {mesaAtual?.status === "ocupada" && itensPedido.length > 0 && (
+            <div className="mb-4 flex w-full items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Esta mesa já está ocupada. O novo pedido será vinculado ao atendimento aberto da mesa.</span>
+            </div>
+          )}
+
           <div className="flex justify-between w-full mb-4 font-bold text-lg">
             <span>Total</span>
             <span>R$ {totalPedido.toFixed(2)}</span>
@@ -151,7 +150,7 @@ export const ComandaPedido = ({
                 Finalizando...
               </>
             ) : (
-              "Finalizar Pedido"
+              precisaMesa ? "Selecionar mesa para finalizar" : "Finalizar Pedido"
             )}
           </Button>
         </CardFooter>

@@ -5,17 +5,20 @@ import { PedidoHistoricoItem } from "./PedidoHistoricoItem";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { PedidoStatus } from "../types";
 
 interface HistoricoPedidosProps {
   pedidosHistorico: Pedido[];
-  alterarStatusPedido: (pedidoId: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => void;
+  alterarStatusPedido: (pedidoId: number | string, novoStatus: PedidoStatus) => void;
   onAtualizar: () => Promise<void>;
+  restaurantName: string;
 }
 
 export const HistoricoPedidos = ({
   pedidosHistorico,
   alterarStatusPedido,
   onAtualizar,
+  restaurantName,
 }: HistoricoPedidosProps) => {
   const [atualizando, setAtualizando] = useState(false);
 
@@ -53,6 +56,7 @@ export const HistoricoPedidos = ({
               key={pedido.id}
               pedido={pedido}
               alterarStatusPedido={alterarStatusPedido}
+              restaurantName={restaurantName}
             />
           ))}
         </div>

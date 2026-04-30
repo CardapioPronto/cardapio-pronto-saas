@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Mesa, CreateMesaData, UpdateMesaData } from '@/types/mesa';
 import { mesasService } from '@/services/mesasService';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useMesas = (restaurantId: string) => {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMesas = async () => {
+  const loadMesas = useCallback(async () => {
     if (!restaurantId) return;
     
     setLoading(true);
@@ -24,7 +25,7 @@ export const useMesas = (restaurantId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
 
   const createMesa = async (mesaData: Omit<CreateMesaData, 'restaurant_id'>) => {
     try {
@@ -85,7 +86,39 @@ export const useMesas = (restaurantId: string) => {
 
   useEffect(() => {
     loadMesas();
-  }, [restaurantId]);
+  }, [loadMesas]);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    const handleMesasChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ restaurantId?: string }>).detail;
+      if (!detail?.restaurantId || detail.restaurantId === restaurantId) {
+        loadMesas();
+      }
+    };
+
+    window.addEventListener('mesas:changed', handleMesasChanged);
+
+    const channel = supabase
+      .channel(`mesas-status-${restaurantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mesas',
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        () => loadMesas()
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('mesas:changed', handleMesasChanged);
+      supabase.removeChannel(channel);
+    };
+  }, [restaurantId, loadMesas]);
 
   return {
     mesas,

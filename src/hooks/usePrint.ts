@@ -64,6 +64,9 @@ export const usePrint = () => {
 };
 
 const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
+  const safeRestaurantName = escapeHtml(restaurantName);
+  const safeMesa = escapeHtml(pedido.mesa || "Balcão");
+  const safeCliente = pedido.cliente ? escapeHtml(pedido.cliente) : "";
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -77,7 +80,7 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Comanda - ${pedido.mesa}</title>
+        <title>Comanda - ${safeMesa}</title>
         <style>
             @media print {
                 @page {
@@ -200,19 +203,19 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
     </head>
     <body>
         <div class="header">
-            <div class="restaurant-name">${restaurantName}</div>
+            <div class="restaurant-name">${safeRestaurantName}</div>
             <div class="document-type">COMANDA DE COZINHA</div>
         </div>
 
         <div class="order-info">
             <div class="info-row">
                 <span class="info-label">MESA:</span>
-                <span>${pedido.mesa}</span>
+                <span>${safeMesa}</span>
             </div>
             ${pedido.cliente ? `
             <div class="info-row">
                 <span class="info-label">CLIENTE:</span>
-                <span>${pedido.cliente}</span>
+                <span>${safeCliente}</span>
             </div>
             ` : ''}
             <div class="info-row">
@@ -221,7 +224,7 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
             </div>
             <div class="info-row">
                 <span class="info-label">STATUS:</span>
-                <span>${pedido.status.toUpperCase()}</span>
+                <span>${escapeHtml(pedido.status.toUpperCase())}</span>
             </div>
         </div>
 
@@ -231,13 +234,13 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
 
         ${pedido.itensPedido.map(item => `
             <div class="item">
-                <div class="item-name">${item.quantidade}x ${item.produto.name}</div>
+                <div class="item-name">${item.quantidade}x ${escapeHtml(item.produto.name)}</div>
                 ${item.produto.description ? `
-                    <div class="item-description">${item.produto.description}</div>
+                    <div class="item-description">${escapeHtml(item.produto.description)}</div>
                 ` : ''}
                 ${item.observacao ? `
                     <div class="item-observation">
-                        <span class="observation-label">OBS:</span> ${item.observacao}
+                        <span class="observation-label">OBS:</span> ${escapeHtml(item.observacao)}
                     </div>
                 ` : ''}
             </div>
@@ -258,3 +261,11 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
     </html>
   `;
 };
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");

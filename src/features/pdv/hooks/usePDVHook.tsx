@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/types";
-import { Pedido, ItemPedido, DadosClientePedido } from "../types";
+import { Pedido, ItemPedido, DadosClientePedido, PedidoStatus } from "../types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -22,6 +22,13 @@ export const usePDVHook = (restaurantId: string) => {
   const [visualizacaoAtiva, setVisualizacaoAtiva] = useState<"novo" | "historico">("novo");
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [nomeCliente, setNomeCliente] = useState("");
+
+  const trocarTipoPedido = useCallback((novoTipo: "mesa" | "balcao") => {
+    setTipoPedido(novoTipo);
+    if (novoTipo === "balcao") {
+      setMesaSelecionada("");
+    }
+  }, []);
 
   // Carregar histórico de pedidos
   const carregarHistoricoPedidos = useCallback(async () => {
@@ -45,7 +52,6 @@ export const usePDVHook = (restaurantId: string) => {
 
   // Ação ao selecionar um produto
   const adicionarProduto = (produto: Product) => {
-    console.log("Produto selecionado para adicionar:", produto);
     setProdutoSelecionado(produto);
   };
 
@@ -128,9 +134,7 @@ export const usePDVHook = (restaurantId: string) => {
     
     try {
       setSalvandoPedido(true);
-      const mesa = mesaSelecionada 
-        ? (tipoPedido === "mesa" ? `Mesa ${mesaSelecionada}` : `Balcão - Mesa ${mesaSelecionada}`)
-        : "Balcão";
+      const mesa = tipoPedido === "mesa" && mesaSelecionada ? `Mesa ${mesaSelecionada}` : "Balcão";
       
       // Obter o ID do usuário atual da sessão
       const { data: { user } } = await supabase.auth.getUser();
@@ -151,7 +155,7 @@ export const usePDVHook = (restaurantId: string) => {
         user.id, // ID do funcionário/usuário logado
         nomeClientePedido,
         telefoneClientePedido,
-        mesaSelecionada || undefined // Mesa opcional para balcão
+        tipoPedido === "mesa" ? mesaSelecionada : undefined
       );
       
       if (result.success) {
@@ -173,7 +177,7 @@ export const usePDVHook = (restaurantId: string) => {
   };
 
   // Mudar status do pedido
-  const handleAlterarStatusPedido = async (pedidoId: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => {
+  const handleAlterarStatusPedido = async (pedidoId: number | string, novoStatus: PedidoStatus) => {
     const result = await alterarStatusPedido(String(pedidoId), novoStatus);
     if (result.success) {
       // Atualizar o estado local para refletir a mudança imediatamente
@@ -200,6 +204,7 @@ export const usePDVHook = (restaurantId: string) => {
     setBusca,
     tipoPedido,
     setTipoPedido,
+    trocarTipoPedido,
     pedidosHistorico,
     visualizacaoAtiva,
     setVisualizacaoAtiva,

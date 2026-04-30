@@ -1,6 +1,8 @@
 
 import { Product, Category } from "@/types";
 
+export type PedidoStatus = 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado';
+
 // Create a simplified product type for database responses
 export interface ProdutoSimplificado {
   id: string;
@@ -30,7 +32,7 @@ export interface Pedido {
   cliente?: string;
   clientName?: string; // Campo adicional para compatibilidade
   itensPedido: ItemPedido[];
-  status: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado';
+  status: PedidoStatus;
   timestamp: Date;
   total: number;
   source?: 'app' | 'ifood' | 'whatsapp';

@@ -1,8 +1,46 @@
 import { supabase } from "@/integrations/supabase/client";
-import { ItemPedido, ProdutoSimplificado, Pedido } from "../types";
+import { ItemPedido, ProdutoSimplificado, Pedido, PedidoStatus } from "../types";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { mesasService } from "@/services/mesasService";
 import { toast } from "sonner";
+
+type PedidoQueryRow = {
+  id: string;
+  customer_name: string | null;
+  created_at: string;
+  status: string;
+  source: string | null;
+  table_id: string | null;
+  total: number;
+  order_items?: Array<{
+    id: string;
+    product_id: string | null;
+    product_name: string;
+    quantity: number;
+    price: number;
+    observations: string | null;
+  }> | null;
+  mesa?: {
+    id: string;
+    name: string | null;
+    number: string | null;
+  } | null;
+};
+
+const formatMesaDisplay = (pedido: PedidoQueryRow) => {
+  if (!pedido.mesa) return 'Balcão';
+
+  if (pedido.mesa.number) return `Mesa ${pedido.mesa.number}`;
+  if (pedido.mesa.name) return pedido.mesa.name;
+
+  return 'Mesa';
+};
+
+const OPEN_TABLE_STATUSES: PedidoStatus[] = ['pendente', 'preparo', 'em-andamento'];
+
+const notifyMesasChanged = (restaurantId: string) => {
+  window.dispatchEvent(new CustomEvent('mesas:changed', { detail: { restaurantId } }));
+};
 
 export async function salvarPedido(
   restaurantId: string,
@@ -17,6 +55,12 @@ export async function salvarPedido(
   try {
     // Determinar se é mesa ou balcão
     const isMesa = mesaOuBalcao.startsWith('Mesa');
+    const tableId = isMesa ? mesaId : null;
+
+    if (isMesa && !tableId) {
+      toast.error('Selecione uma mesa válida para finalizar o pedido.');
+      return { success: false, error: new Error('Mesa não selecionada') };
+    }
     
     // 1. Inserir o pedido principal
     const { data: order, error: orderError } = await supabase
@@ -27,7 +71,7 @@ export async function salvarPedido(
         customer_name: nomeCliente || (isMesa ? 'Cliente local' : 'Cliente balcão'),
         customer_phone: telefoneCliente || null,
         order_type: isMesa ? 'mesa' : 'balcao',
-        table_id: isMesa ? mesaOuBalcao.replace('Mesa ', '') : null,
+        table_id: tableId,
         status: 'pendente',
         total: totalPedido,
         source: 'app'
@@ -58,6 +102,7 @@ export async function salvarPedido(
     if (itemsError) {
       console.error('Erro ao criar itens do pedido:', itemsError);
       toast.error('Erro ao salvar os itens do pedido.');
+      await supabase.from('orders').delete().eq('id', order.id);
       return { success: false, error: itemsError };
     }
 
@@ -65,6 +110,7 @@ export async function salvarPedido(
     if (isMesa && mesaId) {
       try {
         await mesasService.updateMesaStatus(mesaId, 'ocupada');
+        notifyMesasChanged(restaurantId);
       } catch (mesaError) {
         console.error('Erro ao atualizar status da mesa:', mesaError);
         // Não falhar o pedido por erro na atualização da mesa
@@ -110,7 +156,8 @@ export async function listarPedidos(restaurantId: string) {
       ),
       mesa:mesas (
         id,
-        name
+        name,
+        number
       )
     `)
     .eq('restaurant_id', restaurantId)
@@ -121,19 +168,18 @@ export async function listarPedidos(restaurantId: string) {
       return { success: false, error };
     }
 
-    // Formatar os dados para o formato esperado pelo front-end
-    const pedidosFormatados = (data as any[]).map((pedido: any) => ({
+    const rows = (data || []) as PedidoQueryRow[];
+    const pedidosFormatados = rows.map((pedido) => ({
       id: pedido.id,
-      // O tipo Pedido espera a propriedade 'mesa' como um tuple [name, id]; ajustar para esse formato
-      mesa: pedido.mesa ? pedido.mesa.name : 'Balcão',
+      mesa: formatMesaDisplay(pedido),
+      table_id: pedido.table_id,
       cliente: pedido.customer_name || undefined,
       clientName: pedido.customer_name || undefined,
-      itensPedido: (pedido.order_items || []).map((item: any) => ({
+      itensPedido: (pedido.order_items || []).map((item) => ({
         produto: {
-          id: item.product_id,
+          id: item.product_id || item.id,
           name: item.product_name,
           price: item.price,
-          // Add missing properties with default values
           description: "",
           available: true,
           restaurant_id: restaurantId
@@ -141,11 +187,11 @@ export async function listarPedidos(restaurantId: string) {
         quantidade: item.quantity,
         observacao: item.observations
       })),
-      status: pedido.status,
+      status: pedido.status as PedidoStatus,
       timestamp: new Date(pedido.created_at),
       total: pedido.total,
-      source: pedido.source
-    })) as unknown as Pedido[];
+      source: pedido.source as Pedido['source']
+    })) satisfies Pedido[];
 
     return { success: true, pedidos: pedidosFormatados };
   } catch (error) {
@@ -154,7 +200,7 @@ export async function listarPedidos(restaurantId: string) {
   }
 }
 
-export async function alterarStatusPedido(pedidoId: string, novoStatus: string) {
+export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoStatus) {
   try {
     // Primeiro, buscar informações do pedido para poder liberar a mesa se necessário
     const { data: orderData, error: fetchError } = await supabase
@@ -172,7 +218,10 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: string) 
     // Atualizar o status do pedido
     const { error } = await supabase
       .from('orders')
-      .update({ status: novoStatus })
+      .update({
+        status: novoStatus,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', pedidoId);
 
     if (error) {
@@ -181,20 +230,31 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: string) 
       return { success: false, error };
     }
 
-    // Se o pedido foi finalizado ou cancelado e é de mesa, liberar a mesa
+    if (OPEN_TABLE_STATUSES.includes(novoStatus) && orderData.order_type === 'mesa' && orderData.table_id) {
+      try {
+        await mesasService.updateMesaStatus(orderData.table_id, 'ocupada');
+        notifyMesasChanged(orderData.restaurant_id);
+      } catch (mesaError) {
+        console.error('Erro ao ocupar mesa:', mesaError);
+      }
+    }
+
+    // Se ainda existirem pedidos abertos na mesa, ela permanece ocupada.
     if ((novoStatus === 'finalizado' || novoStatus === 'cancelado') && orderData.order_type === 'mesa' && orderData.table_id) {
       try {
-        // Buscar a mesa pelo número da mesa
-        const { data: mesa } = await supabase
-          .from('mesas')
-          .select('id, name')
+        const { data: pedidosAbertos, error: pedidosAbertosError } = await supabase
+          .from('orders')
+          .select('id')
           .eq('restaurant_id', orderData.restaurant_id)
-          .eq('id', orderData.table_id)
-          .single();
+          .eq('table_id', orderData.table_id)
+          .in('status', OPEN_TABLE_STATUSES)
+          .neq('id', pedidoId);
 
-        if (mesa) {
-          await mesasService.updateMesaStatus(mesa.id, 'livre');
-        }
+        if (pedidosAbertosError) throw pedidosAbertosError;
+
+        const mesaStatus = pedidosAbertos && pedidosAbertos.length > 0 ? 'ocupada' : 'livre';
+        await mesasService.updateMesaStatus(orderData.table_id, mesaStatus);
+        notifyMesasChanged(orderData.restaurant_id);
       } catch (mesaError) {
         console.error('Erro ao liberar mesa:', mesaError);
         // Não falhar a operação por erro na liberação da mesa

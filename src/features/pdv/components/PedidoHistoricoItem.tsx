@@ -1,21 +1,21 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pedido } from "../types";
+import { Pedido, PedidoStatus } from "../types";
 import { AlertCircle, CheckCircle, Clock, Package, XCircle, Printer } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface PedidoHistoricoItemProps {
   pedido: Pedido;
-  alterarStatusPedido: (pedidoId: number | string, novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado') => void;
+  alterarStatusPedido: (pedidoId: number | string, novoStatus: PedidoStatus) => void;
+  restaurantName: string;
 }
 
 export const PedidoHistoricoItem = ({
   pedido,
   alterarStatusPedido,
+  restaurantName,
 }: PedidoHistoricoItemProps) => {
-  const { user } = useCurrentUser();
   const { printOrder, printing } = usePrint();
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -63,7 +63,6 @@ export const PedidoHistoricoItem = ({
   const statusInfo = getStatusInfo(pedido.status);
 
   const handlePrint = () => {
-    const restaurantName = 'Restaurante'; // Usar nome padrão por enquanto
     printOrder(pedido, { restaurantName });
   };
 

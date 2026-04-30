@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Users } from "lucide-react";
+import { AlertCircle, MapPin, Users, XCircle } from "lucide-react";
 import { Mesa } from "@/types/mesa";
 import { Area } from "@/types/area";
 import { MesaStatusBadge } from "@/components/mesas/MesaStatusBadge";
@@ -15,6 +14,7 @@ interface MesaSelectorModalProps {
   areas: Area[];
   mesaSelecionada: string;
   onMesaChange: (mesa: string) => void;
+  onClearMesa?: () => void;
   tipoPedido: "mesa" | "balcao";
 }
 
@@ -25,6 +25,7 @@ export function MesaSelectorModal({
   areas, 
   mesaSelecionada, 
   onMesaChange, 
+  onClearMesa,
   tipoPedido 
 }: MesaSelectorModalProps) {
   const [areaFiltro, setAreaFiltro] = useState<string>("all");
@@ -39,7 +40,7 @@ export function MesaSelectorModal({
     ? mesas
     : mesas.filter(mesa => mesa.area_id === areaFiltro);
 
-  const mesasDisponiveis = mesasFiltradas.filter(mesa => 
+  const mesasSelecionaveis = mesasFiltradas.filter(mesa => 
     mesa.status !== 'indisponivel'
   );
 
@@ -48,9 +49,14 @@ export function MesaSelectorModal({
     onOpenChange(false);
   };
 
+  const handleClearMesa = () => {
+    onClearMesa?.();
+    onOpenChange(false);
+  };
+
   const getMesaInfo = (mesaId: string) => {
     const mesa = mesas.find(m => m.id === mesaId);
-    return mesa ? `Mesa ${mesa.number}` : "Mesa não encontrada";
+    return mesa ? `Mesa ${mesa.number} - ${mesa.status === "ocupada" ? "ocupada" : mesa.status}` : "Mesa não encontrada";
   };
 
   return (
@@ -86,14 +92,28 @@ export function MesaSelectorModal({
           {/* Mesa selecionada atualmente */}
           {mesaSelecionada && (
             <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">Mesa selecionada:</p>
-              <p className="text-lg">{getMesaInfo(mesaSelecionada)}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Mesa selecionada:</p>
+                  <p className="text-lg">{getMesaInfo(mesaSelecionada)}</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={handleClearMesa}>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Remover
+                </Button>
+              </div>
+              {mesas.find(m => m.id === mesaSelecionada)?.status === "ocupada" && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Novo pedido será adicionado a uma mesa já em atendimento.
+                </p>
+              )}
             </div>
           )}
 
           {/* Grid de mesas */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
-            {mesasDisponiveis.map((mesa) => (
+            {mesasSelecionaveis.map((mesa) => (
               <Button
                 key={mesa.id}
                 variant={mesaSelecionada === mesa.id ? "default" : "outline"}
@@ -112,11 +132,17 @@ export function MesaSelectorModal({
                   <Users className="h-3 w-3" />
                   {mesa.capacity} pessoas
                 </div>
+                {mesa.status === "ocupada" && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <AlertCircle className="h-3 w-3" />
+                    Adicionar ao atendimento aberto
+                  </div>
+                )}
               </Button>
             ))}
           </div>
 
-          {mesasDisponiveis.length === 0 && (
+          {mesasSelecionaveis.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <p className="text-sm">Nenhuma mesa disponível</p>
               {areaFiltro !== "all" && (
