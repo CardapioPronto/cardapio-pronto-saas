@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/types";
-import { Pedido, ItemPedido, DadosClientePedido, PedidoStatus } from "../types";
+import {
+  DadosClientePedido,
+  HistoricoPedidosFiltros,
+  HistoricoPedidosResumo,
+  HistoricoPeriodoFiltro,
+  HistoricoStatusFiltro,
+  ItemPedido,
+  Pedido,
+  PedidoStatus,
+} from "../types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -8,6 +17,56 @@ import {
   listarPedidos, 
   alterarStatusPedido 
 } from "../services/pedidoService";
+
+const formatDateInput = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getDateRangeByPeriod = (periodo: HistoricoPeriodoFiltro) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+
+  if (periodo === "ontem") {
+    start.setDate(today.getDate() - 1);
+    end.setDate(today.getDate() - 1);
+  }
+
+  if (periodo === "7dias") {
+    start.setDate(today.getDate() - 6);
+  }
+
+  if (periodo === "mes") {
+    start.setDate(1);
+  }
+
+  return {
+    dataInicio: formatDateInput(start),
+    dataFim: formatDateInput(end),
+  };
+};
+
+const getInitialHistoricoFiltros = (): HistoricoPedidosFiltros => ({
+  periodo: "hoje",
+  ...getDateRangeByPeriod("hoje"),
+  status: "todos",
+  pagina: 1,
+  itensPorPagina: 20,
+});
+
+const toStartOfDayIso = (date: string) => {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+};
+
+const toEndOfDayIso = (date: string) => {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+};
 
 export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
@@ -22,6 +81,15 @@ export const usePDVHook = (restaurantId: string) => {
   const [visualizacaoAtiva, setVisualizacaoAtiva] = useState<"novo" | "historico">("novo");
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [nomeCliente, setNomeCliente] = useState("");
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [historicoFiltros, setHistoricoFiltros] = useState<HistoricoPedidosFiltros>(getInitialHistoricoFiltros);
+  const [historicoTotal, setHistoricoTotal] = useState(0);
+  const [historicoResumo, setHistoricoResumo] = useState<HistoricoPedidosResumo>({
+    totalPedidos: 0,
+    totalVendido: 0,
+    pedidosAbertos: 0,
+    cancelados: 0,
+  });
 
   const trocarTipoPedido = useCallback((novoTipo: "mesa" | "balcao") => {
     setTipoPedido(novoTipo);
@@ -33,22 +101,86 @@ export const usePDVHook = (restaurantId: string) => {
   // Carregar histórico de pedidos
   const carregarHistoricoPedidos = useCallback(async () => {
     if (!restaurantId) return;
+
+    setCarregandoHistorico(true);
     
-    const result = await listarPedidos(restaurantId);
-    if (result.success) {
-      // Convert API response to match our Pedido interface
-      const pedidos = result.pedidos || [];
-      setPedidosHistorico(pedidos as Pedido[]);
-    } else {
-      toast.error("Erro ao carregar o histórico de pedidos");
+    try {
+      const result = await listarPedidos(restaurantId, {
+        dataInicio: toStartOfDayIso(historicoFiltros.dataInicio),
+        dataFim: toEndOfDayIso(historicoFiltros.dataFim),
+        status: historicoFiltros.status,
+        pagina: historicoFiltros.pagina,
+        itensPorPagina: historicoFiltros.itensPorPagina,
+      });
+
+      if (result.success) {
+        setPedidosHistorico(result.pedidos);
+        setHistoricoTotal(result.total);
+        setHistoricoResumo(result.resumo);
+      } else {
+        toast.error("Erro ao carregar o histórico de pedidos");
+      }
+    } finally {
+      setCarregandoHistorico(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, historicoFiltros]);
 
   useEffect(() => {
     if (restaurantId && visualizacaoAtiva === "historico") {
       carregarHistoricoPedidos();
     }
   }, [restaurantId, visualizacaoAtiva, carregarHistoricoPedidos]);
+
+  const setHistoricoPeriodo = useCallback((periodo: HistoricoPeriodoFiltro) => {
+    const range = periodo === "personalizado" ? {} : getDateRangeByPeriod(periodo);
+    setHistoricoFiltros((filtros) => ({
+      ...filtros,
+      periodo,
+      ...range,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setHistoricoStatus = useCallback((status: HistoricoStatusFiltro) => {
+    setHistoricoFiltros((filtros) => ({
+      ...filtros,
+      status,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setHistoricoDataInicio = useCallback((dataInicio: string) => {
+    setHistoricoFiltros((filtros) => ({
+      ...filtros,
+      periodo: "personalizado",
+      dataInicio,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setHistoricoDataFim = useCallback((dataFim: string) => {
+    setHistoricoFiltros((filtros) => ({
+      ...filtros,
+      periodo: "personalizado",
+      dataFim,
+      pagina: 1,
+    }));
+  }, []);
+
+  const setHistoricoPagina = useCallback((pagina: number) => {
+    setHistoricoFiltros((filtros) => ({
+      ...filtros,
+      pagina,
+    }));
+  }, []);
+
+  const setHistoricoItensPorPagina = useCallback((itensPorPagina: number) => {
+    setHistoricoFiltros((filtros) => ({
+      ...filtros,
+      itensPorPagina,
+      pagina: 1,
+    }));
+  }, []);
 
   // Ação ao selecionar um produto
   const adicionarProduto = (produto: Product) => {
@@ -180,7 +312,6 @@ export const usePDVHook = (restaurantId: string) => {
   const handleAlterarStatusPedido = async (pedidoId: number | string, novoStatus: PedidoStatus) => {
     const result = await alterarStatusPedido(String(pedidoId), novoStatus);
     if (result.success) {
-      // Atualizar o estado local para refletir a mudança imediatamente
       setPedidosHistorico(pedidos => 
         pedidos.map(pedido => 
           pedido.id === pedidoId 
@@ -188,6 +319,7 @@ export const usePDVHook = (restaurantId: string) => {
             : pedido
         )
       );
+      await carregarHistoricoPedidos();
     }
   };
 
@@ -206,6 +338,16 @@ export const usePDVHook = (restaurantId: string) => {
     setTipoPedido,
     trocarTipoPedido,
     pedidosHistorico,
+    carregandoHistorico,
+    historicoFiltros,
+    historicoTotal,
+    historicoResumo,
+    setHistoricoPeriodo,
+    setHistoricoStatus,
+    setHistoricoDataInicio,
+    setHistoricoDataFim,
+    setHistoricoPagina,
+    setHistoricoItensPorPagina,
     visualizacaoAtiva,
     setVisualizacaoAtiva,
     salvandoPedido,

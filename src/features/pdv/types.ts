@@ -2,6 +2,30 @@
 import { Product, Category } from "@/types";
 
 export type PedidoStatus = 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado';
+export type HistoricoStatusFiltro = PedidoStatus | 'todos';
+export type HistoricoPeriodoFiltro = 'hoje' | 'ontem' | '7dias' | 'mes' | 'personalizado';
+
+export interface HistoricoPedidosFiltros {
+  periodo: HistoricoPeriodoFiltro;
+  dataInicio: string;
+  dataFim: string;
+  status: HistoricoStatusFiltro;
+  pagina: number;
+  itensPorPagina: number;
+}
+
+export interface HistoricoPedidosResumo {
+  totalPedidos: number;
+  totalVendido: number;
+  pedidosAbertos: number;
+  cancelados: number;
+}
+
+export interface HistoricoPedidosResultado {
+  pedidos: Pedido[];
+  total: number;
+  resumo: HistoricoPedidosResumo;
+}
 
 // Create a simplified product type for database responses
 export interface ProdutoSimplificado {

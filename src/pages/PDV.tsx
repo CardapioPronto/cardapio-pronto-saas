@@ -30,6 +30,16 @@ export default function PDV() {
     tipoPedido,
     trocarTipoPedido,
     pedidosHistorico,
+    carregandoHistorico,
+    historicoFiltros,
+    historicoTotal,
+    historicoResumo,
+    setHistoricoPeriodo,
+    setHistoricoStatus,
+    setHistoricoDataInicio,
+    setHistoricoDataFim,
+    setHistoricoPagina,
+    setHistoricoItensPorPagina,
     visualizacaoAtiva,
     setVisualizacaoAtiva,
     salvandoPedido,
@@ -108,9 +118,19 @@ export default function PDV() {
       ) : (
         <HistoricoPedidos 
           pedidosHistorico={pedidosHistorico}
+          carregando={carregandoHistorico}
           alterarStatusPedido={handleAlterarStatusPedido}
           onAtualizar={carregarHistoricoPedidos}
           restaurantName={restaurantName}
+          filtros={historicoFiltros}
+          total={historicoTotal}
+          resumo={historicoResumo}
+          onChangePeriodo={setHistoricoPeriodo}
+          onChangeStatus={setHistoricoStatus}
+          onChangeDataInicio={setHistoricoDataInicio}
+          onChangeDataFim={setHistoricoDataFim}
+          onChangePagina={setHistoricoPagina}
+          onChangeItensPorPagina={setHistoricoItensPorPagina}
         />
       )}
 

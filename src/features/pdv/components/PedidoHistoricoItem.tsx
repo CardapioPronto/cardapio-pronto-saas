@@ -1,8 +1,9 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pedido, PedidoStatus } from "../types";
-import { AlertCircle, CheckCircle, Clock, Package, XCircle, Printer } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Clock, Package, Printer, User, XCircle } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
 
 interface PedidoHistoricoItemProps {
@@ -16,6 +17,7 @@ export const PedidoHistoricoItem = ({
   alterarStatusPedido,
   restaurantName,
 }: PedidoHistoricoItemProps) => {
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const { printOrder, printing } = usePrint();
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -61,6 +63,8 @@ export const PedidoHistoricoItem = ({
   };
 
   const statusInfo = getStatusInfo(pedido.status);
+  const nomeCliente = pedido.cliente || pedido.clientName || "Cliente não informado";
+  const totalItens = pedido.itensPedido.reduce((total, item) => total + item.quantidade, 0);
 
   const handlePrint = () => {
     printOrder(pedido, { restaurantName });
@@ -80,20 +84,59 @@ export const PedidoHistoricoItem = ({
         </div>
         <div className="text-sm text-muted-foreground">{dataFormatada}</div>
       </CardHeader>
-      <CardContent>
-        <ul className="space-y-1">
-          {pedido.itensPedido.map((item, index) => (
-            <li key={index} className="text-sm">
-              <div className="flex justify-between">
-                <span>{item.quantidade}x {item.produto.name}</span>
-                <span>R$ {(item.produto.price * item.quantidade).toFixed(2)}</span>
-              </div>
-              {item.observacao && (
-                <p className="text-xs text-muted-foreground">Obs: {item.observacao}</p>
-              )}
-            </li>
-          ))}
-        </ul>
+      <CardContent className="space-y-3">
+        <div className="rounded-md border bg-background p-3">
+          <div className="flex items-start gap-2">
+            <User className="mt-0.5 h-4 w-4 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Cliente</p>
+              <p className="truncate text-sm font-medium">{nomeCliente}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            {totalItens} {totalItens === 1 ? "item" : "itens"} no pedido
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setDetalhesAbertos((aberto) => !aberto)}
+            className="h-8 px-2"
+          >
+            {detalhesAbertos ? (
+              <>
+                <ChevronUp className="mr-1 h-4 w-4" />
+                Ver menos
+              </>
+            ) : (
+              <>
+                <ChevronDown className="mr-1 h-4 w-4" />
+                Ver mais
+              </>
+            )}
+          </Button>
+        </div>
+
+        {detalhesAbertos && (
+          <ul className="max-h-56 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
+            {pedido.itensPedido.map((item, index) => (
+              <li key={`${item.produto.id}-${index}`} className="text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="min-w-0">
+                    {item.quantidade}x {item.produto.name}
+                  </span>
+                  <span className="shrink-0">R$ {(item.produto.price * item.quantidade).toFixed(2)}</span>
+                </div>
+                {item.observacao && (
+                  <p className="mt-1 text-xs text-muted-foreground">Obs: {item.observacao}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
       <CardFooter className="flex-col items-stretch gap-2 border-t pt-4">
         <div className="flex justify-between font-medium">

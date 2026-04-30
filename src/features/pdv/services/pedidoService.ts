@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
-import { ItemPedido, ProdutoSimplificado, Pedido, PedidoStatus } from "../types";
+import {
+  HistoricoPedidosResumo,
+  HistoricoPedidosResultado,
+  HistoricoStatusFiltro,
+  ItemPedido,
+  ProdutoSimplificado,
+  Pedido,
+  PedidoStatus,
+} from "../types";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
 import { mesasService } from "@/services/mesasService";
 import { toast } from "sonner";
@@ -27,6 +35,20 @@ type PedidoQueryRow = {
   } | null;
 };
 
+interface ListarPedidosOptions {
+  dataInicio?: string;
+  dataFim?: string;
+  status?: HistoricoStatusFiltro;
+  pagina?: number;
+  itensPorPagina?: number;
+}
+
+type PedidoResumoRow = {
+  id: string;
+  status: string;
+  total: number;
+};
+
 const formatMesaDisplay = (pedido: PedidoQueryRow) => {
   if (!pedido.mesa) return 'Balcão';
 
@@ -41,6 +63,15 @@ const OPEN_TABLE_STATUSES: PedidoStatus[] = ['pendente', 'preparo', 'em-andament
 const notifyMesasChanged = (restaurantId: string) => {
   window.dispatchEvent(new CustomEvent('mesas:changed', { detail: { restaurantId } }));
 };
+
+const montarResumoPedidos = (pedidos: PedidoResumoRow[] = []): HistoricoPedidosResumo => ({
+  totalPedidos: pedidos.length,
+  totalVendido: pedidos
+    .filter((pedido) => pedido.status !== 'cancelado')
+    .reduce((total, pedido) => total + Number(pedido.total || 0), 0),
+  pedidosAbertos: pedidos.filter((pedido) => OPEN_TABLE_STATUSES.includes(pedido.status as PedidoStatus)).length,
+  cancelados: pedidos.filter((pedido) => pedido.status === 'cancelado').length,
+});
 
 export async function salvarPedido(
   restaurantId: string,
@@ -140,32 +171,81 @@ export async function salvarPedido(
   }
 }
 
-export async function listarPedidos(restaurantId: string) {
+export async function listarPedidos(
+  restaurantId: string,
+  options: ListarPedidosOptions = {}
+): Promise<{ success: true } & HistoricoPedidosResultado | { success: false; error: unknown }> {
   try {
-    const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      order_items (
-        id,
-        product_id,
-        product_name,
-        quantity,
-        price,
-        observations
-      ),
-      mesa:mesas (
-        id,
-        name,
-        number
-      )
-    `)
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: false });
+    const pagina = Math.max(1, options.pagina || 1);
+    const itensPorPagina = Math.max(1, options.itensPorPagina || 20);
+    const from = (pagina - 1) * itensPorPagina;
+    const to = from + itensPorPagina - 1;
+
+    let pedidosQuery = supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          id,
+          product_id,
+          product_name,
+          quantity,
+          price,
+          observations
+        ),
+        mesa:mesas (
+          id,
+          name,
+          number
+        )
+      `, { count: 'exact' });
+
+    pedidosQuery = pedidosQuery.eq('restaurant_id', restaurantId);
+
+    if (options.dataInicio) {
+      pedidosQuery = pedidosQuery.gte('created_at', options.dataInicio);
+    }
+
+    if (options.dataFim) {
+      pedidosQuery = pedidosQuery.lte('created_at', options.dataFim);
+    }
+
+    if (options.status && options.status !== 'todos') {
+      pedidosQuery = pedidosQuery.eq('status', options.status);
+    }
+
+    const { data, error, count } = await pedidosQuery
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Erro ao buscar pedidos:', error);
       return { success: false, error };
+    }
+
+    let resumoQuery = supabase
+      .from('orders')
+      .select('id, status, total');
+
+    resumoQuery = resumoQuery.eq('restaurant_id', restaurantId);
+
+    if (options.dataInicio) {
+      resumoQuery = resumoQuery.gte('created_at', options.dataInicio);
+    }
+
+    if (options.dataFim) {
+      resumoQuery = resumoQuery.lte('created_at', options.dataFim);
+    }
+
+    if (options.status && options.status !== 'todos') {
+      resumoQuery = resumoQuery.eq('status', options.status);
+    }
+
+    const { data: resumoData, error: resumoError } = await resumoQuery;
+
+    if (resumoError) {
+      console.error('Erro ao buscar resumo de pedidos:', resumoError);
+      return { success: false, error: resumoError };
     }
 
     const rows = (data || []) as PedidoQueryRow[];
@@ -193,7 +273,12 @@ export async function listarPedidos(restaurantId: string) {
       source: pedido.source as Pedido['source']
     })) satisfies Pedido[];
 
-    return { success: true, pedidos: pedidosFormatados };
+    return {
+      success: true,
+      pedidos: pedidosFormatados,
+      total: count || 0,
+      resumo: montarResumoPedidos((resumoData || []) as PedidoResumoRow[]),
+    };
   } catch (error) {
     console.error('Erro ao listar pedidos:', error);
     return { success: false, error };
