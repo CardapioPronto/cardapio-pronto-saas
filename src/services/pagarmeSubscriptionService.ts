@@ -74,3 +74,44 @@ export async function changePagarmeSubscriptionCycle(
   if (data?.success === false) throw new Error(data.error || "Falha ao alterar plano");
   return data;
 }
+
+export interface PagarmeReceipt {
+  charge_id: string | null;
+  status: string | null;
+  amount: number | null;
+  paid_amount: number | null;
+  payment_method: string | null;
+  paid_at: string | null;
+  created_at: string | null;
+  due_at: string | null;
+  boleto_url: string | null;
+  boleto_barcode: string | null;
+  boleto_line: string | null;
+  pix_qr_code: string | null;
+  pix_qr_code_url: string | null;
+  pix_expires_at: string | null;
+  card_brand: string | null;
+  card_last_four: string | null;
+  acquirer_tid: string | null;
+  acquirer_nsu: string | null;
+}
+
+export interface PagarmeReceiptResponse {
+  success: boolean;
+  latest: PagarmeReceipt | null;
+  last_paid: PagarmeReceipt | null;
+  history: PagarmeReceipt[];
+  error?: string;
+}
+
+export async function getPagarmeReceipt(
+  subscription_id: string,
+): Promise<PagarmeReceiptResponse> {
+  const { data, error } = await supabase.functions.invoke(
+    "pagarme-get-receipt",
+    { body: { subscription_id } },
+  );
+  if (error) throw new Error(error.message || "Falha ao buscar comprovante");
+  if (data?.success === false) throw new Error(data.error || "Falha ao buscar comprovante");
+  return data as PagarmeReceiptResponse;
+}

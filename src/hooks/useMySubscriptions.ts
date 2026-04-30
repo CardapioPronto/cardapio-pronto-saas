@@ -111,18 +111,18 @@ export const useMySubscriptions = () => {
         if (planIds.length > 0) {
           const { data: plansData } = await supabase
             .from("plans")
-            .select("id, name, description, price_monthly, price_yearly, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_status, pagarme_payment_methods")
-            .in("id", planIds);
-          plansMap = Object.fromEntries((plansData ?? []).map((p) => [p.id, p]));
+            .select("id, name, description, price_monthly, price_yearly, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_status")
+            .in("id", planIds as string[]);
+          plansMap = Object.fromEntries(((plansData ?? []) as unknown as PlanSummary[]).map((p) => [p.id, p]));
         }
 
         setSubscriptions(
-          ((fallbackData ?? []) as SubscriptionRow[]).map((s) =>
+          ((fallbackData ?? []) as unknown as SubscriptionRow[]).map((s) =>
             normalizeSubscription(s, plansMap[s.plan_id] ?? null),
           )
         );
       } else {
-        setSubscriptions(((data ?? []) as SubscriptionRow[]).map((s) => normalizeSubscription(s)));
+        setSubscriptions(((data ?? []) as unknown as SubscriptionRow[]).map((s) => normalizeSubscription(s)));
       }
       setError(null);
     } catch (err) {

@@ -1284,7 +1284,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
-          pagarme_payment_methods: string[]
           pagarme_plan_id_monthly: string | null
           pagarme_plan_id_yearly: string | null
           pagarme_sync_error: string | null
@@ -1301,7 +1300,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
-          pagarme_payment_methods?: string[]
           pagarme_plan_id_monthly?: string | null
           pagarme_plan_id_yearly?: string | null
           pagarme_sync_error?: string | null
@@ -1318,7 +1316,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          pagarme_payment_methods?: string[]
           pagarme_plan_id_monthly?: string | null
           pagarme_plan_id_yearly?: string | null
           pagarme_sync_error?: string | null

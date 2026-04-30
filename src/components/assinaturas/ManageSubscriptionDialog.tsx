@@ -20,13 +20,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, XCircle, RefreshCw, ArrowLeftRight } from "lucide-react";
+import { Loader2, XCircle, RefreshCw, ArrowLeftRight, Receipt } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import {
   cancelPagarmeSubscription,
   changePagarmeSubscriptionCycle,
 } from "@/services/pagarmeSubscriptionService";
 import { MySubscription } from "@/hooks/useMySubscriptions";
+import SubscriptionReceiptView from "./SubscriptionReceiptView";
 
 interface ManageSubscriptionDialogProps {
   open: boolean;
@@ -62,6 +63,7 @@ const ManageSubscriptionDialog = ({
   const [actionLoading, setActionLoading] = useState<null | "cancel" | "cycle">(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmCycle, setConfirmCycle] = useState(false);
+  const [view, setView] = useState<"details" | "receipt">("details");
 
   if (!subscription) return null;
 
@@ -113,7 +115,7 @@ const ManageSubscriptionDialog = ({
         <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              Gerenciar assinatura
+              {view === "receipt" ? "Comprovante" : "Gerenciar assinatura"}
               <Badge className={meta.className}>{meta.label}</Badge>
             </DialogTitle>
             <DialogDescription>
@@ -122,6 +124,12 @@ const ManageSubscriptionDialog = ({
             </DialogDescription>
           </DialogHeader>
 
+          {view === "receipt" ? (
+            <SubscriptionReceiptView
+              subscriptionId={subscription.id}
+              onBack={() => setView("details")}
+            />
+          ) : (
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -186,6 +194,15 @@ const ManageSubscriptionDialog = ({
                     <Button
                       variant="outline"
                       className="justify-start"
+                      onClick={() => setView("receipt")}
+                      disabled={actionLoading !== null || !subscription.pagarme_subscription_id}
+                    >
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Ver comprovante
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="justify-start"
                       onClick={() => setConfirmCycle(true)}
                       disabled={actionLoading !== null}
                     >
@@ -212,15 +229,33 @@ const ManageSubscriptionDialog = ({
             )}
 
             {isCanceled && (
-              <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                Esta assinatura está cancelada. Para voltar a usar o Pubfy,
-                contrate um novo plano na aba "Planos disponíveis".
-              </div>
+              <>
+                <Separator />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setView("receipt")}
+                    disabled={!subscription.pagarme_subscription_id}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Ver último comprovante
+                  </Button>
+                </div>
+                <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                  Esta assinatura está cancelada. Para voltar a usar o Pubfy,
+                  contrate um novo plano na aba "Planos disponíveis".
+                </div>
+              </>
             )}
           </div>
+          )}
 
           <DialogFooter>
-            <Button variant="ghost" onClick={onClose} disabled={actionLoading !== null}>
+            <Button
+              variant="ghost"
+              onClick={() => { setView("details"); onClose(); }}
+              disabled={actionLoading !== null}
+            >
               Fechar
             </Button>
           </DialogFooter>
