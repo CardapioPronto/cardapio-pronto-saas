@@ -134,17 +134,39 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1) Restaurante do usuário (apenas owner pode contratar)
-    const { data: restaurant, error: restErr } = await admin
-      .from("restaurants")
-      .select("id, name, owner_id")
-      .eq("owner_id", userId)
+    const { data: profile } = await admin
+      .from("users")
+      .select("id, restaurant_id, role, user_type")
+      .eq("id", userId)
       .maybeSingle();
+
+    const { data: isSuperAdmin } = await admin.rpc("is_super_admin", { user_id: userId });
+
+    // 1) Restaurante do usuário. O painel usa users.restaurant_id; manter a
+    // mesma fonte evita que super admins/testes fiquem sem vínculo de cobrança.
+    let restaurantQuery = admin
+      .from("restaurants")
+      .select("id, name, owner_id");
+
+    restaurantQuery = profile?.restaurant_id
+      ? restaurantQuery.eq("id", profile.restaurant_id)
+      : restaurantQuery.eq("owner_id", userId);
+
+    const { data: restaurant, error: restErr } = await restaurantQuery
+      .maybeSingle();
+
     if (restErr || !restaurant) {
       return new Response(
         JSON.stringify({ error: "Restaurant not found for user" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    if (restaurant.owner_id !== userId && !isSuperAdmin) {
+      return new Response(JSON.stringify({ error: "Only the restaurant owner can subscribe" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 2) Plano local + IDs Pagar.me
