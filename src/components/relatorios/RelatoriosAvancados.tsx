@@ -42,11 +42,12 @@ export const RelatoriosAvancados = () => {
         setDateFrom(startOfMonth(now));
         setDateTo(endOfMonth(now));
         break;
-      case "mes-passado":
+      case "mes-passado": {
         const lastMonth = subMonths(now, 1);
         setDateFrom(startOfMonth(lastMonth));
         setDateTo(endOfMonth(lastMonth));
         break;
+      }
       case "ano-atual":
         setDateFrom(startOfYear(now));
         setDateTo(endOfYear(now));

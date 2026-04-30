@@ -14,13 +14,13 @@ interface UserSession {
 
 const SESSION_TIMEOUT_MS = 10000;
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+function withTimeout<T>(operation: PromiseLike<T>, timeoutMs: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       reject(new Error(`${label} demorou para responder`));
     }, timeoutMs);
 
-    promise
+    Promise.resolve(operation)
       .then(resolve)
       .catch(reject)
       .finally(() => window.clearTimeout(timeout));
