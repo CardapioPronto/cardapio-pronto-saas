@@ -78,7 +78,7 @@ export const useSubscriptionStatus = () => {
           return;
         }
 
-        const normalizedSubscription = subscription as SubscriptionStatusRow;
+        const normalizedSubscription = subscription as unknown as SubscriptionStatusRow;
         const isInTrial =
           normalizedSubscription.status === 'trialing' ||
           normalizedSubscription.is_trial ||
