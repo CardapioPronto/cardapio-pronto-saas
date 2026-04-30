@@ -20,7 +20,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, XCircle, RefreshCw, ArrowLeftRight, Receipt } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  Calendar,
+  CreditCard,
+  Loader2,
+  Receipt,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import {
   cancelPagarmeSubscription,
@@ -57,6 +66,22 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   canceled: { label: "Cancelada", className: "bg-muted text-muted-foreground" },
 };
 
+const DetailItem = ({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+}) => (
+  <div className="min-w-0 rounded-md border bg-muted/20 p-3">
+    <p className="text-xs font-medium text-muted-foreground">{label}</p>
+    <p className="mt-1 truncate font-semibold text-foreground">{value}</p>
+    {helper && <p className="mt-1 text-xs text-muted-foreground">{helper}</p>}
+  </div>
+);
+
 const ManageSubscriptionDialog = ({
   open, subscription, onClose, onUpdated,
 }: ManageSubscriptionDialogProps) => {
@@ -76,6 +101,11 @@ const ManageSubscriptionDialog = ({
     targetCycle === "yearly"
       ? subscription.plan?.price_yearly
       : subscription.plan?.price_monthly;
+  const currentPrice =
+    subscription.billing_cycle === "yearly"
+      ? subscription.plan?.price_yearly
+      : subscription.plan?.price_monthly;
+  const hasPagarmeSubscription = Boolean(subscription.pagarme_subscription_id);
 
   const handleCancel = async () => {
     setActionLoading("cancel");
@@ -112,90 +142,101 @@ const ManageSubscriptionDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="sm:max-w-[560px]">
+        <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-[680px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {view === "receipt" ? "Comprovante" : "Gerenciar assinatura"}
-              <Badge className={meta.className}>{meta.label}</Badge>
-            </DialogTitle>
-            <DialogDescription>
-              {subscription.plan?.name ?? "Plano"} —{" "}
-              {subscription.billing_cycle === "yearly" ? "Anual" : "Mensal"}
-            </DialogDescription>
+            <div className="border-b px-6 py-5">
+              <DialogTitle className="flex flex-wrap items-center gap-3 text-xl">
+                {view === "receipt" ? "Comprovante" : "Gerenciar assinatura"}
+                <Badge className={meta.className}>{meta.label}</Badge>
+              </DialogTitle>
+              <DialogDescription className="mt-1">
+                {subscription.plan?.name ?? "Plano"} ·{" "}
+                {subscription.billing_cycle === "yearly" ? "Cobrança anual" : "Cobrança mensal"}
+              </DialogDescription>
+            </div>
           </DialogHeader>
 
           {view === "receipt" ? (
-            <SubscriptionReceiptView
-              subscriptionId={subscription.id}
-              onBack={() => setView("details")}
-            />
+            <div className="px-6 py-5">
+              <SubscriptionReceiptView
+                subscriptionId={subscription.id}
+                onBack={() => setView("details")}
+              />
+            </div>
           ) : (
-          <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Início</p>
-                <p className="font-medium">{formatDate(subscription.start_date)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Período atual</p>
-                <p className="font-medium">
-                  {formatDate(subscription.current_period_start)} →{" "}
-                  {formatDate(subscription.current_period_end)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {status === "trialing" ? "Fim do teste" : "Próxima cobrança"}
-                </p>
-                <p className="font-medium">
-                  {status === "trialing"
-                    ? formatDate(subscription.trial_ends_at)
-                    : formatDate(subscription.next_billing_at ?? subscription.current_period_end)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Valor atual</p>
-                <p className="font-medium">
-                  {formatCurrency(
-                    subscription.billing_cycle === "yearly"
-                      ? subscription.plan?.price_yearly
-                      : subscription.plan?.price_monthly,
-                  )}
-                  {subscription.billing_cycle === "yearly" ? "/ano" : "/mês"}
-                </p>
-              </div>
-              {subscription.last_payment_at && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Último pagamento</p>
-                  <p className="font-medium">
-                    {formatDate(subscription.last_payment_at)}{" "}
-                    {subscription.last_payment_status && (
-                      <span className="text-xs text-muted-foreground">
-                        ({subscription.last_payment_status})
-                      </span>
-                    )}
+          <div className="space-y-5 px-6 py-5 text-sm">
+            {!hasPagarmeSubscription && (
+              <div className="flex gap-3 rounded-md border border-orange/30 bg-orange/5 p-3 text-orange">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium">Assinatura criada manualmente</p>
+                  <p className="text-xs text-orange/90">
+                    Esta assinatura não possui ID do Pagar.me. Comprovante,
+                    cancelamento e troca de ciclo precisam de uma assinatura criada pelo checkout.
                   </p>
                 </div>
-              )}
-              {subscription.pagarme_subscription_id && (
-                <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground">ID Pagar.me</p>
-                  <code className="text-xs">{subscription.pagarme_subscription_id}</code>
+              </div>
+            )}
+
+            <div className="rounded-md border bg-background">
+              <div className="flex items-center gap-2 border-b px-4 py-3">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                <p className="font-semibold">Resumo do plano</p>
+              </div>
+              <div className="grid gap-3 p-4 sm:grid-cols-2">
+                <DetailItem label="Plano" value={subscription.plan?.name ?? "Plano"} />
+                <DetailItem
+                  label="Valor atual"
+                  value={`${formatCurrency(currentPrice)}${subscription.billing_cycle === "yearly" ? "/ano" : "/mês"}`}
+                  helper={subscription.billing_cycle === "yearly" ? "Ciclo anual" : "Ciclo mensal"}
+                />
+                <DetailItem label="Início" value={formatDate(subscription.start_date)} />
+                <DetailItem
+                  label={status === "trialing" ? "Fim do teste" : "Próxima cobrança"}
+                  value={
+                    status === "trialing"
+                      ? formatDate(subscription.trial_ends_at)
+                      : formatDate(subscription.next_billing_at ?? subscription.current_period_end)
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="rounded-md border bg-background">
+              <div className="flex items-center gap-2 border-b px-4 py-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <p className="font-semibold">Período e pagamento</p>
+              </div>
+              <div className="grid gap-3 p-4 sm:grid-cols-2">
+                <DetailItem
+                  label="Período atual"
+                  value={`${formatDate(subscription.current_period_start)} até ${formatDate(subscription.current_period_end)}`}
+                />
+                <DetailItem
+                  label="Último pagamento"
+                  value={formatDate(subscription.last_payment_at)}
+                  helper={subscription.last_payment_status ? `Status: ${subscription.last_payment_status}` : undefined}
+                />
+                <div className="min-w-0 rounded-md border bg-muted/20 p-3 sm:col-span-2">
+                  <p className="text-xs font-medium text-muted-foreground">ID Pagar.me</p>
+                  <p className="mt-1 truncate font-mono text-xs text-foreground">
+                    {subscription.pagarme_subscription_id ?? "Sem ID vinculado"}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
 
             {!isCanceled && (
               <>
                 <Separator />
                 <div>
-                  <p className="font-semibold mb-2">Ações disponíveis</p>
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <p className="mb-2 font-semibold">Ações disponíveis</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
                     <Button
                       variant="outline"
                       className="justify-start"
                       onClick={() => setView("receipt")}
-                      disabled={actionLoading !== null || !subscription.pagarme_subscription_id}
+                      disabled={actionLoading !== null || !hasPagarmeSubscription}
                     >
                       <Receipt className="h-4 w-4 mr-2" />
                       Ver comprovante
@@ -204,26 +245,30 @@ const ManageSubscriptionDialog = ({
                       variant="outline"
                       className="justify-start"
                       onClick={() => setConfirmCycle(true)}
-                      disabled={actionLoading !== null}
+                      disabled={actionLoading !== null || !hasPagarmeSubscription}
                     >
                       <ArrowLeftRight className="h-4 w-4 mr-2" />
-                      Mudar para cobrança {targetCycleLabel.toLowerCase()}
-                      {targetPrice != null && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({formatCurrency(targetPrice)}
-                          {targetCycle === "yearly" ? "/ano" : "/mês"})
-                        </span>
-                      )}
+                      <span className="truncate">
+                        Mudar para {targetCycleLabel.toLowerCase()}
+                      </span>
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={() => setConfirmCancel(true)}
-                      disabled={actionLoading !== null}
+                      disabled={actionLoading !== null || !hasPagarmeSubscription}
+                      className="justify-start sm:col-span-2"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
                       Cancelar assinatura
                     </Button>
                   </div>
+                  {targetPrice != null && hasPagarmeSubscription && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Ao mudar para {targetCycleLabel.toLowerCase()}, o valor será{" "}
+                      {formatCurrency(targetPrice)}
+                      {targetCycle === "yearly" ? "/ano" : "/mês"}.
+                    </p>
+                  )}
                 </div>
               </>
             )}
@@ -250,7 +295,7 @@ const ManageSubscriptionDialog = ({
           </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="border-t px-6 py-4">
             <Button
               variant="ghost"
               onClick={() => { setView("details"); onClose(); }}
