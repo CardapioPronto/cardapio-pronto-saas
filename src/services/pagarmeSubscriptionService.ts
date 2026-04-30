@@ -32,7 +32,7 @@ export async function createPagarmeSubscription(input: CreateSubscriptionInput) 
 export interface CreateBoletoPixInput {
   local_plan_id: string;
   billing_cycle: "monthly" | "yearly";
-  payment_method: "boleto" | "pix";
+  payment_method: "boleto";
   customer: {
     name: string;
     email: string;

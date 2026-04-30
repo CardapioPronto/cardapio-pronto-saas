@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
@@ -9,19 +8,15 @@ import {
   Settings,
   ShoppingBasket,
   UserRound,
-  Menu,
-  X,
   Store,
   LogOut,
   MapPin,
   TableIcon,
-  Bot,
   Headphones,
   Tags,
   Shield,
   ShieldCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -40,6 +35,11 @@ type NavItem = {
   /** se true, exige TODAS as permissões; se false ou omitido, exige PELO MENOS UMA */
   all?: boolean;
 };
+
+interface DashboardSidebarProps {
+  className?: string;
+  onNavigate?: () => void;
+}
 
 const operationalLinks: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: Home, permissions: ["dashboard_view"] },
@@ -72,8 +72,7 @@ const userTypeLabel = (t?: string | null) => {
   }
 };
 
-const DashboardSidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
   const { isSuperAdmin } = useSuperAdmin();
   const { signOut } = useAuth();
   const { hasAnyPermission, hasPermission, loading } = usePermissionsV2();
@@ -83,6 +82,7 @@ const DashboardSidebar = () => {
 
   const handleLogout = async () => {
     await signOut();
+    onNavigate?.();
     navigate("/login");
   };
 
@@ -100,16 +100,16 @@ const DashboardSidebar = () => {
       <Link
         key={item.to}
         to={item.to}
-        onClick={() => setIsOpen(false)}
+        onClick={onNavigate}
         className={cn(
-          "flex items-center px-3 py-2 text-sm rounded-md transition-colors",
+          "flex min-h-10 items-center rounded-md px-3 py-2 text-sm transition-colors",
           active
             ? "bg-primary/10 text-primary font-medium"
             : "text-foreground hover:bg-muted"
         )}
       >
-        <Icon className="mr-3 h-4 w-4" />
-        {item.label}
+        <Icon className="mr-3 h-4 w-4 flex-shrink-0" />
+        <span className="truncate">{item.label}</span>
       </Link>
     );
   };
@@ -119,69 +119,47 @@ const DashboardSidebar = () => {
   const visibleAdmin = adminLinks.filter(canSee);
 
   return (
-    <>
-      {/* Mobile menu button */}
-      <div className="fixed top-4 left-4 z-50 md:hidden">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsOpen(!isOpen)}
-          className="rounded-full h-10 w-10 bg-background shadow-md"
-        >
-          {isOpen ? <X size={18} /> : <Menu size={18} />}
-        </Button>
-      </div>
+    <aside
+      className={cn(
+        "hidden h-full w-64 flex-shrink-0 flex-col border-r bg-background md:flex",
+        className
+      )}
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="px-5 pb-4 pt-5">
+          <Link to="/" className="inline-flex items-center" onClick={onNavigate}>
+            <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain" />
+          </Link>
+        </div>
 
-      <aside
-        className={cn(
-          "h-screen bg-background border-r flex-shrink-0 overflow-y-auto transition-all duration-300",
-          isOpen ? "fixed inset-0 z-40 w-64" : "hidden md:block md:w-64"
-        )}
-      >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <Link to="/" className="flex items-center">
-              {/* <span className="text-foreground text-2xl font-bold">Pubfy</span> */}
-              <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain md:h-14" />
-            </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setIsOpen(false)}
-            >
-              <X size={18} />
-            </Button>
-          </div>
-
-          {/* Identificação do usuário e cargo */}
-          {appUser && (
-            <div className="mb-6 p-3 rounded-lg bg-muted/50">
-              <p className="text-sm font-medium truncate" title={appUser.name || appUser.email}>
-                {appUser.name || appUser.email}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs">
-                  {userTypeLabel(appUser.user_type)}
+        {appUser && (
+          <div className="mx-4 mb-4 rounded-md border bg-muted/35 p-3">
+            <p className="truncate text-sm font-medium" title={appUser.name || appUser.email}>
+              {appUser.name || appUser.email}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {userTypeLabel(appUser.user_type)}
+              </Badge>
+              {isSuperAdmin && (
+                <Badge className="bg-primary/15 text-xs text-primary hover:bg-primary/20">
+                  <ShieldCheck className="mr-1 h-3 w-3" />
+                  Super Admin
                 </Badge>
-                {isSuperAdmin && (
-                  <Badge className="text-xs bg-primary/15 text-primary hover:bg-primary/20">
-                    <ShieldCheck className="h-3 w-3 mr-1" />
-                    Super Admin
-                  </Badge>
-                )}
-              </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
+        <nav className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {loading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 pt-1">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-9 bg-muted/50 rounded animate-pulse" />
+                <div key={i} className="h-10 animate-pulse rounded bg-muted/50" />
               ))}
             </div>
           ) : (
-            <>
+            <div className="space-y-1">
               {visibleOperational.length > 0 && (
                 <div className="space-y-1">{visibleOperational.map(renderLink)}</div>
               )}
@@ -205,28 +183,31 @@ const DashboardSidebar = () => {
                   <Separator className="my-4" />
                   <Link
                     to="/admin"
-                    className="flex items-center px-3 py-2 text-sm rounded-md bg-primary/10 text-primary hover:bg-primary/20"
-                    onClick={() => setIsOpen(false)}
+                    className="flex min-h-10 items-center rounded-md bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20"
+                    onClick={onNavigate}
                   >
-                    <Shield className="mr-3 h-4 w-4" />
-                    Painel Admin
+                    <Shield className="mr-3 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Painel Admin</span>
                   </Link>
                 </>
               )}
-
-              <Separator className="my-4" />
-              <button
-                onClick={handleLogout}
-                className="flex items-center px-3 py-2 text-sm rounded-md w-full text-left text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="mr-3 h-4 w-4" />
-                Sair
-              </button>
-            </>
+            </div>
           )}
-        </div>
-      </aside>
-    </>
+        </nav>
+
+        {!loading && (
+          <div className="border-t p-4">
+            <button
+              onClick={handleLogout}
+              className="flex min-h-10 w-full items-center rounded-md px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <LogOut className="mr-3 h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Sair</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </aside>
   );
 };
 

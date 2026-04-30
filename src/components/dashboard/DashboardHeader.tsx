@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import DashboardSidebar from "./DashboardSidebar";
 
 interface DashboardHeaderProps {
@@ -11,36 +11,41 @@ interface DashboardHeaderProps {
 }
 
 const DashboardHeader = ({ title }: DashboardHeaderProps) => {
-  const [notifications, setNotifications] = useState(3);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const notifications = 3;
 
   return (
-    <header className="bg-white border-b py-4 px-6 flex items-center justify-between sticky top-0 z-10">
-      <div className="flex items-center">
-        <Sheet>
+    <header className="z-10 flex h-16 flex-shrink-0 items-center justify-between border-b bg-white px-4 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center">
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden">
+            <Button variant="ghost" size="icon" className="mr-2 md:hidden">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0">
-            <DashboardSidebar />
+          <SheetContent side="left" className="w-72 p-0 sm:max-w-72">
+            <SheetTitle className="sr-only">Menu do dashboard</SheetTitle>
+            <DashboardSidebar
+              className="flex w-full border-r-0 md:flex"
+              onNavigate={() => setMenuOpen(false)}
+            />
           </SheetContent>
         </Sheet>
-        <h1 className="text-2xl font-bold text-navy ml-2 md:ml-0">{title}</h1>
+        <h1 className="truncate text-xl font-semibold text-navy sm:text-2xl">{title}</h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
         <div className="relative">
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
             {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 bg-orange text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange text-xs text-white">
                 {notifications}
               </span>
             )}
           </Button>
         </div>
         <Link to="/configuracoes">
-          <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center text-white cursor-pointer">
+          <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-navy text-white">
             U
           </div>
         </Link>

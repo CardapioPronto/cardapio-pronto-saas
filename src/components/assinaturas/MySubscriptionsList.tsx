@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, CreditCard, RefreshCw, Clock, CheckCircle2, AlertTriangle, XCircle, Settings } from "lucide-react";
+import { Calendar, CreditCard, RefreshCw, Clock, CheckCircle2, AlertTriangle, XCircle, Settings, type LucideIcon } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
 
 interface MySubscriptionsListProps {
@@ -33,7 +33,7 @@ const formatCurrency = (value: number | null | undefined) =>
 
 const STATUS_META: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any; className?: string }
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: LucideIcon; className?: string }
 > = {
   active: { label: "Ativa", variant: "default", icon: CheckCircle2, className: "bg-green text-white hover:bg-green-dark" },
   trialing: { label: "Em teste", variant: "secondary", icon: Clock, className: "bg-orange/15 text-orange border-orange/30" },

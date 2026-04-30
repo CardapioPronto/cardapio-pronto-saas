@@ -1,134 +1,172 @@
-
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Sparkles, ShoppingBag, MessageCircle, LayoutGrid, Zap } from "lucide-react";
 import { useState } from "react";
+import { AlertTriangle, CheckCircle2, LayoutGrid, MessageCircle, ShoppingBag, Sparkles, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Plano } from "@/types/plano";
-import { Assinatura } from "@/types/subscription";
+import { MySubscription } from "@/hooks/useMySubscriptions";
 
 interface PlansGridProps {
   planos: Plano[];
-  assinatura: Assinatura;
-  onSelectPlan: (plano: Plano) => void;
+  currentSubscription: MySubscription | null;
+  onSelectPlan: (plano: Plano, billingCycle: "monthly" | "yearly") => void;
 }
 
 const benefits = [
   { icon: ShoppingBag, text: "Cardápio digital profissional" },
   { icon: MessageCircle, text: "Pedidos automatizados pelo WhatsApp" },
-  { icon: LayoutGrid, text: "Gestão completa: PDV, mesas, relatórios" },
+  { icon: LayoutGrid, text: "Gestão completa: PDV, mesas e relatórios" },
   { icon: Zap, text: "Atualizações e suporte incluídos" },
 ];
 
-const PlansGrid = ({ planos, assinatura, onSelectPlan }: PlansGridProps) => {
-  const [annual, setAnnual] = useState(false);
+const formatCurrency = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  // Plano único: usa o primeiro plano ativo retornado, com fallback estático
-  const plano = planos[0];
-  const monthly = plano?.price_monthly ?? 59.9;
-  const yearlyMonthly = plano?.price_yearly ?? 49.0;
-  const yearlyTotal = Math.round(yearlyMonthly * 12);
-  const displayPrice = annual ? yearlyMonthly : monthly;
-  const planName = plano?.name ?? "Plano Pubfy";
-  const trialDays = (plano as any)?.trial_days ?? 14;
-  const discountPct = monthly > 0 ? Math.round((1 - yearlyMonthly / monthly) * 100) : 0;
-  const isAtivo = plano && assinatura.planoId === plano.id && assinatura.status === "ativa";
+const isPlanSyncedForCycle = (plano: Plano, cycle: "monthly" | "yearly") =>
+  cycle === "monthly"
+    ? Boolean(plano.pagarme_plan_id_monthly)
+    : Boolean(plano.pagarme_plan_id_yearly);
+
+const PlansGrid = ({ planos, currentSubscription, onSelectPlan }: PlansGridProps) => {
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const isSinglePlanModel = planos.length <= 1;
+
+  if (planos.length === 0) {
+    return (
+      <Alert className="border-orange/40 bg-orange/5">
+        <AlertTriangle className="h-4 w-4 text-orange" />
+        <AlertTitle>Plano Pubfy temporariamente indisponível</AlertTitle>
+        <AlertDescription>
+          O plano único ainda não está ativo para contratação online neste ambiente.
+          Assim que a configuração do pagamento for concluída, a opção de adesão aparecerá aqui.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center bg-muted p-1 rounded-full">
+    <div className="space-y-6">
+      <div className="flex justify-center">
+        <div className="inline-flex rounded-md border bg-background p-1">
           <button
-            onClick={() => setAnnual(false)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition ${
-              !annual ? "bg-background shadow-sm" : "text-muted-foreground"
+            type="button"
+            onClick={() => setBillingCycle("monthly")}
+            className={`rounded px-4 py-2 text-sm font-medium transition ${
+              billingCycle === "monthly" ? "bg-muted text-foreground" : "text-muted-foreground"
             }`}
           >
             Mensal
           </button>
           <button
-            onClick={() => setAnnual(true)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
-              annual ? "bg-background shadow-sm" : "text-muted-foreground"
+            type="button"
+            onClick={() => setBillingCycle("yearly")}
+            className={`rounded px-4 py-2 text-sm font-medium transition ${
+              billingCycle === "yearly" ? "bg-muted text-foreground" : "text-muted-foreground"
             }`}
           >
             Anual
-            {discountPct > 0 && (
-              <span className="text-[10px] bg-green text-white font-bold px-2 py-0.5 rounded-full">
-                -{discountPct}%
-              </span>
-            )}
           </button>
         </div>
       </div>
 
-      <Card className="relative overflow-hidden border-2 border-green shadow-xl">
-        <div className="absolute -top-px left-1/2 -translate-x-1/2 bg-green text-white text-xs font-bold py-1.5 px-5 rounded-b-xl flex items-center gap-1.5">
-          <Sparkles size={12} /> PLANO RECOMENDADO
-        </div>
+      <div
+        className={
+          isSinglePlanModel
+            ? "mx-auto grid w-full max-w-xl gap-5"
+            : "grid gap-5 lg:grid-cols-2 xl:grid-cols-3"
+        }
+      >
+        {planos.map((plano) => {
+          const price = billingCycle === "yearly" ? plano.price_yearly : plano.price_monthly;
+          const isCurrentPlan =
+            currentSubscription?.plan_id === plano.id &&
+            currentSubscription?.status !== "canceled" &&
+            currentSubscription?.billing_cycle === billingCycle;
+          const isSynced = isPlanSyncedForCycle(plano, billingCycle);
+          const paymentMethods = plano.pagarme_payment_methods ?? [];
+          const hasSupportedPaymentMethod = paymentMethods.some((method) => method === "credit_card" || method === "boleto");
+          const canSubscribe = isSynced && hasSupportedPaymentMethod;
+          const buttonLabel = isCurrentPlan
+            ? "Plano atual"
+            : !canSubscribe
+              ? "Pagamento em configuração"
+              : currentSubscription?.status === "past_due"
+                ? "Regularizar plano"
+                : "Começar agora";
 
-        <div className="p-8 pt-12 text-center">
-          <h3 className="text-2xl font-bold">{planName}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Tudo o que seu restaurante precisa
-          </p>
+          return (
+            <Card key={plano.id} className="relative flex flex-col overflow-hidden border-2 border-green/50 shadow-sm">
+              {isSinglePlanModel && (
+                <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-b-md bg-green px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
+                  Plano único
+                </div>
+              )}
 
-          <div className="mt-6 flex items-baseline justify-center">
-            <span className="text-2xl font-medium text-muted-foreground">R$</span>
-            <span className="text-5xl font-bold mx-1">
-              {displayPrice.toFixed(2).replace(".", ",")}
-            </span>
-            <span className="text-muted-foreground">/mês</span>
-          </div>
+              <div className="border-b bg-muted/25 p-5 pt-10">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-semibold">{plano.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {plano.description ?? "Plano Pubfy para operação do restaurante"}
+                    </p>
+                  </div>
+                  {isCurrentPlan && (
+                    <Badge className="bg-green text-white hover:bg-green-dark">
+                      <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                      Atual
+                    </Badge>
+                  )}
+                </div>
 
-          {annual ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Cobrado <strong>R$ {yearlyTotal.toFixed(2).replace(".", ",")}/ano</strong>
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
-              ou <strong>R$ {yearlyMonthly.toFixed(2).replace(".", ",")}/mês</strong> no plano anual
-            </p>
-          )}
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl font-bold">{formatCurrency(price)}</span>
+                  <span className="pb-1 text-sm text-muted-foreground">/mês</span>
+                </div>
+                {billingCycle === "yearly" && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cobrado {formatCurrency(price * 12)} por ano
+                  </p>
+                )}
+                {(plano.trial_days ?? 0) > 0 && (
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-orange/10 px-3 py-1 text-sm font-medium text-orange">
+                    <Sparkles className="h-4 w-4" />
+                    {plano.trial_days} dias grátis
+                  </div>
+                )}
+              </div>
 
-          <div className="mt-4 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-full">
-            <Sparkles size={14} />
-            <span className="text-sm font-semibold">{trialDays} dias grátis</span>
-          </div>
+              <div className="flex flex-1 flex-col p-5">
+                <ul className="space-y-3">
+                  {benefits.map((benefit) => (
+                    <li key={benefit.text} className="flex items-start gap-3 text-sm">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-green/10 text-green">
+                        <benefit.icon className="h-4 w-4" />
+                      </span>
+                      <span className="pt-1">{benefit.text}</span>
+                    </li>
+                  ))}
+                </ul>
 
-          <div className="mt-8">
-            {isAtivo ? (
-              <Button disabled className="w-full h-12 bg-green text-white">
-                Plano Atual
-              </Button>
-            ) : (
-              <Button
-                onClick={() => plano && onSelectPlan(plano)}
-                disabled={!plano}
-                className="w-full h-12 bg-green hover:bg-green-dark text-white text-base font-semibold"
-              >
-                {assinatura.status === "ativa" ? "Reativar plano" : "Ativar plano"}
-              </Button>
-            )}
-          </div>
-        </div>
+                {!isSynced && (
+                  <div className="mt-5 rounded-md border border-orange/30 bg-orange/5 p-3 text-sm text-orange">
+                    Contratação online em configuração para cobrança{" "}
+                    {billingCycle === "yearly" ? "anual" : "mensal"}.
+                  </div>
+                )}
 
-        <div className="border-t bg-muted/30 p-6">
-          <ul className="space-y-3">
-            {benefits.map((b, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="shrink-0 w-7 h-7 rounded-lg bg-green/10 text-green flex items-center justify-center">
-                  <b.icon size={15} />
-                </span>
-                <span className="text-sm pt-0.5">{b.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Card>
-
-      <p className="text-center mt-6 text-sm text-muted-foreground">
-        Sem burocracia. Cancele quando quiser.
-      </p>
+                <Button
+                  className="mt-5 h-11 w-full bg-green font-semibold text-white hover:bg-green-dark"
+                  disabled={isCurrentPlan || !canSubscribe}
+                  onClick={() => onSelectPlan(plano, billingCycle)}
+                >
+                  {buttonLabel}
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };

@@ -27,10 +27,34 @@ export interface MySubscription {
     description: string | null;
     price_monthly: number;
     price_yearly: number;
+    trial_days?: number | null;
+    pagarme_plan_id_monthly?: string | null;
+    pagarme_plan_id_yearly?: string | null;
+    pagarme_sync_status?: string | null;
+    pagarme_payment_methods?: string[] | null;
   } | null;
 }
 
 const VISIBLE_STATUSES = ["active", "trialing", "past_due", "canceled"];
+
+type PlanSummary = NonNullable<MySubscription["plan"]>;
+type SubscriptionRow = Omit<MySubscription, "plan"> & {
+  plan?: PlanSummary | PlanSummary[] | null;
+};
+
+const normalizeSubscription = (
+  subscription: SubscriptionRow,
+  plan?: PlanSummary | null,
+): MySubscription => {
+  const joinedPlan = Array.isArray(subscription.plan)
+    ? subscription.plan[0] ?? null
+    : subscription.plan ?? null;
+
+  return {
+    ...subscription,
+    plan: plan ?? joinedPlan,
+  };
+};
 
 export const useMySubscriptions = () => {
   const { user } = useCurrentUser();
@@ -56,7 +80,12 @@ export const useMySubscriptions = () => {
             name,
             description,
             price_monthly,
-            price_yearly
+            price_yearly,
+            trial_days,
+            pagarme_plan_id_monthly,
+            pagarme_plan_id_yearly,
+            pagarme_sync_status,
+            pagarme_payment_methods
           )
         `)
         .eq("restaurant_id", user.restaurant_id)
@@ -78,28 +107,27 @@ export const useMySubscriptions = () => {
           new Set((fallbackData ?? []).map((s) => s.plan_id).filter(Boolean))
         );
 
-        let plansMap: Record<string, any> = {};
+        let plansMap: Record<string, PlanSummary> = {};
         if (planIds.length > 0) {
           const { data: plansData } = await supabase
             .from("plans")
-            .select("id, name, description, price_monthly, price_yearly")
+            .select("id, name, description, price_monthly, price_yearly, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_status, pagarme_payment_methods")
             .in("id", planIds);
           plansMap = Object.fromEntries((plansData ?? []).map((p) => [p.id, p]));
         }
 
         setSubscriptions(
-          (fallbackData ?? []).map((s) => ({
-            ...(s as any),
-            plan: plansMap[s.plan_id] ?? null,
-          }))
+          ((fallbackData ?? []) as SubscriptionRow[]).map((s) =>
+            normalizeSubscription(s, plansMap[s.plan_id] ?? null),
+          )
         );
       } else {
-        setSubscriptions((data as any) ?? []);
+        setSubscriptions(((data ?? []) as SubscriptionRow[]).map((s) => normalizeSubscription(s)));
       }
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erro ao buscar assinaturas:", err);
-      setError(err.message ?? "Erro ao buscar assinaturas");
+      setError(err instanceof Error ? err.message : "Erro ao buscar assinaturas");
       setSubscriptions([]);
     } finally {
       setLoading(false);

@@ -80,12 +80,12 @@ const ManageSubscriptionDialog = ({
     try {
       await cancelPagarmeSubscription(subscription.id);
       toast.success("Assinatura cancelada", {
-        description: "Você terá acesso até o fim do período pago.",
+        description: "O status foi atualizado após o cancelamento no Pagar.me.",
       });
       onUpdated();
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Falha ao cancelar assinatura");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao cancelar assinatura");
     } finally {
       setActionLoading(null);
       setConfirmCancel(false);
@@ -99,8 +99,8 @@ const ManageSubscriptionDialog = ({
       toast.success(`Ciclo alterado para ${targetCycleLabel}`);
       onUpdated();
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Falha ao alterar ciclo");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao alterar ciclo");
     } finally {
       setActionLoading(null);
       setConfirmCycle(false);
@@ -232,9 +232,8 @@ const ManageSubscriptionDialog = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
             <AlertDialogDescription>
-              A cobrança será interrompida no Pagar.me. Você manterá o acesso
-              até o fim do período já pago ({formatDate(subscription.current_period_end)}).
-              Esta ação não pode ser desfeita.
+              A cobrança será interrompida no Pagar.me e a assinatura local será
+              marcada como cancelada. Período atual: até {formatDate(subscription.current_period_end)}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

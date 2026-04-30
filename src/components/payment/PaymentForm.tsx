@@ -1,9 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,29 @@ import {
   createPagarmeSubscription,
   createPagarmeBoletoPix,
 } from "@/services/pagarmeSubscriptionService";
-import { Loader2, CreditCard, QrCode, FileText } from "lucide-react";
+import { Loader2, CreditCard, FileText } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { PagarmePaymentMethod } from "@/types/plano";
+
+export type PaymentSuccessData = {
+  success: boolean;
+  subscription?: unknown;
+  payment?: Record<string, unknown>;
+  pagarme?: {
+    subscription_id?: string;
+    customer_id?: string;
+    status?: string;
+  };
+};
 
 interface PaymentFormProps {
   planId: string;
   planName: string;
-  planPrice: number;
-  onSuccess: (subscriptionData: any) => void;
+  planPriceMonthly: number;
+  planPriceYearly: number;
+  initialBillingType?: "monthly" | "yearly";
+  allowedPaymentMethods?: PagarmePaymentMethod[];
+  onSuccess: (subscriptionData: PaymentSuccessData) => void;
   onCancel: () => void;
 }
 
@@ -29,7 +44,7 @@ const paymentFormSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
   document: z.string().min(11, { message: "CPF/CNPJ inválido" }),
   phone: z.string().min(10, { message: "Telefone inválido" }),
-  paymentMethod: z.enum(["credit_card", "boleto", "pix"]),
+  paymentMethod: z.enum(["credit_card", "boleto"]),
   billingType: z.enum(["monthly", "yearly"]),
   
   // Credit card fields (conditional)
@@ -37,17 +52,42 @@ const paymentFormSchema = z.object({
   cardName: z.string().optional(),
   cardExpiry: z.string().optional(),
   cardCvc: z.string().optional(),
+}).superRefine((values, ctx) => {
+  if (values.paymentMethod !== "credit_card") return;
+
+  if (!values.cardNumber || values.cardNumber.replace(/\D/g, "").length < 13) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardNumber"], message: "Número do cartão inválido" });
+  }
+  if (!values.cardName || values.cardName.length < 3) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardName"], message: "Nome no cartão é obrigatório" });
+  }
+  if (!values.cardExpiry || !/^\d{2}\/\d{2,4}$/.test(values.cardExpiry)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardExpiry"], message: "Use MM/AA ou MM/AAAA" });
+  }
+  if (!values.cardCvc || values.cardCvc.replace(/\D/g, "").length < 3) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardCvc"], message: "CVV inválido" });
+  }
 });
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
   planId,
   planName,
-  planPrice,
+  planPriceMonthly,
+  planPriceYearly,
+  initialBillingType = "monthly",
+  allowedPaymentMethods = ["credit_card", "boleto"],
   onSuccess,
   onCancel
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("credit_card");
+  const availablePaymentMethods = useMemo(
+    () => allowedPaymentMethods.filter((method) => method === "credit_card" || method === "boleto"),
+    [allowedPaymentMethods],
+  );
+  const defaultPaymentMethod = availablePaymentMethods.includes("credit_card")
+    ? "credit_card"
+    : "boleto";
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"credit_card" | "boleto">(defaultPaymentMethod);
   
   const form = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
@@ -56,8 +96,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       email: "",
       document: "",
       phone: "",
-      paymentMethod: "credit_card",
-      billingType: "monthly",
+      paymentMethod: defaultPaymentMethod,
+      billingType: initialBillingType,
       cardNumber: "",
       cardName: "",
       cardExpiry: "",
@@ -65,9 +105,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     },
   });
 
+  useEffect(() => {
+    if (!availablePaymentMethods.includes(selectedPaymentMethod)) {
+      setSelectedPaymentMethod(defaultPaymentMethod);
+      form.setValue("paymentMethod", defaultPaymentMethod);
+    }
+  }, [availablePaymentMethods, defaultPaymentMethod, form, selectedPaymentMethod]);
+
   const handlePaymentMethodChange = (value: string) => {
-    setSelectedPaymentMethod(value);
-    form.setValue("paymentMethod", value as "credit_card" | "boleto" | "pix");
+    const method = value as "credit_card" | "boleto";
+    setSelectedPaymentMethod(method);
+    form.setValue("paymentMethod", method);
   };
 
   async function onSubmit(values: z.infer<typeof paymentFormSchema>) {
@@ -101,11 +149,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         return;
       }
 
-      // Boleto / PIX → Edge Function dedicada (server-side, plano sincronizado)
+      // Boleto → Edge Function dedicada (server-side, plano sincronizado)
       const result = await createPagarmeBoletoPix({
         local_plan_id: planId,
         billing_cycle: values.billingType,
-        payment_method: values.paymentMethod as "boleto" | "pix",
+        payment_method: "boleto",
         customer: {
           name: values.name,
           email: values.email,
@@ -115,18 +163,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       });
       toast.success(`Assinatura ${planName} criada com sucesso!`);
       onSuccess(result);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating subscription:", error);
-      toast.error(error?.message || "Erro ao processar pagamento. Tente novamente.");
+      toast.error(error instanceof Error ? error.message : "Erro ao processar pagamento. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Fix: Updated to render the billing price based on current state rather than using a function
-  const displayPrice = form.watch("billingType") === "yearly" 
-    ? <><span className="font-semibold">R$ {(planPrice * 10).toFixed(2)}</span> <span className="text-green text-sm">(2 meses grátis)</span></>
-    : <><span className="font-semibold">R$ {planPrice.toFixed(2)}</span></>;
+  const selectedBillingType = form.watch("billingType");
+  const price = selectedBillingType === "yearly" ? planPriceYearly * 12 : planPriceMonthly;
 
   return (
     <Card className="w-full max-w-lg mx-auto">
@@ -134,9 +180,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         <CardTitle>Assinar plano {planName}</CardTitle>
         <CardDescription>
           {form.watch("billingType") === "yearly" ? (
-            <>Cobrança anual: <span className="font-semibold">R$ {(planPrice * 10).toFixed(2)}</span> <span className="text-green text-sm">(2 meses grátis)</span></>
+            <>Cobrança anual: <span className="font-semibold">R$ {(planPriceYearly * 12).toFixed(2)}</span></>
           ) : (
-            <>Cobrança mensal: <span className="font-semibold">R$ {planPrice.toFixed(2)}</span></>
+            <>Cobrança mensal: <span className="font-semibold">R$ {planPriceMonthly.toFixed(2)}</span></>
           )}
         </CardDescription>
       </CardHeader>
@@ -230,22 +276,26 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               <div className="space-y-2">
                 <FormLabel>Método de pagamento</FormLabel>
                 <Tabs 
-                  defaultValue="credit_card" 
+                  value={selectedPaymentMethod}
                   onValueChange={handlePaymentMethodChange}
                 >
-                  <TabsList className="grid grid-cols-3 mb-4">
-                    <TabsTrigger value="credit_card" className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      <span>Cartão</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="boleto" className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      <span>Boleto</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="pix" className="flex items-center gap-2">
-                      <QrCode className="h-4 w-4" />
-                      <span>PIX</span>
-                    </TabsTrigger>
+                  <TabsList
+                    className={`mb-4 grid ${
+                      availablePaymentMethods.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                    }`}
+                  >
+                    {availablePaymentMethods.includes("credit_card") && (
+                      <TabsTrigger value="credit_card" className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        <span>Cartão</span>
+                      </TabsTrigger>
+                    )}
+                    {availablePaymentMethods.includes("boleto") && (
+                      <TabsTrigger value="boleto" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span>Boleto</span>
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                 
                   <TabsContent value="credit_card" className="space-y-4">
@@ -315,14 +365,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="pix">
-                    <div className="bg-muted p-4 rounded-md text-center">
-                      <p>Você receberá o QR Code do PIX por email após confirmar a assinatura.</p>
-                      <p className="text-sm text-muted-foreground mt-2">O acesso será liberado imediatamente após a confirmação do pagamento.</p>
-                    </div>
-                  </TabsContent>
                 </Tabs>
               </div>
+            </div>
+            
+            <div className="rounded-md bg-muted/50 p-3 text-sm">
+              Total: <span className="font-semibold">R$ {price.toFixed(2)}</span>
+              {selectedBillingType === "yearly" ? " por ano" : " por mês"}
             </div>
             
             <div className="flex justify-end space-x-2">

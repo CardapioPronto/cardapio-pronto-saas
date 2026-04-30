@@ -1,5 +1,5 @@
 // Edge Function: pagarme-create-boleto-pix
-// Cria customer + subscription no Pagar.me usando boleto OU pix
+// Cria customer + subscription no Pagar.me usando boleto
 // a partir de um plano local sincronizado, e persiste em `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -13,7 +13,7 @@ const corsHeaders = {
 const PAGARME_API_URL = "https://api.pagar.me/core/v5";
 
 type BillingCycle = "monthly" | "yearly";
-type PaymentMethod = "boleto" | "pix";
+type PaymentMethod = "boleto";
 
 interface CustomerInput {
   name: string;
@@ -63,8 +63,8 @@ function validateBody(b: any): RequestBody {
   if (b.billing_cycle !== "monthly" && b.billing_cycle !== "yearly") {
     throw new Error("billing_cycle must be monthly or yearly");
   }
-  if (b.payment_method !== "boleto" && b.payment_method !== "pix") {
-    throw new Error("payment_method must be boleto or pix");
+  if (b.payment_method !== "boleto") {
+    throw new Error("payment_method must be boleto");
   }
   if (!b.customer?.name || !b.customer?.email || !b.customer?.document || !b.customer?.phone) {
     throw new Error("customer fields are required");
@@ -168,20 +168,16 @@ Deno.serve(async (req) => {
       },
     });
 
-    // 4) Subscription (boleto/pix)
-    const subscriptionPayload: any = {
+    // 4) Subscription (boleto)
+    const subscriptionPayload: Record<string, unknown> = {
       plan_id: pagarmePlanId,
       customer_id: customer.id,
       payment_method: body.payment_method,
     };
-    if (body.payment_method === "boleto") {
-      subscriptionPayload.boleto = {
-        instructions: "Pagar até a data de vencimento",
-        due_at: new Date(Date.now() + 3 * 86400000).toISOString(),
-      };
-    } else {
-      subscriptionPayload.pix = { expires_in: 86400 };
-    }
+    subscriptionPayload.boleto = {
+      instructions: "Pagar até a data de vencimento",
+      due_at: new Date(Date.now() + 3 * 86400000).toISOString(),
+    };
     const subscription = await pagarme("/subscriptions", "POST", subscriptionPayload);
 
     // 5) Datas e status
@@ -244,24 +240,19 @@ Deno.serve(async (req) => {
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 8) Extrai dados do boleto/pix da última fatura/charge se disponível
+    // 8) Extrai dados do boleto da última fatura/charge se disponível
     const latestInvoice = subscription?.current_cycle ?? null;
     const charge = latestInvoice?.charges?.[0]
       ?? subscription?.invoices?.[0]?.charges?.[0]
       ?? null;
     const lastTransaction = charge?.last_transaction ?? null;
 
-    const paymentInfo: Record<string, any> = {};
-    if (body.payment_method === "boleto" && lastTransaction) {
+    const paymentInfo: Record<string, unknown> = {};
+    if (lastTransaction) {
       paymentInfo.boleto_url = lastTransaction.url ?? lastTransaction.pdf ?? null;
       paymentInfo.boleto_barcode = lastTransaction.barcode ?? null;
       paymentInfo.boleto_line = lastTransaction.line ?? null;
       paymentInfo.due_at = lastTransaction.due_at ?? null;
-    }
-    if (body.payment_method === "pix" && lastTransaction) {
-      paymentInfo.pix_qr_code = lastTransaction.qr_code ?? null;
-      paymentInfo.pix_qr_code_url = lastTransaction.qr_code_url ?? null;
-      paymentInfo.pix_expires_at = lastTransaction.expires_at ?? null;
     }
 
     return new Response(JSON.stringify({

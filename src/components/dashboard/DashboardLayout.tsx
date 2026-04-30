@@ -11,13 +11,15 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   return (
-    <div className="min-h-screen w-full flex bg-beige/10">
+    <div className="h-screen w-full overflow-hidden bg-beige/10 md:flex">
       <DashboardSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         <DashboardHeader title={title} />
-        <main className="flex-1 p-6 overflow-auto w-full">
-          <TrialBanner />
-          {children}
+        <main className="dashboard-scrollbar flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+            <TrialBanner />
+            {children}
+          </div>
         </main>
       </div>
     </div>
