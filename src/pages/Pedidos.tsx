@@ -6,14 +6,29 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { RealtimeChannel } from "@supabase/supabase-js";
 import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
-import { Pedido } from "@/features/pdv/types";
+import { Pedido, PedidoStatus, ProdutoSimplificado } from "@/features/pdv/types";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+
+type OrderItemWithProduct = {
+  id: string;
+  product_id: string | null;
+  quantity: number;
+  price: number;
+  observations: string | null;
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    image_url: string | null;
+  } | null;
+};
 
 const Pedidos = () => {
   const { user } = useCurrentUser();
@@ -24,10 +39,15 @@ const Pedidos = () => {
   const [carregando, setCarregando] = useState(false);
   
   // ✅ Ref para evitar múltiplas subscrições
-  const subscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<RealtimeChannel | null>(null);
+  const pedidoDetalhesRef = useRef<Pedido | null>(null);
+
+  useEffect(() => {
+    pedidoDetalhesRef.current = pedidoDetalhes;
+  }, [pedidoDetalhes]);
   
   // Função para carregar pedidos do banco de dados
-  const carregarPedidos = async () => {
+  const carregarPedidos = useCallback(async () => {
     if (!restaurantId) return;
     
     setCarregando(true);
@@ -44,7 +64,7 @@ const Pedidos = () => {
     } finally {
       setCarregando(false);
     }
-  };
+  }, [restaurantId]);
   
   // ✅ Configurar real-time subscriptions
   useEffect(() => {
@@ -71,8 +91,6 @@ const Pedidos = () => {
             filter: `restaurant_id=eq.${restaurantId}`
           },
           (payload) => {
-            console.log('Order changed:', payload);
-            
             if (payload.eventType === 'INSERT') {
               // ✅ Novo pedido - buscar com detalhes completos
               const novoPedido = payload.new as Pedido;
@@ -92,17 +110,20 @@ const Pedidos = () => {
                 .eq('order_id', String(novoPedido.id))
                 .then(({ data: items }) => {
                   if (items) {
-                    const pedidoCompleto = {
+                    const typedItems = items as OrderItemWithProduct[];
+                    const pedidoCompleto: Pedido = {
                       ...novoPedido,
-                      itensPedido: items.map((item: any) => ({
-                        id: item.id,
+                      itensPedido: typedItems.map((item) => ({
                         quantidade: item.quantity,
                         produto: {
-                          id: item.product.id,
-                          name: item.product.name,
-                          price: item.product.price,
-                          image_url: item.product.image_url
-                        },
+                          id: item.product?.id || item.product_id || item.id,
+                          name: item.product?.name || "Produto removido",
+                          price: item.product?.price ?? item.price,
+                          image_url: item.product?.image_url || undefined,
+                          description: "",
+                          available: true,
+                          restaurant_id: restaurantId,
+                        } as ProdutoSimplificado,
                         observacao: item.observations
                       }))
                     };
@@ -111,9 +132,7 @@ const Pedidos = () => {
                     
                     // ✅ Notificação sonora e visual
                     const audio = new Audio('/notification.mp3');
-                    audio.play().catch(() => {
-                      console.log('Audio play blocked by browser');
-                    });
+                    audio.play().catch(() => undefined);
                     
                     toast.success('Novo pedido recebido!', {
                       description: `Mesa: ${novoPedido.mesa || novoPedido.table_id || 'Balcão'} - Total: R$ ${novoPedido.total.toFixed(2)}`,
@@ -135,7 +154,7 @@ const Pedidos = () => {
               );
               
               // Atualizar detalhes se estiver aberto
-              if (pedidoDetalhes && pedidoDetalhes.id === pedidoAtualizado.id) {
+              if (pedidoDetalhesRef.current && pedidoDetalhesRef.current.id === pedidoAtualizado.id) {
                 setPedidoDetalhes(prev => prev ? { ...prev, ...pedidoAtualizado } : null);
               }
               
@@ -148,18 +167,14 @@ const Pedidos = () => {
               );
               
               // Fechar detalhes se estava aberto
-              if (pedidoDetalhes && pedidoDetalhes.id === pedidoDeletado.id) {
+              if (pedidoDetalhesRef.current && pedidoDetalhesRef.current.id === pedidoDeletado.id) {
                 setPedidoDetalhes(null);
               }
             }
           }
         )
         .subscribe((status) => {
-          console.log('Subscription status:', status);
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Real-time subscription ativa para pedidos');
-          } else if (status === 'CHANNEL_ERROR') {
+          if (status === 'CHANNEL_ERROR') {
             console.error('❌ Erro na subscrição real-time');
             toast.error('Erro na conexão em tempo real. Recarregue a página.');
           }
@@ -177,7 +192,7 @@ const Pedidos = () => {
         subscriptionRef.current = null;
       }
     };
-  }, [restaurantId]);
+  }, [restaurantId, carregarPedidos]);
   
   // ✅ Auto-refresh a cada 30 segundos (fallback)
   useEffect(() => {
@@ -188,12 +203,12 @@ const Pedidos = () => {
     }, 30000); // 30 segundos
     
     return () => clearInterval(intervalId);
-  }, [restaurantId]);
+  }, [restaurantId, carregarPedidos]);
   
   // Função para alterar status do pedido
   const handleAlterarStatus = async (
     id: number | string, 
-    novoStatus: 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado'
+    novoStatus: PedidoStatus
   ) => {
     try {
       const result = await alterarStatusPedido(String(id), novoStatus);
