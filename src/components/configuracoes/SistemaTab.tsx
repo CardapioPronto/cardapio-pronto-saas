@@ -7,24 +7,30 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { ConfiguracoesSistema } from "@/services/configuracoes";
 import { PrintTestButton } from "@/components/impressao/PrintTestButton";
+import { Badge } from "@/components/ui/badge";
 
 interface SistemaTabProps {
   configuracoesSistema: ConfiguracoesSistema;
   setConfiguracoesSistema: React.Dispatch<React.SetStateAction<ConfiguracoesSistema>>;
   loading: boolean;
   salvarConfiguracoesDoSistema: () => Promise<void>;
+  canEdit: boolean;
 }
 
 export const SistemaTab: React.FC<SistemaTabProps> = ({
   configuracoesSistema,
   setConfiguracoesSistema,
   loading,
-  salvarConfiguracoesDoSistema
+  salvarConfiguracoesDoSistema,
+  canEdit
 }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Configurações do Sistema</CardTitle>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Configurações do Sistema</CardTitle>
+          {!canEdit && <Badge variant="outline">Somente leitura</Badge>}
+        </div>
         <CardDescription>
           Personalize a experiência e funcionalidades do sistema
         </CardDescription>
@@ -41,6 +47,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             id="notificacao-pedido"
             checked={configuracoesSistema.notification_new_order}
             onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, notification_new_order: value})}
+            disabled={!canEdit}
           />
         </div>
         
@@ -55,6 +62,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             id="notificacao-email"
             checked={configuracoesSistema.notification_email}
             onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, notification_email: value})}
+            disabled={!canEdit}
           />
         </div>
         
@@ -69,6 +77,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             id="modo-escuro"
             checked={configuracoesSistema.dark_mode}
             onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, dark_mode: value})}
+            disabled={!canEdit}
           />
         </div>
         
@@ -83,6 +92,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             id="impressao-automatica"
             checked={configuracoesSistema.auto_print}
             onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, auto_print: value})}
+            disabled={!canEdit}
           />
         </div>
 
@@ -93,7 +103,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
               Teste a configuração de impressão com um pedido de exemplo
             </p>
           </div>
-          <PrintTestButton />
+          <PrintTestButton disabled={!canEdit} />
         </div>
         
         <div className="space-y-2">
@@ -103,6 +113,7 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
             value={configuracoesSistema.language}
             onChange={(e) => setConfiguracoesSistema({...configuracoesSistema, language: e.target.value})}
+            disabled={!canEdit}
           >
             <option value="pt-BR">Português (Brasil)</option>
             <option value="en-US">English (US)</option>
@@ -110,15 +121,17 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
           </select>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          onClick={salvarConfiguracoesDoSistema}
-          disabled={loading}
-        >
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Salvar configurações
-        </Button>
-      </CardFooter>
+      {canEdit && (
+        <CardFooter>
+          <Button
+            onClick={salvarConfiguracoesDoSistema}
+            disabled={loading}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar configurações
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };

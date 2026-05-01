@@ -27,7 +27,7 @@ export function useEstabelecimento() {
       
       setLoading(true);
       try {
-        const dados = await obterDadosEstabelecimento();
+        const dados = await obterDadosEstabelecimento(user.restaurant_id);
         setDadosEstabelecimento(dados);
       } catch (error) {
         console.error("Erro ao carregar dados do estabelecimento:", error);
@@ -45,7 +45,7 @@ export function useEstabelecimento() {
   const salvarDadosEstabelecimento = async () => {
     setLoading(true);
     try {
-      await atualizarDadosEstabelecimento(dadosEstabelecimento);
+      await atualizarDadosEstabelecimento(dadosEstabelecimento, user?.restaurant_id);
       toast.success("Dados do estabelecimento atualizados com sucesso!");
     } catch (error) {
       console.error("Erro ao atualizar dados do estabelecimento:", error);

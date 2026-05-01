@@ -26,7 +26,7 @@ export const useSistema = () => {
 
     setLoading(true);
     try {
-      const config = await obterConfiguracoesSistema();
+      const config = await obterConfiguracoesSistema(user.restaurant_id);
       setConfiguracoesSistema(config);
     } catch (error) {
       console.error("Erro ao carregar configurações do sistema:", error);
@@ -41,7 +41,7 @@ export const useSistema = () => {
 
     setLoading(true);
     try {
-      await salvarConfiguracoesSistema(configuracoesSistema);
+      await salvarConfiguracoesSistema(configuracoesSistema, user.restaurant_id);
       toast.success("Configurações do sistema salvas com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar configurações do sistema:", error);

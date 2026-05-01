@@ -9,6 +9,7 @@ const ALL_PERMISSIONS: PermissionType[] = [
   'pdv_access', 'orders_view', 'orders_manage', 'orders_metrics_view',
   'products_view', 'products_manage',
   'reports_view', 'settings_view', 'settings_manage',
+  'settings_establishment_manage', 'settings_system_manage', 'settings_integrations_manage',
   'employees_manage',
   'whatsapp_manage', 'whatsapp_manage_instances',
   'whatsapp_take_conversations', 'whatsapp_reply_as_human',

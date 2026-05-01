@@ -3,14 +3,22 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-export const IntegracoesTab: React.FC = () => {
+interface IntegracoesTabProps {
+  canManage: boolean;
+}
+
+export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => {
   return (
     <div className="space-y-6">
       {/* Integrações Disponíveis */}
       <Card>
         <CardHeader>
-          <CardTitle>Integrações Disponíveis</CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>Integrações Disponíveis</CardTitle>
+            {!canManage && <Badge variant="outline">Somente leitura</Badge>}
+          </div>
           <CardDescription>
             Conecte o sistema com outras plataformas
           </CardDescription>
@@ -29,7 +37,7 @@ export const IntegracoesTab: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button onClick={() => window.location.href = "/atendimento"}>Configurar</Button>
+              <Button disabled={!canManage} onClick={() => window.location.href = "/atendimento"}>Configurar</Button>
             </div>
           </div>
 
@@ -46,7 +54,7 @@ export const IntegracoesTab: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button onClick={() => window.location.href = "/pagarme-config"}>Configurar</Button>
+              <Button disabled={!canManage} onClick={() => window.location.href = "/pagarme-config"}>Configurar</Button>
             </div>
           </div>
           
@@ -63,7 +71,7 @@ export const IntegracoesTab: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" onClick={() => window.location.href = "/ifood-integracao"}>Configurar</Button>
+              <Button disabled={!canManage} variant="outline" onClick={() => window.location.href = "/ifood-integracao"}>Configurar</Button>
             </div>
           </div>
         </CardContent>

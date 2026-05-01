@@ -3,7 +3,11 @@ import { Printer } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
 import { Pedido } from "@/features/pdv/types";
 
-export const PrintTestButton = () => {
+interface PrintTestButtonProps {
+  disabled?: boolean;
+}
+
+export const PrintTestButton = ({ disabled = false }: PrintTestButtonProps) => {
   const { printOrder, printing } = usePrint();
 
   const handleTestPrint = () => {
@@ -44,7 +48,7 @@ export const PrintTestButton = () => {
     <Button 
       onClick={handleTestPrint}
       variant="outline"
-      disabled={printing}
+      disabled={printing || disabled}
     >
       <Printer className="h-4 w-4 mr-2" />
       {printing ? 'Imprimindo...' : 'Testar Impressão'}

@@ -166,14 +166,14 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/pagarme-config" element={
-        <ProtectedRoute requiredPermissions={['settings_manage']}>
+        <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage']} requireAny>
           <MainLayout>
             <PagarmeConfig />
           </MainLayout>
         </ProtectedRoute>
       } />
       <Route path="/ifood-integracao" element={
-        <ProtectedRoute requiredPermissions={['settings_manage']}>
+        <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage']} requireAny>
           <MainLayout>
             <IfoodIntegracao />
           </MainLayout>

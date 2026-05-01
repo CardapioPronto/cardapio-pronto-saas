@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DadosEstabelecimento } from "@/services/configuracoes/estabelecimentoService";
+import { Badge } from "@/components/ui/badge";
 
 interface EstabelecimentoTabProps {
   dadosEstabelecimento: DadosEstabelecimento;
@@ -14,6 +15,7 @@ interface EstabelecimentoTabProps {
   salvarDadosEstabelecimento: () => Promise<void>;
   handleLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   logoLoading: boolean;
+  canEdit: boolean;
 }
 
 export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
@@ -22,12 +24,16 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
   loading,
   salvarDadosEstabelecimento,
   handleLogoChange,
-  logoLoading
+  logoLoading,
+  canEdit
 }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Dados do Estabelecimento</CardTitle>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Dados do Estabelecimento</CardTitle>
+          {!canEdit && <Badge variant="outline">Somente leitura</Badge>}
+        </div>
         <CardDescription>
           Configure as informações do seu restaurante
         </CardDescription>
@@ -41,6 +47,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
               value={dadosEstabelecimento.nome}
               onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, nome: e.target.value})}
               placeholder="Nome do seu restaurante"
+              disabled={!canEdit}
             />
           </div>
           
@@ -51,6 +58,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
               value={dadosEstabelecimento.categoria || ''}
               onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, categoria: e.target.value})}
               placeholder="Ex: Pizzaria, Hamburgueria, etc."
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -63,6 +71,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
               value={dadosEstabelecimento.telefone || ''}
               onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, telefone: e.target.value})}
               placeholder="(11) 99999-9999"
+              disabled={!canEdit}
             />
           </div>
           
@@ -73,6 +82,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
               value={dadosEstabelecimento.phone_whatsapp || ''}
               onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, phone_whatsapp: e.target.value})}
               placeholder="+55 11 99999-9999"
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -86,6 +96,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
               value={dadosEstabelecimento.email || ''}
               onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, email: e.target.value})}
               placeholder="contato@restaurante.com"
+              disabled={!canEdit}
             />
           </div>
           
@@ -96,6 +107,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
               value={dadosEstabelecimento.cnpj || ''}
               onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, cnpj: e.target.value})}
               placeholder="00.000.000/0000-00"
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -108,6 +120,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
             onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, endereco: e.target.value})}
             placeholder="Endereço completo do restaurante"
             rows={3}
+            disabled={!canEdit}
           />
         </div>
 
@@ -119,6 +132,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
             onChange={(e) => setDadosEstabelecimento({...dadosEstabelecimento, horarioFuncionamento: e.target.value})}
             placeholder="Ex: Segunda a Sexta: 11h às 22h, Sábado e Domingo: 11h às 23h"
             rows={3}
+            disabled={!canEdit}
           />
         </div>
 
@@ -129,7 +143,7 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
             type="file"
             accept="image/*"
             onChange={handleLogoChange}
-            disabled={logoLoading}
+            disabled={logoLoading || !canEdit}
           />
           {logoLoading && <p className="text-sm text-muted-foreground">Fazendo upload...</p>}
           {dadosEstabelecimento.logo_url && (
@@ -143,13 +157,15 @@ export const EstabelecimentoTab: React.FC<EstabelecimentoTabProps> = ({
           )}
         </div>
 
-        <Button 
-          onClick={salvarDadosEstabelecimento} 
-          disabled={loading}
-          className="w-full"
-        >
-          {loading ? "Salvando..." : "Salvar Dados"}
-        </Button>
+        {canEdit && (
+          <Button 
+            onClick={salvarDadosEstabelecimento} 
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? "Salvando..." : "Salvar Dados"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

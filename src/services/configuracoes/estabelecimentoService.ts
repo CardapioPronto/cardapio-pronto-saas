@@ -14,18 +14,32 @@ export interface DadosEstabelecimento {
   logo_url: string | null;
 }
 
-export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento> {
+async function obterRestauranteId(restauranteId?: string | null) {
+  if (restauranteId) return restauranteId;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado');
+
+  const { data: perfil, error } = await supabase
+    .from('users')
+    .select('restaurant_id')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!perfil?.restaurant_id) throw new Error('Restaurante não encontrado para este usuário');
+
+  return perfil.restaurant_id;
+}
+
+export async function obterDadosEstabelecimento(restauranteId?: string | null): Promise<DadosEstabelecimento> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('Usuário não autenticado');
-    }
+    const restaurantId = await obterRestauranteId(restauranteId);
 
     const { data: restaurants, error } = await supabase
       .from('restaurants')
       .select('*')
-      .eq('owner_id', user.id)
+      .eq('id', restaurantId)
       .limit(1);
 
     if (error) {
@@ -66,7 +80,10 @@ export async function obterDadosEstabelecimento(): Promise<DadosEstabelecimento>
   }
 }
 
-export async function atualizarDadosEstabelecimento(dados: DadosEstabelecimento): Promise<void> {
+export async function atualizarDadosEstabelecimento(
+  dados: DadosEstabelecimento,
+  restauranteId?: string | null
+): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -74,10 +91,12 @@ export async function atualizarDadosEstabelecimento(dados: DadosEstabelecimento)
       throw new Error('Usuário não autenticado');
     }
 
+    const restaurantId = await obterRestauranteId(restauranteId);
+
     const { data: existingRestaurants, error: searchError } = await supabase
       .from('restaurants')
       .select('id')
-      .eq('owner_id', user.id)
+      .eq('id', restaurantId)
       .limit(1);
 
     if (searchError) {

@@ -2162,6 +2162,9 @@ export type Database = {
         | "reports_view"
         | "settings_view"
         | "settings_manage"
+        | "settings_establishment_manage"
+        | "settings_system_manage"
+        | "settings_integrations_manage"
         | "employees_manage"
         | "dashboard_view"
         | "subscription_view"
@@ -2309,6 +2312,9 @@ export const Constants = {
         "reports_view",
         "settings_view",
         "settings_manage",
+        "settings_establishment_manage",
+        "settings_system_manage",
+        "settings_integrations_manage",
         "employees_manage",
         "dashboard_view",
         "subscription_view",

@@ -2,45 +2,36 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ConfiguracoesSistema } from "./types";
 
+async function obterRestauranteId(restauranteId?: string | null) {
+  if (restauranteId) return restauranteId;
+
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) throw new Error("Usuário não autenticado");
+
+  const { data: perfil, error } = await supabase
+    .from("users")
+    .select("restaurant_id")
+    .eq("id", user.user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!perfil?.restaurant_id) throw new Error("Restaurante não encontrado para este usuário");
+
+  return perfil.restaurant_id;
+}
+
 /**
  * Obtém as configurações do sistema para o restaurante do usuário autenticado
  */
-export async function obterConfiguracoesSistema(): Promise<ConfiguracoesSistema> {
+export async function obterConfiguracoesSistema(restauranteId?: string | null): Promise<ConfiguracoesSistema> {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) {
-      throw new Error("Usuário não autenticado");
-    }
-
-    // Obter ID do restaurante do usuário
-    const { data: restaurants, error: restaurantError } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("owner_id", user.user.id)
-      .limit(1);
-
-    if (restaurantError) {
-      console.error("Erro ao obter restaurante:", restaurantError);
-      throw restaurantError;
-    }
-
-    if (!restaurants || restaurants.length === 0) {
-      // Se não encontrar restaurante, retornar configurações padrão
-      console.log("Nenhum restaurante encontrado, retornando configurações padrão");
-      return {
-        notification_new_order: true,
-        notification_email: true,
-        dark_mode: false,
-        language: "pt-BR",
-        auto_print: false,
-      };
-    }
+    const restaurantId = await obterRestauranteId(restauranteId);
 
     // Obter configurações
     const { data, error } = await supabase
       .from("system_configurations")
       .select("*")
-      .eq("restaurant_id", restaurants[0].id)
+      .eq("restaurant_id", restaurantId)
       .maybeSingle();
 
     if (error) {
@@ -83,28 +74,9 @@ export async function obterConfiguracoesSistema(): Promise<ConfiguracoesSistema>
 /**
  * Salva as configurações do sistema para o restaurante do usuário autenticado
  */
-export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema) {
+export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema, restauranteId?: string | null) {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) {
-      throw new Error("Usuário não autenticado");
-    }
-
-    // Obter ID do restaurante do usuário
-    const { data: restaurants, error: restaurantError } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("owner_id", user.user.id)
-      .limit(1);
-
-    if (restaurantError) {
-      console.error("Erro ao obter restaurante:", restaurantError);
-      throw restaurantError;
-    }
-
-    if (!restaurants || restaurants.length === 0) {
-      throw new Error("Nenhum restaurante encontrado para este usuário");
-    }
+    const restaurantId = await obterRestauranteId(restauranteId);
 
     // Verificar se já existe configuração para este restaurante
     if (config.id) {
@@ -128,7 +100,7 @@ export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema) {
     } else {
       // Criar nova configuração
       const { error } = await supabase.from("system_configurations").insert({
-        restaurant_id: restaurants[0].id,
+        restaurant_id: restaurantId,
         notification_new_order: config.notification_new_order,
         notification_email: config.notification_email,
         dark_mode: config.dark_mode,
