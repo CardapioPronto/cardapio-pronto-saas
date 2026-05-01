@@ -10,7 +10,6 @@ import {
   UserRound,
   Store,
   LogOut,
-  MapPin,
   TableIcon,
   Headphones,
   Tags,
@@ -48,8 +47,7 @@ const operationalLinks: NavItem[] = [
   { to: "/produtos", label: "Produtos", icon: Package2, permissions: ["products_view"] },
   { to: "/categorias", label: "Categorias", icon: Tags, permissions: ["products_view"] },
   { to: "/cardapio", label: "Menu Digital", icon: Store, permissions: ["products_view"] },
-  { to: "/areas", label: "Áreas", icon: MapPin, permissions: ["settings_view"] },
-  { to: "/mesas", label: "Mesas", icon: TableIcon, permissions: ["settings_view"] },
+  { to: "/mesas", label: "Áreas e Mesas", icon: TableIcon, permissions: ["settings_view"] },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3, permissions: ["reports_view"] },
 ];
 
@@ -95,7 +93,7 @@ const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
 
   const renderLink = (item: NavItem) => {
     const Icon = item.icon;
-    const active = location.pathname === item.to;
+    const active = location.pathname === item.to || (item.to === "/mesas" && location.pathname === "/areas");
     return (
       <Link
         key={item.to}

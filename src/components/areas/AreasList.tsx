@@ -2,21 +2,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, MapPin } from "lucide-react";
+import { Edit, Trash2, MapPin, TableIcon } from "lucide-react";
 import { Area } from "@/types/area";
+import { Mesa } from "@/types/mesa";
 import { EditAreaDialog } from "./EditAreaDialog";
 import { DeleteAreaDialog } from "./DeleteAreaDialog";
 
 interface AreasListProps {
   areas: Area[];
+  mesas?: Mesa[];
   onUpdate: (id: string, data: any) => Promise<Area>;
   onDelete: (id: string) => Promise<void>;
   loading?: boolean;
 }
 
-export function AreasList({ areas, onUpdate, onDelete, loading }: AreasListProps) {
+export function AreasList({ areas, mesas = [], onUpdate, onDelete, loading }: AreasListProps) {
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [deletingArea, setDeletingArea] = useState<Area | null>(null);
+
+  const getMesaCount = (areaId: string) => mesas.filter((mesa) => mesa.area_id === areaId).length;
 
   if (loading) {
     return (
@@ -57,33 +61,46 @@ export function AreasList({ areas, onUpdate, onDelete, loading }: AreasListProps
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {areas.map((area) => (
-          <Card key={area.id} className="relative">
-            <CardHeader>
+          <Card key={area.id} className="relative overflow-hidden">
+            <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{area.name}</CardTitle>
-                  <CardDescription>
+                <div className="min-w-0 space-y-1">
+                  <CardTitle className="truncate text-lg" title={area.name}>
+                    {area.name}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2 min-h-10">
                     {area.description || "Sem descrição"}
                   </CardDescription>
                 </div>
-                <Badge variant={area.is_active ? "default" : "secondary"}>
+                <Badge variant={area.is_active ? "default" : "secondary"} className="ml-3 shrink-0">
                   {area.is_active ? "Ativa" : "Inativa"}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="flex justify-end gap-2">
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <TableIcon className="h-4 w-4" />
+                <span>
+                  {getMesaCount(area.id)} {getMesaCount(area.id) === 1 ? "mesa vinculada" : "mesas vinculadas"}
+                </span>
+              </div>
+              <div className="flex justify-end gap-2 border-t pt-4">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={() => setEditingArea(area)}
+                  title="Editar área"
+                  aria-label={`Editar área ${area.name}`}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={() => setDeletingArea(area)}
+                  title="Remover área"
+                  aria-label={`Remover área ${area.name}`}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

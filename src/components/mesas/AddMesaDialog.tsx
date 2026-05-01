@@ -39,7 +39,7 @@ export function AddMesaDialog({ areas, onAdd }: AddMesaDialogProps) {
       await onAdd({
         number: formData.number.trim(),
         name: `Mesa ${formData.number.trim()}`,
-        area_id: formData.area_id === "none" ? undefined : formData.area_id || undefined,
+        area_id: formData.area_id === "none" ? null : formData.area_id || null,
         capacity: formData.capacity,
       });
       

@@ -50,7 +50,7 @@ export function EditMesaDialog({ mesa, areas, open, onOpenChange, onUpdate }: Ed
     try {
       await onUpdate(mesa.id, {
         number: formData.number.trim(),
-        area_id: formData.area_id === "none" ? undefined : formData.area_id || undefined,
+        area_id: formData.area_id === "none" ? null : formData.area_id || null,
         capacity: formData.capacity,
         status: formData.status,
       });
