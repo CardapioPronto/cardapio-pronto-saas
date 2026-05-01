@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useUserSession } from "./useUserSession";
 import { PermissionType } from "@/types/employee";
@@ -10,6 +10,7 @@ const ALL_PERMISSIONS: PermissionType[] = [
   'products_view', 'products_manage',
   'reports_view', 'settings_view', 'settings_manage',
   'settings_establishment_manage', 'settings_system_manage', 'settings_integrations_manage',
+  'settings_audit_view',
   'employees_manage',
   'whatsapp_manage', 'whatsapp_manage_instances',
   'whatsapp_take_conversations', 'whatsapp_reply_as_human',
@@ -33,7 +34,7 @@ export const usePermissionsV2 = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserPermissions = async () => {
+  const fetchUserPermissions = useCallback(async () => {
     if (!appUser?.id) {
       setUserPermissions([]);
       setLoading(false);
@@ -118,7 +119,7 @@ export const usePermissionsV2 = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appUser?.id, appUser?.role, appUser?.user_type]);
 
   const hasPermission = (permission: PermissionType): boolean =>
     userPermissions.includes(permission);
@@ -140,7 +141,7 @@ export const usePermissionsV2 = () => {
     if (!sessionLoading) {
       fetchUserPermissions();
     }
-  }, [appUser?.id, appUser?.user_type, sessionLoading]);
+  }, [fetchUserPermissions, sessionLoading]);
 
   return {
     userPermissions,

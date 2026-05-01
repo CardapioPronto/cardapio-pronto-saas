@@ -3,7 +3,7 @@ import { useState, ChangeEvent } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
-import { EstabelecimentoTab, UsuarioTab, SistemaTab, IntegracoesTab } from "@/components/configuracoes";
+import { AuditoriaTab, EstabelecimentoTab, UsuarioTab, SistemaTab, IntegracoesTab } from "@/components/configuracoes";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 
 const Configuracoes = () => {
@@ -29,6 +29,8 @@ const Configuracoes = () => {
     canManageAllSettings || hasPermission("settings_system_manage");
   const canManageIntegrations =
     canManageAllSettings || hasPermission("settings_integrations_manage");
+  const canViewAudit =
+    canManageAllSettings || hasPermission("settings_audit_view");
 
   const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!canEditEstablishment) return;
@@ -42,11 +44,12 @@ const Configuracoes = () => {
   return (
     <DashboardLayout title="Configurações">
       <Tabs defaultValue="estabelecimento" className="space-y-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="estabelecimento">Estabelecimento</TabsTrigger>
           <TabsTrigger value="usuario">Usuário</TabsTrigger>
           <TabsTrigger value="sistema">Sistema</TabsTrigger>
           <TabsTrigger value="integracoes">Integrações</TabsTrigger>
+          {canViewAudit && <TabsTrigger value="auditoria">Auditoria</TabsTrigger>}
         </TabsList>
         
         {/* Tab: Estabelecimento */}
@@ -87,6 +90,12 @@ const Configuracoes = () => {
         <TabsContent value="integracoes">
           <IntegracoesTab canManage={canManageIntegrations} />
         </TabsContent>
+
+        {canViewAudit && (
+          <TabsContent value="auditoria">
+            <AuditoriaTab />
+          </TabsContent>
+        )}
       </Tabs>
     </DashboardLayout>
   );

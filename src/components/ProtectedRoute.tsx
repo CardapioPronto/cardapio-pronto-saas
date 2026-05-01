@@ -23,6 +23,7 @@ const PERMISSION_LABELS: Record<PermissionType, string> = {
   settings_establishment_manage: 'Editar Estabelecimento',
   settings_system_manage: 'Editar Sistema',
   settings_integrations_manage: 'Gerenciar Integrações',
+  settings_audit_view: 'Ver Auditoria',
   employees_manage: 'Gerenciar Funcionários',
   whatsapp_manage: 'Gerenciar WhatsApp',
   whatsapp_manage_instances: 'Gerenciar Instâncias',

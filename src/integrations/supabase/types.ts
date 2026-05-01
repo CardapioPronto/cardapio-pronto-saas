@@ -44,6 +44,73 @@ export type Database = {
         }
         Relationships: []
       }
+      configuration_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          area: string
+          changed_fields: string[]
+          changes: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+          restaurant_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          area: string
+          changed_fields?: string[]
+          changes?: Json
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json
+          restaurant_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          area?: string
+          changed_fields?: string[]
+          changes?: Json
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          restaurant_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuration_audit_logs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_logs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_handoff_rules: {
         Row: {
           created_at: string | null
@@ -2146,6 +2213,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_configuration_audit_event: {
+        Args: {
+          event_action: string
+          event_area: string
+          event_changes: Json
+          event_entity_id: string
+          event_entity_type: string
+          event_metadata?: Json
+          event_target_user_id?: string
+          target_restaurant_id: string
+        }
+        Returns: string
+      }
       user_has_role: {
         Args: { required_role: string; user_id: string }
         Returns: boolean
@@ -2165,6 +2245,7 @@ export type Database = {
         | "settings_establishment_manage"
         | "settings_system_manage"
         | "settings_integrations_manage"
+        | "settings_audit_view"
         | "employees_manage"
         | "dashboard_view"
         | "subscription_view"
@@ -2315,6 +2396,7 @@ export const Constants = {
         "settings_establishment_manage",
         "settings_system_manage",
         "settings_integrations_manage",
+        "settings_audit_view",
         "employees_manage",
         "dashboard_view",
         "subscription_view",
