@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 
 interface UsuarioTabProps {
   dadosUsuario: {
@@ -41,7 +41,7 @@ export const UsuarioTab: React.FC<UsuarioTabProps> = ({
       <CardHeader>
         <CardTitle>Dados do Usuário</CardTitle>
         <CardDescription>
-          Gerencie suas informações pessoais e senha de acesso
+          Gerencie seu nome e senha de acesso
         </CardDescription>
       </CardHeader>
       <form onSubmit={atualizarDadosUsuario}>
@@ -57,12 +57,20 @@ export const UsuarioTab: React.FC<UsuarioTabProps> = ({
           
           <div className="grid gap-2">
             <Label htmlFor="email-usuario">Email</Label>
-            <Input
-              id="email-usuario"
-              type="email"
-              value={dadosUsuario.email}
-              onChange={(e) => setDadosUsuario({...dadosUsuario, email: e.target.value})}
-            />
+            <div className="relative">
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="email-usuario"
+                type="email"
+                value={dadosUsuario.email}
+                disabled
+                readOnly
+                className="pl-9"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Alteração de e-mail somente via suporte.
+            </p>
           </div>
           
           <div className="grid gap-2">

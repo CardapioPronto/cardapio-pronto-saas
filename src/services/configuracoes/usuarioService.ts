@@ -34,6 +34,12 @@ export async function atualizarDadosUsuario(nome: string, email: string, senha?:
       throw new Error("Usuário não autenticado");
     }
 
+    const currentEmail = user.user.email || "";
+
+    if (email !== currentEmail) {
+      throw new Error("Alteração de e-mail deve ser solicitada ao suporte");
+    }
+
     const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("id, name, email, restaurant_id")
@@ -47,7 +53,6 @@ export async function atualizarDadosUsuario(nome: string, email: string, senha?:
 
     // Atualizar metadata do usuário
     const { error: updateError } = await supabase.auth.updateUser({
-      email: email !== user.user.email ? email : undefined,
       password: novaSenha,
       data: { name: nome }
     });
@@ -59,10 +64,9 @@ export async function atualizarDadosUsuario(nome: string, email: string, senha?:
 
     const publicProfileUpdates = {
       name: nome,
-      email,
     };
 
-    if (profile.name !== nome || profile.email !== email) {
+    if (profile.name !== nome) {
       const { error: publicProfileError } = await supabase
         .from("users")
         .update(publicProfileUpdates)
