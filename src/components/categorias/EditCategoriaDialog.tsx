@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { CategoriaForm } from "./CategoriaForm";
 import { Category } from "@/types";
-import { DialogTrigger } from "@radix-ui/react-dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 
 interface EditCategoriaDialogProps {
   categoria: Category;
@@ -34,7 +34,7 @@ export const EditCategoriaDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" aria-label={`Editar ${categoria.name}`}>
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>

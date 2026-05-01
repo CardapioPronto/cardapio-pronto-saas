@@ -17,12 +17,14 @@ import { Trash2 } from "lucide-react";
 interface DeleteCategoriaDialogProps {
   categoriaId: string;
   categoriaName: string;
+  productsCount: number;
   onDeleteCategoria: (id: string) => Promise<boolean>;
 }
 
 export const DeleteCategoriaDialog = ({
   categoriaId,
   categoriaName,
+  productsCount,
   onDeleteCategoria,
 }: DeleteCategoriaDialogProps) => {
   const [open, setOpen] = useState(false);
@@ -40,7 +42,13 @@ export const DeleteCategoriaDialog = ({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Excluir ${categoriaName}`}
+          disabled={productsCount > 0}
+          title={productsCount > 0 ? "Categoria com produtos não pode ser excluída" : undefined}
+        >
           <Trash2 className="h-4 w-4 text-red-500" />
         </Button>
       </AlertDialogTrigger>

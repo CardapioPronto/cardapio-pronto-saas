@@ -17,10 +17,11 @@ export const CategoriaForm = ({ onSubmit, initialValues }: CategoriaFormProps) =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const normalizedName = name.trim();
+    if (!normalizedName) return;
     
     setIsSubmitting(true);
-    await onSubmit(name);
+    await onSubmit(normalizedName);
     setIsSubmitting(false);
   };
 

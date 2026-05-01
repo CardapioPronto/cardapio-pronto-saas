@@ -4,4 +4,5 @@ export type Category = {
     restaurant_id: string;
     created_at?: string;
     updated_at?: string;
+    products_count?: number;
 };
