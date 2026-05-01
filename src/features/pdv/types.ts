@@ -59,5 +59,5 @@ export interface Pedido {
   status: PedidoStatus;
   timestamp: Date;
   total: number;
-  source?: 'app' | 'ifood' | 'whatsapp';
+  source?: 'app' | 'ifood' | 'whatsapp' | 'cardapio';
 }

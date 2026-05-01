@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RestaurantMenuConfig } from '@/types/menuTheme';
 import { Palette } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface ColorCustomizerProps {
   config: RestaurantMenuConfig;
@@ -31,6 +32,15 @@ export const ColorCustomizer = ({ config, onUpdateColors }: ColorCustomizerProps
   };
 
   const handleSave = () => {
+    const invalid = Object.values(colors).find(value => !/^#[0-9A-Fa-f]{6}$/.test(value));
+    if (invalid) {
+      toast({
+        variant: 'destructive',
+        title: 'Cor inválida',
+        description: 'Use cores no formato hexadecimal, por exemplo #C8102E.',
+      });
+      return;
+    }
     onUpdateColors(colors);
     setHasChanges(false);
   };

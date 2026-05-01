@@ -10,6 +10,7 @@ const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
 const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const PUBLIC_SITE_URL = (Deno.env.get('PUBLIC_SITE_URL') || Deno.env.get('SITE_URL') || '').replace(/\/+$/, '');
 
 interface ItemPayload {
   product_id: string;
@@ -87,7 +88,9 @@ function buildOrderMessage(order: any, items: ItemPayload[]): string {
   }
   lines.push('');
   lines.push(`🆔 Pedido: \`${order.id.substring(0, 8)}\``);
-  lines.push(`🔗 Acompanhar: ${SUPABASE_URL.replace(/\.supabase\.co.*$/, '')}/pedido/${order.id}`);
+  if (PUBLIC_SITE_URL) {
+    lines.push(`🔗 Acompanhar: ${PUBLIC_SITE_URL}/pedido/${order.id}`);
+  }
   return lines.join('\n');
 }
 

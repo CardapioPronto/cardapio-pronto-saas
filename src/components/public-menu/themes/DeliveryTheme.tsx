@@ -3,7 +3,7 @@ import { MenuData } from '@/types/menuTheme';
 import { CartProvider, useCart, formatBRL } from '../cart/CartContext';
 import { CheckoutFlow } from '../checkout/CheckoutFlow';
 import { AddItemModal, AddItemModalProduct } from './AddItemModal';
-import { Search, ShoppingBag, MapPin, Clock, Phone, Plus, Minus, Home, Tag, ClipboardList, ChevronRight, X } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, Phone, Plus, Minus, Home, ClipboardList, ChevronRight, X } from 'lucide-react';
 
 interface Props {
   data: MenuData;
@@ -59,9 +59,11 @@ const DeliveryLayout = ({ data }: Props) => {
         style={{ backgroundColor: primary }}
       >
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-center gap-2 sm:gap-6">
-          <HeaderTab icon={<Home className="h-4 w-4" />} label="Início" active />
-          <HeaderTab icon={<Tag className="h-4 w-4" />} label="Promoções" />
-          <HeaderTab icon={<ClipboardList className="h-4 w-4" />} label="Pedidos" />
+          <HeaderTab icon={<Home className="h-4 w-4" />} label="Início" active onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+          <HeaderTab icon={<ClipboardList className="h-4 w-4" />} label="Cardápio" onClick={() => document.getElementById('menu-categorias')?.scrollIntoView({ behavior: 'smooth' })} />
+          {data.restaurant.phone_whatsapp && (
+            <HeaderTab icon={<Phone className="h-4 w-4" />} label="Contato" onClick={() => window.open(`https://wa.me/${data.restaurant.phone_whatsapp?.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer')} />
+          )}
         </div>
       </header>
 
@@ -102,9 +104,11 @@ const DeliveryLayout = ({ data }: Props) => {
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg sm:text-2xl font-bold truncate">{data.restaurant.name}</h1>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1 font-medium" style={{ color: primary }}>
-                    <span className="w-2 h-2 rounded-full bg-green-500" /> Sempre aberto
-                  </span>
+                  {data.restaurant.business_hours && (
+                    <span className="flex items-center gap-1 font-medium" style={{ color: primary }}>
+                      {data.restaurant.business_hours}
+                    </span>
+                  )}
                   {data.restaurant.address && (
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" />
@@ -138,7 +142,7 @@ const DeliveryLayout = ({ data }: Props) => {
             </div>
 
             {/* Categorias e produtos */}
-            <div className="mt-6 space-y-8">
+            <div id="menu-categorias" className="mt-6 space-y-8">
               {filteredCategories.length === 0 && (
                 <div className="bg-card rounded-xl p-8 text-center text-muted-foreground">
                   Nenhum produto encontrado.
@@ -256,8 +260,9 @@ const DeliveryLayout = ({ data }: Props) => {
 
 /* --- Subcomponents --- */
 
-const HeaderTab = ({ icon, label, active }: { icon: React.ReactNode; label: string; active?: boolean }) => (
+const HeaderTab = ({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) => (
   <button
+    onClick={onClick}
     className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition ${
       active ? 'bg-white text-black shadow' : 'text-white/90 hover:bg-white/10'
     }`}

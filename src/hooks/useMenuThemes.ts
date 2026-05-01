@@ -14,9 +14,7 @@ export const useMenuThemes = () => {
     queryKey: ['menu-themes'],
     queryFn: async () => {
       try {
-        console.log('Buscando temas disponíveis...');
         const result = await menuThemeService.getAvailableThemes();
-        console.log('Temas carregados:', result);
         return result;
       } catch (error) {
         console.error('Erro ao buscar temas:', error);
@@ -46,13 +44,10 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
     queryKey: ['restaurant-menu-config', restaurantId],
     queryFn: async () => {
       if (!restaurantId) {
-        console.log('Restaurant ID não fornecido');
         return null;
       }
       try {
-        console.log('Buscando configuração do restaurante:', restaurantId);
         const result = await menuThemeService.getRestaurantMenuConfig(restaurantId);
-        console.log('Configuração carregada:', result);
         return result;
       } catch (error) {
         console.error('Erro ao buscar configuração:', error);
@@ -79,13 +74,6 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
         throw new Error('Restaurant ID é obrigatório');
       }
 
-      console.log('Atualizando configuração:', { 
-        restaurantId, 
-        themeId, 
-        customColors, 
-        customSettings 
-      });
-
       return await menuThemeService.updateRestaurantTheme(
         restaurantId, 
         themeId, 
@@ -94,7 +82,6 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
       );
     },
     onSuccess: (data) => {
-      console.log('Configuração atualizada com sucesso:', data);
       queryClient.invalidateQueries({ queryKey: ['restaurant-menu-config', restaurantId] });
       toast({
         title: 'Sucesso',

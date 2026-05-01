@@ -18,6 +18,7 @@ type PedidoQueryRow = {
   created_at: string;
   status: string;
   source: string | null;
+  order_type: string;
   table_id: string | null;
   total: number;
   order_items?: Array<{
@@ -60,6 +61,8 @@ type PedidoResumoRow = {
 };
 
 const formatMesaDisplay = (pedido: PedidoQueryRow) => {
+  if (pedido.order_type === 'delivery') return 'Delivery';
+  if (pedido.order_type === 'balcao') return 'Balcão';
   if (!pedido.mesa) return 'Balcão';
 
   if (pedido.mesa.number) return `Mesa ${pedido.mesa.number}`;

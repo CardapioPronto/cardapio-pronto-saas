@@ -304,6 +304,8 @@ const Pedidos = () => {
         return <Badge className="bg-green-500 text-white ml-2">WhatsApp</Badge>;
       case 'app':
         return <Badge className="bg-blue-500 text-white ml-2">App</Badge>;
+      case 'cardapio':
+        return <Badge className="bg-purple-500 text-white ml-2">Cardápio</Badge>;
       default:
         return null;
     }

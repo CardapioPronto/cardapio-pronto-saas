@@ -2,6 +2,7 @@
 import React from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useRestaurantMenuConfig } from '@/hooks/useMenuThemes';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, QrCode } from 'lucide-react';
@@ -10,6 +11,17 @@ import { toast } from '@/components/ui/use-toast';
 export const MenuPreview = () => {
   const { user } = useCurrentUser();
   const { config, loadingConfig } = useRestaurantMenuConfig(user?.restaurant_id || '');
+  const [publicSlug, setPublicSlug] = React.useState<string>('');
+
+  React.useEffect(() => {
+    if (!user?.restaurant_id) return;
+    supabase
+      .from('restaurants')
+      .select('slug')
+      .eq('id', user.restaurant_id)
+      .maybeSingle()
+      .then(({ data }) => setPublicSlug(data?.slug || user.restaurant_id));
+  }, [user?.restaurant_id]);
 
   if (loadingConfig) {
     return (
@@ -34,14 +46,14 @@ export const MenuPreview = () => {
     // os módulos dinâmicos após restart do dev server, evitando o erro
     // "Failed to fetch dynamically imported module".
     const cacheBust = Date.now();
-    const previewUrl = `/cardapio/${user.restaurant_id}?preview=${cacheBust}`;
+    const previewUrl = `/cardapio/${publicSlug || user.restaurant_id}?preview=${cacheBust}`;
     window.open(previewUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleCopyLink = () => {
     if (!user?.restaurant_id) return;
     
-    const menuUrl = `${window.location.origin}/cardapio/${user.restaurant_id}`;
+    const menuUrl = `${window.location.origin}/cardapio/${publicSlug || user.restaurant_id}`;
     navigator.clipboard.writeText(menuUrl);
     
     toast({

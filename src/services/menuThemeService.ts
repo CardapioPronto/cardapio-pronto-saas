@@ -5,8 +5,6 @@ import { MenuTheme, RestaurantMenuConfig, DeliveryConfig, DEFAULT_DELIVERY_CONFI
 export const menuThemeService = {
   // Buscar todos os temas disponíveis
   async getAvailableThemes(): Promise<MenuTheme[]> {
-    console.log('Buscando temas disponíveis...');
-    
     try {
       const { data, error } = await supabase
         .from('menu_themes')
@@ -17,8 +15,6 @@ export const menuThemeService = {
         console.error('Erro ao buscar temas:', error);
         throw new Error(`Erro ao buscar temas: ${error.message}`);
       }
-      
-      console.log('Temas encontrados:', data);
 
       const dbThemes: MenuTheme[] = (data || []).map(theme => ({
         ...theme,
@@ -44,8 +40,6 @@ export const menuThemeService = {
 
   // Buscar configuração do menu de um restaurante
   async getRestaurantMenuConfig(restaurantId: string): Promise<RestaurantMenuConfig | null> {
-    console.log('Buscando configuração do restaurante:', restaurantId);
-    
     if (!restaurantId) {
       console.warn('Restaurant ID não fornecido');
       return null;
@@ -64,10 +58,7 @@ export const menuThemeService = {
         throw new Error(`Erro ao buscar configuração: ${error.message}`);
       }
       
-      console.log('Configuração encontrada:', data);
-      
       if (!data) {
-        console.log('Nenhuma configuração encontrada, retornando null');
         return null;
       }
       
@@ -85,8 +76,6 @@ export const menuThemeService = {
 
   // Buscar dados do cardápio público por slug
   async getPublicMenuData(slug: string) {
-    console.log('Getting public menu data for slug:', slug);
-    
     try {
       // Detectar se é UUID (id) ou slug textual
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
@@ -100,6 +89,7 @@ export const menuThemeService = {
           .from('restaurants')
           .select(columns)
           .eq('id', slug)
+          .eq('active', true)
           .maybeSingle();
         restaurant = res.data;
         restaurantError = res.error;
@@ -108,6 +98,7 @@ export const menuThemeService = {
           .from('restaurants')
           .select(columns)
           .eq('slug', slug)
+          .eq('active', true)
           .maybeSingle();
         restaurant = res.data;
         restaurantError = res.error;
@@ -121,8 +112,6 @@ export const menuThemeService = {
       if (!restaurant) {
         throw new Error('Restaurante não encontrado. Verifique o link do cardápio.');
       }
-
-      console.log('Restaurant found:', restaurant);
 
       // Buscar categorias e produtos
       const { data: categories, error: categoriesError } = await supabase
@@ -148,11 +137,8 @@ export const menuThemeService = {
         throw new Error(`Erro ao buscar categorias: ${categoriesError.message}`);
       }
 
-      console.log('Categories found:', categories);
-
       // Buscar configuração do tema
       const config = await this.getRestaurantMenuConfig(restaurant.id);
-      console.log('Config found:', config);
 
       // Buscar configuração de delivery (restaurant_settings)
       const deliveryConfig = await this.getDeliveryConfig(restaurant.id);
@@ -171,7 +157,6 @@ export const menuThemeService = {
       };
 
       const transformedCategories = (categories || [])
-        .filter(cat => cat.products && cat.products.length > 0)
         .map(category => ({
           ...category,
           products: category.products
@@ -181,7 +166,8 @@ export const menuThemeService = {
               description: product.description || undefined,
               image_url: product.image_url || undefined,
             })),
-        }));
+        }))
+        .filter(cat => cat.products && cat.products.length > 0);
       
       return {
         restaurant: transformedRestaurant,
@@ -273,13 +259,6 @@ export const menuThemeService = {
     customColors: Record<string, string> = {},
     customSettings: Record<string, any> = {}
   ): Promise<RestaurantMenuConfig> {
-    console.log('Updating restaurant theme:', {
-      restaurantId,
-      themeId,
-      customColors,
-      customSettings
-    });
-
     if (!restaurantId) {
       throw new Error('Restaurant ID é obrigatório');
     }
@@ -298,8 +277,6 @@ export const menuThemeService = {
         .maybeSingle();
 
       if (existingConfig) {
-        console.log('Atualizando configuração existente:', existingConfig.id);
-        
         // Atualizar configuração existente
         const { data, error } = await supabase
           .from('restaurant_menu_config')
@@ -318,16 +295,12 @@ export const menuThemeService = {
           throw new Error(`Erro ao atualizar tema: ${error.message}`);
         }
 
-        console.log('Theme updated successfully:', data);
-        
         return {
           ...data,
           custom_colors: (data.custom_colors as Record<string, string>) || {},
           custom_settings: (data.custom_settings as Record<string, any>) || {}
         };
       } else {
-        console.log('Criando nova configuração');
-        
         // Criar nova configuração
         const { data, error } = await supabase
           .from('restaurant_menu_config')
@@ -345,8 +318,6 @@ export const menuThemeService = {
           console.error('Error creating restaurant theme:', error);
           throw new Error(`Erro ao criar tema: ${error.message}`);
         }
-        
-        console.log('Theme created successfully:', data);
         
         return {
           ...data,

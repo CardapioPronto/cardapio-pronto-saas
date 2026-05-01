@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { supabase } from '@/integrations/supabase/client';
 import { Download, QrCode, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,9 +15,17 @@ export const QRCodeGenerator = () => {
 
   useEffect(() => {
     if (user?.restaurant_id) {
-      const url = `${window.location.origin}/cardapio/${user.restaurant_id}`;
-      setMenuUrl(url);
-      generateQRCode(url);
+      supabase
+        .from('restaurants')
+        .select('slug')
+        .eq('id', user.restaurant_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const publicId = data?.slug || user.restaurant_id;
+          const url = `${window.location.origin}/cardapio/${publicId}`;
+          setMenuUrl(url);
+          generateQRCode(url);
+        });
     }
   }, [user?.restaurant_id]);
 

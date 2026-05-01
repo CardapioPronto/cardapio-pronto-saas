@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { deliveryOrderService } from '@/services/deliveryOrderService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +34,13 @@ const STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
   { key: 'preparing', label: 'Em preparo', icon: ChefHat },
   { key: 'out_for_delivery', label: 'Saiu para entrega', icon: Bike },
   { key: 'delivered', label: 'Entregue', icon: PackageCheck },
+];
+
+const LOCAL_STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
+  { key: 'pending', label: 'Pedido recebido', icon: Clock },
+  { key: 'confirmed', label: 'Confirmado pela loja', icon: CheckCircle2 },
+  { key: 'preparing', label: 'Em preparo', icon: ChefHat },
+  { key: 'delivered', label: 'Pronto/concluído', icon: PackageCheck },
 ];
 
 const STATUS_INDEX: Record<StatusKey, number> = {
@@ -107,7 +113,20 @@ export default function AcompanharPedido() {
     }
   }
 
-  // Carga inicial
+  const loadOrder = async (trackingId: string, cancelled?: () => boolean) => {
+    const o = await deliveryOrderService.getById(trackingId);
+    if (cancelled?.()) return;
+    if (!o) {
+      setError('Pedido não encontrado.');
+      return;
+    }
+    setOrder(o);
+    setHistory(o.history || []);
+    setLive(true);
+    setError(null);
+  };
+
+  // Carga inicial e atualização periódica por RPC pública.
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -115,17 +134,7 @@ export default function AcompanharPedido() {
     (async () => {
       try {
         setLoading(true);
-        const [o, h] = await Promise.all([
-          deliveryOrderService.getById(id),
-          deliveryOrderService.getStatusHistory(id),
-        ]);
-        if (cancelled) return;
-        if (!o) {
-          setError('Pedido não encontrado.');
-        } else {
-          setOrder(o);
-          setHistory(h);
-        }
+        await loadOrder(id, () => cancelled);
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Erro ao carregar pedido.');
       } finally {
@@ -133,47 +142,13 @@ export default function AcompanharPedido() {
       }
     })();
 
+    const interval = window.setInterval(() => {
+      loadOrder(id, () => cancelled).catch(() => setLive(false));
+    }, 15000);
+
     return () => {
       cancelled = true;
-    };
-  }, [id]);
-
-  // Realtime: assina mudanças no pedido + histórico
-  useEffect(() => {
-    if (!id) return;
-
-    const channel = supabase
-      .channel(`delivery-order-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'delivery_orders',
-          filter: `id=eq.${id}`,
-        },
-        (payload) => {
-          setOrder((prev: any) => ({ ...(prev || {}), ...(payload.new as any) }));
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'delivery_order_status_history',
-          filter: `delivery_order_id=eq.${id}`,
-        },
-        (payload) => {
-          setHistory((prev) => [...prev, payload.new as any]);
-        },
-      )
-      .subscribe((status) => {
-        setLive(status === 'SUBSCRIBED');
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(interval);
     };
   }, [id]);
 
@@ -212,7 +187,9 @@ export default function AcompanharPedido() {
   const restaurant = order.restaurant;
   const currentStatus = order.status as StatusKey;
   const isCancelled = currentStatus === 'cancelled';
-  const currentIdx = STATUS_INDEX[currentStatus] ?? 0;
+  const statusFlow = order.fulfillment_type === 'delivery' ? STATUS_FLOW : LOCAL_STATUS_FLOW;
+  const currentIdx = Math.min(STATUS_INDEX[currentStatus] ?? 0, statusFlow.length - 1);
+  const isDelivery = order.fulfillment_type === 'delivery';
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -235,7 +212,7 @@ export default function AcompanharPedido() {
           <div className="flex items-center gap-2">
             <Badge variant={live ? 'default' : 'secondary'} className="gap-1">
               <Wifi className="h-3 w-3" />
-              {live ? 'Ao vivo' : 'Conectando…'}
+              {live ? 'Atualizado' : 'Atualizando...'}
             </Badge>
             <Button
               size="sm"
@@ -267,9 +244,9 @@ export default function AcompanharPedido() {
             <h2 className="text-2xl font-bold">
               {isCancelled
                 ? 'Pedido cancelado'
-                : STATUS_FLOW[currentIdx]?.label || 'Recebido'}
+                : statusFlow[currentIdx]?.label || 'Recebido'}
             </h2>
-            {!isCancelled && order.estimated_delivery_minutes && currentStatus !== 'delivered' && (
+            {!isCancelled && isDelivery && order.estimated_delivery_minutes && currentStatus !== 'delivered' && (
               <p className="text-sm text-muted-foreground">
                 Tempo estimado de entrega: <strong>{order.estimated_delivery_minutes} min</strong>
               </p>
@@ -295,7 +272,7 @@ export default function AcompanharPedido() {
               </div>
             ) : (
               <ol className="relative space-y-6">
-                {STATUS_FLOW.map((step, idx) => {
+                {statusFlow.map((step, idx) => {
                   const Icon = step.icon;
                   const reached = idx <= currentIdx;
                   const active = idx === currentIdx;
@@ -315,7 +292,7 @@ export default function AcompanharPedido() {
                         >
                           <Icon className="h-5 w-5" />
                         </div>
-                        {idx < STATUS_FLOW.length - 1 && (
+                        {idx < statusFlow.length - 1 && (
                           <div
                             className={cn(
                               'w-0.5 flex-1 mt-1 min-h-[20px]',
@@ -355,14 +332,31 @@ export default function AcompanharPedido() {
             <CardTitle className="text-base">Resumo do pedido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
+            {Array.isArray(order.items) && order.items.length > 0 && (
+              <div className="space-y-2 pb-3 border-b">
+                {order.items.map((item: any) => (
+                  <div key={item.id} className="flex justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{item.quantity}x {item.name}</p>
+                      {item.observations && (
+                        <p className="text-xs text-muted-foreground">Obs: {item.observations}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0">{brl(Number(item.price) * Number(item.quantity))}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
               <span>{brl(order.subtotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Taxa de entrega</span>
-              <span>{brl(order.delivery_fee)}</span>
-            </div>
+            {isDelivery && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Taxa de entrega</span>
+                <span>{brl(order.delivery_fee)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-semibold text-base pt-2 border-t">
               <span>Total</span>
               <span>{brl(order.total)}</span>
@@ -382,29 +376,47 @@ export default function AcompanharPedido() {
           </CardContent>
         </Card>
 
-        {/* Endereço de entrega */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Endereço de entrega
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <p className="font-medium">{order.customer_name}</p>
-            <p className="text-muted-foreground">
-              {order.street}, {order.number}
-              {order.complement ? ` - ${order.complement}` : ''}
-            </p>
-            <p className="text-muted-foreground">
-              {order.neighborhood} • {order.city}/{order.state}
-            </p>
-            <p className="text-muted-foreground">CEP: {order.zip_code}</p>
-            {order.reference_point && (
-              <p className="text-muted-foreground italic">📌 {order.reference_point}</p>
-            )}
-          </CardContent>
-        </Card>
+        {isDelivery ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Endereço de entrega
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-1">
+              <p className="font-medium">{order.customer_name}</p>
+              <p className="text-muted-foreground">
+                {order.street}, {order.number}
+                {order.complement ? ` - ${order.complement}` : ''}
+              </p>
+              <p className="text-muted-foreground">
+                {order.neighborhood} • {order.city}/{order.state}
+              </p>
+              <p className="text-muted-foreground">CEP: {order.zip_code}</p>
+              {order.reference_point && (
+                <p className="text-muted-foreground italic">Ref: {order.reference_point}</p>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Retirada/atendimento local
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-1">
+              <p className="font-medium">{order.customer_name || 'Cliente'}</p>
+              <p className="text-muted-foreground">
+                {order.fulfillment_type === 'table'
+                  ? 'Pedido enviado para atendimento na mesa.'
+                  : 'Pedido enviado para retirada ou pagamento no balcão.'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Contato com a loja */}
         {restaurant?.phone_whatsapp && (

@@ -73,6 +73,10 @@ export interface MenuData {
   }>;
   theme: ThemeConfig;
   deliveryConfig?: DeliveryConfig;
+  context?: {
+    fulfillmentType?: 'delivery' | 'pickup' | 'table' | 'counter';
+    tableId?: string;
+  };
 }
 
 export interface DeliveryConfig {

@@ -21,18 +21,6 @@ export const MenuThemeSelector = () => {
     configError 
   } = useRestaurantMenuConfig(user?.restaurant_id ?? '');
 
-  console.log('MenuThemeSelector - Estado atual:', {
-    user: user?.restaurant_id,
-    themes: themes?.length,
-    config,
-    userLoading,
-    loadingThemes,
-    loadingConfig,
-    isUpdating,
-    themesError,
-    configError
-  });
-
   // Mostrar loading enquanto carrega dados essenciais
   if (userLoading || loadingThemes || loadingConfig) {
     return (
@@ -93,12 +81,9 @@ export const MenuThemeSelector = () => {
     }
 
     if (isUpdating) {
-      console.log('Já existe uma atualização em andamento, ignorando...');
       return; // Evita múltiplas submissões
     }
 
-    console.log('Selecionando tema:', { themeId, restaurantId: user.restaurant_id });
-    
     try {
       updateConfig({
         themeId,
@@ -207,12 +192,9 @@ export const MenuThemeSelector = () => {
           config={config}
           onUpdateColors={(colors) => {
             if (isUpdating) {
-              console.log('Já existe uma atualização em andamento, ignorando...');
               return;
             }
-            
-            console.log('Atualizando cores personalizadas:', colors);
-            
+
             updateConfig({
               themeId: config.theme_id,
               customColors: colors,

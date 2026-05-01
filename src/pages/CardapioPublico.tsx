@@ -9,7 +9,8 @@ import { MenuData } from "@/types/menuTheme";
 import { Loader2, AlertCircle, Smartphone } from "lucide-react";
 
 const CardapioPublico = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const params = useParams<{ slug?: string; id?: string }>();
+  const slug = params.slug || params.id;
   const [menuData, setMenuData] = useState<MenuData | null>(null);
   const [themeName, setThemeName] = useState('default');
   const [loading, setLoading] = useState(true);
@@ -25,10 +26,7 @@ const CardapioPublico = () => {
 
       try {
         setLoading(true);
-        console.log('Loading menu data for slug:', slug);
-        
         const data = await menuThemeService.getPublicMenuData(slug);
-        console.log('Menu data loaded:', data);
         
         // Determinar o tema
         let selectedTheme = 'delivery';
@@ -51,6 +49,7 @@ const CardapioPublico = () => {
           categories: data.categories,
           theme: themeConfig,
           deliveryConfig: data.deliveryConfig,
+          context: getPublicMenuContext(),
         });
         
         setThemeName(selectedTheme);
@@ -189,5 +188,31 @@ const CardapioPublico = () => {
     </>
   );
 };
+
+function getPublicMenuContext(): MenuData['context'] {
+  if (typeof window === 'undefined') return undefined;
+
+  const params = new URLSearchParams(window.location.search);
+  const tableId = params.get('mesa') || params.get('table') || undefined;
+  const mode = params.get('modo') || params.get('mode') || undefined;
+
+  const fulfillmentType =
+    mode === 'mesa' || mode === 'table'
+      ? 'table'
+      : mode === 'retirada' || mode === 'pickup'
+        ? 'pickup'
+        : mode === 'balcao' || mode === 'counter'
+          ? 'counter'
+          : mode === 'delivery'
+            ? 'delivery'
+            : tableId
+              ? 'table'
+              : undefined;
+
+  return {
+    fulfillmentType,
+    tableId,
+  };
+}
 
 export default CardapioPublico;
