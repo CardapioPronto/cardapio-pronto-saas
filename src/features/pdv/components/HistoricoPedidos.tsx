@@ -31,6 +31,8 @@ interface HistoricoPedidosProps {
   onChangeDataFim: (data: string) => void;
   onChangePagina: (pagina: number) => void;
   onChangeItensPorPagina: (itens: number) => void;
+  canViewFinancials: boolean;
+  canManageOrders: boolean;
 }
 
 export const HistoricoPedidos = ({
@@ -48,6 +50,8 @@ export const HistoricoPedidos = ({
   onChangeDataFim,
   onChangePagina,
   onChangeItensPorPagina,
+  canViewFinancials,
+  canManageOrders,
 }: HistoricoPedidosProps) => {
   const [atualizando, setAtualizando] = useState(false);
   const totalPaginas = Math.max(1, Math.ceil(total / filtros.itensPorPagina));
@@ -71,44 +75,46 @@ export const HistoricoPedidos = ({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Receipt className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Pedidos</p>
-              <p className="text-lg font-semibold">{resumo.totalPedidos}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <CalendarDays className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Vendido</p>
-              <p className="text-lg font-semibold">{formatCurrency(resumo.totalVendido)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Abertos</p>
-              <p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <XCircle className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Cancelados</p>
-              <p className="text-lg font-semibold">{resumo.cancelados}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {canViewFinancials && (
+        <div className="grid gap-3 md:grid-cols-4">
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Receipt className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Pedidos</p>
+                <p className="text-lg font-semibold">{resumo.totalPedidos}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <CalendarDays className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Vendido</p>
+                <p className="text-lg font-semibold">{formatCurrency(resumo.totalVendido)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Abertos</p>
+                <p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <XCircle className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Cancelados</p>
+                <p className="text-lg font-semibold">{resumo.cancelados}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -213,6 +219,7 @@ export const HistoricoPedidos = ({
               pedido={pedido}
               alterarStatusPedido={alterarStatusPedido}
               restaurantName={restaurantName}
+              canManageOrders={canManageOrders}
             />
           ))}
         </div>

@@ -6,14 +6,19 @@ import { HistoricoPedidos } from "@/features/pdv/components/HistoricoPedidos";
 import { NovoPedido } from "@/features/pdv/components/NovoPedido";
 import { PDVTabs } from "@/features/pdv/components/PDVTabs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function PDV() {
   // Obter o usuário atual e ID do restaurante
   const { user } = useCurrentUser();
+  const { hasPermission } = usePermissionsV2();
   const restaurantId = user?.restaurant_id || "";
   const [restaurantName, setRestaurantName] = useState("Pubfy");
+  const canViewOrderHistory = hasPermission("orders_view");
+  const canViewFinancials = hasPermission("orders_metrics_view");
+  const canManageOrders = hasPermission("orders_manage");
   
   // Usar o hook refatorado que contém toda a lógica
   const {
@@ -84,6 +89,12 @@ export default function PDV() {
     };
   }, [restaurantId]);
 
+  useEffect(() => {
+    if (!canViewOrderHistory && visualizacaoAtiva === "historico") {
+      setVisualizacaoAtiva("novo");
+    }
+  }, [canViewOrderHistory, setVisualizacaoAtiva, visualizacaoAtiva]);
+
   return (
     <DashboardLayout title="PDV - Ponto de Venda">
       <PDVTabs 
@@ -92,6 +103,7 @@ export default function PDV() {
         tipoPedido={tipoPedido}
         onChangeTipoPedido={trocarTipoPedido}
         showPedidoTabs={visualizacaoAtiva === "novo"}
+        canViewHistory={canViewOrderHistory}
       />
 
       {visualizacaoAtiva === "novo" ? (
@@ -115,7 +127,7 @@ export default function PDV() {
           nomeCliente={nomeCliente}
           setNomeCliente={setNomeCliente}
         />
-      ) : (
+      ) : canViewOrderHistory ? (
         <HistoricoPedidos 
           pedidosHistorico={pedidosHistorico}
           carregando={carregandoHistorico}
@@ -131,8 +143,10 @@ export default function PDV() {
           onChangeDataFim={setHistoricoDataFim}
           onChangePagina={setHistoricoPagina}
           onChangeItensPorPagina={setHistoricoItensPorPagina}
+          canViewFinancials={canViewFinancials}
+          canManageOrders={canManageOrders}
         />
-      )}
+      ) : null}
 
       {/* Modal para adicionar observação ao produto */}
       <ObservacaoModal 

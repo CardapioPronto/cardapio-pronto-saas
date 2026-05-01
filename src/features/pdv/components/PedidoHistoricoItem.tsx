@@ -10,12 +10,14 @@ interface PedidoHistoricoItemProps {
   pedido: Pedido;
   alterarStatusPedido: (pedidoId: number | string, novoStatus: PedidoStatus) => void;
   restaurantName: string;
+  canManageOrders: boolean;
 }
 
 export const PedidoHistoricoItem = ({
   pedido,
   alterarStatusPedido,
   restaurantName,
+  canManageOrders,
 }: PedidoHistoricoItemProps) => {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const { printOrder, printing } = usePrint();
@@ -122,19 +124,25 @@ export const PedidoHistoricoItem = ({
 
         {detalhesAbertos && (
           <ul className="max-h-56 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
-            {pedido.itensPedido.map((item, index) => (
-              <li key={`${item.produto.id}-${index}`} className="text-sm">
-                <div className="flex justify-between gap-3">
-                  <span className="min-w-0">
-                    {item.quantidade}x {item.produto.name}
-                  </span>
-                  <span className="shrink-0">R$ {(item.produto.price * item.quantidade).toFixed(2)}</span>
-                </div>
-                {item.observacao && (
-                  <p className="mt-1 text-xs text-muted-foreground">Obs: {item.observacao}</p>
-                )}
+            {pedido.itensPedido.length > 0 ? (
+              pedido.itensPedido.map((item, index) => (
+                <li key={`${item.produto.id}-${index}`} className="text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span className="min-w-0">
+                      {item.quantidade}x {item.produto.name}
+                    </span>
+                    <span className="shrink-0">R$ {(item.produto.price * item.quantidade).toFixed(2)}</span>
+                  </div>
+                  {item.observacao && (
+                    <p className="mt-1 text-xs text-muted-foreground">Obs: {item.observacao}</p>
+                  )}
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-muted-foreground">
+                Nenhum item encontrado para este pedido.
               </li>
-            ))}
+            )}
           </ul>
         )}
       </CardContent>
@@ -155,7 +163,7 @@ export const PedidoHistoricoItem = ({
           {printing ? 'Imprimindo...' : 'Imprimir Comanda'}
         </Button>
         
-        {pedido.status === 'pendente' && (
+        {canManageOrders && pedido.status === 'pendente' && (
           <Button 
             variant="outline" 
             onClick={() => alterarStatusPedido(pedido.id, 'preparo')}
@@ -165,7 +173,7 @@ export const PedidoHistoricoItem = ({
           </Button>
         )}
         
-        {(pedido.status === 'preparo' || pedido.status === 'em-andamento') && (
+        {canManageOrders && (pedido.status === 'preparo' || pedido.status === 'em-andamento') && (
           <Button 
             variant="outline" 
             onClick={() => alterarStatusPedido(pedido.id, 'finalizado')}
@@ -175,7 +183,7 @@ export const PedidoHistoricoItem = ({
           </Button>
         )}
         
-        {pedido.status !== 'cancelado' && pedido.status !== 'finalizado' && (
+        {canManageOrders && pedido.status !== 'cancelado' && pedido.status !== 'finalizado' && (
           <Button 
             variant="outline" 
             onClick={() => alterarStatusPedido(pedido.id, 'cancelado')}
@@ -185,7 +193,7 @@ export const PedidoHistoricoItem = ({
           </Button>
         )}
         
-        {pedido.status === 'cancelado' && (
+        {canManageOrders && pedido.status === 'cancelado' && (
           <Button 
             variant="outline" 
             onClick={() => alterarStatusPedido(pedido.id, 'pendente')}
@@ -194,7 +202,7 @@ export const PedidoHistoricoItem = ({
           </Button>
         )}
         
-        {pedido.status === 'finalizado' && (
+        {canManageOrders && pedido.status === 'finalizado' && (
           <Button 
             variant="outline" 
             onClick={() => alterarStatusPedido(pedido.id, 'pendente')}

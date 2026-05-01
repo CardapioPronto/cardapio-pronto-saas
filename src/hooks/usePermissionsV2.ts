@@ -6,7 +6,7 @@ import { PermissionType } from "@/types/employee";
 
 const ALL_PERMISSIONS: PermissionType[] = [
   'dashboard_view', 'subscription_view',
-  'pdv_access', 'orders_view', 'orders_manage',
+  'pdv_access', 'orders_view', 'orders_manage', 'orders_metrics_view',
   'products_view', 'products_manage',
   'reports_view', 'settings_view', 'settings_manage',
   'employees_manage',
@@ -18,7 +18,7 @@ const ALL_PERMISSIONS: PermissionType[] = [
 // Gerente: tudo, exceto financeiro/equipe (que ficam só para o dono).
 const MANAGER_PERMISSIONS: PermissionType[] = [
   'dashboard_view',
-  'pdv_access', 'orders_view', 'orders_manage',
+  'pdv_access', 'orders_view', 'orders_manage', 'orders_metrics_view',
   'products_view', 'products_manage',
   'reports_view', 'settings_view',
   'whatsapp_manage', 'whatsapp_manage_instances',

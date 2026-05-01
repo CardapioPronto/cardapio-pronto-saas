@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { CheckedState } from "@radix-ui/react-checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,62 +7,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useEmployees } from "@/hooks/useEmployees";
 import { EmployeeWithPermissions, PermissionType } from "@/types/employee";
+import { PERMISSION_GROUPS, PermissionGroup } from "./permissions";
 
 interface EditPermissionsDialogProps {
   employee: EmployeeWithPermissions | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-interface PermissionGroup {
-  title: string;
-  permissions: { value: PermissionType; label: string; description: string }[];
-}
-
-const permissionGroups: PermissionGroup[] = [
-  {
-    title: "Geral",
-    permissions: [
-      { value: 'dashboard_view', label: 'Ver Dashboard', description: 'Visualizar o painel principal' },
-      { value: 'subscription_view', label: 'Ver Assinatura', description: 'Visualizar informações da assinatura' },
-      { value: 'pdv_access', label: 'Acesso ao PDV', description: 'Permite usar o sistema de PDV' },
-    ],
-  },
-  {
-    title: "Pedidos",
-    permissions: [
-      { value: 'orders_view', label: 'Ver Pedidos', description: 'Visualizar lista de pedidos' },
-      { value: 'orders_manage', label: 'Gerenciar Pedidos', description: 'Criar, editar e cancelar pedidos' },
-    ],
-  },
-  {
-    title: "Produtos",
-    permissions: [
-      { value: 'products_view', label: 'Ver Produtos', description: 'Visualizar catálogo de produtos' },
-      { value: 'products_manage', label: 'Gerenciar Produtos', description: 'Criar, editar e remover produtos' },
-    ],
-  },
-  {
-    title: "Sistema",
-    permissions: [
-      { value: 'reports_view', label: 'Ver Relatórios', description: 'Acessar relatórios e estatísticas' },
-      { value: 'settings_view', label: 'Ver Configurações', description: 'Visualizar configurações do sistema' },
-      { value: 'settings_manage', label: 'Gerenciar Configurações', description: 'Alterar configurações do sistema' },
-      { value: 'employees_manage', label: 'Gerenciar Funcionários', description: 'Adicionar e gerenciar colaboradores' },
-    ],
-  },
-  {
-    title: "WhatsApp & Atendimento",
-    permissions: [
-      { value: 'whatsapp_manage', label: 'Acessar Módulo WhatsApp', description: 'Acesso geral ao módulo de atendimento' },
-      { value: 'whatsapp_manage_instances', label: 'Gerenciar Instâncias', description: 'Criar, conectar e apagar instâncias WhatsApp' },
-      { value: 'whatsapp_take_conversations', label: 'Assumir Conversas', description: 'Pode assumir atendimento de conversas' },
-      { value: 'whatsapp_reply_as_human', label: 'Responder como Humano', description: 'Enviar mensagens como atendente humano' },
-      { value: 'whatsapp_view_all_conversations', label: 'Ver Todas as Conversas', description: 'Visualizar conversas de todos os atendentes' },
-      { value: 'whatsapp_configure_automation', label: 'Configurar Automação', description: 'Alterar configurações de IA e automação' },
-    ],
-  },
-];
 
 export const EditPermissionsDialog = ({ employee, open, onOpenChange }: EditPermissionsDialogProps) => {
   const { updateEmployeePermissions } = useEmployees();
@@ -89,17 +41,19 @@ export const EditPermissionsDialog = ({ employee, open, onOpenChange }: EditPerm
     }
   };
 
-  const handlePermissionChange = (permission: PermissionType, checked: boolean) => {
-    if (checked) {
+  const isChecked = (checked: CheckedState) => checked === true;
+
+  const handlePermissionChange = (permission: PermissionType, checked: CheckedState) => {
+    if (isChecked(checked)) {
       setSelectedPermissions(prev => [...prev, permission]);
     } else {
       setSelectedPermissions(prev => prev.filter(p => p !== permission));
     }
   };
 
-  const handleGroupToggle = (group: PermissionGroup, checked: boolean) => {
+  const handleGroupToggle = (group: PermissionGroup, checked: CheckedState) => {
     const groupValues = group.permissions.map(p => p.value);
-    if (checked) {
+    if (isChecked(checked)) {
       setSelectedPermissions(prev => [...new Set([...prev, ...groupValues])]);
     } else {
       setSelectedPermissions(prev => prev.filter(p => !groupValues.includes(p)));
@@ -127,20 +81,15 @@ export const EditPermissionsDialog = ({ employee, open, onOpenChange }: EditPerm
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {permissionGroups.map((group, index) => (
+          {PERMISSION_GROUPS.map((group, index) => (
             <div key={group.title}>
               {index > 0 && <Separator className="mb-4" />}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id={`group-${group.title}`}
-                    checked={isGroupFullySelected(group)}
-                    ref={(el) => {
-                      if (el) {
-                        (el as any).indeterminate = isGroupPartiallySelected(group);
-                      }
-                    }}
-                    onCheckedChange={(checked) => handleGroupToggle(group, checked as boolean)}
+                    checked={isGroupPartiallySelected(group) ? "indeterminate" : isGroupFullySelected(group)}
+                    onCheckedChange={(checked) => handleGroupToggle(group, checked)}
                   />
                   <Label htmlFor={`group-${group.title}`} className="font-semibold text-sm">
                     {group.title}
@@ -153,7 +102,7 @@ export const EditPermissionsDialog = ({ employee, open, onOpenChange }: EditPerm
                         id={option.value}
                         checked={selectedPermissions.includes(option.value)}
                         onCheckedChange={(checked) => 
-                          handlePermissionChange(option.value, checked as boolean)
+                          handlePermissionChange(option.value, checked)
                         }
                         className="mt-0.5"
                       />

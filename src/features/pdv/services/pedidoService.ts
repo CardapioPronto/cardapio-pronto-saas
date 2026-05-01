@@ -35,6 +35,16 @@ type PedidoQueryRow = {
   } | null;
 };
 
+type OrderItemQueryRow = {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  product_name: string;
+  quantity: number;
+  price: number;
+  observations: string | null;
+};
+
 interface ListarPedidosOptions {
   dataInicio?: string;
   dataFim?: string;
@@ -249,13 +259,35 @@ export async function listarPedidos(
     }
 
     const rows = (data || []) as PedidoQueryRow[];
+    const orderIds = rows.map((pedido) => pedido.id);
+    const itemsByOrderId = new Map<string, OrderItemQueryRow[]>();
+
+    if (orderIds.length > 0) {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('order_items')
+        .select('id, order_id, product_id, product_name, quantity, price, observations')
+        .in('order_id', orderIds)
+        .order('created_at', { ascending: true });
+
+      if (itemsError) {
+        console.error('Erro ao buscar itens dos pedidos:', itemsError);
+        return { success: false, error: itemsError };
+      }
+
+      for (const item of (itemsData || []) as OrderItemQueryRow[]) {
+        const items = itemsByOrderId.get(item.order_id) || [];
+        items.push(item);
+        itemsByOrderId.set(item.order_id, items);
+      }
+    }
+
     const pedidosFormatados = rows.map((pedido) => ({
       id: pedido.id,
       mesa: formatMesaDisplay(pedido),
       table_id: pedido.table_id,
       cliente: pedido.customer_name || undefined,
       clientName: pedido.customer_name || undefined,
-      itensPedido: (pedido.order_items || []).map((item) => ({
+      itensPedido: (itemsByOrderId.get(pedido.id) || pedido.order_items || []).map((item) => ({
         produto: {
           id: item.product_id || item.id,
           name: item.product_name,

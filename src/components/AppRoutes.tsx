@@ -201,7 +201,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/mesas" element={
-        <ProtectedRoute requiredPermissions={['orders_manage', 'pdv_access', 'settings_view']} requireAny>
+        <ProtectedRoute requiredPermissions={['orders_manage', 'settings_view']} requireAny>
           <MainLayout>
             <Mesas />
           </MainLayout>

@@ -11,65 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEmployees } from "@/hooks/useEmployees";
 import { EmployeeRole, PermissionType, ROLE_PRESETS } from "@/types/employee";
+import { PERMISSION_GROUPS } from "./permissions";
 
 interface AddFuncionarioDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-type PermissionGroup = {
-  label: string;
-  description: string;
-  permissions: { value: PermissionType; label: string; hint?: string }[];
-};
-
-const PERMISSION_GROUPS: PermissionGroup[] = [
-  {
-    label: "Visão Geral",
-    description: "Acesso a dashboards e relatórios",
-    permissions: [
-      { value: "dashboard_view", label: "Ver Dashboard" },
-      { value: "reports_view", label: "Ver Relatórios" },
-    ],
-  },
-  {
-    label: "PDV e Pedidos",
-    description: "Operação de venda e atendimento",
-    permissions: [
-      { value: "pdv_access", label: "Acesso ao PDV" },
-      { value: "orders_view", label: "Ver Pedidos" },
-      { value: "orders_manage", label: "Gerenciar Pedidos" },
-    ],
-  },
-  {
-    label: "Produtos",
-    description: "Catálogo e cardápio",
-    permissions: [
-      { value: "products_view", label: "Ver Produtos" },
-      { value: "products_manage", label: "Gerenciar Produtos" },
-    ],
-  },
-  {
-    label: "WhatsApp / Atendimento",
-    description: "Conversas, instâncias e automação",
-    permissions: [
-      { value: "whatsapp_manage", label: "Gerenciar WhatsApp" },
-      { value: "whatsapp_manage_instances", label: "Gerenciar Instâncias" },
-      { value: "whatsapp_take_conversations", label: "Assumir Conversas" },
-      { value: "whatsapp_reply_as_human", label: "Responder como Humano" },
-      { value: "whatsapp_view_all_conversations", label: "Ver Todas as Conversas" },
-      { value: "whatsapp_configure_automation", label: "Configurar Automação" },
-    ],
-  },
-  {
-    label: "Configurações",
-    description: "Ajustes do estabelecimento e sistema",
-    permissions: [
-      { value: "settings_view", label: "Ver Configurações" },
-      { value: "settings_manage", label: "Gerenciar Configurações" },
-    ],
-  },
-];
 
 export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialogProps) => {
   const { createEmployee } = useEmployees();
@@ -79,7 +26,7 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
     employee_name: "",
     employee_email: "",
     password: "",
-    permissions: ROLE_PRESETS.find((p) => p.id === "cashier")?.permissions ?? [] as PermissionType[],
+    permissions: (ROLE_PRESETS.find((p) => p.id === "cashier")?.permissions ?? []) as PermissionType[],
   });
 
   const currentPreset = useMemo(
@@ -214,9 +161,9 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
               </div>
               <div className="space-y-4 rounded-md border p-3 bg-muted/30">
                 {PERMISSION_GROUPS.map((group) => (
-                  <div key={group.label}>
+                  <div key={group.title}>
                     <div className="mb-2">
-                      <p className="text-sm font-semibold">{group.label}</p>
+                      <p className="text-sm font-semibold">{group.title}</p>
                       <p className="text-xs text-muted-foreground">{group.description}</p>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-2 pl-1">

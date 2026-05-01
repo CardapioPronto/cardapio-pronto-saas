@@ -2156,6 +2156,7 @@ export type Database = {
         | "pdv_access"
         | "orders_view"
         | "orders_manage"
+        | "orders_metrics_view"
         | "products_view"
         | "products_manage"
         | "reports_view"
@@ -2302,6 +2303,7 @@ export const Constants = {
         "pdv_access",
         "orders_view",
         "orders_manage",
+        "orders_metrics_view",
         "products_view",
         "products_manage",
         "reports_view",

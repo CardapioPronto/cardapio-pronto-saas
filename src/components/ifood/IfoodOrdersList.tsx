@@ -11,7 +11,11 @@ import { IfoodOrder } from '@/services/ifoodService';
 import { getIfoodPendingOrders, loadIfoodConfig, updateIfoodOrderStatus } from '@/services/ifoodService';
 import { IfoodOrderBadge } from './IfoodOrderBadge';
 
-export function IfoodOrdersList() {
+interface IfoodOrdersListProps {
+  canManageOrders: boolean;
+}
+
+export function IfoodOrdersList({ canManageOrders }: IfoodOrdersListProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingOrders, setPendingOrders] = useState<IfoodOrder[]>([]);
   const config = loadIfoodConfig();
@@ -133,21 +137,25 @@ export function IfoodOrdersList() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => acceptOrder(order.id)}
-                      >
-                        Aceitar
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-red-500 text-red-500 hover:bg-red-500/10"
-                        onClick={() => rejectOrder(order.id)}
-                      >
-                        Rejeitar
-                      </Button>
+                      {canManageOrders && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => acceptOrder(order.id)}
+                          >
+                            Aceitar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-red-500 text-red-500 hover:bg-red-500/10"
+                            onClick={() => rejectOrder(order.id)}
+                          >
+                            Rejeitar
+                          </Button>
+                        </>
+                      )}
                       <Button 
                         variant="outline" 
                         size="sm"

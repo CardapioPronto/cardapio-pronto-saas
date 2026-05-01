@@ -14,6 +14,7 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
 import {
   HistoricoPedidosFiltros,
@@ -34,7 +35,10 @@ import { supabase } from "@/lib/supabase";
 
 const Pedidos = () => {
   const { user } = useCurrentUser();
+  const { hasPermission } = usePermissionsV2();
   const restaurantId = user?.restaurant_id || "";
+  const canViewFinancials = hasPermission("orders_metrics_view");
+  const canManageOrders = hasPermission("orders_manage");
   
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidoDetalhes, setPedidoDetalhes] = useState<Pedido | null>(null);
@@ -177,7 +181,7 @@ const Pedidos = () => {
               audio.play().catch(() => undefined);
 
               toast.success('Novo pedido recebido!', {
-                description: `Total: R$ ${Number(novoPedido.total || 0).toFixed(2)}`,
+                description: canViewFinancials ? `Total: R$ ${Number(novoPedido.total || 0).toFixed(2)}` : undefined,
                 duration: 5000
               });
             } else if (payload.eventType === 'UPDATE') {
@@ -223,7 +227,7 @@ const Pedidos = () => {
         subscriptionRef.current = null;
       }
     };
-  }, [restaurantId, carregarPedidos]);
+  }, [restaurantId, carregarPedidos, canViewFinancials]);
   
   // ✅ Auto-refresh a cada 30 segundos (fallback)
   useEffect(() => {
@@ -241,6 +245,11 @@ const Pedidos = () => {
     id: number | string, 
     novoStatus: PedidoStatus
   ) => {
+    if (!canManageOrders) {
+      toast.error("Você não tem permissão para gerenciar pedidos");
+      return;
+    }
+
     try {
       const result = await alterarStatusPedido(String(id), novoStatus);
       if (result.success) {
@@ -313,46 +322,48 @@ const Pedidos = () => {
   return (
     <DashboardLayout title="Pedidos">
       {/* Lista de pedidos do iFood */}
-      <IfoodOrdersList />
+      <IfoodOrdersList canManageOrders={canManageOrders} />
 
-      <div className="mb-4 grid gap-3 md:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Receipt className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Pedidos</p>
-              <p className="text-lg font-semibold">{resumo.totalPedidos}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <CalendarDays className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Vendido</p>
-              <p className="text-lg font-semibold">{formatCurrency(resumo.totalVendido)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Abertos</p>
-              <p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <XCircle className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">Cancelados</p>
-              <p className="text-lg font-semibold">{resumo.cancelados}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {canViewFinancials && (
+        <div className="mb-4 grid gap-3 md:grid-cols-4">
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Receipt className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Pedidos</p>
+                <p className="text-lg font-semibold">{resumo.totalPedidos}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <CalendarDays className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Vendido</p>
+                <p className="text-lg font-semibold">{formatCurrency(resumo.totalVendido)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Abertos</p>
+                <p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <XCircle className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Cancelados</p>
+                <p className="text-lg font-semibold">{resumo.cancelados}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       
       <Card>
         <CardHeader className="space-y-4">
@@ -521,19 +532,25 @@ const Pedidos = () => {
                                 <div>
                                   <h4 className="text-sm font-medium mb-2">Itens do Pedido</h4>
                                   <div className="border rounded-md divide-y">
-                                    {pedidoDetalhes.itensPedido.map((item, index) => (
-                                      <div key={index} className="flex justify-between py-2 px-3">
-                                        <div className="flex-1">
-                                          <span className="font-medium">{item.quantidade}x</span> {item.produto.name}
-                                          {item.observacao && (
-                                            <p className="text-xs text-muted-foreground">Obs: {item.observacao}</p>
-                                          )}
+                                    {pedidoDetalhes.itensPedido.length > 0 ? (
+                                      pedidoDetalhes.itensPedido.map((item, index) => (
+                                        <div key={index} className="flex justify-between gap-3 py-2 px-3">
+                                          <div className="min-w-0 flex-1">
+                                            <span className="font-medium">{item.quantidade}x</span> {item.produto.name}
+                                            {item.observacao && (
+                                              <p className="text-xs text-muted-foreground">Obs: {item.observacao}</p>
+                                            )}
+                                          </div>
+                                          <div className="shrink-0 text-right">
+                                            R$ {(item.produto.price * item.quantidade).toFixed(2)}
+                                          </div>
                                         </div>
-                                        <div className="text-right">
-                                          R$ {(item.produto.price * item.quantidade).toFixed(2)}
-                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="py-2 px-3 text-sm text-muted-foreground">
+                                        Nenhum item encontrado para este pedido.
                                       </div>
-                                    ))}
+                                    )}
                                     <div className="flex justify-between py-2 px-3 font-bold">
                                       <div>Total</div>
                                       <div>R$ {pedidoDetalhes.total.toFixed(2)}</div>
@@ -541,7 +558,7 @@ const Pedidos = () => {
                                   </div>
                                 </div>
                                 
-                                {pedidoDetalhes.status !== "finalizado" && pedidoDetalhes.status !== "cancelado" && (
+                                {canManageOrders && pedidoDetalhes.status !== "finalizado" && pedidoDetalhes.status !== "cancelado" && (
                                   <div>
                                     <h4 className="text-sm font-medium mb-2">Atualizar status</h4>
                                     <div className="flex gap-2">

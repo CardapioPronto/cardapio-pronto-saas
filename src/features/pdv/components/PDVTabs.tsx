@@ -7,6 +7,7 @@ interface PDVTabsProps {
   tipoPedido: "mesa" | "balcao";
   onChangeTipoPedido: (value: "mesa" | "balcao") => void;
   showPedidoTabs: boolean;
+  canViewHistory: boolean;
 }
 
 export const PDVTabs = ({
@@ -14,7 +15,8 @@ export const PDVTabs = ({
   onChangeVisualizacao,
   tipoPedido,
   onChangeTipoPedido,
-  showPedidoTabs
+  showPedidoTabs,
+  canViewHistory,
 }: PDVTabsProps) => {
   return (
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -22,7 +24,7 @@ export const PDVTabs = ({
         <Tabs value={visualizacaoAtiva} onValueChange={(v) => onChangeVisualizacao(v as "novo" | "historico")}>
           <TabsList>
             <TabsTrigger value="novo">Novo Pedido</TabsTrigger>
-            <TabsTrigger value="historico">Histórico</TabsTrigger>
+            {canViewHistory && <TabsTrigger value="historico">Histórico</TabsTrigger>}
           </TabsList>
         </Tabs>
       </div>

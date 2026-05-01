@@ -1,45 +1,45 @@
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
-import { Employee, EmployeeWithPermissions, PermissionType } from "@/types/employee";
+import { Database } from "@/integrations/supabase/types";
+import { Employee, EmployeePermission, EmployeeWithPermissions, PermissionType } from "@/types/employee";
 import { toast } from "sonner";
+
+type EmployeeWithPermissionRows = Employee & {
+  employee_permissions: Pick<EmployeePermission, "permission">[] | null;
+};
+
+type CreateEmployeeResult = {
+  success?: boolean;
+  error?: string;
+};
+
+type EmployeePermissionInsert = Database["public"]["Tables"]["employee_permissions"]["Insert"];
 
 export const useEmployees = () => {
   const { user } = useCurrentUser();
   const [employees, setEmployees] = useState<EmployeeWithPermissions[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     if (!user?.restaurant_id) return;
 
     setLoading(true);
     try {
-      // Buscar funcionários
-      const { data: employeesData, error: employeesError } = await supabase
+      const { data, error } = await supabase
         .from('employees')
-        .select('*')
+        .select('*, employee_permissions(permission)')
         .eq('restaurant_id', user.restaurant_id)
         .order('created_at', { ascending: false });
 
-      if (employeesError) throw employeesError;
+      if (error) throw error;
 
-      // Buscar permissões para cada funcionário
-      const employeesWithPermissions: EmployeeWithPermissions[] = [];
-      
-      for (const employee of employeesData || []) {
-        const { data: permissionsData, error: permissionsError } = await supabase
-          .from('employee_permissions')
-          .select('permission')
-          .eq('employee_id', employee.id);
-
-        if (permissionsError) throw permissionsError;
-
-        employeesWithPermissions.push({
-          ...employee,
-          permissions: permissionsData?.map(p => p.permission) || []
-        });
-      }
+      const employeesData = (data ?? []) as EmployeeWithPermissionRows[];
+      const employeesWithPermissions = employeesData.map(({ employee_permissions, ...employee }) => ({
+        ...employee,
+        permissions: employee_permissions?.map((permissionRow) => permissionRow.permission) ?? [],
+      }));
 
       setEmployees(employeesWithPermissions);
     } catch (error) {
@@ -48,7 +48,7 @@ export const useEmployees = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.restaurant_id]);
 
   const createEmployee = async (employeeData: {
     employee_name: string;
@@ -61,7 +61,7 @@ export const useEmployees = () => {
 
     try {
       // Usar Edge Function para criar funcionário
-      const { data: result, error } = await supabase.functions.invoke('create-employee', {
+      const { data: result, error } = await supabase.functions.invoke<CreateEmployeeResult>('create-employee', {
         body: {
           employee_name: employeeData.employee_name,
           employee_email: employeeData.employee_email,
@@ -83,8 +83,8 @@ export const useEmployees = () => {
         throw error;
       }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erro desconhecido ao criar funcionário');
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro desconhecido ao criar funcionário');
       }
 
       toast.success('Funcionário criado com sucesso!');
@@ -111,9 +111,9 @@ export const useEmployees = () => {
 
       // Adicionar novas permissões
       if (permissions.length > 0) {
-        const permissionsToInsert = permissions.map(permission => ({
+        const permissionsToInsert: EmployeePermissionInsert[] = permissions.map((permission) => ({
           employee_id: employeeId,
-          permission: permission as any, // cast para alinhar com enum do banco até os tipos serem atualizados
+          permission,
           granted_by: user.id
         }));
 
@@ -135,11 +135,14 @@ export const useEmployees = () => {
   };
 
   const toggleEmployeeActive = async (employeeId: string, isActive: boolean) => {
+    if (!user?.restaurant_id) return { success: false };
+
     try {
       const { error } = await supabase
         .from('employees')
         .update({ is_active: isActive })
-        .eq('id', employeeId);
+        .eq('id', employeeId)
+        .eq('restaurant_id', user.restaurant_id);
 
       if (error) throw error;
 
@@ -153,11 +156,47 @@ export const useEmployees = () => {
     }
   };
 
+  const updateEmployeeProfile = async (employee: EmployeeWithPermissions, employeeName: string) => {
+    if (!user?.restaurant_id) return { success: false };
+
+    const trimmedName = employeeName.trim();
+    if (!trimmedName) {
+      toast.error('Informe o nome do funcionário');
+      return { success: false };
+    }
+
+    try {
+      const { error: employeeError } = await supabase
+        .from('employees')
+        .update({ employee_name: trimmedName })
+        .eq('id', employee.id)
+        .eq('restaurant_id', user.restaurant_id);
+
+      if (employeeError) throw employeeError;
+
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ name: trimmedName })
+        .eq('id', employee.user_id)
+        .eq('restaurant_id', user.restaurant_id);
+
+      if (userError) throw userError;
+
+      toast.success('Dados do funcionário atualizados com sucesso!');
+      await fetchEmployees();
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao atualizar funcionário:', error);
+      toast.error('Erro ao atualizar dados do funcionário');
+      return { success: false };
+    }
+  };
+
   useEffect(() => {
     if (user?.restaurant_id) {
-      fetchEmployees();
+      void fetchEmployees();
     }
-  }, [user?.restaurant_id]);
+  }, [fetchEmployees, user?.restaurant_id]);
 
   return {
     employees,
@@ -165,6 +204,7 @@ export const useEmployees = () => {
     createEmployee,
     updateEmployeePermissions,
     toggleEmployeeActive,
+    updateEmployeeProfile,
     refetch: fetchEmployees
   };
 };
