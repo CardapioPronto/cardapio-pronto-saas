@@ -8,14 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCategorias } from "@/hooks/useCategorias";
+import { Category } from "@/types";
 
 interface ProdutosFiltroProps {
   filtro: string;
   categoriaFiltrada: string | null;
   onFiltroChange: (filtro: string) => void;
   onCategoriaChange: (categoria: string | null) => void;
-  restaurantId: string;
+  categorias: Category[];
+  loadingCategorias?: boolean;
 }
 
 export const ProdutosFiltro = ({
@@ -23,10 +24,9 @@ export const ProdutosFiltro = ({
   categoriaFiltrada,
   onFiltroChange,
   onCategoriaChange,
-  restaurantId,
+  categorias,
+  loadingCategorias = false,
 }: ProdutosFiltroProps) => {
-  const { categorias } = useCategorias();
-
   return (
     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
       <div className="relative w-full sm:w-64">
@@ -42,6 +42,7 @@ export const ProdutosFiltro = ({
       <Select
         value={categoriaFiltrada || "all"}
         onValueChange={(value) => onCategoriaChange(value === "all" ? null : value)}
+        disabled={loadingCategorias}
       >
         <SelectTrigger className="w-full sm:w-40">
           <SelectValue placeholder="Categoria" />

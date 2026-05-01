@@ -6,36 +6,44 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Product } from "@/types";
 
 interface DeleteProdutoDialogProps {
   produto: Product;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean> | boolean;
+  onClose?: () => void;
+  isDeleting?: boolean;
 }
 
 export const DeleteProdutoDialog = ({
   produto,
   onDelete,
+  onClose,
+  isDeleting = false,
 }: DeleteProdutoDialogProps) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const busy = deleting || isDeleting;
 
-  const handleDelete = () => {
-    onDelete(produto.id);
+  const handleClose = () => {
     setOpen(false);
+    onClose?.();
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const success = await onDelete(produto.id);
+    setDeleting(false);
+    if (success) {
+      handleClose();
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-red-500">
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Excluir Produto</DialogTitle>
@@ -45,11 +53,11 @@ export const DeleteProdutoDialog = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={handleClose} disabled={busy}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={handleDelete}>
-            Excluir
+          <Button variant="destructive" onClick={handleDelete} disabled={busy}>
+            {busy ? "Excluindo..." : "Excluir"}
           </Button>
         </DialogFooter>
       </DialogContent>

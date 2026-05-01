@@ -13,36 +13,59 @@ import {
 } from "@/components/ui/dialog";
 import { ProdutoForm } from "./ProdutoForm";
 import { useCategorias } from "@/hooks/useCategorias";
+import { useImageUpload } from "@/hooks/useImageUpload";
 
 interface EditProdutoDialogProps {
   produto: Product;
   onSave: (produto: Product) => Promise<boolean> | boolean;
   restaurantId: string;
+  onClose?: () => void;
+  isSaving?: boolean;
 }
 
 export const EditProdutoDialog = ({
   produto,
   onSave,
   restaurantId,
+  onClose,
+  isSaving = false,
 }: EditProdutoDialogProps) => {
   const [isOpen, setIsOpen] = useState(true); // Sempre aberto quando o componente existe
   const [produtoEditando, setProdutoEditando] = useState<Product>(produto);
+  const { deleteImage } = useImageUpload(restaurantId);
 
   const handleSave = async () => {
     const success = await onSave(produtoEditando);
     if (success) {
       setIsOpen(false);
+      onClose?.();
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    if (
+      produtoEditando.image_storage_path &&
+      produtoEditando.image_storage_path !== produto.image_storage_path
+    ) {
+      await deleteImage(produtoEditando.image_storage_path);
+    }
     setIsOpen(false);
+    onClose?.();
   };
 
   const { categorias, loading } = useCategorias();
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (open) {
+          setIsOpen(true);
+        } else {
+          void handleCancel();
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
@@ -63,6 +86,7 @@ export const EditProdutoDialog = ({
           restaurantId={restaurantId}
           categories={categorias}
           loadingCategories={loading}
+          saving={isSaving}
         />
       </DialogContent>
     </Dialog>

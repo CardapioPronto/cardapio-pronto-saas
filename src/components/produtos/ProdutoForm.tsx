@@ -1,5 +1,4 @@
 
-import { useState, useEffect } from "react";
 import { Product, Category } from "@/types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,7 @@ interface ProdutoFormProps {
   restaurantId: string;
   categories: Category[];
   loadingCategories: boolean;
+  saving?: boolean;
 }
 
 export const ProdutoForm = ({
@@ -35,18 +35,8 @@ export const ProdutoForm = ({
   restaurantId,
   categories,
   loadingCategories,
+  saving = false,
 }: ProdutoFormProps) => {
-  const handleCategoryChange = (value: string) => {
-    onChangeProduto({
-      ...produto,
-      category: {
-        id: value,
-        name: value,
-        restaurant_id: restaurantId,
-      },
-    });
-  };
-
   return (
     <>
       <div className="grid gap-4 py-4">
@@ -77,10 +67,11 @@ export const ProdutoForm = ({
 
         <ImageUpload
           currentImageUrl={produto.image_url}
-          onImageChange={(imageUrl) =>
+          onImageChange={({ imageUrl, storagePath }) =>
             onChangeProduto({
               ...produto,
               image_url: imageUrl || undefined,
+              image_storage_path: storagePath,
             })
           }
           restaurantId={restaurantId}
@@ -93,11 +84,12 @@ export const ProdutoForm = ({
               id="preco"
               type="number"
               step="0.01"
-              value={produto.price || 0}
+              min="0.01"
+              value={produto.price ?? ""}
               onChange={(e) =>
                 onChangeProduto({
                   ...produto,
-                  price: parseFloat(e.target.value),
+                  price: e.target.value === "" ? undefined : parseFloat(e.target.value),
                 })
               }
             />
@@ -111,7 +103,7 @@ export const ProdutoForm = ({
               </div>
             ) : (
               <Select
-                value={produto.category?.id || "default-category"}
+                value={produto.category?.id}
                 onValueChange={(value) => {
                   const selectedCategory = categories.find(
                     (cat) => cat.id === value
@@ -124,12 +116,12 @@ export const ProdutoForm = ({
                   }
                 }}
               >
-                <SelectTrigger id="categoria" disabled={loadingCategories}>
+                <SelectTrigger id="categoria" disabled={loadingCategories || categories.length === 0}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id || "default-category"}>
+                    <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
                     </SelectItem>
                   ))}
@@ -144,7 +136,7 @@ export const ProdutoForm = ({
             type="checkbox"
             id="disponivel"
             title="Disponível para venda"
-            checked={produto.available}
+            checked={produto.available ?? true}
             onChange={(e) =>
               onChangeProduto({
                 ...produto,
@@ -157,11 +149,11 @@ export const ProdutoForm = ({
       </div>
 
       <div className="flex justify-end gap-3 mt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancelar
         </Button>
-        <Button type="button" onClick={onSave}>
-          {saveButtonText}
+        <Button type="button" onClick={onSave} disabled={saving}>
+          {saving ? "Salvando..." : saveButtonText}
         </Button>
       </div>
     </>

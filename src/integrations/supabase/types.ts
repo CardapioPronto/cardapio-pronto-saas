@@ -1333,37 +1333,52 @@ export type Database = {
           available: boolean
           category_id: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
+          image_storage_path: string | null
+          image_uploaded_at: string | null
+          image_uploaded_by: string | null
           image_url: string | null
           name: string
           price: number
           restaurant_id: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           available?: boolean
           category_id?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
+          image_storage_path?: string | null
+          image_uploaded_at?: string | null
+          image_uploaded_by?: string | null
           image_url?: string | null
           name: string
           price: number
           restaurant_id: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           available?: boolean
           category_id?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
+          image_storage_path?: string | null
+          image_uploaded_at?: string | null
+          image_uploaded_by?: string | null
           image_url?: string | null
           name?: string
           price?: number
           restaurant_id?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {

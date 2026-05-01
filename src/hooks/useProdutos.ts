@@ -1,71 +1,288 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Product } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatProductFromSupabase } from "@/utils/formatProductFromSupabase";
 import { toast } from "@/components/ui/sonner";
 
-export const useProdutos = (restaurantId: string) => {
+export type ProdutosTab = "todos" | "disponiveis" | "indisponiveis" | "sem-imagem" | "sem-categoria";
+export type ProdutosSortKey = "created_at" | "name" | "price" | "category" | "available";
+export type ProdutosSortDirection = "asc" | "desc";
+
+export interface ProdutosIndicadores {
+  total: number;
+  disponiveis: number;
+  indisponiveis: number;
+  semImagem: number;
+}
+
+interface UseProdutosOptions {
+  busca?: string;
+  categoriaId?: string | null;
+  tab?: ProdutosTab;
+  pagina?: number;
+  itensPorPagina?: number;
+  sortKey?: ProdutosSortKey;
+  sortDirection?: ProdutosSortDirection;
+}
+
+const PRODUCT_SELECT = `
+  id,
+  name,
+  description,
+  price,
+  available,
+  image_url,
+  image_storage_path,
+  image_uploaded_by,
+  image_uploaded_at,
+  created_by,
+  updated_by,
+  restaurant_id,
+  created_at,
+  updated_at,
+  category:categories!products_category_id_fkey (
+    id,
+    name,
+    restaurant_id
+  )
+`;
+
+const LEGACY_PRODUCT_SELECT = `
+  id,
+  name,
+  description,
+  price,
+  available,
+  image_url,
+  restaurant_id,
+  created_at,
+  updated_at,
+  category:categories!products_category_id_fkey (
+    id,
+    name,
+    restaurant_id
+  )
+`;
+
+const isMissingColumnError = (error: unknown) =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  (error as { code?: string }).code === "42703";
+
+const getCurrentUserId = async () => {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+};
+
+const getStoragePathFromUrl = (imageUrl?: string | null, storagePath?: string | null) => {
+  if (storagePath) return storagePath;
+  if (!imageUrl) return null;
+
+  try {
+    const urlObj = new URL(imageUrl);
+    const pathParts = urlObj.pathname.split("/");
+    const bucketIndex = pathParts.findIndex((part) => part === "product-images");
+    if (bucketIndex >= 0) {
+      return pathParts.slice(bucketIndex + 1).join("/");
+    }
+    return pathParts.slice(-2).join("/");
+  } catch {
+    return null;
+  }
+};
+
+const removeProductImage = async (imageUrl?: string | null, storagePath?: string | null) => {
+  const path = getStoragePathFromUrl(imageUrl, storagePath);
+  if (!path) return;
+
+  const { error } = await supabase.storage.from("product-images").remove([path]);
+  if (error) {
+    console.error("Erro ao remover imagem do produto:", error);
+  }
+};
+
+const sanitizeSearch = (value: string) =>
+  value.replace(/[%_,()]/g, " ").trim();
+
+const withProductAuditFields = <T extends Record<string, unknown>>(
+  payload: T,
+  auditFieldsAvailable: boolean,
+) => {
+  if (auditFieldsAvailable) return payload;
+
+  const {
+    image_storage_path: _imageStoragePath,
+    image_uploaded_by: _imageUploadedBy,
+    image_uploaded_at: _imageUploadedAt,
+    created_by: _createdBy,
+    updated_by: _updatedBy,
+    ...legacyPayload
+  } = payload;
+
+  return legacyPayload;
+};
+
+export const useProdutos = (restaurantId: string, options: UseProdutosOptions = {}) => {
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [indicadores, setIndicadores] = useState<ProdutosIndicadores>({
+    total: 0,
+    disponiveis: 0,
+    indisponiveis: 0,
+    semImagem: 0,
+  });
+  const productAuditColumnsAvailableRef = useRef(true);
   
   // ✅ Estados de loading independentes por operação
   const [operationsLoading, setOperationsLoading] = useState({
     fetching: false,
     adding: false,
     updating: false,
-    deleting: false
+    deleting: false,
+    bulkUpdating: false
   });
 
+  const applyCommonFilters = useCallback((query: any) => {
+    const busca = sanitizeSearch(options.busca || "");
+    let nextQuery = query.eq("restaurant_id", restaurantId);
+
+    if (busca) {
+      nextQuery = nextQuery.or(`name.ilike.%${busca}%,description.ilike.%${busca}%`);
+    }
+
+    if (options.categoriaId) {
+      nextQuery = nextQuery.eq("category_id", options.categoriaId);
+    }
+
+    return nextQuery;
+  }, [restaurantId, options.busca, options.categoriaId]);
+
+  const fetchIndicadores = useCallback(async () => {
+    if (!restaurantId) {
+      setIndicadores({ total: 0, disponiveis: 0, indisponiveis: 0, semImagem: 0 });
+      return;
+    }
+
+    const makeCountQuery = () => applyCommonFilters(
+      supabase.from("products").select("id", { count: "exact", head: true })
+    );
+
+    const [
+      totalResult,
+      disponiveisResult,
+      indisponiveisResult,
+      semImagemResult,
+    ] = await Promise.all([
+      makeCountQuery(),
+      makeCountQuery().eq("available", true),
+      makeCountQuery().eq("available", false),
+      makeCountQuery().or("image_url.is.null,image_url.eq."),
+    ]);
+
+    const countError = totalResult.error || disponiveisResult.error || indisponiveisResult.error || semImagemResult.error;
+    if (countError) {
+      console.error("Erro ao buscar indicadores de produtos:", countError);
+      return;
+    }
+
+    setIndicadores({
+      total: totalResult.count || 0,
+      disponiveis: disponiveisResult.count || 0,
+      indisponiveis: indisponiveisResult.count || 0,
+      semImagem: semImagemResult.count || 0,
+    });
+  }, [restaurantId, applyCommonFilters]);
+
   const fetchProdutos = useCallback(async () => {
+    setLoading(true);
     setOperationsLoading(prev => ({ ...prev, fetching: true }));
 
     if (!restaurantId) {
       setProdutos([]);
+      setTotal(0);
       setLoading(false);
       setOperationsLoading(prev => ({ ...prev, fetching: false }));
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .select(
-          `
-          id,
-          name,
-          description,
-          price,
-          available,
-          image_url,
-          restaurant_id,
-          category:categories!products_category_id_fkey (
-            id,
-            name,
-            restaurant_id
-          )
-        `
-        )
-        .eq("restaurant_id", restaurantId)
-        .order('created_at', { ascending: false }); // ✅ Ordenar por mais recentes
+      const pagina = Math.max(1, options.pagina || 1);
+      const itensPorPagina = Math.max(1, options.itensPorPagina || 10);
+      const from = (pagina - 1) * itensPorPagina;
+      const to = from + itensPorPagina - 1;
+
+      const buildQuery = (selectClause: string) => {
+        let nextQuery = supabase
+          .from("products")
+          .select(selectClause, { count: "exact" });
+
+        nextQuery = applyCommonFilters(nextQuery);
+        if (options.tab === "disponiveis") {
+          nextQuery = nextQuery.eq("available", true);
+        } else if (options.tab === "indisponiveis") {
+          nextQuery = nextQuery.eq("available", false);
+        } else if (options.tab === "sem-imagem") {
+          nextQuery = nextQuery.or("image_url.is.null,image_url.eq.");
+        } else if (options.tab === "sem-categoria") {
+          nextQuery = nextQuery.is("category_id", null);
+        }
+
+        const sortKey = options.sortKey || "created_at";
+        const sortDirection = options.sortDirection || "desc";
+        const ascending = sortDirection === "asc";
+
+        if (sortKey === "category") {
+          nextQuery = nextQuery.order("name", { foreignTable: "categories", ascending, nullsFirst: false });
+        } else {
+          nextQuery = nextQuery.order(sortKey, { ascending, nullsFirst: false });
+        }
+
+        return nextQuery.range(from, to);
+      };
+
+      let { data, error, count } = await buildQuery(
+        productAuditColumnsAvailableRef.current ? PRODUCT_SELECT : LEGACY_PRODUCT_SELECT
+      );
+
+      if (error && isMissingColumnError(error)) {
+        productAuditColumnsAvailableRef.current = false;
+        ({ data, error, count } = await buildQuery(LEGACY_PRODUCT_SELECT));
+      }
 
       if (error) {
         console.error("Erro ao buscar produtos:", error);
         toast.error("Erro ao carregar produtos");
         setProdutos([]);
+        setTotal(0);
       } else if (data) {
         setProdutos(formatProductFromSupabase(data));
+        setTotal(count || 0);
       } else {
         setProdutos([]);
+        setTotal(0);
       }
+      await fetchIndicadores();
     } catch (err) {
       console.error("Erro ao buscar produtos:", err);
       toast.error("Erro inesperado ao carregar produtos");
       setProdutos([]);
+      setTotal(0);
     } finally {
       setLoading(false);
       setOperationsLoading(prev => ({ ...prev, fetching: false }));
     }
-  }, [restaurantId]);
+  }, [
+    restaurantId,
+    options.tab,
+    options.pagina,
+    options.itensPorPagina,
+    options.sortKey,
+    options.sortDirection,
+    applyCommonFilters,
+    fetchIndicadores,
+  ]);
 
   const adicionarProduto = async (novoProduto: Partial<Product>) => {
     // Validações
@@ -84,6 +301,10 @@ export const useProdutos = (restaurantId: string) => {
     } else if (novoProduto.price <= 0) {
       errors.push("Preço deve ser maior que zero");
     }
+
+    if (!novoProduto.category?.id) {
+      errors.push("Categoria do produto é obrigatória");
+    }
     
     if (errors.length > 0) {
       errors.forEach(error => toast.error(error));
@@ -92,32 +313,33 @@ export const useProdutos = (restaurantId: string) => {
 
     try {
       setOperationsLoading(prev => ({ ...prev, adding: true })); // ✅ Loading específico
-      
-      const { data, error } = await supabase
+      const userId = await getCurrentUserId();
+
+      const payload = {
+        name: novoProduto.name!.trim(),
+        description: novoProduto.description?.trim() ?? "",
+        price: Number(novoProduto.price),
+        category_id: novoProduto.category?.id,
+        available: novoProduto.available ?? true,
+        image_url: novoProduto.image_url || null,
+        image_storage_path: novoProduto.image_storage_path || null,
+        image_uploaded_by: novoProduto.image_url ? userId : null,
+        image_uploaded_at: novoProduto.image_url ? new Date().toISOString() : null,
+        created_by: userId,
+        updated_by: userId,
+        restaurant_id: restaurantId
+      };
+
+      let { error } = await supabase
         .from("products")
-        .insert({
-          name: novoProduto.name!.trim(),
-          description: novoProduto.description?.trim() ?? "",
-          price: Number(novoProduto.price),
-          category_id: novoProduto.category?.id,
-          available: novoProduto.available ?? true,
-          image_url: novoProduto.image_url || null,
-          restaurant_id: restaurantId
-        })
-        .select(`
-          id,
-          name,
-          description,
-          price,
-          available,
-          image_url,
-          restaurant_id,
-          category:categories!products_category_id_fkey (
-            id,
-            name,
-            restaurant_id
-          )
-        `);
+        .insert(withProductAuditFields(payload, productAuditColumnsAvailableRef.current));
+
+      if (error && isMissingColumnError(error)) {
+        productAuditColumnsAvailableRef.current = false;
+        ({ error } = await supabase
+          .from("products")
+          .insert(withProductAuditFields(payload, false)));
+      }
       
       if (error) {
         console.error("Erro ao adicionar produto:", error);
@@ -133,8 +355,8 @@ export const useProdutos = (restaurantId: string) => {
         return false;
       }
       
-      const novosProdutos = formatProductFromSupabase(data);
-      setProdutos((prev) => [novosProdutos[0], ...prev]); // ✅ Adicionar no início
+      await fetchProdutos();
+      await fetchIndicadores();
       toast.success("Produto adicionado com sucesso!");
       return true;
       
@@ -164,6 +386,10 @@ export const useProdutos = (restaurantId: string) => {
     } else if (produtoAtualizado.price <= 0) {
       errors.push("Preço deve ser maior que zero");
     }
+
+    if (!produtoAtualizado.category?.id) {
+      errors.push("Categoria do produto é obrigatória");
+    }
     
     if (errors.length > 0) {
       errors.forEach(error => toast.error(error));
@@ -172,19 +398,38 @@ export const useProdutos = (restaurantId: string) => {
 
     try {
       setOperationsLoading(prev => ({ ...prev, updating: true })); // ✅ Loading específico
-      
-      const { error } = await supabase
+      const userId = await getCurrentUserId();
+      const produtoAnterior = produtos.find((p) => p.id === produtoAtualizado.id);
+      const imageChanged = produtoAnterior?.image_url !== produtoAtualizado.image_url;
+
+      const payload = {
+        name: produtoAtualizado.name.trim(),
+        description: produtoAtualizado.description.trim(),
+        price: Number(produtoAtualizado.price),
+        category_id: produtoAtualizado.category?.id,
+        available: produtoAtualizado.available,
+        image_url: produtoAtualizado.image_url || null,
+        image_storage_path: produtoAtualizado.image_storage_path || null,
+        image_uploaded_by: imageChanged && produtoAtualizado.image_url ? userId : produtoAtualizado.image_uploaded_by || null,
+        image_uploaded_at: imageChanged && produtoAtualizado.image_url ? new Date().toISOString() : produtoAtualizado.image_uploaded_at || null,
+        updated_by: userId,
+        updated_at: new Date().toISOString()
+      };
+
+      let { error } = await supabase
         .from("products")
-        .update({
-          name: produtoAtualizado.name.trim(),
-          description: produtoAtualizado.description.trim(),
-          price: Number(produtoAtualizado.price),
-          category_id: produtoAtualizado.category?.id,
-          available: produtoAtualizado.available,
-          image_url: produtoAtualizado.image_url || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", produtoAtualizado.id);
+        .update(withProductAuditFields(payload, productAuditColumnsAvailableRef.current))
+        .eq("id", produtoAtualizado.id)
+        .eq("restaurant_id", restaurantId);
+
+      if (error && isMissingColumnError(error)) {
+        productAuditColumnsAvailableRef.current = false;
+        ({ error } = await supabase
+          .from("products")
+          .update(withProductAuditFields(payload, false))
+          .eq("id", produtoAtualizado.id)
+          .eq("restaurant_id", restaurantId));
+      }
       
       if (error) {
         console.error("Erro ao atualizar produto:", error);
@@ -200,9 +445,12 @@ export const useProdutos = (restaurantId: string) => {
         return false;
       }
       
-      setProdutos(
-        produtos.map((p) => (p.id === produtoAtualizado.id ? produtoAtualizado : p))
-      );
+      if (imageChanged && produtoAnterior?.image_url) {
+        await removeProductImage(produtoAnterior.image_url, produtoAnterior.image_storage_path);
+      }
+
+      await fetchProdutos();
+      await fetchIndicadores();
       toast.success("Produto atualizado com sucesso!");
       return true;
       
@@ -218,11 +466,13 @@ export const useProdutos = (restaurantId: string) => {
   const removerProduto = async (id: string) => {
     try {
       setOperationsLoading(prev => ({ ...prev, deleting: true })); // ✅ Loading específico
+      const produto = produtos.find((p) => p.id === id);
       
       const { error } = await supabase
         .from("products")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("restaurant_id", restaurantId);
       
       if (error) {
         console.error("Erro ao remover produto:", error);
@@ -237,7 +487,12 @@ export const useProdutos = (restaurantId: string) => {
         return false;
       }
       
-      setProdutos(produtos.filter((p) => p.id !== id));
+      if (produto?.image_url) {
+        await removeProductImage(produto.image_url, produto.image_storage_path);
+      }
+
+      await fetchProdutos();
+      await fetchIndicadores();
       toast.success("Produto removido com sucesso!");
       return true;
       
@@ -250,6 +505,58 @@ export const useProdutos = (restaurantId: string) => {
     }
   };
 
+  const atualizarProdutosEmLote = async (
+    ids: string[],
+    changes: { available?: boolean; category_id?: string | null }
+  ) => {
+    if (ids.length === 0) {
+      toast.error("Selecione ao menos um produto");
+      return false;
+    }
+
+    try {
+      setOperationsLoading(prev => ({ ...prev, bulkUpdating: true }));
+      const userId = await getCurrentUserId();
+      const payload = {
+        ...changes,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      };
+
+      let { error } = await supabase
+        .from("products")
+        .update(withProductAuditFields(payload, productAuditColumnsAvailableRef.current))
+        .eq("restaurant_id", restaurantId)
+        .in("id", ids);
+
+      if (error && isMissingColumnError(error)) {
+        productAuditColumnsAvailableRef.current = false;
+        ({ error } = await supabase
+          .from("products")
+          .update(withProductAuditFields(payload, false))
+          .eq("restaurant_id", restaurantId)
+          .in("id", ids));
+      }
+
+      if (error) {
+        console.error("Erro ao atualizar produtos em lote:", error);
+        toast.error("Erro ao atualizar produtos selecionados");
+        return false;
+      }
+
+      await fetchProdutos();
+      await fetchIndicadores();
+      toast.success(`${ids.length} produto(s) atualizado(s)`);
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar produtos em lote:", error);
+      toast.error("Erro inesperado ao atualizar produtos");
+      return false;
+    } finally {
+      setOperationsLoading(prev => ({ ...prev, bulkUpdating: false }));
+    }
+  };
+
   useEffect(() => {
     fetchProdutos();
   }, [restaurantId, fetchProdutos]);
@@ -257,14 +564,18 @@ export const useProdutos = (restaurantId: string) => {
   // ✅ Retornar estados de loading individuais
   return {
     produtos,
+    total,
+    indicadores,
     loading,
     isAdding: operationsLoading.adding,
     isUpdating: operationsLoading.updating,
     isDeleting: operationsLoading.deleting,
     isFetching: operationsLoading.fetching,
+    isBulkUpdating: operationsLoading.bulkUpdating,
     adicionarProduto,
     atualizarProduto,
     removerProduto,
+    atualizarProdutosEmLote,
     fetchProdutos
   };
 };

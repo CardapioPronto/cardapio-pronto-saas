@@ -2,13 +2,13 @@ import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, X, ImageIcon } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import produtoPadrao from '@/assets/produto-padrao.jpg';
 
 interface ImageUploadProps {
   currentImageUrl?: string;
-  onImageChange: (imageUrl: string | null) => void;
+  onImageChange: (image: { imageUrl: string | null; storagePath: string | null }) => void;
   restaurantId: string;
 }
 
@@ -19,7 +19,7 @@ export const ImageUpload = ({
 }: ImageUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
-  const { uploadImage, deleteImage, uploading } = useImageUpload(restaurantId);
+  const { uploadImage, uploading } = useImageUpload(restaurantId);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -30,11 +30,14 @@ export const ImageUpload = ({
     setPreviewUrl(objectUrl);
 
     // Upload file
-    const uploadedUrl = await uploadImage(file);
+    const uploadedImage = await uploadImage(file);
     
-    if (uploadedUrl) {
-      onImageChange(uploadedUrl);
-      setPreviewUrl(uploadedUrl);
+    if (uploadedImage) {
+      onImageChange({
+        imageUrl: uploadedImage.publicUrl,
+        storagePath: uploadedImage.path,
+      });
+      setPreviewUrl(uploadedImage.publicUrl);
     } else {
       // Reset preview on error
       setPreviewUrl(currentImageUrl || null);
@@ -49,11 +52,8 @@ export const ImageUpload = ({
     }
   };
 
-  const handleRemoveImage = async () => {
-    if (currentImageUrl && currentImageUrl !== produtoPadrao) {
-      await deleteImage(currentImageUrl);
-    }
-    onImageChange(null);
+  const handleRemoveImage = () => {
+    onImageChange({ imageUrl: null, storagePath: null });
     setPreviewUrl(null);
   };
 

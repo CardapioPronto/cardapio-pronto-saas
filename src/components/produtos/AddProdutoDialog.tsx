@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { Category, Product } from "@/types";
+import { useState } from "react";
+import { Product } from "@/types";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,56 +13,67 @@ import {
 } from "@/components/ui/dialog";
 import { ProdutoForm } from "./ProdutoForm";
 import { useCategorias } from "@/hooks/useCategorias";
+import { useImageUpload } from "@/hooks/useImageUpload";
 
 interface AddProdutoDialogProps {
-  onAddProduto: (produto: Partial<Product>) => void;
+  onAddProduto: (produto: Partial<Product>) => Promise<boolean>;
   restaurantId: string;
+  isSaving?: boolean;
 }
 
-export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialogProps) => {
+export const AddProdutoDialog = ({ onAddProduto, restaurantId, isSaving = false }: AddProdutoDialogProps) => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [novoProduto, setNovoProduto] = useState<Partial<Product>>({
     name: "",
     description: "",
-    price: 0,
-    category: {
-      id: "lanches",
-      name: "lanches",
-      restaurant_id: restaurantId
-    },
+    price: undefined,
+    category: null,
     available: true,
   });
   
-  const handleAddProduto = () => {
-    onAddProduto(novoProduto);
-    resetForm();
-    setIsOpen(false);
+  const { categorias, loading } = useCategorias();
+  const { deleteImage } = useImageUpload(restaurantId);
+
+  const handleAddProduto = async () => {
+    const success = await onAddProduto(novoProduto);
+    if (success) {
+      resetForm();
+      setIsOpen(false);
+    }
   };
   
   const resetForm = () => {
     setNovoProduto({
       name: "",
       description: "",
-      price: 0,
-      category: {
-        id: "lanches",
-        name: "lanches",
-        restaurant_id: restaurantId
-      },
+      price: undefined,
+      category: null,
+      image_url: undefined,
+      image_storage_path: null,
       available: true,
     });
   };
   
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    if (novoProduto.image_storage_path) {
+      await deleteImage(novoProduto.image_storage_path);
+    }
     resetForm();
     setIsOpen(false);
   };
 
-  const { categorias, loading } = useCategorias();
-  
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (open) {
+          setIsOpen(true);
+        } else {
+          void handleCancel();
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="bg-green hover:bg-green-dark text-white">
           <Plus className="h-4 w-4 mr-2" />
@@ -87,6 +98,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId }: AddProdutoDialo
           restaurantId={restaurantId}
           categories={categorias}
           loadingCategories={loading}
+          saving={isSaving}
         />
       </DialogContent>
     </Dialog>
