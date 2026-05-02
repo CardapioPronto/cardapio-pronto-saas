@@ -50,6 +50,9 @@ const emptyInfo: RestaurantInfoForm = {
   banner_url: null,
 };
 
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export const PersonalizacaoTab = () => {
   const { user, loading: userLoading } = useCurrentUser();
   const restaurantId = user?.restaurant_id ?? '';
@@ -62,7 +65,7 @@ export const PersonalizacaoTab = () => {
       if (!restaurantId) return null;
       const { data, error } = await supabase
         .from('restaurants')
-        .select('id, name, address, phone, phone_whatsapp, business_hours, category, logo_url, banner_url')
+        .select('id, name, address, phone, phone_whatsapp, business_hours, category, logo_url, banner_url, slug')
         .eq('id', restaurantId)
         .single();
       if (error) throw error;
@@ -124,8 +127,8 @@ export const PersonalizacaoTab = () => {
       const url = await menuThemeService.uploadRestaurantAsset(restaurantId, file, kind);
       setInfo(prev => ({ ...prev, [`${kind}_url`]: url }));
       toast({ title: 'Imagem enviada', description: 'Não esqueça de salvar as alterações.' });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Erro no upload', description: err?.message ?? 'Falha ao enviar' });
+    } catch (err: unknown) {
+      toast({ variant: 'destructive', title: 'Erro no upload', description: errorMessage(err, 'Falha ao enviar') });
     } finally {
       setUploading(null);
     }
@@ -150,8 +153,8 @@ export const PersonalizacaoTab = () => {
       queryClient.invalidateQueries({ queryKey: ['restaurant-personalization', restaurantId] });
       toast({ title: 'Sucesso', description: 'Informações do estabelecimento salvas.' });
     },
-    onError: (err: any) => {
-      toast({ variant: 'destructive', title: 'Erro', description: err?.message ?? 'Falha ao salvar' });
+    onError: (err: unknown) => {
+      toast({ variant: 'destructive', title: 'Erro', description: errorMessage(err, 'Falha ao salvar') });
     },
   });
 
@@ -164,8 +167,8 @@ export const PersonalizacaoTab = () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-config', restaurantId] });
       toast({ title: 'Sucesso', description: 'Configurações de entrega salvas.' });
     },
-    onError: (err: any) => {
-      toast({ variant: 'destructive', title: 'Erro', description: err?.message ?? 'Falha ao salvar' });
+    onError: (err: unknown) => {
+      toast({ variant: 'destructive', title: 'Erro', description: errorMessage(err, 'Falha ao salvar') });
     },
   });
 
@@ -489,7 +492,7 @@ export const PersonalizacaoTab = () => {
       </Card>
 
       {/* Slug do Cardápio */}
-      {restaurantId && <SlugEditor restaurantId={restaurantId} currentSlug={restaurant?.slug} />}
+      {restaurantId && <SlugEditor restaurantId={restaurantId} currentSlug={restaurant?.slug ?? undefined} />}
 
       {/* Horário de Funcionamento */}
       {restaurantId && <HoursManager restaurantId={restaurantId} />}

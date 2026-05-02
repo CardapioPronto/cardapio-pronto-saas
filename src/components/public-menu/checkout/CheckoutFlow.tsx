@@ -7,7 +7,7 @@ import {
   DeliveryAddressInput,
   FulfillmentType,
 } from '@/services/deliveryOrderService';
-import { ArrowLeft, Loader2, X, CheckCircle2, Bike, Store, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, Loader2, X, CheckCircle2, Bike, Store, UtensilsCrossed, TicketPercent } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -59,7 +59,15 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     ? ['local']
     : (dCfg?.payment_methods?.length ? dCfg.payment_methods : ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito']);
   const deliveryFee = needsAddress ? dCfg?.delivery_fee || 0 : 0;
-  const total = subtotal + deliveryFee;
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    title?: string;
+    discount: number;
+  } | null>(null);
+  const discountAmount = appliedCoupon?.discount || 0;
+  const total = Math.max(subtotal - discountAmount, 0) + deliveryFee;
 
   const firstDataStep = needsAddress ? 'address' : 'customer';
   const [step, setStep] = useState<'fulfillment' | 'customer' | 'address' | 'payment' | 'review' | 'success'>(
@@ -92,8 +100,13 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
 
   const moveBack = () => {
     if (step === 'fulfillment') onClose();
-    else if (step === 'customer') availableFulfillmentTypes.length > 1 ? setStep('fulfillment') : onClose();
-    else if (step === 'address') availableFulfillmentTypes.length > 1 ? setStep('fulfillment') : onClose();
+    else if (step === 'customer') {
+      if (availableFulfillmentTypes.length > 1) setStep('fulfillment');
+      else onClose();
+    } else if (step === 'address') {
+      if (availableFulfillmentTypes.length > 1) setStep('fulfillment');
+      else onClose();
+    }
     else if (step === 'payment') setStep(needsAddress ? 'address' : 'customer');
     else if (step === 'review') setStep('payment');
     else onClose();
@@ -105,6 +118,51 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
       ? ['local']
       : (dCfg?.payment_methods?.length ? dCfg.payment_methods : ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito']);
     setPayment(nextPaymentMethods[0] || 'pix');
+  };
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      toast({ title: 'Informe um cupom', variant: 'destructive' });
+      return;
+    }
+
+    setCouponLoading(true);
+    try {
+      const result = await deliveryOrderService.validateCoupon({
+        restaurant_id: data.restaurant.id,
+        code,
+        subtotal,
+      });
+
+      if (!result.valid) {
+        setAppliedCoupon(null);
+        toast({ title: 'Cupom inválido', description: result.message, variant: 'destructive' });
+        return;
+      }
+
+      setCouponCode(result.code || code);
+      setAppliedCoupon({
+        code: result.code || code,
+        title: result.title,
+        discount: Number(result.discount || 0),
+      });
+      toast({ title: 'Cupom aplicado', description: result.message });
+    } catch (error: unknown) {
+      setAppliedCoupon(null);
+      toast({
+        title: 'Erro ao validar cupom',
+        description: getErrorMessage(error, 'Tente novamente em instantes.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
   };
 
   const handleCepBlur = async () => {
@@ -197,15 +255,15 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         payment_method: payment,
         change_for: payment === 'dinheiro' && changeFor ? Number(changeFor) : undefined,
         notes,
+        coupon_code: appliedCoupon?.code,
         delivery_fee: deliveryFee,
         estimated_delivery_minutes: dCfg?.estimated_delivery_minutes,
       });
       setCreatedId(result.id);
       setStep('success');
       clear();
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: 'Erro ao enviar pedido', description: e?.message || 'Tente novamente', variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Erro ao enviar pedido', description: getErrorMessage(e, 'Tente novamente'), variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -337,8 +395,45 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
               <Section title="Pagamento">
                 <p className="text-muted-foreground">{PAYMENT_LABELS[payment]}{payment === 'dinheiro' && changeFor ? ` (troco para ${formatBRL(Number(changeFor))})` : ''}</p>
               </Section>
+              <Section title="Cupom de desconto">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <TicketPercent className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      value={couponCode}
+                      onChange={e => {
+                        setCouponCode(e.target.value.toUpperCase());
+                        if (appliedCoupon) setAppliedCoupon(null);
+                      }}
+                      placeholder="Digite seu cupom"
+                      className="w-full h-10 pl-9 pr-3 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                  {appliedCoupon ? (
+                    <button type="button" onClick={removeCoupon} className="px-3 rounded-lg border border-border text-sm font-medium">
+                      Remover
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={couponLoading}
+                      className="px-3 rounded-lg text-white text-sm font-semibold disabled:opacity-60"
+                      style={{ backgroundColor: primary }}
+                    >
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                    </button>
+                  )}
+                </div>
+                {appliedCoupon && (
+                  <p className="text-xs text-green-600">
+                    {appliedCoupon.title || appliedCoupon.code}: -{formatBRL(appliedCoupon.discount)}
+                  </p>
+                )}
+              </Section>
               <div className="border-t border-border pt-3 space-y-1">
                 <div className="flex justify-between"><span>Subtotal</span><span>{formatBRL(subtotal)}</span></div>
+                {discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Desconto</span><span>-{formatBRL(discountAmount)}</span></div>}
                 {needsAddress && <div className="flex justify-between"><span>Taxa de entrega</span><span>{deliveryFee > 0 ? formatBRL(deliveryFee) : 'Grátis'}</span></div>}
                 <div className="flex justify-between font-bold text-base"><span>Total</span><span style={{ color: primary }}>{formatBRL(total)}</span></div>
               </div>
@@ -403,3 +498,6 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
     <div className="space-y-1">{children}</div>
   </div>
 );
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;

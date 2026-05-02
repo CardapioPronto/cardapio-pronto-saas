@@ -314,6 +314,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          order_position: number | null
           restaurant_id: string | null
           updated_at: string | null
         }
@@ -321,6 +322,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          order_position?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
@@ -328,6 +330,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          order_position?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
@@ -1395,6 +1398,181 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          applicable_categories: string[] | null
+          applicable_products: string[] | null
+          applicable_to: string | null
+          code: string
+          created_at: string | null
+          description: string | null
+          discount_type: "percentage" | "fixed"
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          minimum_order_value: number | null
+          restaurant_id: string
+          title: string
+          updated_at: string | null
+          usage_count: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          applicable_to?: string | null
+          code: string
+          created_at?: string | null
+          description?: string | null
+          discount_type: "percentage" | "fixed"
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          minimum_order_value?: number | null
+          restaurant_id: string
+          title: string
+          updated_at?: string | null
+          usage_count?: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          applicable_to?: string | null
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          discount_type?: "percentage" | "fixed"
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          minimum_order_value?: number | null
+          restaurant_id?: string
+          title?: string
+          updated_at?: string | null
+          usage_count?: number | null
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_usage: {
+        Row: {
+          coupon_id: string
+          created_at: string | null
+          customer_phone: string | null
+          discount_amount: number
+          id: string
+          order_id: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string | null
+          customer_phone?: string | null
+          discount_amount: number
+          id?: string
+          order_id: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string | null
+          customer_phone?: string | null
+          discount_amount?: number
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usage_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          applicable_to: "product" | "category" | "order"
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount_type: "percentage" | "fixed"
+          discount_value: number
+          id: string
+          is_active: boolean
+          min_order_value: number | null
+          name: string
+          restaurant_id: string
+          target_id: string | null
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          applicable_to: "product" | "category" | "order"
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_type: "percentage" | "fixed"
+          discount_value: number
+          id?: string
+          is_active?: boolean
+          min_order_value?: number | null
+          name: string
+          restaurant_id: string
+          target_id?: string | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          applicable_to?: "product" | "category" | "order"
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_type?: "percentage" | "fixed"
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          min_order_value?: number | null
+          name?: string
+          restaurant_id?: string
+          target_id?: string | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           available: boolean
@@ -1408,6 +1586,7 @@ export type Database = {
           image_uploaded_by: string | null
           image_url: string | null
           name: string
+          order_position: number | null
           price: number
           restaurant_id: string
           updated_at: string
@@ -1425,6 +1604,7 @@ export type Database = {
           image_uploaded_by?: string | null
           image_url?: string | null
           name: string
+          order_position?: number | null
           price: number
           restaurant_id: string
           updated_at?: string
@@ -1442,6 +1622,7 @@ export type Database = {
           image_uploaded_by?: string | null
           image_url?: string | null
           name?: string
+          order_position?: number | null
           price?: number
           restaurant_id?: string
           updated_at?: string
@@ -2176,9 +2357,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_public_menu_order: {
+        Args: { payload: Json }
+        Returns: {
+          coupon_code: string | null
+          delivery_order_id: string | null
+          discount_amount: number
+          fulfillment_type: string
+          order_id: string
+          order_number: string | null
+          total: number
+          tracking_id: string
+        }
+      }
       create_default_employee_permissions: {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
+      }
+      get_public_order_tracking: {
+        Args: { p_tracking_id: string }
+        Returns: {
+          [key: string]: Json | undefined
+          history: Json[]
+        } | null
       }
       get_user_basic_info: {
         Args: { _user_id: string }
@@ -2203,6 +2404,21 @@ export type Database = {
       is_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_super_admin_v2: { Args: { user_id: string }; Returns: boolean }
       is_user_active: { Args: { _user_id: string }; Returns: boolean }
+      validate_public_coupon: {
+        Args: {
+          p_code: string
+          p_restaurant_id: string
+          p_order_value: number
+        }
+        Returns: {
+          code?: string
+          coupon_id?: string
+          discount?: number
+          message: string
+          title?: string
+          valid: boolean
+        }
+      }
       log_admin_activity: {
         Args: {
           action: string

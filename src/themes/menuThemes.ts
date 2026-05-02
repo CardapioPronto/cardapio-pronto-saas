@@ -412,7 +412,7 @@ export const themesBySegment: Record<RestaurantSegment, ThemeName[]> = {
   hamburgueria: ['hamburgueria', 'modern'],
   sushi: ['sushi', 'elegant'],
   cafeteria: ['cafeteria', 'default'],
-  sorveteria: ['sorvetaria', 'modern'],
+  sorveteria: ['sorveteria', 'modern'],
   bistro: ['bistro', 'elegant'],
   bar: ['bar', 'delivery'],
   outro: ['delivery', 'default', 'modern', 'elegant', 'consultaRapida']

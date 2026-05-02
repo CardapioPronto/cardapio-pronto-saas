@@ -14,11 +14,14 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Promotion, CreatePromotionInput } from '@/types/features';
 import { toast } from '@/components/ui/sonner';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export const PromotionsManager: React.FC = () => {
+  const { user } = useCurrentUser();
+  const restaurantId = user?.restaurant_id ?? '';
   const { promotions, activePromotions, isLoading, createPromotion, updatePromotion, deletePromotion, togglePromotion } = usePromotions();
-  const { data: products = [] } = useProdutos();
-  const { data: categories = [] } = useCategorias();
+  const { produtos: products = [] } = useProdutos(restaurantId, { itensPorPagina: 500 });
+  const { categorias: categories = [] } = useCategorias();
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export const PromotionsManager: React.FC = () => {
         await updatePromotion.mutateAsync({
           id: editingId,
           ...formData,
-        } as any);
+        });
       } else {
         await createPromotion.mutateAsync(formData);
       }

@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createLogger } from "../_shared/logger.ts";
+
+const logger = createLogger("send-delivery-whatsapp");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +31,43 @@ interface RequestBody {
   new_status?: string;
 }
 
+interface RestaurantPayload {
+  id: string;
+  name: string;
+  phone_whatsapp?: string | null;
+  phone?: string | null;
+}
+
+interface DeliveryOrderPayload {
+  id: string;
+  restaurant_id: string;
+  customer_name: string;
+  customer_phone: string;
+  street: string;
+  number: string;
+  complement?: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  reference_point?: string | null;
+  subtotal: number | string;
+  delivery_fee: number | string;
+  total: number | string;
+  payment_method?: string | null;
+  change_for?: number | string | null;
+  estimated_delivery_minutes?: number | null;
+  notes?: string | null;
+  whatsapp_send_attempts?: number | null;
+  restaurant?: RestaurantPayload | null;
+}
+
+interface EvolutionSendResult {
+  key?: { id?: string };
+  messageId?: string;
+  [key: string]: unknown;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pending: '🕒 Aguardando confirmação',
   confirmed: '✅ Pedido confirmado',
@@ -48,7 +88,7 @@ function formatPhoneBR(raw: string): string {
   return `55${digits}`;
 }
 
-function buildOrderMessage(order: any, items: ItemPayload[]): string {
+function buildOrderMessage(order: DeliveryOrderPayload, items: ItemPayload[]): string {
   const lines: string[] = [];
   lines.push(`🆕 *NOVO PEDIDO DE DELIVERY*`);
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);
@@ -94,7 +134,7 @@ function buildOrderMessage(order: any, items: ItemPayload[]): string {
   return lines.join('\n');
 }
 
-function buildStatusMessage(order: any, newStatus: string): string {
+function buildStatusMessage(order: DeliveryOrderPayload, newStatus: string): string {
   const label = STATUS_LABEL[newStatus] || newStatus;
   return [
     `📦 *Atualização do seu pedido*`,
@@ -106,7 +146,7 @@ function buildStatusMessage(order: any, newStatus: string): string {
   ].join('\n');
 }
 
-async function sendViaEvolution(instanceName: string, phoneE164: string, text: string) {
+async function sendViaEvolution(instanceName: string, phoneE164: string, text: string): Promise<EvolutionSendResult> {
   const baseUrl = (EVOLUTION_API_URL || '').replace(/\/+$/, '');
   const url = `${baseUrl}/message/sendText/${instanceName}`;
   const res = await fetch(url, {
@@ -125,7 +165,7 @@ async function sendViaEvolution(instanceName: string, phoneE164: string, text: s
     throw new Error(`Evolution API ${res.status}: ${body}`);
   }
   try {
-    return JSON.parse(body);
+    return JSON.parse(body) as EvolutionSendResult;
   } catch {
     return { raw: body };
   }
@@ -164,7 +204,8 @@ serve(async (req) => {
       throw new Error(`Pedido não encontrado: ${orderErr?.message || 'not found'}`);
     }
 
-    const restaurant = (order as any).restaurant;
+    const deliveryOrder = order as DeliveryOrderPayload;
+    const restaurant = deliveryOrder.restaurant;
     const storePhoneRaw = restaurant?.phone_whatsapp || restaurant?.phone;
     if (!storePhoneRaw) {
       throw new Error('Restaurante sem telefone WhatsApp configurado.');
@@ -174,7 +215,7 @@ serve(async (req) => {
     const { data: instance, error: instErr } = await supabase
       .from('whatsapp_instances')
       .select('instance_name, status')
-      .eq('restaurant_id', order.restaurant_id)
+        .eq('restaurant_id', deliveryOrder.restaurant_id)
       .eq('is_active', true)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -190,12 +231,12 @@ serve(async (req) => {
 
     if (event === 'status_changed' && new_status) {
       // notifica o CLIENTE
-      target = formatPhoneBR(order.customer_phone);
-      text = buildStatusMessage(order, new_status);
+      target = formatPhoneBR(deliveryOrder.customer_phone);
+      text = buildStatusMessage(deliveryOrder, new_status);
     } else {
       // notifica a LOJA
       target = formatPhoneBR(storePhoneRaw);
-      text = buildOrderMessage(order, items || []);
+      text = buildOrderMessage(deliveryOrder, items || []);
     }
 
     if (!target) throw new Error('Número de destino inválido.');
@@ -203,17 +244,17 @@ serve(async (req) => {
     // 4) Tentar envio com retry simples (3 tentativas, backoff 1s/2s)
     const maxAttempts = 3;
     let lastError: unknown = null;
-    let success: any = null;
+    let success: EvolutionSendResult | null = null;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        console.log(`[send-delivery-whatsapp] tentativa ${attempt} → ${target}`);
+        logger.info('Sending WhatsApp message attempt', { attempt, delivery_order_id, event });
         success = await sendViaEvolution(instance.instance_name, target, text);
         lastError = null;
         break;
       } catch (e) {
         lastError = e;
-        console.warn(`Falha na tentativa ${attempt}:`, (e as Error).message);
+        logger.warn('WhatsApp send attempt failed', { attempt, delivery_order_id, error: (e as Error).message });
         if (attempt < maxAttempts) {
           await new Promise((r) => setTimeout(r, attempt * 1000));
         }
@@ -221,7 +262,7 @@ serve(async (req) => {
     }
 
     // 5) Persistir resultado
-    const attemptsInc = (order.whatsapp_send_attempts || 0) + 1;
+    const attemptsInc = (deliveryOrder.whatsapp_send_attempts || 0) + 1;
     if (success && event !== 'status_changed') {
       await supabase
         .from('delivery_orders')
@@ -251,7 +292,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    console.error('send-delivery-whatsapp error:', (error as Error).message);
+    logger.error('send-delivery-whatsapp error', error as Error);
     return new Response(
       JSON.stringify({ success: false, error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

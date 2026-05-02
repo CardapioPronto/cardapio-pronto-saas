@@ -1,6 +1,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createLogger } from "../_shared/logger.ts";
+
+const logger = createLogger("create-employee");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,13 +34,13 @@ serve(async (req) => {
     const { employee_name, employee_email, password, restaurant_id, created_by, permissions, user_type: requestedType } = await req.json() as EmployeeRequest;
     const userType: 'employee' | 'manager' = requestedType === 'manager' ? 'manager' : 'employee';
 
-    console.log('Creating employee:', { employee_name, employee_email, restaurant_id });
+    logger.info('Creating employee', { employee_email, restaurant_id, userType });
 
     // Verificar se o email já existe
     const { data: existingUser, error: checkError } = await supabaseClient.auth.admin.listUsers();
     
     if (checkError) {
-      console.error('Erro ao verificar usuários existentes:', checkError);
+      logger.error('Failed to list auth users', new Error(checkError.message), { restaurant_id });
       return new Response(
         JSON.stringify({ success: false, error: checkError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,7 +51,7 @@ serve(async (req) => {
     let authUserId: string;
 
     if (userExists) {
-      console.log('User already exists in auth, using existing ID:', userExists.id);
+      logger.info('Auth user already exists', { authUserId: userExists.id, restaurant_id });
       authUserId = userExists.id;
       
       // Verificar se já existe um funcionário com este user_id
@@ -60,7 +63,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (employeeCheckError) {
-        console.error('Erro ao verificar funcionário existente:', employeeCheckError);
+        logger.error('Failed to check existing employee', new Error(employeeCheckError.message), { authUserId, restaurant_id });
         return new Response(
           JSON.stringify({ success: false, error: employeeCheckError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -86,7 +89,7 @@ serve(async (req) => {
       });
 
       if (authError) {
-        console.error('Erro ao criar usuário:', authError);
+        logger.error('Failed to create auth user', new Error(authError.message), { employee_email, restaurant_id });
         return new Response(
           JSON.stringify({ success: false, error: authError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -101,7 +104,7 @@ serve(async (req) => {
       }
 
       authUserId = authData.user.id;
-      console.log('Created new auth user:', authUserId);
+      logger.info('Created new auth user', { authUserId, restaurant_id });
     }
 
     // Verificar se já existe um registro na tabela users
@@ -112,7 +115,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (userCheckError) {
-      console.error('Erro ao verificar registro de usuário:', userCheckError);
+      logger.error('Failed to check user profile', new Error(userCheckError.message), { authUserId, restaurant_id });
       return new Response(
         JSON.stringify({ success: false, error: userCheckError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -133,7 +136,7 @@ serve(async (req) => {
         });
 
       if (userError) {
-        console.error('Erro ao criar registro de usuário:', userError);
+        logger.error('Failed to create user profile', new Error(userError.message), { authUserId, restaurant_id });
         return new Response(
           JSON.stringify({ success: false, error: userError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -151,7 +154,7 @@ serve(async (req) => {
         .eq('id', authUserId);
 
       if (updateError) {
-        console.error('Erro ao atualizar registro de usuário:', updateError);
+        logger.error('Failed to update user profile', new Error(updateError.message), { authUserId, restaurant_id });
         return new Response(
           JSON.stringify({ success: false, error: updateError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -174,7 +177,7 @@ serve(async (req) => {
       .single();
 
     if (employeeError) {
-      console.error('Erro ao criar funcionário:', employeeError);
+      logger.error('Failed to create employee record', new Error(employeeError.message), { authUserId, restaurant_id });
       return new Response(
         JSON.stringify({ success: false, error: employeeError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -194,7 +197,7 @@ serve(async (req) => {
         .insert(permissionsToInsert);
 
       if (permissionsError) {
-        console.error('Erro ao criar permissões:', permissionsError);
+        logger.error('Failed to create employee permissions', new Error(permissionsError.message), { employeeId: employeeRecord.id, restaurant_id });
         return new Response(
           JSON.stringify({ success: false, error: permissionsError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -202,7 +205,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('Employee created successfully:', employeeRecord.id);
+    logger.info('Employee created successfully', { employeeId: employeeRecord.id, restaurant_id });
 
     return new Response(
       JSON.stringify({ success: true, employee: employeeRecord }),
@@ -210,7 +213,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro geral:', error);
+    logger.error('Unhandled employee creation error', error as Error);
     return new Response(
       JSON.stringify({ success: false, error: 'Erro interno do servidor' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

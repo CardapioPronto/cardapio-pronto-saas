@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import type { CartItem } from '@/components/public-menu/cart/CartContext';
 
 export type FulfillmentType = 'delivery' | 'pickup' | 'table' | 'counter';
@@ -27,6 +28,7 @@ export interface CreateDeliveryOrderInput {
   payment_method?: string;
   change_for?: number;
   notes?: string;
+  coupon_code?: string;
   delivery_fee: number;
   estimated_delivery_minutes?: number;
 }
@@ -38,17 +40,33 @@ export const deliveryOrderService = {
     delivery_order_id: string | null;
     order_number: string | null;
     fulfillment_type: FulfillmentType;
+    discount_amount: number;
+    total: number;
   }> {
-    const payload = {
+    const payload: Json = {
       restaurant_id: input.restaurant_id,
       fulfillment_type: input.fulfillment_type,
       table_id: input.table_id,
       customer_name: input.address?.customer_name || input.customer_name,
       customer_phone: input.address?.customer_phone || input.customer_phone,
-      address: input.address,
+      address: input.address
+        ? {
+            customer_name: input.address.customer_name,
+            customer_phone: input.address.customer_phone,
+            zip_code: input.address.zip_code,
+            street: input.address.street,
+            number: input.address.number,
+            complement: input.address.complement,
+            neighborhood: input.address.neighborhood,
+            city: input.address.city,
+            state: input.address.state,
+            reference_point: input.address.reference_point,
+          }
+        : undefined,
       payment_method: input.payment_method,
       change_for: input.change_for,
       notes: input.notes,
+      coupon_code: input.coupon_code?.trim().toUpperCase() || undefined,
       delivery_fee: input.fulfillment_type === 'delivery' ? input.delivery_fee : 0,
       estimated_delivery_minutes: input.estimated_delivery_minutes,
       items: input.items.map(i => ({
@@ -58,7 +76,7 @@ export const deliveryOrderService = {
       })),
     };
 
-    const { data, error } = await (supabase as any).rpc('create_public_menu_order', {
+    const { data, error } = await supabase.rpc('create_public_menu_order', {
       payload,
     });
 
@@ -70,6 +88,8 @@ export const deliveryOrderService = {
       delivery_order_id: string | null;
       order_number: string | null;
       fulfillment_type: FulfillmentType;
+      discount_amount?: number;
+      total?: number;
     };
 
     if (input.fulfillment_type === 'delivery' && result.delivery_order_id) {
@@ -98,11 +118,40 @@ export const deliveryOrderService = {
       delivery_order_id: result.delivery_order_id,
       order_number: result.order_number,
       fulfillment_type: result.fulfillment_type,
+      discount_amount: Number(result.discount_amount || 0),
+      total: Number(result.total || 0),
+    };
+  },
+
+  async validateCoupon(input: {
+    restaurant_id: string;
+    code: string;
+    subtotal: number;
+  }): Promise<{
+    valid: boolean;
+    message: string;
+    code?: string;
+    title?: string;
+    discount?: number;
+  }> {
+    const { data, error } = await supabase.rpc('validate_public_coupon', {
+      p_code: input.code.trim().toUpperCase(),
+      p_restaurant_id: input.restaurant_id,
+      p_order_value: input.subtotal,
+    });
+
+    if (error) throw error;
+    return data as {
+      valid: boolean;
+      message: string;
+      code?: string;
+      title?: string;
+      discount?: number;
     };
   },
 
   async getById(id: string) {
-    const { data, error } = await (supabase as any).rpc('get_public_order_tracking', {
+    const { data, error } = await supabase.rpc('get_public_order_tracking', {
       p_tracking_id: id,
     });
     if (error) throw error;

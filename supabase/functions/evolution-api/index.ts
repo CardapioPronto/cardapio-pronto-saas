@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createLogger } from "../_shared/logger.ts";
+
+const logger = createLogger("evolution-api");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,13 +27,12 @@ serve(async (req) => {
   try {
     const { action, instanceName, restaurantId }: EvolutionRequest = await req.json();
 
-    console.log(`Evolution API action: ${action} for instance: ${instanceName}`);
+    logger.info("Evolution API action", { action, instanceName, restaurantId });
 
     if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      console.error('Missing env vars:', { 
+      logger.error('Missing Evolution API environment variables', new Error('EVOLUTION_API_URL or EVOLUTION_API_KEY missing'), { 
         hasUrl: !!EVOLUTION_API_URL, 
         hasKey: !!EVOLUTION_API_KEY,
-        urlValue: EVOLUTION_API_URL?.substring(0, 20),
       });
       throw new Error('Evolution API não configurada. Verifique EVOLUTION_API_URL e EVOLUTION_API_KEY.');
     }
@@ -52,7 +54,7 @@ serve(async (req) => {
     switch (action) {
       case 'create_instance': {
         const createUrl = `${baseUrl}/instance/create`;
-        console.log('Creating instance at:', createUrl);
+        logger.debug('Creating Evolution instance', { instanceName });
         response = await fetch(createUrl, {
           method: 'POST',
           headers,
@@ -63,13 +65,13 @@ serve(async (req) => {
           }),
         });
         result = await response.json();
-        console.log('Create instance result:', JSON.stringify(result));
+        logger.debug('Evolution instance create result', { hasInstance: !!result?.instance });
 
         // Configure webhook automatically after creation
         if (result.instance && N8N_WEBHOOK_URL) {
           try {
             const webhookUrl = `${baseUrl}/webhook/set/${instanceName}`;
-            console.log('Setting webhook at:', webhookUrl);
+            logger.debug('Setting Evolution webhook', { instanceName });
             await fetch(webhookUrl, {
               method: 'POST',
               headers,
@@ -85,9 +87,9 @@ serve(async (req) => {
                 ],
               }),
             });
-            console.log('Webhook configured for instance:', instanceName);
+            logger.info('Webhook configured for instance', { instanceName });
           } catch (whErr) {
-            console.error('Failed to set webhook:', whErr);
+            logger.error('Failed to set webhook', whErr as Error, { instanceName });
           }
         }
         break;
@@ -95,13 +97,13 @@ serve(async (req) => {
 
       case 'connect': {
         const connectUrl = `${baseUrl}/instance/connect/${instanceName}`;
-        console.log('Connecting at:', connectUrl);
+        logger.debug('Connecting Evolution instance', { instanceName });
         response = await fetch(connectUrl, {
           method: 'GET',
           headers,
         });
         result = await response.json();
-        console.log('Connect result:', JSON.stringify(result));
+        logger.debug('Evolution connect result', { hasQrCode: !!result?.base64 });
         break;
       }
 
@@ -120,7 +122,7 @@ serve(async (req) => {
           headers,
         });
         result = await response.json();
-        console.log('Status result:', JSON.stringify(result));
+        logger.debug('Evolution status result', { state: result?.instance?.state || result?.state });
         break;
       }
 
@@ -139,7 +141,7 @@ serve(async (req) => {
           headers,
         });
         result = await response.json();
-        console.log('Delete instance result:', JSON.stringify(result));
+        logger.info('Evolution instance deleted', { instanceName });
         break;
       }
 
@@ -232,7 +234,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Evolution API error:', error);
+    logger.error('Evolution API error', error as Error);
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
       {

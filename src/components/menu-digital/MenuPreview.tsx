@@ -20,7 +20,7 @@ export const MenuPreview = () => {
       .select('slug')
       .eq('id', user.restaurant_id)
       .maybeSingle()
-      .then(({ data }) => setPublicSlug(data?.slug || user.restaurant_id));
+      .then(({ data }) => setPublicSlug(data?.slug ?? user.restaurant_id ?? ''));
   }, [user?.restaurant_id]);
 
   if (loadingConfig) {
