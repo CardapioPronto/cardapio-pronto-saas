@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { menuThemeService } from '@/services/menuThemeService';
 import { DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useOrderPosition, reorderItemsBatch } from '@/hooks/useOrderPosition';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { Image as ImageIcon, Upload, Loader2, Save, AlertCircle, X } from 'lucide-react';
+import { SlugEditor } from './SlugEditor';
+import { HoursManager } from './HoursManager';
+import { PromotionsManager } from './PromotionsManager';
+import { ReorderList, type DraggableItem } from './ReorderList';
 
 const PAYMENT_OPTIONS: Array<{ value: DeliveryConfig['payment_methods'][number]; label: string }> = [
   { value: 'pix', label: 'PIX' },
@@ -481,7 +487,101 @@ export const PersonalizacaoTab = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Slug do Cardápio */}
+      {restaurantId && <SlugEditor restaurantId={restaurantId} currentSlug={restaurant?.slug} />}
+
+      {/* Horário de Funcionamento */}
+      {restaurantId && <HoursManager restaurantId={restaurantId} />}
+
+      {/* Gerenciar Promoções */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Promoções e Descontos</CardTitle>
+          <CardDescription>Crie promoções para produtos, categorias ou pedidos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PromotionsManager />
+        </CardContent>
+      </Card>
+
+      {/* Reordenar Categorias e Produtos */}
+      <Tabs defaultValue="categories" className="w-full">
+        <TabsList>
+          <TabsTrigger value="categories">Ordenar Categorias</TabsTrigger>
+          <TabsTrigger value="products">Ordenar Produtos</TabsTrigger>
+        </TabsList>
+        <TabsContent value="categories" className="space-y-4">
+          <CategoriesOrderManager restaurantId={restaurantId} />
+        </TabsContent>
+        <TabsContent value="products" className="space-y-4">
+          <ProductsOrderManager restaurantId={restaurantId} />
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+};
+
+// Sub-component for managing category order
+const CategoriesOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId }) => {
+  const { updateOrderPosition, reorderItems } = useOrderPosition('categories', restaurantId);
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['categories', restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, order_position')
+        .eq('restaurant_id', restaurantId)
+        .order('order_position', { ascending: true });
+      if (error) throw error;
+      return data as DraggableItem[];
+    },
+    enabled: !!restaurantId,
+  });
+
+  const handleReorder = async (items: Array<{ id: string; order_position: number }>) => {
+    await reorderItemsBatch('categories', items);
+  };
+
+  return (
+    <ReorderList
+      items={categories}
+      title="Ordenar Categorias"
+      description="Arraste para reorganizar a ordem das categorias no cardápio"
+      onReorder={handleReorder}
+      isLoading={isLoading}
+    />
+  );
+};
+
+// Sub-component for managing product order
+const ProductsOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId }) => {
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products-order', restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, order_position')
+        .eq('restaurant_id', restaurantId)
+        .order('order_position', { ascending: true });
+      if (error) throw error;
+      return data as DraggableItem[];
+    },
+    enabled: !!restaurantId,
+  });
+
+  const handleReorder = async (items: Array<{ id: string; order_position: number }>) => {
+    await reorderItemsBatch('products', items);
+  };
+
+  return (
+    <ReorderList
+      items={products}
+      title="Ordenar Produtos"
+      description="Arraste para reorganizar a ordem dos produtos no cardápio"
+      onReorder={handleReorder}
+      isLoading={isLoading}
+    />
   );
 };
 
