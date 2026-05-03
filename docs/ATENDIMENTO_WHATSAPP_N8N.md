@@ -50,6 +50,8 @@ Fluxo recomendado:
 8. Enviar a resposta pela Evolution e gravar a resposta como `sender_type = bot`.
 9. Se detectar handoff, mudar a conversa para `waiting_human` e nao responder automaticamente.
 
+No workflow atual, os passos 4, 5, 6 e parte do 9 ficam centralizados na Edge Function `whatsapp-n8n-context`. A gravacao da resposta enviada fica na Edge Function `whatsapp-n8n-persist-outgoing`. Isso evita chamadas HTTP dentro de Code nodes, que nao sao suportadas de forma confiavel no n8n 2.x.
+
 ## Correcoes no workflow anexado
 
 No node `Workflow Configuration`:

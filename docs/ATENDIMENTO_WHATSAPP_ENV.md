@@ -10,6 +10,29 @@ EVOLUTION_API_KEY=sua-chave-da-evolution
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
 PUBLIC_SITE_URL=https://seu-dominio.com
+N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+```
+
+Em n8n self-hosted, se aparecer `access to env vars denied` ao usar `{{ $env.NOME_DA_VARIAVEL }}`, o n8n esta bloqueando variaveis de ambiente dentro dos nodes. Deixe `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` no ambiente do servico que executa os workflows.
+
+Exemplo com Docker Compose:
+
+```yaml
+services:
+  n8n:
+    env_file:
+      - .env
+    environment:
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # mantenha aqui as outras variaveis antigas, se preferir
+```
+
+Se voce usa modo fila com `worker` ou servico separado de `webhook`, aplique o mesmo `env_file`/`environment` em todos os servicos n8n que executam workflows.
+
+Depois de alterar `.env` ou `docker-compose.yml`, recrie o container para ele reler o ambiente:
+
+```bash
+docker compose up -d --force-recreate n8n
 ```
 
 No workflow importado, configure tambem as credenciais dos nodes:
@@ -19,7 +42,7 @@ No workflow importado, configure tambem as credenciais dos nodes:
 
 ## Supabase Edge Function
 
-A Edge Function `evolution-api` precisa destes secrets:
+As Edge Functions do Atendimento WhatsApp precisam destes secrets:
 
 ```env
 EVOLUTION_API_URL=https://sua-evolution-api.com
@@ -45,6 +68,8 @@ Depois disso, redeploy da function:
 
 ```bash
 supabase functions deploy evolution-api
+supabase functions deploy whatsapp-n8n-context
+supabase functions deploy whatsapp-n8n-persist-outgoing
 ```
 
 ## Ordem recomendada
@@ -59,6 +84,15 @@ supabase functions deploy evolution-api
 8. Clique no botao de webhook em cada instancia para reaplicar o webhook.
 9. Conecte a instancia por QR Code.
 10. Envie uma mensagem de teste de outro WhatsApp.
+
+## N8N 2.x e Code nodes
+
+O workflow nao deve fazer chamadas REST ao Supabase dentro de Code nodes. No n8n 2.x, Code node nao deve ser usado para HTTP request. Por isso o workflow usa HTTP Request nodes chamando:
+
+- `SUPABASE_URL/functions/v1/whatsapp-n8n-context`
+- `SUPABASE_URL/functions/v1/whatsapp-n8n-persist-outgoing`
+
+Essas Edge Functions centralizam leitura/escrita no Supabase com `SUPABASE_SERVICE_ROLE_KEY` e retornam ao n8n somente o contexto necessario para IA e envio da resposta.
 
 ## Observacoes de seguranca
 
