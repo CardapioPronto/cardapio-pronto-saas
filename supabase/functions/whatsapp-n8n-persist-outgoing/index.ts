@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const N8N_INTERNAL_API_KEY = Deno.env.get("N8N_INTERNAL_API_KEY");
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -16,9 +17,12 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function ensureServiceRole(req: Request) {
+function ensureN8nRequest(req: Request) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token || token !== SUPABASE_SERVICE_ROLE_KEY) {
+  const n8nSecret = req.headers.get("x-n8n-secret");
+  const expectedSecret = N8N_INTERNAL_API_KEY;
+
+  if (!expectedSecret || (token !== expectedSecret && n8nSecret !== expectedSecret)) {
     throw new Error("Unauthorized n8n request");
   }
 }
@@ -27,7 +31,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    ensureServiceRole(req);
+    ensureN8nRequest(req);
     const { item, sendResult } = await req.json();
 
     if (!item?.threadId) throw new Error("threadId ausente no payload");
@@ -81,6 +85,7 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error("whatsapp-n8n-persist-outgoing error", error);
-    return jsonResponse({ error: error.message || "Erro interno" }, 500);
+    const status = error.message === "Unauthorized n8n request" ? 401 : 500;
+    return jsonResponse({ error: error.message || "Erro interno" }, status);
   }
 });

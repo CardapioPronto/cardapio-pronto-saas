@@ -5,11 +5,9 @@
 Crie estas variaveis no ambiente do N8N antes de ativar o workflow:
 
 ```env
-EVOLUTION_API_URL=https://sua-evolution-api.com
-EVOLUTION_API_KEY=sua-chave-da-evolution
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
 PUBLIC_SITE_URL=https://seu-dominio.com
+N8N_INTERNAL_API_KEY=gere-uma-chave-forte-para-n8n-chamar-o-supabase
 N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 ```
 
@@ -35,9 +33,12 @@ Depois de alterar `.env` ou `docker-compose.yml`, recrie o container para ele re
 docker compose up -d --force-recreate n8n
 ```
 
+O n8n nao precisa carregar `SUPABASE_SERVICE_ROLE_KEY`, `EVOLUTION_API_URL` nem `EVOLUTION_API_KEY` para este workflow. Essas chaves devem ficar somente nos Supabase secrets das Edge Functions.
+
 No workflow importado, configure tambem as credenciais dos nodes:
 
 - OpenAI: node `OpenAI Chat Model` e node `Transcribe Audio`.
+- Groq: node `Groq Chat Model` no workflow `docs/Evolution_Whatsapp_Generic_N8N_Groq.json`.
 - Redis: node `Redis Chat Memory`.
 
 ## Supabase Edge Function
@@ -51,6 +52,8 @@ N8N_WEBHOOK_URL=https://seu-n8n.com/webhook/whatsapp
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_ANON_KEY=sua-anon-key
 SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+N8N_INTERNAL_API_KEY=mesma-chave-configurada-no-env-do-n8n
+GROQ_API_KEY=sua-chave-groq-para-transcricao-de-audio
 ```
 
 Com Supabase CLI, o comando fica neste formato:
@@ -62,6 +65,8 @@ supabase secrets set N8N_WEBHOOK_URL="https://seu-n8n.com/webhook/whatsapp"
 supabase secrets set SUPABASE_URL="https://seu-projeto.supabase.co"
 supabase secrets set SUPABASE_ANON_KEY="sua-anon-key"
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY="sua-service-role-key"
+supabase secrets set N8N_INTERNAL_API_KEY="mesma-chave-configurada-no-env-do-n8n"
+supabase secrets set GROQ_API_KEY="sua-chave-groq-para-transcricao-de-audio"
 ```
 
 Depois disso, redeploy da function:
@@ -70,6 +75,8 @@ Depois disso, redeploy da function:
 supabase functions deploy evolution-api
 supabase functions deploy whatsapp-n8n-context
 supabase functions deploy whatsapp-n8n-persist-outgoing
+supabase functions deploy whatsapp-n8n-evolution --no-verify-jwt
+supabase functions deploy whatsapp-n8n-groq-transcribe --no-verify-jwt
 ```
 
 ## Ordem recomendada
@@ -91,12 +98,14 @@ O workflow nao deve fazer chamadas REST ao Supabase dentro de Code nodes. No n8n
 
 - `SUPABASE_URL/functions/v1/whatsapp-n8n-context`
 - `SUPABASE_URL/functions/v1/whatsapp-n8n-persist-outgoing`
+- `SUPABASE_URL/functions/v1/whatsapp-n8n-evolution`
 
-Essas Edge Functions centralizam leitura/escrita no Supabase com `SUPABASE_SERVICE_ROLE_KEY` e retornam ao n8n somente o contexto necessario para IA e envio da resposta.
+Essas Edge Functions centralizam leitura/escrita no Supabase e chamadas para Evolution API usando secrets internos. O n8n recebe somente o contexto necessario para IA e envio da resposta.
 
 ## Observacoes de seguranca
 
 - Nao coloque `SUPABASE_SERVICE_ROLE_KEY` no frontend.
+- Nao coloque `SUPABASE_SERVICE_ROLE_KEY` nem `EVOLUTION_API_KEY` no n8n para este fluxo.
 - Nao deixe chaves reais dentro do JSON do workflow.
 - Rotacione qualquer chave que tenha sido exportada em JSON, print ou conversa.
 - Use a Production URL do webhook no Evolution, nao a Test URL do n8n.

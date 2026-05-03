@@ -57,6 +57,18 @@ verify_jwt = false
 [functions.evolution-api]
 verify_jwt = false
 
+[functions.whatsapp-n8n-context]
+verify_jwt = false
+
+[functions.whatsapp-n8n-persist-outgoing]
+verify_jwt = false
+
+[functions.whatsapp-n8n-evolution]
+verify_jwt = false
+
+[functions.whatsapp-n8n-groq-transcribe]
+verify_jwt = false
+
 [functions.generate-ai-response]
 verify_jwt = false
 

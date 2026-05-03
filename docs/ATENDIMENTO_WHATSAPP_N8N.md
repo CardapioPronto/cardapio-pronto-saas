@@ -4,14 +4,15 @@
 
 O workflow deve ser generico por instancia. Evite chaves, URLs e nomes de instancia fixos dentro dos nodes.
 
-Configure como variaveis/credenciais:
+Configure no ambiente do n8n:
 
-- `EVOLUTION_API_URL`: URL base da Evolution API.
-- `EVOLUTION_API_KEY`: chave global da Evolution API.
 - `SUPABASE_URL`: URL do projeto Supabase.
-- `SUPABASE_SERVICE_ROLE_KEY`: somente no N8N ou em Edge Functions privadas, nunca no frontend.
+- `N8N_INTERNAL_API_KEY`: segredo compartilhado entre n8n e Edge Functions para autorizar chamadas internas.
 - `OPENAI_API_KEY`: credencial do node OpenAI.
+- `GROQ_API_KEY`: credencial do node Groq Chat Model quando usar o workflow Groq.
 - `REDIS_*`: credenciais da memoria do agente.
+
+Nao coloque `SUPABASE_SERVICE_ROLE_KEY` nem `EVOLUTION_API_KEY` no ambiente do n8n para este workflow. Elas devem ficar somente nos secrets das Edge Functions.
 
 No Supabase Edge Function `evolution-api`, configure:
 
@@ -21,6 +22,10 @@ No Supabase Edge Function `evolution-api`, configure:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `N8N_INTERNAL_API_KEY`
+- `EVOLUTION_API_URL`
+- `EVOLUTION_API_KEY`
+- `GROQ_API_KEY`: usado pela Edge Function `whatsapp-n8n-groq-transcribe` para audio.
 
 Importante: o JSON anexado contem chave da Evolution API em texto puro. Rotacione essa chave antes de usar em producao.
 
@@ -52,12 +57,14 @@ Fluxo recomendado:
 
 No workflow atual, os passos 4, 5, 6 e parte do 9 ficam centralizados na Edge Function `whatsapp-n8n-context`. A gravacao da resposta enviada fica na Edge Function `whatsapp-n8n-persist-outgoing`. Isso evita chamadas HTTP dentro de Code nodes, que nao sao suportadas de forma confiavel no n8n 2.x.
 
+As chamadas para Evolution API feitas pelo n8n passam pela Edge Function `whatsapp-n8n-evolution`. Assim o workflow nao precisa transportar `EVOLUTION_API_KEY` em headers ou no payload da execucao.
+
 ## Correcoes no workflow anexado
 
 No node `Workflow Configuration`:
 
-- Troque `evolutionApiUrl` hardcoded por variavel/credencial.
-- Troque `evolutionApiKey` hardcoded por credencial.
+- Mantenha apenas variaveis nao sensiveis no payload, como `SUPABASE_URL` e `PUBLIC_SITE_URL`.
+- Nao transporte `EVOLUTION_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ou `N8N_INTERNAL_API_KEY` dentro do JSON entre nodes.
 - Mantenha `instanceName = {{ $json.body.instance }}`.
 
 No node de memoria Redis:

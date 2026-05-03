@@ -1,5 +1,5 @@
 {
-  "name": "Evolution WhatsApp Generic Multi Store",
+  "name": "Evolution WhatsApp Generic Multi Store - Groq",
   "nodes": [
     {
       "parameters": {
@@ -123,10 +123,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const original = $('Normalize Incoming Message').first().json;\nconst payload = $input.first().json;\nconst base64 = payload.base64 || payload.data || payload.file || payload.media || '';\nconst mimeType = payload.mimetype || payload.mimeType || 'audio/ogg';\nif (!base64) return [{ json: { ...original, userMessage: '', audioError: 'Audio sem base64 retornado pela Evolution API' } }];\nreturn [{ json: { ...original }, binary: { data: { data: base64, mimeType, fileName: 'audio.ogg' } } }];"
+        "jsCode": "const original = $('Normalize Incoming Message').first().json;\nconst payload = $input.first().json;\nconst base64 = payload.base64 || payload.data || payload.file || payload.media || '';\nconst mimeType = payload.mimetype || payload.mimeType || 'audio/ogg';\nif (!base64) return [{ json: { ...original, userMessage: '', audioError: 'Audio sem base64 retornado pela Evolution API' } }];\nreturn [{ json: { ...original, audioBase64: base64, audioMimeType: mimeType, audioFileName: 'audio.ogg' } }];"
       },
       "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060006",
-      "name": "Audio Base64 to Binary",
+      "name": "Prepare Groq Audio Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -136,24 +136,30 @@
     },
     {
       "parameters": {
-        "resource": "audio",
-        "operation": "transcribe",
+        "method": "POST",
+        "url": "={{ $json.supabaseUrl }}/functions/v1/whatsapp-n8n-groq-transcribe",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.N8N_INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { base64: $json.audioBase64, mimeType: $json.audioMimeType, fileName: $json.audioFileName, language: \"pt\" } }}",
         "options": {}
       },
       "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060007",
       "name": "Transcribe Audio",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
       "position": [
         140,
         -80
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "__REPLACE_WITH_OPENAI_CREDENTIAL_ID__",
-          "name": "OpenAI account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
@@ -263,25 +269,27 @@
       "parameters": {
         "model": {
           "__rl": true,
-          "value": "gpt-5-mini",
+          "value": "llama-3.3-70b-versatile",
           "mode": "list",
-          "cachedResultName": "gpt-5-mini"
+          "cachedResultName": "llama-3.3-70b-versatile"
         },
-        "builtInTools": {},
-        "options": {}
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 1200
+        }
       },
       "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060013",
-      "name": "OpenAI Chat Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.3,
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
       "position": [
         1080,
         -300
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "__REPLACE_WITH_OPENAI_CREDENTIAL_ID__",
-          "name": "OpenAI account"
+        "groqApi": {
+          "id": "__REPLACE_WITH_GROQ_CREDENTIAL_ID__",
+          "name": "Groq account"
         }
       }
     },
@@ -455,18 +463,7 @@
       "main": [
         [
           {
-            "node": "Audio Base64 to Binary",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Audio Base64 to Binary": {
-      "main": [
-        [
-          {
-            "node": "Transcribe Audio",
+            "node": "Prepare Groq Audio Payload",
             "type": "main",
             "index": 0
           }
@@ -535,17 +532,6 @@
         ]
       ]
     },
-    "OpenAI Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Redis Chat Memory": {
       "ai_memory": [
         [
@@ -607,6 +593,28 @@
           {
             "node": "Persist Outgoing Message",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Groq Audio Payload": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
