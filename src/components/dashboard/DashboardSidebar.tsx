@@ -52,7 +52,12 @@ const operationalLinks: NavItem[] = [
 ];
 
 const communicationLinks: NavItem[] = [
-  { to: "/atendimento", label: "Atendimento WhatsApp", icon: Headphones, permissions: ["whatsapp_manage"] },
+  {
+    to: "/atendimento",
+    label: "Atendimento WhatsApp",
+    icon: Headphones,
+    permissions: ["whatsapp_manage", "whatsapp_take_conversations", "whatsapp_reply_as_human", "whatsapp_view_all_conversations"],
+  },
 ];
 
 const adminLinks: NavItem[] = [

@@ -27,6 +27,7 @@ interface ConversationDetailPanelProps {
   addNote: (content: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   canManage?: boolean;
+  canReply?: boolean;
   isOwnerOrAdmin?: boolean;
 }
 
@@ -117,6 +118,7 @@ const ConversationDetailPanel = ({
   addNote,
   deleteNote,
   canManage = true,
+  canReply = true,
   isOwnerOrAdmin = false,
 }: ConversationDetailPanelProps) => {
   const [messageText, setMessageText] = useState("");
@@ -144,6 +146,8 @@ const ConversationDetailPanel = ({
     try {
       await sendMessage(messageText.trim());
       setMessageText("");
+    } catch {
+      // Toast is emitted by the hook/service layer.
     } finally {
       setSending(false);
     }
@@ -275,7 +279,7 @@ const ConversationDetailPanel = ({
           {/* Message input */}
           {thread.status !== 'closed' && (
             <div className="p-3 border-t bg-card">
-              {thread.status === 'human_active' ? (
+              {thread.status === 'human_active' && canReply ? (
                 <div className="flex gap-2">
                   <Input
                     placeholder="Digite sua mensagem..."
@@ -295,7 +299,9 @@ const ConversationDetailPanel = ({
                 </div>
               ) : (
                 <div className="text-center py-2 text-xs text-muted-foreground">
-                  Assuma a conversa para enviar mensagens
+                  {thread.status === 'human_active'
+                    ? 'Você não tem permissão para responder como atendente'
+                    : 'Assuma a conversa para enviar mensagens'}
                 </div>
               )}
             </div>

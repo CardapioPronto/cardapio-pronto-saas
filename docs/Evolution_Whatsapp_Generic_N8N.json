@@ -1,0 +1,627 @@
+{
+  "name": "Evolution WhatsApp Generic Multi Store",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060001",
+      "name": "Evolution API Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1180,
+        80
+      ],
+      "webhookId": "generic-evolution-whatsapp"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-1",
+              "name": "evolutionApiUrl",
+              "value": "={{ $env.EVOLUTION_API_URL }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-2",
+              "name": "evolutionApiKey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-3",
+              "name": "supabaseUrl",
+              "value": "={{ $env.SUPABASE_URL }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-4",
+              "name": "supabaseServiceRoleKey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-5",
+              "name": "publicSiteUrl",
+              "value": "={{ $env.PUBLIC_SITE_URL || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060002",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -960,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst body = input.body || input;\nconst data = body.data || {};\nconst key = data.key || {};\nconst message = data.message || {};\nconst instanceName = body.instance || body.instanceName || body.instance_name || input.instanceName;\nconst remoteJid = key.remoteJid || data.remoteJid || data.sender || '';\nconst messageType = data.messageType || data.message_type || (message.audioMessage ? 'audioMessage' : 'conversation');\nconst fromMe = key.fromMe === true;\nconst event = body.event || '';\nconst validEvent = !event || event === 'messages.upsert' || event === 'MESSAGES_UPSERT';\nif (!validEvent || fromMe || !instanceName || !remoteJid || remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') return [];\nconst userMessage = message.conversation || message.extendedTextMessage?.text || data.message?.conversation || data.text || '';\nconst customerPhone = String(remoteJid).split('@')[0].replace(/\\D/g, '');\nreturn [{ json: { ...input, body, event, instanceName, remoteJid, customerPhone, customerName: data.pushName || data.pushname || body.senderName || null, messageId: key.id || data.id || null, messageType, userMessage, hasAudio: messageType === 'audioMessage', rawMessage: message, receivedAt: new Date().toISOString() } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060003",
+      "name": "Normalize Incoming Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "audio-check",
+              "leftValue": "={{ $json.hasAudio }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060004",
+      "name": "Is Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -520,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.evolutionApiUrl }}/message/decodeMedia",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.evolutionApiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"instance\": \"{{ $json.instanceName }}\", \"message\": \"{{ $json.messageId }}\" }",
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060005",
+      "name": "Decode Audio Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -300,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('Normalize Incoming Message').first().json;\nconst payload = $input.first().json;\nconst base64 = payload.base64 || payload.data || payload.file || payload.media || '';\nconst mimeType = payload.mimetype || payload.mimeType || 'audio/ogg';\nif (!base64) return [{ json: { ...original, userMessage: '', audioError: 'Audio sem base64 retornado pela Evolution API' } }];\nreturn [{ json: { ...original }, binary: { data: { data: base64, mimeType, fileName: 'audio.ogg' } } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060006",
+      "name": "Audio Base64 to Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060007",
+      "name": "Transcribe Audio",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        140,
+        -80
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "__REPLACE_WITH_OPENAI_CREDENTIAL_ID__",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('Normalize Incoming Message').first().json;\nconst transcript = $input.first().json.text || $input.first().json.transcription || '';\nreturn [{ json: { ...original, userMessage: transcript, transcription: transcript, messageType: 'audioMessage' } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060008",
+      "name": "Prepare Audio Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060009",
+      "name": "Prepare Text Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst required = ['evolutionApiUrl', 'evolutionApiKey', 'supabaseUrl', 'supabaseServiceRoleKey'];\nfor (const key of required) if (!item[key]) throw new Error(`Variavel obrigatoria ausente: ${key}`);\nconst sb = item.supabaseUrl.replace(/\\/+$/, '');\nconst headers = { apikey: item.supabaseServiceRoleKey, Authorization: `Bearer ${item.supabaseServiceRoleKey}`, 'Content-Type': 'application/json' };\nasync function rest(path, options = {}) {\n  const res = await fetch(`${sb}/rest/v1/${path}`, { ...options, headers: { ...headers, ...(options.headers || {}) } });\n  const text = await res.text();\n  let json = null;\n  try { json = text ? JSON.parse(text) : null; } catch { json = text; }\n  if (!res.ok) throw new Error(`Supabase ${res.status} ${path}: ${text}`);\n  return json;\n}\nfunction enc(v) { return encodeURIComponent(String(v)); }\nfunction fallbackFrom(settings) {\n  try { const extra = JSON.parse(settings?.additional_instructions || '{}'); return extra.fallback_message || 'Vou transferir você para um atendente humano.'; } catch { return 'Vou transferir você para um atendente humano.'; }\n}\nfunction isInsideBusinessHours(settings) {\n  if (!settings?.business_hours_only || !settings.business_hours) return true;\n  const now = new Date();\n  const dayKey = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][now.getDay()];\n  const day = settings.business_hours[dayKey];\n  if (!day?.enabled) return false;\n  const hhmm = now.toISOString().slice(11, 16);\n  return hhmm >= day.start && hhmm <= day.end;\n}\nconst instances = await rest(`whatsapp_instances?instance_name=eq.${enc(item.instanceName)}&is_active=eq.true&select=id,restaurant_id,instance_name,status,automation_enabled,is_active&limit=1`);\nconst instance = Array.isArray(instances) ? instances[0] : instances;\nif (!instance?.id) return [];\nconst restaurantId = instance.restaurant_id;\nconst [settingsRows, restaurantRows, rules, products, recentOrders, threadRows] = await Promise.all([\n  rest(`automation_settings?instance_id=eq.${enc(instance.id)}&select=*&limit=1`),\n  rest(`restaurants?id=eq.${enc(restaurantId)}&select=id,name,slug,phone,phone_whatsapp,business_hours,category&limit=1`),\n  rest(`ai_handoff_rules?instance_id=eq.${enc(instance.id)}&is_active=eq.true&select=rule_type,rule_value,priority&order=priority.asc`),\n  rest(`products?restaurant_id=eq.${enc(restaurantId)}&available=eq.true&select=id,name,description,price,category_id&order=order_position.asc&limit=100`),\n  rest(`delivery_orders?restaurant_id=eq.${enc(restaurantId)}&customer_phone=ilike.*${enc(item.customerPhone.slice(-8))}*&select=id,status,total,created_at,estimated_delivery_minutes&order=created_at.desc&limit=3`),\n  rest(`conversation_threads?restaurant_id=eq.${enc(restaurantId)}&instance_id=eq.${enc(instance.id)}&remote_jid=eq.${enc(item.remoteJid)}&select=*&limit=1`)\n]);\nconst settings = (Array.isArray(settingsRows) ? settingsRows[0] : settingsRows) || { ai_enabled: true, bot_name: 'Atendente Virtual', ai_persona: 'Atendente simpatico e profissional', use_menu_knowledge: true, auto_handoff_enabled: true, auto_handoff_confidence_threshold: 0.3, welcome_message: 'Olá! Como posso ajudar?' };\nconst restaurant = (Array.isArray(restaurantRows) ? restaurantRows[0] : restaurantRows) || { id: restaurantId, name: 'Loja' };\nlet thread = Array.isArray(threadRows) ? threadRows[0] : threadRows;\nconst preview = (item.userMessage || '[audio]').slice(0, 120);\nif (!thread?.id) {\n  const created = await rest('conversation_threads', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ restaurant_id: restaurantId, instance_id: instance.id, remote_jid: item.remoteJid, customer_phone: item.customerPhone, customer_name: item.customerName, status: 'bot_active', unread_count: 1, last_message_at: item.receivedAt, last_message_preview: preview, metadata: { instanceName: item.instanceName } }) });\n  thread = Array.isArray(created) ? created[0] : created;\n} else {\n  await rest(`conversation_threads?id=eq.${enc(thread.id)}`, { method: 'PATCH', body: JSON.stringify({ unread_count: Number(thread.unread_count || 0) + 1, last_message_at: item.receivedAt, last_message_preview: preview, customer_name: item.customerName || thread.customer_name }) });\n}\nawait rest('conversation_messages', { method: 'POST', body: JSON.stringify({ thread_id: thread.id, restaurant_id: restaurantId, sender_type: 'customer', content: item.userMessage || '[Audio sem transcricao]', message_type: item.messageType || 'text', metadata: { messageId: item.messageId, remoteJid: item.remoteJid, transcription: item.transcription || null } }) });\nconst lower = String(item.userMessage || '').toLowerCase();\nconst keywordRules = (rules || []).filter(r => ['keyword', 'customer_request'].includes(r.rule_type) && r.rule_value);\nconst matchedRule = keywordRules.find(r => lower.includes(String(r.rule_value).toLowerCase()));\nconst outsideHours = !isInsideBusinessHours(settings);\nconst automationEnabled = instance.automation_enabled !== false && settings.ai_enabled !== false;\nconst needsHuman = Boolean(settings.auto_handoff_enabled && matchedRule) || outsideHours;\nconst fallbackMessage = outsideHours ? 'No momento estamos fora do horario de atendimento. Sua mensagem ficou registrada e retornaremos assim que possivel.' : fallbackFrom(settings);\nif (needsHuman) {\n  await rest(`conversation_threads?id=eq.${enc(thread.id)}`, { method: 'PATCH', body: JSON.stringify({ status: 'waiting_human' }) });\n}\nconst shouldUseAI = automationEnabled && !needsHuman && thread.status !== 'human_active' && thread.status !== 'waiting_human' && thread.status !== 'closed' && Boolean(item.userMessage);\nconst menuSummary = settings.use_menu_knowledge === false ? 'Cardapio nao habilitado para IA.' : (products || []).map(p => `- ${p.name}: R$ ${Number(p.price || 0).toFixed(2)}${p.description ? ` | ${p.description}` : ''}`).join('\\n');\nconst ordersSummary = (recentOrders || []).map(o => `- Pedido ${String(o.id).slice(0, 8)}: ${o.status}, total R$ ${Number(o.total || 0).toFixed(2)}, criado em ${o.created_at}`).join('\\n') || 'Nenhum pedido recente encontrado para este telefone.';\nconst handoffSummary = keywordRules.map(r => r.rule_value).filter(Boolean).join(', ') || 'sem palavras-chave configuradas';\nconst systemPrompt = `Voce e ${settings.bot_name || 'Atendente Virtual'}, atendente virtual de ${restaurant.name}.\\nResponda em portugues brasileiro, de forma objetiva e cordial.\\nPersona/tom: ${settings.ai_persona || 'profissional e simpatico'}.\\n\\nRegras obrigatorias:\\n- Atenda somente esta loja e esta instancia: ${item.instanceName}.\\n- Use apenas o cardapio e contexto recebidos. Nao invente produto, preco, prazo, status ou politica.\\n- Se o cliente quiser montar pedido, colete itens, quantidades, observacoes, entrega/retirada, endereco e pagamento.\\n- Para pedidos ja feitos pelo menu delivery, use o contexto de pedidos recentes.\\n- Se o cliente pedir humano, reclamar, cancelar, falar de problema de pagamento, ou a confianca for baixa, devolva action=handoff.\\n- Palavras de handoff: ${handoffSummary}.\\n\\nCardapio disponivel:\\n${menuSummary || 'Sem produtos disponiveis.'}\\n\\nPedidos recentes deste cliente:\\n${ordersSummary}\\n\\nResponda sempre em JSON valido neste formato:\\n{\"action\":\"reply|handoff|order_status|create_order_draft\",\"message\":\"texto para enviar ao cliente\",\"confidence\":0.0,\"handoff_reason\":null,\"order_draft\":null}`;\nreturn [{ json: { ...item, instance, restaurant, automation: settings, handoffRules: rules || [], products: products || [], recentOrders: recentOrders || [], thread, threadId: thread.id, shouldUseAI, action: needsHuman ? 'handoff' : 'reply', outboundText: needsHuman ? fallbackMessage : '', handoffReason: matchedRule?.rule_value || (outsideHours ? 'outside_business_hours' : null), systemPrompt, aiInput: item.userMessage } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060010",
+      "name": "Load Context and Persist Incoming",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "use-ai",
+              "leftValue": "={{ $json.shouldUseAI }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060011",
+      "name": "Use AI?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.aiInput }}",
+        "options": {
+          "systemMessage": "={{ $json.systemPrompt }}"
+        }
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060012",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1100,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060013",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1080,
+        -300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "__REPLACE_WITH_OPENAI_CREDENTIAL_ID__",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.instanceName + ':' + $json.remoteJid }}"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060014",
+      "name": "Redis Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        1260,
+        -300
+      ],
+      "credentials": {
+        "redis": {
+          "id": "__REPLACE_WITH_REDIS_CREDENTIAL_ID__",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Load Context and Persist Incoming').first().json;\nconst raw = $input.first().json.output || $input.first().json.text || '';\nlet parsed;\ntry { parsed = JSON.parse(String(raw).replace(/^```json\\s*/i, '').replace(/```$/i, '').trim()); } catch { parsed = { action: 'reply', message: String(raw), confidence: 0.7, handoff_reason: null, order_draft: null }; }\nconst outboundText = parsed.message || 'Desculpe, nao consegui gerar uma resposta agora. Vou encaminhar para um atendente.';\nreturn [{ json: { ...base, aiRawOutput: raw, aiResult: parsed, action: parsed.action || 'reply', outboundText, confidence: Number(parsed.confidence ?? 0.7), handoffReason: parsed.handoff_reason || null } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060015",
+      "name": "Parse AI Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (!item.outboundText) return [];\nreturn [{ json: item }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060016",
+      "name": "Prepare Direct Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (!item.outboundText) return [];\nreturn [{ json: { ...item, outboundText: String(item.outboundText).slice(0, 3500) } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060017",
+      "name": "Prepare Outbound Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.evolutionApiUrl }}/message/sendText/{{ $json.instanceName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.evolutionApiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ ($json.remoteJid || '').split('@')[0].replace(/\\D/g, '') }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.outboundText }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060018",
+      "name": "Send WhatsApp Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1900,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $('Prepare Outbound Message').first().json;\nconst sendResult = $input.first().json;\nconst sb = item.supabaseUrl.replace(/\\/+$/, '');\nconst headers = { apikey: item.supabaseServiceRoleKey, Authorization: `Bearer ${item.supabaseServiceRoleKey}`, 'Content-Type': 'application/json' };\nasync function rest(path, options = {}) {\n  const res = await fetch(`${sb}/rest/v1/${path}`, { ...options, headers: { ...headers, ...(options.headers || {}) } });\n  const text = await res.text();\n  if (!res.ok) throw new Error(`Supabase ${res.status} ${path}: ${text}`);\n  try { return text ? JSON.parse(text) : null; } catch { return text; }\n}\nfunction enc(v) { return encodeURIComponent(String(v)); }\nif (item.action === 'handoff') {\n  await rest(`conversation_threads?id=eq.${enc(item.threadId)}`, { method: 'PATCH', body: JSON.stringify({ status: 'waiting_human' }) });\n}\nawait rest('conversation_messages', { method: 'POST', body: JSON.stringify({ thread_id: item.threadId, restaurant_id: item.restaurant.id, sender_type: item.action === 'handoff' ? 'bot' : 'bot', content: item.outboundText, message_type: 'text', metadata: { action: item.action, confidence: item.confidence || null, handoffReason: item.handoffReason || null, evolution_result: sendResult } }) });\nawait rest(`conversation_threads?id=eq.${enc(item.threadId)}`, { method: 'PATCH', body: JSON.stringify({ last_message_at: new Date().toISOString(), last_message_preview: item.outboundText.slice(0, 120), unread_count: 0 }) });\nreturn [{ json: { success: true, threadId: item.threadId, action: item.action, sentText: item.outboundText, evolution: sendResult } }];"
+      },
+      "id": "9b57f48d-73d8-4f3e-9ca7-5ab2f3060019",
+      "name": "Persist Outgoing Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2120,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Evolution API Webhook": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incoming Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Incoming Message": {
+      "main": [
+        [
+          {
+            "node": "Is Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Audio?": {
+      "main": [
+        [
+          {
+            "node": "Decode Audio Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Text Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decode Audio Media": {
+      "main": [
+        [
+          {
+            "node": "Audio Base64 to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio Base64 to Binary": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Audio": {
+      "main": [
+        [
+          {
+            "node": "Prepare Audio Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Audio Message": {
+      "main": [
+        [
+          {
+            "node": "Load Context and Persist Incoming",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Text Message": {
+      "main": [
+        [
+          {
+            "node": "Load Context and Persist Incoming",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Context and Persist Incoming": {
+      "main": [
+        [
+          {
+            "node": "Use AI?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use AI?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Direct Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Output": {
+      "main": [
+        [
+          {
+            "node": "Prepare Outbound Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Direct Response": {
+      "main": [
+        [
+          {
+            "node": "Prepare Outbound Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Outbound Message": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Response": {
+      "main": [
+        [
+          {
+            "node": "Persist Outgoing Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "default"
+  },
+  "versionId": "generic-whatsapp-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

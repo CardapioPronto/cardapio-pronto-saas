@@ -198,7 +198,7 @@ export const InstancesService = {
     const instance = await this.getById(instanceId);
     if (!instance) throw new Error('Instância não encontrada');
 
-    const { error } = await supabase.functions.invoke('evolution-api', {
+    const { data, error } = await supabase.functions.invoke('evolution-api', {
       body: {
         action: 'set_webhook',
         instanceName: instance.instance_name,
@@ -207,6 +207,7 @@ export const InstancesService = {
     });
 
     if (error) throw error;
+    if (data?.error) throw new Error(data.error);
   },
 };
 

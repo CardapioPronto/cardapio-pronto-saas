@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect, useMemo } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useUserSession } from '@/hooks/useUserSession';
 import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
@@ -45,7 +45,12 @@ function pickFallbackRoute(perms: PermissionType[]): string {
   if (perms.includes('dashboard_view')) return '/dashboard';
   if (perms.includes('pdv_access')) return '/pdv';
   if (perms.includes('orders_view')) return '/pedidos';
-  if (perms.includes('whatsapp_manage') || perms.includes('whatsapp_take_conversations')) return '/atendimento';
+  if (
+    perms.includes('whatsapp_manage')
+    || perms.includes('whatsapp_take_conversations')
+    || perms.includes('whatsapp_reply_as_human')
+    || perms.includes('whatsapp_view_all_conversations')
+  ) return '/atendimento';
   if (perms.includes('products_view')) return '/produtos';
   if (perms.includes('reports_view')) return '/relatorios';
   return '/login';
@@ -65,18 +70,6 @@ export const ProtectedRoute = ({
   const loading = sessionLoading || permissionsLoading;
   const fallback = useMemo(() => pickFallbackRoute(userPermissions), [userPermissions]);
 
-  useEffect(() => {
-    if (!loading) {
-      console.log('ProtectedRoute - Auth state:', { 
-        user: appUser?.id,
-        userType: appUser?.user_type,
-        restaurantId: appUser?.restaurant_id,
-        requiredPermissions,
-        currentPath: location.pathname
-      });
-    }
-  }, [loading, appUser, requiredPermissions, location.pathname]);
-
   if (loading) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center">
@@ -87,7 +80,6 @@ export const ProtectedRoute = ({
   }
 
   if (!appUser) {
-    console.log("No authenticated user, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -114,12 +106,6 @@ export const ProtectedRoute = ({
       : requiredPermissions.every(permission => hasPermission(permission));
 
     if (!hasRequiredPermissions) {
-      console.log("User doesn't have required permissions:", {
-        required: requiredPermissions,
-        requireAny,
-        userType: appUser?.user_type
-      });
-      
       if (redirectOnDenied) {
         return <Navigate to={redirectOnDenied} replace />;
       }

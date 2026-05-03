@@ -119,8 +119,7 @@ export const useUserSession = (): UserSession => {
 
     // Escutar mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+      async (_event, session) => {
         await applySession(session, false);
       }
     );

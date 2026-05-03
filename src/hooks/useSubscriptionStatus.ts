@@ -17,12 +17,6 @@ type SubscriptionStatusRow = {
   status: string;
   is_trial: boolean | null;
   trial_ends_at: string | null;
-  plans?: { name: string } | { name: string }[] | null;
-};
-
-const getPlanName = (plans: SubscriptionStatusRow["plans"]) => {
-  if (Array.isArray(plans)) return plans[0]?.name ?? null;
-  return plans?.name ?? null;
 };
 
 export const useSubscriptionStatus = () => {
@@ -48,7 +42,7 @@ export const useSubscriptionStatus = () => {
         ? Math.ceil((trialEndsAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : 0;
 
-      let planName = getPlanName(subscription.plans);
+      let planName: string | null = null;
 
       if (!planName && subscription.plan_id) {
         const { data: plan } = await supabase
@@ -78,17 +72,12 @@ export const useSubscriptionStatus = () => {
       }
 
       try {
-        // Buscar assinatura ativa do restaurante. Ambientes antigos podem não ter
-        // FK entre subscriptions.plan_id e plans.id, então há fallback sem join.
+        // Buscar assinatura ativa do restaurante sem join embutido. Em alguns
+        // ambientes o FK subscriptions.plan_id -> plans.id não está exposto ao
+        // PostgREST, e o join gera 400 em toda navegação protegida.
         const { data: subscription, error } = await supabase
           .from('subscriptions')
-          .select(`
-            plan_id,
-            status,
-            is_trial,
-            trial_ends_at,
-            plans:plan_id (name)
-          `)
+          .select('plan_id, status, is_trial, trial_ends_at')
           .eq('restaurant_id', user.restaurant_id)
           .in('status', ['active', 'trialing', 'past_due'])
           .order('created_at', { ascending: false })
@@ -96,41 +85,8 @@ export const useSubscriptionStatus = () => {
           .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
-          if (error.code !== 'PGRST200') {
-            console.error('Erro ao buscar assinatura:', error);
-            setStatus(prev => ({ ...prev, isLoading: false }));
-            return;
-          }
-
-          const { data: fallbackSubscription, error: fallbackError } = await supabase
-            .from('subscriptions')
-            .select('plan_id, status, is_trial, trial_ends_at')
-            .eq('restaurant_id', user.restaurant_id)
-            .in('status', ['active', 'trialing', 'past_due'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (fallbackError && fallbackError.code !== 'PGRST116') {
-            console.error('Erro ao buscar assinatura:', fallbackError);
-            setStatus(prev => ({ ...prev, isLoading: false }));
-            return;
-          }
-
-          if (!fallbackSubscription) {
-            setStatus({
-              hasActiveSubscription: false,
-              isInTrial: false,
-              trialEndsAt: null,
-              daysLeftInTrial: 0,
-              planName: null,
-              subscriptionStatus: null,
-              isLoading: false,
-            });
-            return;
-          }
-
-          await applySubscriptionStatus(fallbackSubscription as unknown as SubscriptionStatusRow);
+          console.error('Erro ao buscar assinatura:', error);
+          setStatus(prev => ({ ...prev, isLoading: false }));
           return;
         }
 

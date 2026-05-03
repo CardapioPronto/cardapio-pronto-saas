@@ -3,6 +3,7 @@ import { ConversationMessage, ConversationNote, ConversationThread } from '@/typ
 import { ConversationsService } from '@/services/atendimento/conversationsService';
 import { useCurrentUser } from './useCurrentUser';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const useConversationDetail = (threadId: string | null) => {
   const { user } = useCurrentUser();
@@ -56,13 +57,18 @@ export const useConversationDetail = (threadId: string | null) => {
       await ConversationsService.sendMessage({
         threadId,
         restaurantId: thread.restaurant_id,
+        instanceId: thread.instance_id,
+        remoteJid: thread.remote_jid,
         content,
         senderType: 'human',
         senderId: user.id,
         isInternal,
       });
+      if (!isInternal) toast.success('Mensagem enviada');
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao enviar mensagem');
+      throw error;
     }
   };
 

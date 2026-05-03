@@ -4,6 +4,10 @@ import { ConversationThread, ConversationMessage, ConversationNote, Conversation
 // Helper for new tables not yet in generated Supabase types
 const db = supabase as any;
 
+function escapePostgrestSearch(value: string): string {
+  return value.replace(/[%_*(),.]/g, '\\$&').trim();
+}
+
 export const ConversationsService = {
   async listThreads(restaurantId: string, filters?: {
     status?: ThreadStatus;
@@ -21,7 +25,10 @@ export const ConversationsService = {
     if (filters?.instanceId) query = query.eq('instance_id', filters.instanceId);
     if (filters?.assignedTo) query = query.eq('assigned_to', filters.assignedTo);
     if (filters?.search) {
-      query = query.or(`customer_name.ilike.%${filters.search}%,customer_phone.ilike.%${filters.search}%`);
+      const search = escapePostgrestSearch(filters.search);
+      if (search) {
+        query = query.or(`customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%`);
+      }
     }
 
     const { data, error } = await query;
@@ -54,11 +61,46 @@ export const ConversationsService = {
   async sendMessage(params: {
     threadId: string;
     restaurantId: string;
+    instanceId: string;
+    remoteJid: string;
     content: string;
     senderType: 'human';
     senderId: string;
     isInternal?: boolean;
   }): Promise<ConversationMessage> {
+    let sendResult: unknown = null;
+
+    if (!params.isInternal) {
+      const { data: instance, error: instanceError } = await db
+        .from('whatsapp_instances')
+        .select('instance_name, status')
+        .eq('id', params.instanceId)
+        .eq('restaurant_id', params.restaurantId)
+        .maybeSingle();
+
+      if (instanceError || !instance?.instance_name) {
+        throw new Error('Instância WhatsApp não encontrada para esta conversa.');
+      }
+
+      if (instance.status !== 'CONNECTED') {
+        throw new Error('A instância WhatsApp precisa estar conectada para enviar mensagens.');
+      }
+
+      const { data: evoResult, error: evoError } = await supabase.functions.invoke('evolution-api', {
+        body: {
+          action: 'send_text',
+          instanceName: instance.instance_name,
+          restaurantId: params.restaurantId,
+          number: params.remoteJid,
+          text: params.content,
+        },
+      });
+
+      if (evoError) throw evoError;
+      if (evoResult?.error) throw new Error(evoResult.error);
+      sendResult = evoResult;
+    }
+
     const { data, error } = await db
       .from('conversation_messages')
       .insert({
@@ -69,6 +111,7 @@ export const ConversationsService = {
         sender_id: params.senderId,
         is_internal: params.isInternal || false,
         message_type: 'text',
+        metadata: sendResult ? { evolution_result: sendResult } : {},
       })
       .select()
       .single();

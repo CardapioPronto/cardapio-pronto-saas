@@ -19,6 +19,7 @@ export interface WhatsAppInstance {
   webhook_url: string | null;
   is_active: boolean;
   automation_enabled: boolean;
+  last_connection_update_at?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

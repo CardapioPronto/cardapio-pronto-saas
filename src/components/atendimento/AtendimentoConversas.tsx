@@ -89,7 +89,9 @@ const AtendimentoConversas = () => {
   const { instances } = useWhatsAppInstances();
   const { isOwner, isSuperAdmin, hasPermission } = usePermissionsV2();
 
-  const canManageConversations = isOwner() || isSuperAdmin() || hasPermission('whatsapp_manage');
+  const hasFullWhatsAppAccess = isOwner() || isSuperAdmin() || hasPermission('whatsapp_manage');
+  const canManageConversations = hasFullWhatsAppAccess || hasPermission('whatsapp_take_conversations');
+  const canReplyAsHuman = hasFullWhatsAppAccess || hasPermission('whatsapp_reply_as_human');
 
   const filters = {
     status: statusFilter !== 'all' ? statusFilter as ThreadStatus : undefined,
@@ -202,6 +204,7 @@ const AtendimentoConversas = () => {
           <ConversationDetailPanel
             {...conversationDetail}
             canManage={canManageConversations}
+            canReply={canReplyAsHuman}
             isOwnerOrAdmin={isOwner() || isSuperAdmin()}
           />
         ) : (

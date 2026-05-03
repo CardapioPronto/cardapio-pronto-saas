@@ -36,10 +36,27 @@ const DEFAULT_HOURS: BusinessHoursMap = Object.fromEntries(
   WEEKDAYS.map(d => [d.key, { enabled: d.key !== "sun", start: "08:00", end: "22:00" }])
 );
 
+const N8N_ENV_VARS = [
+  "EVOLUTION_API_URL",
+  "EVOLUTION_API_KEY",
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "PUBLIC_SITE_URL",
+];
+
+const EDGE_ENV_VARS = [
+  "EVOLUTION_API_URL",
+  "EVOLUTION_API_KEY",
+  "N8N_WEBHOOK_URL",
+  "SUPABASE_URL",
+  "SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+];
+
 const AtendimentoAutomacao = () => {
   const { instances, loading: instancesLoading } = useWhatsAppInstances();
-  const { hasPermission } = usePermissionsV2();
-  const canConfigure = hasPermission("whatsapp_configure_automation");
+  const { hasPermission, isOwner, isSuperAdmin, loading: permissionsLoading } = usePermissionsV2();
+  const canConfigure = isOwner() || isSuperAdmin() || hasPermission("whatsapp_configure_automation");
 
   const [selectedInstanceId, setSelectedInstanceId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -198,7 +215,7 @@ const AtendimentoAutomacao = () => {
   };
 
   // --- render ---
-  if (instancesLoading) {
+  if (instancesLoading || permissionsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -366,7 +383,8 @@ const AtendimentoAutomacao = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                     <Info className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="text-sm text-muted-foreground space-y-1">
                       <p>
@@ -377,6 +395,34 @@ const AtendimentoAutomacao = () => {
                         Webhook configurado via Edge Function <code>evolution-api</code>.
                       </p>
                     </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border p-3">
+                        <p className="mb-2 text-xs font-semibold text-muted-foreground">Variáveis do n8n</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {N8N_ENV_VARS.map(name => (
+                            <Badge key={name} variant="secondary" className="font-mono text-[10px]">
+                              {name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="mb-2 text-xs font-semibold text-muted-foreground">Secrets da Edge Function</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {EDGE_ENV_VARS.map(name => (
+                            <Badge key={name} variant="secondary" className="font-mono text-[10px]">
+                              {name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      Workflow pronto para importar: <code>docs/Evolution_Whatsapp_Generic_N8N.json</code>
+                    </p>
                   </div>
                 </CardContent>
               </Card>

@@ -12,11 +12,76 @@ const corsHeaders = {
 const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
 const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
 const N8N_WEBHOOK_URL = Deno.env.get('N8N_WEBHOOK_URL');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 interface EvolutionRequest {
-  action: 'create_instance' | 'connect' | 'get_qrcode' | 'disconnect' | 'delete_instance' | 'get_status' | 'set_webhook';
+  action: 'create_instance' | 'connect' | 'get_qrcode' | 'disconnect' | 'delete_instance' | 'get_status' | 'set_webhook' | 'send_text';
   instanceName: string;
   restaurantId: string;
+  number?: string;
+  text?: string;
+}
+
+type RequiredPermission = 'whatsapp_manage_instances' | 'whatsapp_reply_as_human';
+
+function normalizeWhatsAppNumber(raw: string): string {
+  const withoutDomain = raw.split('@')[0] || raw;
+  return withoutDomain.replace(/\D/g, '');
+}
+
+function requiredPermissionForAction(action: EvolutionRequest['action']): RequiredPermission {
+  return action === 'send_text' ? 'whatsapp_reply_as_human' : 'whatsapp_manage_instances';
+}
+
+async function authorizeRequest(req: Request, restaurantId: string, action: EvolutionRequest['action']) {
+  const authHeader = req.headers.get('Authorization') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  if (!token) throw new Error('Usuário não autenticado.');
+
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: userData, error: userError } = await authClient.auth.getUser(token);
+  if (userError || !userData.user) throw new Error('Sessão inválida.');
+
+  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const userId = userData.user.id;
+
+  const { data: appUser, error: appUserError } = await adminClient
+    .from('users')
+    .select('id, restaurant_id, user_type, role')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (appUserError || !appUser) throw new Error('Perfil do usuário não encontrado.');
+
+  if (appUser.role === 'super_admin') return adminClient;
+  if (appUser.restaurant_id !== restaurantId) throw new Error('Usuário sem acesso a este estabelecimento.');
+  if (appUser.user_type === 'owner' || appUser.user_type === 'manager') return adminClient;
+
+  const { data: employee, error: employeeError } = await adminClient
+    .from('employees')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('restaurant_id', restaurantId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (employeeError || !employee?.id) throw new Error('Funcionário sem vínculo ativo com este estabelecimento.');
+
+  const requiredPermission = requiredPermissionForAction(action);
+  const { data: permission, error: permissionError } = await adminClient
+    .from('employee_permissions')
+    .select('permission')
+    .eq('employee_id', employee.id)
+    .in('permission', [requiredPermission, 'whatsapp_manage'])
+    .limit(1)
+    .maybeSingle();
+
+  if (permissionError || !permission) throw new Error('Usuário sem permissão para executar esta ação.');
+  return adminClient;
 }
 
 serve(async (req) => {
@@ -25,7 +90,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, instanceName, restaurantId }: EvolutionRequest = await req.json();
+    const { action, instanceName, restaurantId, number, text }: EvolutionRequest = await req.json();
 
     logger.info("Evolution API action", { action, instanceName, restaurantId });
 
@@ -47,6 +112,8 @@ serve(async (req) => {
       'Content-Type': 'application/json',
       'apikey': EVOLUTION_API_KEY,
     };
+
+    const supabase = await authorizeRequest(req, restaurantId, action);
 
     let response;
     let result;
@@ -168,15 +235,35 @@ serve(async (req) => {
         break;
       }
 
+      case 'send_text': {
+        if (!number || !text?.trim()) {
+          throw new Error('Número e texto são obrigatórios para enviar mensagem.');
+        }
+
+        const normalizedNumber = normalizeWhatsAppNumber(number);
+        if (!normalizedNumber) throw new Error('Número de WhatsApp inválido.');
+
+        response = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            number: normalizedNumber,
+            text: text.trim(),
+          }),
+        });
+        result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(`Evolution API ${response.status}: ${JSON.stringify(result)}`);
+        }
+        break;
+      }
+
       default:
         throw new Error(`Ação desconhecida: ${action}`);
     }
 
     // Update whatsapp_instances table (not whatsapp_ai_config)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     if (action === 'create_instance' && result?.instance) {
       await supabase
         .from('whatsapp_instances')
@@ -210,6 +297,17 @@ serve(async (req) => {
         .update({
           qrcode_base64: result.base64,
           status: 'CONNECTING',
+          last_connection_update_at: new Date().toISOString(),
+        })
+        .eq('instance_name', instanceName)
+        .eq('restaurant_id', restaurantId);
+    }
+
+    if (action === 'set_webhook') {
+      await supabase
+        .from('whatsapp_instances')
+        .update({
+          webhook_url: N8N_WEBHOOK_URL || null,
           last_connection_update_at: new Date().toISOString(),
         })
         .eq('instance_name', instanceName)

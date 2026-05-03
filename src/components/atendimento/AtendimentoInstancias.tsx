@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Wifi, WifiOff, QrCode, Trash2, RefreshCw, Loader2, Smartphone, AlertCircle, Clock, User, ShieldAlert, Bot } from "lucide-react";
+import { Plus, Wifi, WifiOff, QrCode, Trash2, RefreshCw, Loader2, Smartphone, AlertCircle, Clock, User, ShieldAlert, Bot, Webhook, CheckCircle2 } from "lucide-react";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { WhatsAppInstance, InstanceStatus } from "@/types/atendimento";
@@ -27,17 +27,20 @@ const statusConfig: Record<InstanceStatus, { label: string; variant: "default" |
   ERROR: { label: "Erro", variant: "destructive", icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive" },
 };
 
-function InstanceCard({ instance, canManage, creatorName, onConnect, onDisconnect, onDelete, onRefresh, onToggleAutomation }: {
+function InstanceCard({ instance, canManage, creatorName, configuringWebhook, onConnect, onDisconnect, onDelete, onRefresh, onToggleAutomation, onConfigureWebhook }: {
   instance: WhatsAppInstance;
   canManage: boolean;
   creatorName: string;
+  configuringWebhook: boolean;
   onConnect: (id: string) => void;
   onDisconnect: (id: string) => void;
   onDelete: (id: string) => void;
   onRefresh: (id: string) => void;
   onToggleAutomation: (id: string, enabled: boolean) => void;
+  onConfigureWebhook: (id: string) => void;
 }) {
   const cfg = statusConfig[instance.status] || statusConfig.DISCONNECTED;
+  const webhookConfigured = Boolean(instance.webhook_url);
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -66,6 +69,22 @@ function InstanceCard({ instance, canManage, creatorName, onConnect, onDisconnec
             onCheckedChange={(checked) => onToggleAutomation(instance.id, checked)}
             disabled={!canManage}
           />
+        </div>
+
+        <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 min-w-0">
+            <Webhook className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <span className="block text-sm font-medium">Webhook n8n</span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {webhookConfigured ? "Configurado para receber mensagens" : "Pendente de configuração"}
+              </span>
+            </div>
+          </div>
+          <Badge variant={webhookConfigured ? "default" : "outline"} className="gap-1 shrink-0">
+            {webhookConfigured && <CheckCircle2 className="h-3 w-3" />}
+            {webhookConfigured ? "OK" : "Pendente"}
+          </Badge>
         </div>
 
         {/* Metadata */}
@@ -104,6 +123,15 @@ function InstanceCard({ instance, canManage, creatorName, onConnect, onDisconnec
               )}
               <Button size="sm" variant="ghost" onClick={() => onRefresh(instance.id)} className="gap-1">
                 <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onConfigureWebhook(instance.id)}
+                disabled={configuringWebhook}
+                className="gap-1"
+              >
+                {configuringWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Webhook className="h-4 w-4" />}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -148,10 +176,11 @@ function InstanceCard({ instance, canManage, creatorName, onConnect, onDisconnec
 
 const AtendimentoInstancias = () => {
   const { instances, loading, restaurantId, createInstance, deleteInstance, connectInstance, disconnectInstance, refetch } = useWhatsAppInstances();
-  const { hasPermission, isOwner, isSuperAdmin } = usePermissionsV2();
+  const { hasPermission, isOwner, isSuperAdmin, loading: permissionsLoading } = usePermissionsV2();
   const [newName, setNewName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [configuringWebhookId, setConfiguringWebhookId] = useState<string | null>(null);
   const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
   
   // QR Code modal state
@@ -222,6 +251,21 @@ const AtendimentoInstancias = () => {
     }
   };
 
+  const handleConfigureWebhook = async (id: string) => {
+    if (!restaurantId) return;
+    setConfiguringWebhookId(id);
+    try {
+      await InstancesService.configureWebhook(id, restaurantId);
+      await refetch();
+      toast.success("Webhook n8n configurado");
+    } catch (error) {
+      console.error("Erro ao configurar webhook:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao configurar webhook");
+    } finally {
+      setConfiguringWebhookId(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -279,7 +323,26 @@ const AtendimentoInstancias = () => {
         </div>
       </div>
 
-      {loading ? (
+      {instances.length > 0 && (
+        <Card className="border-dashed bg-muted/20">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Webhook className="mt-0.5 h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Integração Evolution API + n8n</p>
+                <p className="text-xs text-muted-foreground">
+                  Ao criar ou configurar o webhook, esta instância passa a enviar eventos para o workflow n8n definido em <code>N8N_WEBHOOK_URL</code>.
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="w-fit">
+              {instances.filter(i => i.webhook_url).length}/{instances.length} configuradas
+            </Badge>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading || permissionsLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -305,11 +368,13 @@ const AtendimentoInstancias = () => {
               instance={instance}
               canManage={canManage}
               creatorName={creatorNames[instance.created_by] || 'Carregando...'}
+              configuringWebhook={configuringWebhookId === instance.id}
               onConnect={handleConnect}
               onDisconnect={disconnectInstance}
               onDelete={deleteInstance}
               onRefresh={handleRefresh}
               onToggleAutomation={handleToggleAutomation}
+              onConfigureWebhook={handleConfigureWebhook}
             />
           ))}
         </div>

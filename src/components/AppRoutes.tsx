@@ -209,7 +209,7 @@ const AppRoutes = () => {
       } />
       <Route path="/atendimento" element={
         <ProtectedRoute
-          requiredPermissions={['whatsapp_manage', 'whatsapp_take_conversations', 'whatsapp_view_all_conversations']}
+          requiredPermissions={['whatsapp_manage', 'whatsapp_take_conversations', 'whatsapp_reply_as_human', 'whatsapp_view_all_conversations']}
           requireAny
         >
           <MainLayout>
