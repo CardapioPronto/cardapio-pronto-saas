@@ -4,6 +4,35 @@ import { WhatsAppInstance, CreateInstanceInput } from "@/types/atendimento";
 // Cast to any until Supabase types are regenerated with new columns
 const db = supabase as any;
 
+function getEvolutionStatus(data: any): InstanceStatus {
+  const rawState =
+    data?._pubfy?.status ||
+    data?.instance?.state ||
+    data?.instance?.connectionState ||
+    data?.state ||
+    data?.connectionState?.state ||
+    data?.connectionState ||
+    data?.status;
+
+  const state = String(rawState || '').toLowerCase();
+  if (['connected', 'open', 'connect', 'online'].includes(state)) return 'CONNECTED';
+  if (['connecting', 'qr', 'qrcode', 'pairing'].includes(state)) return 'CONNECTING';
+  return 'DISCONNECTED';
+}
+
+function getEvolutionPhone(data: any): string | null {
+  const raw =
+    data?._pubfy?.phoneNumber ||
+    data?.instance?.phoneNumber ||
+    data?.instance?.ownerJid ||
+    data?.phoneNumber ||
+    data?.ownerJid;
+
+  if (!raw) return null;
+  const digits = String(raw).split('@')[0].replace(/\D/g, '');
+  return digits || null;
+}
+
 export const InstancesService = {
   async list(restaurantId: string): Promise<WhatsAppInstance[]> {
     const { data, error } = await db
@@ -68,6 +97,7 @@ export const InstancesService = {
           .from('whatsapp_instances')
           .update({
             evolution_instance_id: evoResult.instance?.instanceName || null,
+            webhook_url: evoResult?._pubfy?.webhookUrl || null,
             status: 'CREATED',
           })
           .eq('id', data.id);
@@ -185,10 +215,14 @@ export const InstancesService = {
 
     if (error) throw error;
 
-    const newStatus: InstanceStatus = data?.state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
+    if (data?.error) throw new Error(data.error);
+
+    const newStatus = getEvolutionStatus(data);
+    const phoneNumber = getEvolutionPhone(data);
     await this.update(instanceId, {
       status: newStatus,
-      ...(newStatus === 'CONNECTED' && data?.phoneNumber ? { phone_number: data.phoneNumber } : {}),
+      qrcode_base64: newStatus === 'CONNECTED' ? null : instance.qrcode_base64,
+      phone_number: newStatus === 'CONNECTED' ? phoneNumber : null,
     } as any);
 
     return newStatus;
@@ -208,6 +242,10 @@ export const InstancesService = {
 
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
+
+    await this.update(instanceId, {
+      webhook_url: data?._pubfy?.webhookUrl || 'configured',
+    } as any);
   },
 };
 

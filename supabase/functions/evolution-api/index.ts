@@ -26,6 +26,15 @@ interface EvolutionRequest {
 
 type RequiredPermission = 'whatsapp_manage_instances' | 'whatsapp_reply_as_human';
 
+type SupabaseAdminClient = ReturnType<typeof createClient>;
+
+const WEBHOOK_EVENTS = [
+  'MESSAGES_UPSERT',
+  'MESSAGES_UPDATE',
+  'CONNECTION_UPDATE',
+  'QRCODE_UPDATED',
+];
+
 function normalizeWhatsAppNumber(raw: string): string {
   const withoutDomain = raw.split('@')[0] || raw;
   return withoutDomain.replace(/\D/g, '');
@@ -33,6 +42,109 @@ function normalizeWhatsAppNumber(raw: string): string {
 
 function requiredPermissionForAction(action: EvolutionRequest['action']): RequiredPermission {
   return action === 'send_text' ? 'whatsapp_reply_as_human' : 'whatsapp_manage_instances';
+}
+
+function normalizeConnectionState(result: Record<string, any> | null | undefined): string | null {
+  const rawState =
+    result?.instance?.state ||
+    result?.instance?.connectionState ||
+    result?.state ||
+    result?.connectionState?.state ||
+    result?.connectionState ||
+    result?.status ||
+    null;
+
+  if (!rawState) return null;
+  const state = String(rawState).toLowerCase();
+  if (['open', 'connected', 'connect', 'online'].includes(state)) return 'CONNECTED';
+  if (['connecting', 'qr', 'qrcode', 'pairing'].includes(state)) return 'CONNECTING';
+  return 'DISCONNECTED';
+}
+
+function extractPhoneNumber(result: Record<string, any> | null | undefined): string | null {
+  const raw =
+    result?.instance?.phoneNumber ||
+    result?.instance?.ownerJid ||
+    result?.instance?.profileName ||
+    result?.phoneNumber ||
+    result?.ownerJid ||
+    null;
+
+  if (!raw) return null;
+  const digits = String(raw).split('@')[0].replace(/\D/g, '');
+  return digits || null;
+}
+
+function buildWebhookPayload(webhookUrl: string) {
+  return {
+    enabled: true,
+    url: webhookUrl,
+    events: WEBHOOK_EVENTS,
+    headers: {},
+    base64: false,
+    webhookByEvents: false,
+    webhookBase64: false,
+  };
+}
+
+async function readResponseBody(response: Response): Promise<Record<string, any>> {
+  const body = await response.text();
+  try {
+    return body ? JSON.parse(body) : {};
+  } catch {
+    return { raw: body };
+  }
+}
+
+async function updateInstance(
+  supabase: SupabaseAdminClient,
+  instanceName: string,
+  restaurantId: string,
+  updates: Record<string, unknown>,
+) {
+  const cleanUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, value]) => value !== undefined),
+  );
+  const withTimestamp = {
+    ...cleanUpdates,
+    last_connection_update_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from('whatsapp_instances')
+    .update(withTimestamp)
+    .eq('instance_name', instanceName)
+    .eq('restaurant_id', restaurantId);
+
+  if (!error) return;
+
+  if (String(error.message || '').includes('last_connection_update_at')) {
+    const { error: retryError } = await supabase
+      .from('whatsapp_instances')
+      .update(cleanUpdates)
+      .eq('instance_name', instanceName)
+      .eq('restaurant_id', restaurantId);
+
+    if (!retryError) return;
+    throw retryError;
+  }
+
+  throw error;
+}
+
+async function setEvolutionWebhook(baseUrl: string, instanceName: string, headers: Record<string, string>, webhookUrl: string) {
+  const response = await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(buildWebhookPayload(webhookUrl)),
+  });
+  const result = await readResponseBody(response);
+
+  if (!response.ok) {
+    throw new Error(`Evolution webhook ${response.status}: ${JSON.stringify(result)}`);
+  }
+
+  return result;
 }
 
 async function authorizeRequest(req: Request, restaurantId: string, action: EvolutionRequest['action']) {
@@ -131,29 +243,15 @@ serve(async (req) => {
             integration: 'WHATSAPP-BAILEYS',
           }),
         });
-        result = await response.json();
+        result = await readResponseBody(response);
+        if (!response.ok) throw new Error(`Evolution create ${response.status}: ${JSON.stringify(result)}`);
         logger.debug('Evolution instance create result', { hasInstance: !!result?.instance });
 
         // Configure webhook automatically after creation
         if (result.instance && N8N_WEBHOOK_URL) {
           try {
-            const webhookUrl = `${baseUrl}/webhook/set/${instanceName}`;
             logger.debug('Setting Evolution webhook', { instanceName });
-            await fetch(webhookUrl, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({
-                url: N8N_WEBHOOK_URL,
-                webhookByEvents: false,
-                webhookBase64: false,
-                events: [
-                  'MESSAGES_UPSERT',
-                  'MESSAGES_UPDATE',
-                  'CONNECTION_UPDATE',
-                  'QRCODE_UPDATED',
-                ],
-              }),
-            });
+            await setEvolutionWebhook(baseUrl, instanceName, headers, N8N_WEBHOOK_URL);
             logger.info('Webhook configured for instance', { instanceName });
           } catch (whErr) {
             logger.error('Failed to set webhook', whErr as Error, { instanceName });
@@ -169,7 +267,8 @@ serve(async (req) => {
           method: 'GET',
           headers,
         });
-        result = await response.json();
+        result = await readResponseBody(response);
+        if (!response.ok) throw new Error(`Evolution connect ${response.status}: ${JSON.stringify(result)}`);
         logger.debug('Evolution connect result', { hasQrCode: !!result?.base64 });
         break;
       }
@@ -179,7 +278,8 @@ serve(async (req) => {
           method: 'GET',
           headers,
         });
-        result = await response.json();
+        result = await readResponseBody(response);
+        if (!response.ok) throw new Error(`Evolution qrcode ${response.status}: ${JSON.stringify(result)}`);
         break;
       }
 
@@ -188,7 +288,8 @@ serve(async (req) => {
           method: 'GET',
           headers,
         });
-        result = await response.json();
+        result = await readResponseBody(response);
+        if (!response.ok) throw new Error(`Evolution status ${response.status}: ${JSON.stringify(result)}`);
         logger.debug('Evolution status result', { state: result?.instance?.state || result?.state });
         break;
       }
@@ -198,7 +299,8 @@ serve(async (req) => {
           method: 'DELETE',
           headers,
         });
-        result = await response.json();
+        result = await readResponseBody(response);
+        if (!response.ok) throw new Error(`Evolution logout ${response.status}: ${JSON.stringify(result)}`);
         break;
       }
 
@@ -207,7 +309,8 @@ serve(async (req) => {
           method: 'DELETE',
           headers,
         });
-        result = await response.json();
+        result = await readResponseBody(response);
+        if (!response.ok) throw new Error(`Evolution delete ${response.status}: ${JSON.stringify(result)}`);
         logger.info('Evolution instance deleted', { instanceName });
         break;
       }
@@ -216,22 +319,7 @@ serve(async (req) => {
         if (!N8N_WEBHOOK_URL) {
           throw new Error('N8N Webhook URL não configurada');
         }
-        response = await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            url: N8N_WEBHOOK_URL,
-            webhookByEvents: false,
-            webhookBase64: false,
-            events: [
-              'MESSAGES_UPSERT',
-              'MESSAGES_UPDATE',
-              'CONNECTION_UPDATE',
-              'QRCODE_UPDATED',
-            ],
-          }),
-        });
-        result = await response.json();
+        result = await setEvolutionWebhook(baseUrl, instanceName, headers, N8N_WEBHOOK_URL);
         break;
       }
 
@@ -251,7 +339,7 @@ serve(async (req) => {
             text: text.trim(),
           }),
         });
-        result = await response.json();
+        result = await readResponseBody(response);
 
         if (!response.ok) {
           throw new Error(`Evolution API ${response.status}: ${JSON.stringify(result)}`);
@@ -265,69 +353,52 @@ serve(async (req) => {
 
     // Update whatsapp_instances table (not whatsapp_ai_config)
     if (action === 'create_instance' && result?.instance) {
-      await supabase
-        .from('whatsapp_instances')
-        .update({
-          evolution_instance_id: result.instance.instanceName || instanceName,
-          webhook_url: N8N_WEBHOOK_URL || null,
-          status: 'CREATED',
-          last_connection_update_at: new Date().toISOString(),
-        })
-        .eq('instance_name', instanceName)
-        .eq('restaurant_id', restaurantId);
+      await updateInstance(supabase, instanceName, restaurantId, {
+        evolution_instance_id: result.instance.instanceName || instanceName,
+        webhook_url: N8N_WEBHOOK_URL || null,
+        status: 'CREATED',
+      });
     }
 
-    if (action === 'get_status' && result?.instance) {
-      const state = result.instance?.state || result.state;
-      const status = state === 'open' ? 'CONNECTED' : 'DISCONNECTED';
-      await supabase
-        .from('whatsapp_instances')
-        .update({
-          status,
-          phone_number: state === 'open' ? (result.instance?.phoneNumber || null) : null,
-          last_connection_update_at: new Date().toISOString(),
-        })
-        .eq('instance_name', instanceName)
-        .eq('restaurant_id', restaurantId);
+    if (action === 'get_status') {
+      const status = normalizeConnectionState(result) || 'DISCONNECTED';
+      const phoneNumber = extractPhoneNumber(result);
+      await updateInstance(supabase, instanceName, restaurantId, {
+        status,
+        phone_number: status === 'CONNECTED' ? phoneNumber : null,
+        qrcode_base64: status === 'CONNECTED' ? null : undefined,
+      });
     }
 
     if (action === 'connect' && result?.base64) {
-      await supabase
-        .from('whatsapp_instances')
-        .update({
-          qrcode_base64: result.base64,
-          status: 'CONNECTING',
-          last_connection_update_at: new Date().toISOString(),
-        })
-        .eq('instance_name', instanceName)
-        .eq('restaurant_id', restaurantId);
+      await updateInstance(supabase, instanceName, restaurantId, {
+        qrcode_base64: result.base64,
+        status: 'CONNECTING',
+      });
     }
 
     if (action === 'set_webhook') {
-      await supabase
-        .from('whatsapp_instances')
-        .update({
-          webhook_url: N8N_WEBHOOK_URL || null,
-          last_connection_update_at: new Date().toISOString(),
-        })
-        .eq('instance_name', instanceName)
-        .eq('restaurant_id', restaurantId);
+      await updateInstance(supabase, instanceName, restaurantId, {
+        webhook_url: N8N_WEBHOOK_URL || null,
+      });
     }
 
     if (action === 'disconnect' || action === 'delete_instance') {
-      await supabase
-        .from('whatsapp_instances')
-        .update({
-          status: 'DISCONNECTED',
-          qrcode_base64: null,
-          phone_number: null,
-          last_connection_update_at: new Date().toISOString(),
-        })
-        .eq('instance_name', instanceName)
-        .eq('restaurant_id', restaurantId);
+      await updateInstance(supabase, instanceName, restaurantId, {
+        status: 'DISCONNECTED',
+        qrcode_base64: null,
+        phone_number: null,
+      });
     }
 
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify({
+      ...result,
+      _pubfy: {
+        status: normalizeConnectionState(result),
+        phoneNumber: extractPhoneNumber(result),
+        webhookUrl: action === 'set_webhook' || action === 'create_instance' ? N8N_WEBHOOK_URL || null : undefined,
+      },
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

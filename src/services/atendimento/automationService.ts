@@ -10,7 +10,7 @@ export const AutomationService = {
       .from('automation_settings')
       .select('*')
       .eq('instance_id', instanceId)
-      .single();
+      .maybeSingle();
 
     if (error) return null;
     return data as AutomationSettings;

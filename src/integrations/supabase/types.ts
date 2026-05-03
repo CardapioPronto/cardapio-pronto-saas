@@ -2126,12 +2126,14 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          automation_enabled: boolean
           created_at: string | null
           created_by: string
           evolution_instance_id: string | null
           id: string
           instance_name: string
           is_active: boolean | null
+          last_connection_update_at: string | null
           phone_number: string | null
           qrcode_base64: string | null
           restaurant_id: string
@@ -2140,12 +2142,14 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          automation_enabled?: boolean
           created_at?: string | null
           created_by: string
           evolution_instance_id?: string | null
           id?: string
           instance_name: string
           is_active?: boolean | null
+          last_connection_update_at?: string | null
           phone_number?: string | null
           qrcode_base64?: string | null
           restaurant_id: string
@@ -2154,12 +2158,14 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          automation_enabled?: boolean
           created_at?: string | null
           created_by?: string
           evolution_instance_id?: string | null
           id?: string
           instance_name?: string
           is_active?: boolean | null
+          last_connection_update_at?: string | null
           phone_number?: string | null
           qrcode_base64?: string | null
           restaurant_id?: string
