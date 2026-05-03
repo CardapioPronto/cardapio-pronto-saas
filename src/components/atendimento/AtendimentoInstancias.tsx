@@ -27,6 +27,20 @@ const statusConfig: Record<InstanceStatus, { label: string; variant: "default" |
   ERROR: { label: "Erro", variant: "destructive", icon: <AlertCircle className="h-3 w-3" />, color: "text-destructive" },
 };
 
+function formatWhatsAppPhone(value: string | null) {
+  if (!value) return "Número não conectado";
+
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 13 && digits.startsWith("55")) {
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  if (digits.length === 12 && digits.startsWith("55")) {
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+  }
+
+  return digits ? `+${digits}` : value;
+}
+
 function InstanceCard({ instance, canManage, creatorName, configuringWebhook, onConnect, onDisconnect, onDelete, onRefresh, onToggleAutomation, onConfigureWebhook }: {
   instance: WhatsAppInstance;
   canManage: boolean;
@@ -54,7 +68,7 @@ function InstanceCard({ instance, canManage, creatorName, configuringWebhook, on
         </div>
         <CardDescription className="flex items-center gap-1">
           <Smartphone className="h-3 w-3" />
-          {instance.phone_number || "Número não conectado"}
+          {formatWhatsAppPhone(instance.phone_number)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -251,6 +265,28 @@ const AtendimentoInstancias = () => {
     }
   };
 
+  const handleRefreshAll = async () => {
+    if (!restaurantId) {
+      await refetch();
+      return;
+    }
+
+    try {
+      await Promise.all(
+        instances.map((instance) =>
+          InstancesService.refreshStatus(instance.id, restaurantId).catch((error) => {
+            console.error("Erro ao atualizar instância:", instance.instance_name, error);
+            return null;
+          }),
+        ),
+      );
+      await refetch();
+      toast.success("Instâncias atualizadas");
+    } catch {
+      toast.error("Erro ao atualizar instâncias");
+    }
+  };
+
   const handleConfigureWebhook = async (id: string) => {
     if (!restaurantId) return;
     setConfiguringWebhookId(id);
@@ -276,7 +312,7 @@ const AtendimentoInstancias = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={refetch} className="gap-1">
+          <Button variant="outline" size="sm" onClick={handleRefreshAll} className="gap-1">
             <RefreshCw className="h-4 w-4" />
             Atualizar
           </Button>

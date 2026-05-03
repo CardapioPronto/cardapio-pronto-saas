@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Send, Bot, User, HandMetal, ArrowLeftRight, XCircle,
   StickyNote, Loader2, Phone, MessageSquare, AlertTriangle,
-  UserCheck, ArrowRightLeft
+  UserCheck, ArrowRightLeft, Mic
 } from "lucide-react";
 import { ConversationThread, ConversationMessage, ConversationNote, ThreadStatus } from "@/types/atendimento";
 import { format } from "date-fns";
@@ -35,6 +35,12 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   const isCustomer = message.sender_type === 'customer';
   const isBot = message.sender_type === 'bot';
   const isInternal = message.is_internal;
+  const metadata = message.metadata || {};
+  const originalMessageType = String(metadata.originalMessageType || metadata.messageType || '');
+  const mediaType = String(metadata.mediaType || '');
+  const transcription = typeof metadata.transcription === 'string' ? metadata.transcription.trim() : '';
+  const isAudio = message.message_type?.toLowerCase().includes('audio') || originalMessageType.toLowerCase().includes('audio') || mediaType === 'audio';
+  const content = isAudio && transcription ? transcription : message.content;
 
   const senderLabel = isCustomer ? 'Cliente' : isBot ? 'IA' : isInternal ? 'Nota interna' : 'Atendente';
   const senderIcon = isBot ? <Bot className="h-3 w-3" /> : !isCustomer ? <User className="h-3 w-3" /> : null;
@@ -55,7 +61,21 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           {!isInternal && senderIcon}
           <span className="text-[10px] font-medium opacity-70">{senderLabel}</span>
         </div>
-        <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        {isAudio && (
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium opacity-70">
+            <Mic className="h-3.5 w-3.5" />
+            <span>Audio recebido</span>
+          </div>
+        )}
+        {isAudio && message.media_url && (
+          <audio controls src={message.media_url} className="mb-2 h-8 w-full max-w-[260px]" />
+        )}
+        {isAudio && transcription && (
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide opacity-50">
+            Transcricao
+          </span>
+        )}
+        <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
         <span className="text-[10px] opacity-50 mt-1 block text-right">
           {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
         </span>

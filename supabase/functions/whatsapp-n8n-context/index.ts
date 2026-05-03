@@ -59,6 +59,32 @@ function formatMoney(value: number | string | null | undefined) {
   return Number(value || 0).toFixed(2);
 }
 
+function normalizePhone(raw: unknown) {
+  if (!raw) return null;
+  const digits = String(raw).split("@")[0].replace(/\D/g, "");
+  return digits || null;
+}
+
+function isAudioMessage(item: any) {
+  const messageType = String(item.messageType || "").toLowerCase();
+  return messageType.includes("audio");
+}
+
+function buildIncomingContent(item: any) {
+  const transcript = String(item.transcription || item.userMessage || "").trim();
+  if (isAudioMessage(item)) {
+    return transcript || "[Audio sem transcricao]";
+  }
+
+  return String(item.userMessage || "").trim() || "[Mensagem sem texto]";
+}
+
+function buildIncomingPreview(item: any) {
+  const content = buildIncomingContent(item);
+  const prefix = isAudioMessage(item) ? "Audio: " : "";
+  return `${prefix}${content}`.slice(0, 120);
+}
+
 async function loadContext(supabase: SupabaseClient, item: any) {
   const required = ["instanceName", "remoteJid", "customerPhone"];
   for (const key of required) {
@@ -67,7 +93,7 @@ async function loadContext(supabase: SupabaseClient, item: any) {
 
   const { data: instance, error: instanceError } = await supabase
     .from("whatsapp_instances")
-    .select("id,restaurant_id,instance_name,status,automation_enabled,is_active")
+    .select("id,restaurant_id,instance_name,status,automation_enabled,is_active,phone_number,webhook_url")
     .eq("instance_name", item.instanceName)
     .eq("is_active", true)
     .maybeSingle();
@@ -78,6 +104,22 @@ async function loadContext(supabase: SupabaseClient, item: any) {
   }
 
   const restaurantId = instance.restaurant_id;
+  const connectedPhone = normalizePhone(item.body?.sender || item.sender);
+
+  if (connectedPhone && instance.phone_number !== connectedPhone) {
+    const { error: instanceUpdateError } = await supabase
+      .from("whatsapp_instances")
+      .update({
+        phone_number: connectedPhone,
+        status: "CONNECTED",
+        last_connection_update_at: new Date().toISOString(),
+      })
+      .eq("id", instance.id);
+
+    if (instanceUpdateError) throw instanceUpdateError;
+    instance.phone_number = connectedPhone;
+    instance.status = "CONNECTED";
+  }
 
   const [
     settingsResult,
@@ -152,7 +194,8 @@ async function loadContext(supabase: SupabaseClient, item: any) {
   const recentOrders = recentOrdersResult.data || [];
 
   let thread = threadResult.data;
-  const preview = String(item.userMessage || "[audio]").slice(0, 120);
+  const incomingContent = buildIncomingContent(item);
+  const preview = buildIncomingPreview(item);
 
   if (!thread?.id) {
     const { data: created, error } = await supabase
@@ -192,12 +235,14 @@ async function loadContext(supabase: SupabaseClient, item: any) {
     thread_id: thread.id,
     restaurant_id: restaurantId,
     sender_type: "customer",
-    content: item.userMessage || "[Audio sem transcricao]",
-    message_type: item.messageType || "text",
+    content: incomingContent,
+    message_type: isAudioMessage(item) ? "audio" : item.messageType || "text",
     metadata: {
       messageId: item.messageId,
       remoteJid: item.remoteJid,
       transcription: item.transcription || null,
+      originalMessageType: item.messageType || null,
+      mediaType: isAudioMessage(item) ? "audio" : null,
     },
   });
 

@@ -65,9 +65,13 @@ function extractPhoneNumber(result: Record<string, any> | null | undefined): str
   const raw =
     result?.instance?.phoneNumber ||
     result?.instance?.ownerJid ||
-    result?.instance?.profileName ||
+    result?.instance?.owner ||
+    result?.fetchInstance?.instance?.phoneNumber ||
+    result?.fetchInstance?.instance?.ownerJid ||
+    result?.fetchInstance?.instance?.owner ||
     result?.phoneNumber ||
     result?.ownerJid ||
+    result?.owner ||
     null;
 
   if (!raw) return null;
@@ -290,6 +294,35 @@ serve(async (req) => {
         });
         result = await readResponseBody(response);
         if (!response.ok) throw new Error(`Evolution status ${response.status}: ${JSON.stringify(result)}`);
+
+        if (!extractPhoneNumber(result)) {
+          try {
+            const instanceResponse = await fetch(`${baseUrl}/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`, {
+              method: 'GET',
+              headers,
+            });
+            const instanceResult = await readResponseBody(instanceResponse);
+            if (instanceResponse.ok) {
+              const fetchInstance = Array.isArray(instanceResult)
+                ? instanceResult.find((item: any) => item?.instance?.instanceName === instanceName) || instanceResult[0]
+                : instanceResult;
+              result = {
+                ...result,
+                fetchInstance,
+                instance: {
+                  ...(result?.instance || {}),
+                  ...(fetchInstance?.instance || {}),
+                },
+              };
+            }
+          } catch (fetchError) {
+            logger.warn('Could not fetch Evolution instance details', {
+              instanceName,
+              error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+            });
+          }
+        }
+
         logger.debug('Evolution status result', { state: result?.instance?.state || result?.state });
         break;
       }

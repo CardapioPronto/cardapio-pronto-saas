@@ -222,7 +222,7 @@ export const InstancesService = {
     await this.update(instanceId, {
       status: newStatus,
       qrcode_base64: newStatus === 'CONNECTED' ? null : instance.qrcode_base64,
-      phone_number: newStatus === 'CONNECTED' ? phoneNumber : null,
+      phone_number: newStatus === 'CONNECTED' ? phoneNumber || instance.phone_number : null,
     } as any);
 
     return newStatus;
