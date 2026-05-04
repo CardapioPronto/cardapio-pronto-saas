@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import {
   Plus, Trash2, Save, Loader2, Bot, Shield, Clock, Users,
-  AlertTriangle, CheckCircle2, ArrowRightLeft, Webhook, Info,
+  AlertTriangle, CheckCircle2, ArrowRightLeft, Info, MessageSquareText,
 } from "lucide-react";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { AutomationService } from "@/services/atendimento/automationService";
@@ -35,23 +35,6 @@ type BusinessHoursMap = Record<string, DaySchedule>;
 const DEFAULT_HOURS: BusinessHoursMap = Object.fromEntries(
   WEEKDAYS.map(d => [d.key, { enabled: d.key !== "sun", start: "08:00", end: "22:00" }])
 );
-
-const N8N_ENV_VARS = [
-  "EVOLUTION_API_URL",
-  "EVOLUTION_API_KEY",
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "PUBLIC_SITE_URL",
-];
-
-const EDGE_ENV_VARS = [
-  "EVOLUTION_API_URL",
-  "EVOLUTION_API_KEY",
-  "N8N_WEBHOOK_URL",
-  "SUPABASE_URL",
-  "SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-];
 
 const AtendimentoAutomacao = () => {
   const { instances, loading: instancesLoading } = useWhatsAppInstances();
@@ -374,55 +357,29 @@ const AtendimentoAutomacao = () => {
                 </CardContent>
               </Card>
 
-              {/* n8n Integration Info */}
-              <Card className="border-dashed">
+              {/* Setup guidance */}
+              <Card className="border-dashed bg-muted/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Webhook className="h-5 w-5" />
-                    Integração n8n
+                    <MessageSquareText className="h-5 w-5" />
+                    Como preparar a automação
                   </CardTitle>
+                  <CardDescription>Use estas configurações para deixar o atendimento com o perfil da sua loja</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Info className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="text-sm text-muted-foreground space-y-1">
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3 rounded-lg bg-background/70 p-3">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="space-y-2">
                       <p>
-                        As configurações desta tela são consumidas pelo workflow n8n que roteia as mensagens.
-                        O n8n lê <strong>ai_enabled</strong>, <strong>status da conversa</strong> e <strong>regras de handoff</strong> para decidir se envia para a IA ou para a fila humana.
+                        Descreva o tom de voz, regras comerciais e limites da IA como se estivesse treinando um novo atendente.
                       </p>
-                      <p>
-                        Webhook configurado via Edge Function <code>evolution-api</code>.
-                      </p>
+                      <ul className="list-disc space-y-1 pl-4">
+                        <li>Informe como a loja cumprimenta, oferece produtos e confirma pedidos.</li>
+                        <li>Use as instruções adicionais para políticas de entrega, pagamento, descontos e restrições.</li>
+                        <li>Ative o conhecimento do cardápio para a IA responder com base nos produtos cadastrados.</li>
+                        <li>Configure palavras-chave para transferir quando o cliente pedir humano, reclamar ou tratar assuntos sensíveis.</li>
+                      </ul>
                     </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-lg border p-3">
-                        <p className="mb-2 text-xs font-semibold text-muted-foreground">Variáveis do n8n</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {N8N_ENV_VARS.map(name => (
-                            <Badge key={name} variant="secondary" className="font-mono text-[10px]">
-                              {name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border p-3">
-                        <p className="mb-2 text-xs font-semibold text-muted-foreground">Secrets da Edge Function</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {EDGE_ENV_VARS.map(name => (
-                            <Badge key={name} variant="secondary" className="font-mono text-[10px]">
-                              {name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">
-                      Workflow pronto para importar: <code>docs/Evolution_Whatsapp_Generic_N8N.json</code>
-                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -605,16 +562,16 @@ const AtendimentoAutomacao = () => {
                     <Switch checked={allowManualReturn} onCheckedChange={setAllowManualReturn} />
                   </div>
 
-                  <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+                  <div className="p-3 bg-muted/50 border rounded-lg">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                      <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                       <div className="text-xs text-muted-foreground space-y-1">
-                        <p className="font-medium">Regras de status da conversa:</p>
+                        <p className="font-medium">Como funciona na prática:</p>
                         <ul className="list-disc pl-4 space-y-0.5">
-                          <li><strong>bot_active</strong> → IA responde normalmente</li>
-                          <li><strong>waiting_human</strong> → IA pausada, aguardando atendente</li>
-                          <li><strong>human_active</strong> → IA totalmente pausada</li>
-                          <li><strong>closed</strong> → Conversa encerrada</li>
+                          <li>Enquanto a IA estiver ativa, ela responde automaticamente.</li>
+                          <li>Quando um atendente assume, a IA pausa aquela conversa.</li>
+                          <li>Se permitido, o atendente pode devolver a conversa para a IA.</li>
+                          <li>Conversas encerradas não recebem novas respostas automáticas até uma nova interação.</li>
                         </ul>
                       </div>
                     </div>

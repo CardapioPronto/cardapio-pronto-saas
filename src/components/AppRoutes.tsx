@@ -49,6 +49,7 @@ const AdminContact = lazy(() => import('@/pages/admin/AdminContact'));
 const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactRecipients'));
 const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
 const AdminPagarmeWebhooks = lazy(() => import('@/pages/admin/AdminPagarmeWebhooks'));
+const AdminWhatsApp = lazy(() => import('@/pages/admin/AdminWhatsApp'));
 
 const RouteFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -209,7 +210,7 @@ const AppRoutes = () => {
       } />
       <Route path="/atendimento" element={
         <ProtectedRoute
-          requiredPermissions={['whatsapp_manage', 'whatsapp_take_conversations', 'whatsapp_reply_as_human', 'whatsapp_view_all_conversations']}
+          requiredPermissions={['whatsapp_manage', 'whatsapp_take_conversations', 'whatsapp_reply_as_human', 'whatsapp_view_all_conversations', 'whatsapp_configure_automation']}
           requireAny
         >
           <MainLayout>
@@ -272,6 +273,11 @@ const AppRoutes = () => {
       <Route path="/admin/pagarme-webhooks" element={
         <AdminProtectedRoute>
           <AdminPagarmeWebhooks />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/whatsapp" element={
+        <AdminProtectedRoute>
+          <AdminWhatsApp />
         </AdminProtectedRoute>
       } />
       

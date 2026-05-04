@@ -105,19 +105,25 @@ async function loadContext(supabase: SupabaseClient, item: any) {
 
   const restaurantId = instance.restaurant_id;
   const connectedPhone = normalizePhone(item.body?.sender || item.sender);
+  const receivedWebhookUrl = item.body?.destination || item.webhookUrl || null;
 
-  if (connectedPhone && instance.phone_number !== connectedPhone) {
+  if (
+    (connectedPhone && instance.phone_number !== connectedPhone) ||
+    (receivedWebhookUrl && !instance.webhook_url)
+  ) {
     const { error: instanceUpdateError } = await supabase
       .from("whatsapp_instances")
       .update({
-        phone_number: connectedPhone,
+        phone_number: connectedPhone || instance.phone_number,
+        webhook_url: receivedWebhookUrl || instance.webhook_url,
         status: "CONNECTED",
         last_connection_update_at: new Date().toISOString(),
       })
       .eq("id", instance.id);
 
     if (instanceUpdateError) throw instanceUpdateError;
-    instance.phone_number = connectedPhone;
+    instance.phone_number = connectedPhone || instance.phone_number;
+    instance.webhook_url = receivedWebhookUrl || instance.webhook_url;
     instance.status = "CONNECTED";
   }
 

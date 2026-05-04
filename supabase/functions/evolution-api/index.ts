@@ -84,10 +84,8 @@ function buildWebhookPayload(webhookUrl: string) {
     enabled: true,
     url: webhookUrl,
     events: WEBHOOK_EVENTS,
-    headers: {},
-    base64: false,
-    webhookByEvents: false,
-    webhookBase64: false,
+    webhook_by_events: false,
+    webhook_base64: false,
   };
 }
 
@@ -137,18 +135,65 @@ async function updateInstance(
 }
 
 async function setEvolutionWebhook(baseUrl: string, instanceName: string, headers: Record<string, string>, webhookUrl: string) {
-  const response = await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
-    method: 'POST',
+  const payloads = [
+    buildWebhookPayload(webhookUrl),
+    {
+      enabled: true,
+      url: webhookUrl,
+      events: WEBHOOK_EVENTS,
+      headers: {},
+      base64: false,
+    },
+    {
+      enabled: true,
+      url: webhookUrl,
+      events: WEBHOOK_EVENTS,
+      headers: {},
+      base64: false,
+      webhookByEvents: false,
+      webhookBase64: false,
+    },
+  ];
+  const errors: string[] = [];
+
+  for (const payload of payloads) {
+    const response = await fetch(`${baseUrl}/webhook/set/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const result = await readResponseBody(response);
+
+    if (response.ok) return result;
+    errors.push(`set ${response.status}: ${JSON.stringify(result)}`);
+  }
+
+  throw new Error(`Evolution webhook failed: ${errors.join(' | ')}`);
+}
+
+async function findEvolutionWebhook(baseUrl: string, instanceName: string, headers: Record<string, string>) {
+  const response = await fetch(`${baseUrl}/webhook/find/${encodeURIComponent(instanceName)}`, {
+    method: 'GET',
     headers,
-    body: JSON.stringify(buildWebhookPayload(webhookUrl)),
   });
   const result = await readResponseBody(response);
 
   if (!response.ok) {
-    throw new Error(`Evolution webhook ${response.status}: ${JSON.stringify(result)}`);
+    throw new Error(`Evolution webhook find ${response.status}: ${JSON.stringify(result)}`);
   }
 
   return result;
+}
+
+function extractWebhookUrl(result: Record<string, any> | null | undefined): string | null {
+  const raw =
+    result?.url ||
+    result?.webhook?.url ||
+    result?.webhook?.webhook?.url ||
+    result?.webhook?.webhookUrl ||
+    null;
+
+  return raw ? String(raw) : null;
 }
 
 async function authorizeRequest(req: Request, restaurantId: string, action: EvolutionRequest['action']) {
@@ -352,7 +397,32 @@ serve(async (req) => {
         if (!N8N_WEBHOOK_URL) {
           throw new Error('N8N Webhook URL não configurada');
         }
-        result = await setEvolutionWebhook(baseUrl, instanceName, headers, N8N_WEBHOOK_URL);
+        if (!N8N_WEBHOOK_URL.startsWith('http://') && !N8N_WEBHOOK_URL.startsWith('https://')) {
+          throw new Error('N8N_WEBHOOK_URL inválida. Configure a URL pública do webhook de produção do n8n.');
+        }
+
+        try {
+          const existing = await findEvolutionWebhook(baseUrl, instanceName, headers);
+          const existingUrl = extractWebhookUrl(existing);
+          if (existingUrl) {
+            result = existing;
+            break;
+          }
+        } catch (findError) {
+          logger.warn('Could not find existing Evolution webhook before setting it', {
+            instanceName,
+            error: findError instanceof Error ? findError.message : String(findError),
+          });
+        }
+
+        try {
+          result = await setEvolutionWebhook(baseUrl, instanceName, headers, N8N_WEBHOOK_URL);
+        } catch (setError) {
+          const existing = await findEvolutionWebhook(baseUrl, instanceName, headers);
+          const existingUrl = extractWebhookUrl(existing);
+          if (!existingUrl) throw setError;
+          result = existing;
+        }
         break;
       }
 
@@ -411,8 +481,9 @@ serve(async (req) => {
     }
 
     if (action === 'set_webhook') {
+      const webhookUrl = extractWebhookUrl(result) || N8N_WEBHOOK_URL || null;
       await updateInstance(supabase, instanceName, restaurantId, {
-        webhook_url: N8N_WEBHOOK_URL || null,
+        webhook_url: webhookUrl,
       });
     }
 
@@ -429,7 +500,9 @@ serve(async (req) => {
       _pubfy: {
         status: normalizeConnectionState(result),
         phoneNumber: extractPhoneNumber(result),
-        webhookUrl: action === 'set_webhook' || action === 'create_instance' ? N8N_WEBHOOK_URL || null : undefined,
+        webhookUrl: action === 'set_webhook' || action === 'create_instance'
+          ? extractWebhookUrl(result) || N8N_WEBHOOK_URL || null
+          : undefined,
       },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
