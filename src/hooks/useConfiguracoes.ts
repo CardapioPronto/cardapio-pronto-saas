@@ -15,7 +15,10 @@ export function useConfiguracoes() {
     dadosUsuario,
     setDadosUsuario,
     loading: usuarioLoading,
-    salvarDadosUsuario
+    avatarLoading,
+    salvarDadosUsuario,
+    fazerUploadAvatar,
+    removerAvatar
   } = useUsuario();
 
   const {
@@ -30,7 +33,8 @@ export function useConfiguracoes() {
     estabelecimento: estabelecimentoLoading,
     usuario: usuarioLoading,
     configuracoes: sistemaLoading,
-    logoUpload: logoLoading
+    logoUpload: logoLoading,
+    avatarUpload: avatarLoading
   };
 
   return {
@@ -44,6 +48,8 @@ export function useConfiguracoes() {
     salvarDadosEstabelecimento,
     salvarDadosUsuario,
     salvarConfiguracoesDoSistema,
-    fazerUploadLogo
+    fazerUploadLogo,
+    fazerUploadAvatar,
+    removerAvatar
   };
 }

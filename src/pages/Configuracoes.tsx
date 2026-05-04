@@ -19,7 +19,9 @@ const Configuracoes = () => {
     salvarDadosEstabelecimento,
     salvarDadosUsuario,
     salvarConfiguracoesDoSistema,
-    fazerUploadLogo
+    fazerUploadLogo,
+    fazerUploadAvatar,
+    removerAvatar
   } = useConfiguracoes();
 
   const canManageAllSettings = hasPermission("settings_manage");
@@ -71,7 +73,10 @@ const Configuracoes = () => {
             dadosUsuario={dadosUsuario}
             setDadosUsuario={setDadosUsuario}
             loading={loading.usuario}
+            avatarLoading={loading.avatarUpload}
             salvarDadosUsuario={salvarDadosUsuario}
+            fazerUploadAvatar={fazerUploadAvatar}
+            removerAvatar={removerAvatar}
           />
         </TabsContent>
         

@@ -1,9 +1,16 @@
 
 import { useState } from "react";
-import { Menu, Bell } from "lucide-react";
+import { Menu, Bell, CheckCircle2, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useDashboardNotifications } from "@/hooks/useDashboardNotifications";
 import DashboardSidebar from "./DashboardSidebar";
 
 interface DashboardHeaderProps {
@@ -12,7 +19,15 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const notifications = 3;
+  const { user } = useCurrentUser();
+  const { notifications, unreadCount, loading } = useDashboardNotifications();
+
+  const initials = (user?.name || user?.email || "Usuário")
+    .split(" ")
+    .map(part => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <header className="z-10 flex h-16 flex-shrink-0 items-center justify-between border-b bg-white px-4 sm:px-6 lg:px-8">
@@ -34,20 +49,75 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
         <h1 className="truncate text-xl font-semibold text-navy sm:text-2xl">{title}</h1>
       </div>
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
-        <div className="relative">
-          <Button variant="ghost" size="icon">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
-            {notifications > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange text-xs text-white">
-                {notifications}
+            {unreadCount > 0 && (
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] leading-none text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
-          </Button>
-        </div>
-        <Link to="/configuracoes">
-          <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-navy text-white">
-            U
-          </div>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold">Notificações</p>
+                <p className="text-xs text-muted-foreground">Pontos que precisam de atenção</p>
+              </div>
+              {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+            <Separator />
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 px-6 py-8 text-center">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-medium">Tudo em dia</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pedidos, atendimento e instâncias estão sem pendências relevantes.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-80">
+                <div className="p-2">
+                  {notifications.map(notification => {
+                    const Icon = notification.icon;
+                    return (
+                      <Link
+                        key={notification.id}
+                        to={notification.href}
+                        className="flex gap-3 rounded-md p-3 transition-colors hover:bg-muted"
+                      >
+                        <div className="mt-0.5 rounded-md bg-muted p-2">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate text-sm font-medium">{notification.title}</p>
+                            <Badge variant={notification.tone === "danger" ? "destructive" : "secondary"}>
+                              {notification.count}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">{notification.description}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        <Link to="/configuracoes" aria-label="Abrir configurações do usuário">
+          <Avatar className="h-9 w-9 border bg-navy text-white">
+            <AvatarImage src={user?.avatar_url || undefined} alt={user?.name || "Usuário"} />
+            <AvatarFallback className="bg-navy text-sm font-semibold text-white">
+              {initials || <Settings className="h-4 w-4" />}
+            </AvatarFallback>
+          </Avatar>
         </Link>
       </div>
     </header>

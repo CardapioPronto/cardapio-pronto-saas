@@ -20,3 +20,13 @@ export type ConfiguracoesSistema = {
   language: string;
   auto_print: boolean;
 };
+
+export type DadosUsuario = {
+  nome: string;
+  email: string;
+  senha: string;
+  novaSenha: string;
+  confirmarSenha: string;
+  avatar_url: string | null;
+  avatar_storage_path: string | null;
+};

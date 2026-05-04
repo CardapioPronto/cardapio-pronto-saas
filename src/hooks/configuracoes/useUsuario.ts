@@ -1,20 +1,29 @@
 
 import { useState, useEffect } from "react";
-import { obterDadosUsuario, atualizarDadosUsuario } from "@/services/configuracoes";
+import {
+  atualizarAvatarUsuario,
+  atualizarDadosUsuario,
+  obterDadosUsuario,
+  removerAvatarUsuario,
+  type DadosUsuario,
+} from "@/services/configuracoes";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export function useUsuario() {
   const { user } = useCurrentUser();
-  const [dadosUsuario, setDadosUsuario] = useState({
+  const [dadosUsuario, setDadosUsuario] = useState<DadosUsuario>({
     nome: "",
     email: "",
     senha: "••••••••",
     novaSenha: "",
-    confirmarSenha: ""
+    confirmarSenha: "",
+    avatar_url: null,
+    avatar_storage_path: null,
   });
   
   const [loading, setLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   // Carregar dados do usuário
   useEffect(() => {
@@ -27,7 +36,9 @@ export function useUsuario() {
         setDadosUsuario(prev => ({
           ...prev,
           nome: dados.nome || "",
-          email: dados.email || ""
+          email: dados.email || "",
+          avatar_url: dados.avatar_url || null,
+          avatar_storage_path: dados.avatar_storage_path || null,
         }));
       } catch (error) {
         console.error("Erro ao carregar dados do usuário:", error);
@@ -74,10 +85,49 @@ export function useUsuario() {
     }
   };
 
+  const fazerUploadAvatar = async (file: File) => {
+    setAvatarLoading(true);
+    try {
+      const avatar = await atualizarAvatarUsuario(file);
+      setDadosUsuario(prev => ({
+        ...prev,
+        avatar_url: avatar.avatar_url,
+        avatar_storage_path: avatar.avatar_storage_path,
+      }));
+      toast.success("Foto de perfil atualizada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar foto de perfil:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar foto de perfil");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const removerAvatar = async () => {
+    setAvatarLoading(true);
+    try {
+      await removerAvatarUsuario();
+      setDadosUsuario(prev => ({
+        ...prev,
+        avatar_url: null,
+        avatar_storage_path: null,
+      }));
+      toast.success("Foto de perfil removida");
+    } catch (error) {
+      console.error("Erro ao remover foto de perfil:", error);
+      toast.error("Erro ao remover foto de perfil");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   return {
     dadosUsuario,
     setDadosUsuario,
     loading,
-    salvarDadosUsuario
+    avatarLoading,
+    salvarDadosUsuario,
+    fazerUploadAvatar,
+    removerAvatar,
   };
 }

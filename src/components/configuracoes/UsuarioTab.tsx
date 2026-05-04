@@ -4,36 +4,47 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Camera, Loader2, Lock, Trash2 } from "lucide-react";
+import { DadosUsuario } from "@/services/configuracoes";
 
 interface UsuarioTabProps {
-  dadosUsuario: {
-    nome: string;
-    email: string;
-    senha: string;
-    novaSenha: string;
-    confirmarSenha: string;
-  };
-  setDadosUsuario: React.Dispatch<React.SetStateAction<{
-    nome: string;
-    email: string;
-    senha: string;
-    novaSenha: string;
-    confirmarSenha: string;
-  }>>;
+  dadosUsuario: DadosUsuario;
+  setDadosUsuario: React.Dispatch<React.SetStateAction<DadosUsuario>>;
   loading: boolean;
+  avatarLoading: boolean;
   salvarDadosUsuario: () => Promise<void>;
+  fazerUploadAvatar: (file: File) => Promise<void>;
+  removerAvatar: () => Promise<void>;
 }
 
 export const UsuarioTab: React.FC<UsuarioTabProps> = ({
   dadosUsuario,
   setDadosUsuario,
   loading,
-  salvarDadosUsuario
+  avatarLoading,
+  salvarDadosUsuario,
+  fazerUploadAvatar,
+  removerAvatar,
 }) => {
+  const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const atualizarDadosUsuario = (e: React.FormEvent) => {
     e.preventDefault();
     salvarDadosUsuario();
+  };
+
+  const initials = dadosUsuario.nome
+    .split(" ")
+    .map(part => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "U";
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await fazerUploadAvatar(file);
   };
 
   return (
@@ -41,11 +52,66 @@ export const UsuarioTab: React.FC<UsuarioTabProps> = ({
       <CardHeader>
         <CardTitle>Dados do Usuário</CardTitle>
         <CardDescription>
-          Gerencie seu nome e senha de acesso
+          Gerencie sua foto, nome e senha de acesso
         </CardDescription>
       </CardHeader>
       <form onSubmit={atualizarDadosUsuario}>
         <CardContent className="space-y-4">
+          <div className="flex flex-col gap-4 rounded-md border bg-muted/20 p-4 sm:flex-row sm:items-center">
+            <Avatar className="h-20 w-20 border bg-navy text-white">
+              <AvatarImage src={dadosUsuario.avatar_url || undefined} alt={dadosUsuario.nome || "Usuário"} />
+              <AvatarFallback className="bg-navy text-lg font-semibold text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium">Foto de perfil</p>
+                <p className="text-xs text-muted-foreground">
+                  Use uma imagem quadrada ou retrato em JPG, PNG ou WebP com até 5MB.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={avatarLoading}
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  {avatarLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="mr-2 h-4 w-4" />
+                  )}
+                  Alterar foto
+                </Button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={handleAvatarChange}
+                  disabled={avatarLoading}
+                />
+                {dadosUsuario.avatar_url && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={avatarLoading}
+                    onClick={removerAvatar}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remover
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="nome-usuario">Nome</Label>
             <Input

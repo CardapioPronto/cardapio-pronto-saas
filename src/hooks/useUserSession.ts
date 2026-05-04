@@ -13,6 +13,7 @@ interface UserSession {
 }
 
 const SESSION_TIMEOUT_MS = 10000;
+const PROFILE_UPDATED_EVENT = 'profile-updated';
 
 function withTimeout<T>(operation: PromiseLike<T>, timeoutMs: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -131,14 +132,17 @@ export const useUserSession = (): UserSession => {
     };
 
     const handleFocus = () => refreshSession(false);
+    const handleProfileUpdated = () => refreshSession(false);
 
     window.addEventListener('focus', handleFocus);
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
     document.addEventListener('visibilitychange', handleVisible);
 
     return () => {
       active = false;
       subscription.unsubscribe();
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
       document.removeEventListener('visibilitychange', handleVisible);
     };
   }, [fetchUserProfile]);
