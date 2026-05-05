@@ -20,13 +20,15 @@ export const ItemPedidoLinha = ({
 
   return (
     <div className="py-2 border-b last:border-b-0">
-      <div className="flex justify-between">
-        <div className="font-medium">{produto.name}</div>
-        <div className="font-medium">R$ {subtotal.toFixed(2)}</div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 font-medium leading-tight">
+          <span className="line-clamp-2">{produto.name}</span>
+        </div>
+        <div className="shrink-0 font-medium">R$ {subtotal.toFixed(2)}</div>
       </div>
       
       {observacao && (
-        <div className="text-sm text-muted-foreground mt-1">
+        <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
           Obs: {observacao}
         </div>
       )}

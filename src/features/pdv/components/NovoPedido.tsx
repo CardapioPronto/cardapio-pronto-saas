@@ -12,6 +12,7 @@ import { useMesas } from "@/hooks/useMesas";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 import { Product } from "@/types";
 import { DadosClientePedido, ItemPedido } from "../types";
+import { PackageSearch, UserRound } from "lucide-react";
 
 export interface NovoPedidoProps {
   restaurantId: string;
@@ -139,14 +140,20 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Lista de Produtos */}
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Selecionar Produtos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+    <div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px] 2xl:grid-cols-[minmax(0,1fr)_460px]">
+      <Card className="flex min-h-[560px] flex-col overflow-hidden xl:h-full xl:min-h-0">
+        <CardHeader className="border-b px-4 py-3">
+          <CardTitle className="flex items-center justify-between gap-3 text-base">
+            <span className="flex min-w-0 items-center gap-2">
+              <PackageSearch className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">Produtos</span>
+            </span>
+            <span className="shrink-0 text-sm font-normal text-muted-foreground">
+              {produtosFiltrados.length} disponíveis
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-4">
             <FiltroProdutos
               categoriaAtiva={categoriaAtiva}
               setCategoriaAtiva={setCategoriaAtiva}
@@ -161,22 +168,25 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
               mesasLoading={mesasLoading}
               onRefreshMesas={loadMesas}
             />
-            <ListaProdutos
-              produtosFiltrados={produtosFiltrados}
-              onSelecionarProduto={adicionarProduto}
-              loading={produtosLoading || produtosFetching}
-            />
-          </CardContent>
-        </Card>
-      </div>
+            <div className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
+              <ListaProdutos
+                produtosFiltrados={produtosFiltrados}
+                onSelecionarProduto={adicionarProduto}
+                loading={produtosLoading || produtosFetching}
+              />
+            </div>
+        </CardContent>
+      </Card>
 
-      {/* Comanda do Pedido */}
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Dados do Cliente</CardTitle>
+      <div className="flex min-h-0 flex-col gap-4 xl:h-full">
+        <Card className="shrink-0 overflow-hidden">
+          <CardHeader className="border-b px-4 py-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              Cliente
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="nomeCliente">Nome do Cliente</Label>
               <Input
@@ -199,9 +209,6 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
               {telefoneError && (
                 <p className="text-xs text-red-500">{telefoneError}</p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Opcional - Para envio de confirmação via WhatsApp
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -219,6 +226,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
           nomeCliente={nomeCliente}
           restaurantName={restaurantName}
           mesaError={mesaError}
+          className="min-h-[420px] flex-1 xl:min-h-0"
         />
       </div>
     </div>

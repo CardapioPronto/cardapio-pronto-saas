@@ -6,6 +6,7 @@ import { ItemPedido } from "../types";
 import { AlertCircle, Loader2, Printer } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
 import { MesaStatus } from "@/types/mesa";
+import { cn } from "@/lib/utils";
 
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
@@ -20,6 +21,7 @@ interface ComandaPedidoProps {
   restaurantName: string;
   mesaError?: string;
   mesas?: Array<{id: string; number: string; status: MesaStatus}>;
+  className?: string;
 }
 
 export const ComandaPedido = ({
@@ -35,6 +37,7 @@ export const ComandaPedido = ({
   restaurantName,
   mesaError,
   mesas = [],
+  className,
 }: ComandaPedidoProps) => {
   const { printOrder, printing } = usePrint();
   const mesaAtual = mesas.find(m => m.id === mesaSelecionada);
@@ -69,27 +72,27 @@ export const ComandaPedido = ({
   };
 
   return (
-    <div className="sticky top-4">
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>Comanda: {tituloComanda}</span>
-            <span className="text-sm font-normal text-muted-foreground">
+    <div className={cn("min-h-0", className)}>
+      <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+        <CardHeader className="border-b px-4 py-3">
+          <CardTitle className="flex items-center justify-between gap-3 text-base">
+            <span className="min-w-0 truncate">Comanda: {tituloComanda}</span>
+            <span className="shrink-0 text-sm font-normal text-muted-foreground">
               {itensPedido.length} {itensPedido.length === 1 ? "item" : "itens"}
             </span>
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="border-y py-4 space-y-4">
+        <CardContent className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto py-3">
           {itensPedido.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
+            <div className="flex min-h-48 flex-col items-center justify-center text-center text-muted-foreground">
               <p>Nenhum item adicionado</p>
               <p className="text-sm">
                 Clique nos produtos para adicionar à comanda
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {itensPedido.map((item, index) => (
                 <ItemPedidoLinha
                   key={`${item.produto.id}-${index}`}
@@ -103,7 +106,7 @@ export const ComandaPedido = ({
           )}
         </CardContent>
 
-        <CardFooter className="flex-col pt-4">
+        <CardFooter className="shrink-0 flex-col border-t pt-4">
           {precisaMesa && itensPedido.length > 0 && (
             <div className="mb-4 flex w-full items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />

@@ -8,11 +8,13 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { RecentSales as RecentSalesComponent } from "@/components/dashboard/RecentSales";
 import { PopularProducts as PopularProductsComponent } from "@/components/dashboard/PopularProducts";
+import { DashboardExecutiveSummary } from "@/components/dashboard/DashboardExecutiveSummary";
 import { OperationsOverview } from "@/components/dashboard/OperationsOverview";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardSkeleton = () => (
   <div className="space-y-5">
+    <Skeleton className="h-72 w-full lg:h-64" />
     <Skeleton className="h-48 w-full" />
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {[...Array(4)].map((_, index) => (
@@ -47,6 +49,8 @@ const Dashboard = () => {
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-5">
+        <DashboardExecutiveSummary overview={overview} />
+
         <OperationsOverview overview={overview} />
 
         <QRCodePromotionCard />

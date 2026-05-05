@@ -130,6 +130,7 @@ export const OperationsOverview = ({ overview }: OperationsOverviewProps) => {
       tone: "warning" as StatusTone,
     },
   ].filter(Boolean) as Array<{ label: string; href: string; tone: StatusTone }>;
+  const highPriorityCount = actionItems.filter((item) => item.tone === "danger").length;
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
@@ -185,8 +186,21 @@ export const OperationsOverview = ({ overview }: OperationsOverviewProps) => {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Ações rápidas</CardTitle>
-          <CardDescription>Prioridades do momento</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg">Ações rápidas</CardTitle>
+              <CardDescription>
+                {actionItems.length > 0
+                  ? `${actionItems.length} prioridade${actionItems.length === 1 ? "" : "s"} no momento`
+                  : "Prioridades do momento"}
+              </CardDescription>
+            </div>
+            {highPriorityCount > 0 && (
+              <Badge variant="destructive" className="flex-shrink-0">
+                {highPriorityCount} crítica{highPriorityCount === 1 ? "" : "s"}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -203,13 +217,16 @@ export const OperationsOverview = ({ overview }: OperationsOverviewProps) => {
           </div>
 
           {actionItems.length > 0 ? (
-            <div className="space-y-2">
-              {actionItems.slice(0, 4).map((item) => (
+            <div className="dashboard-scrollbar max-h-64 space-y-2 overflow-y-auto pr-1">
+              {actionItems.map((item) => (
                 <Button
                   key={item.label}
                   asChild
                   variant="outline"
-                  className="h-auto w-full justify-between whitespace-normal py-2 text-left"
+                  className={cn(
+                    "h-auto w-full justify-between whitespace-normal py-2 text-left",
+                    item.tone === "danger" && "border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
+                  )}
                 >
                   <Link to={item.href}>
                     <span className="flex min-w-0 items-center gap-2">
