@@ -1,11 +1,32 @@
-import type { Database } from '@/integrations/supabase/types';
+export interface Coupon {
+  id: string;
+  restaurant_id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  discount_type: DiscountType;
+  discount_value: number;
+  max_uses: number | null;
+  usage_count: number;
+  valid_from: string;
+  valid_until: string;
+  minimum_order_value: number | null;
+  applicable_to: ApplicableTo;
+  applicable_products: string[] | null;
+  applicable_categories: string[] | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-export type Coupon = Database['public']['Tables']['coupons']['Row'];
-export type CouponInsert = Database['public']['Tables']['coupons']['Insert'];
-export type CouponUpdate = Database['public']['Tables']['coupons']['Update'];
-
-export type CouponUsage = Database['public']['Tables']['coupon_usage']['Row'];
-export type CouponUsageInsert = Database['public']['Tables']['coupon_usage']['Insert'];
+export interface CouponUsage {
+  id: string;
+  coupon_id: string;
+  order_id: string | null;
+  customer_phone: string | null;
+  discount_amount: number;
+  created_at: string;
+}
 
 export type DiscountType = 'percentage' | 'fixed';
 export type ApplicableTo = 'all' | 'products' | 'categories';

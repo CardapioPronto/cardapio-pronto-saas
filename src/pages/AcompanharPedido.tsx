@@ -121,7 +121,7 @@ export default function AcompanharPedido() {
       return;
     }
     setOrder(o);
-    setHistory(o.history || []);
+    setHistory((o as any).history || []);
     setLive(true);
     setError(null);
   };
