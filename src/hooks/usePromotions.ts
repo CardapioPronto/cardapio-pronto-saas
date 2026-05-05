@@ -16,7 +16,7 @@ export const usePromotions = () => {
       if (!restaurantId) return [];
 
       const { data, error } = await supabase
-        .from('promotions')
+        .from('promotions' as any)
         .select('*')
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
@@ -25,7 +25,7 @@ export const usePromotions = () => {
         console.error('Error fetching promotions:', error);
         throw error;
       }
-      return data as Promotion[];
+      return data as unknown as Promotion[];
     },
     enabled: !!restaurantId,
   });
@@ -38,7 +38,7 @@ export const usePromotions = () => {
 
       const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from('promotions')
+        .from('promotions' as any)
         .select('*')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
@@ -50,7 +50,7 @@ export const usePromotions = () => {
         console.error('Error fetching active promotions:', error);
         throw error;
       }
-      return data as Promotion[];
+      return data as unknown as Promotion[];
     },
     enabled: !!restaurantId,
     staleTime: 300000, // 5 minutes
@@ -62,7 +62,7 @@ export const usePromotions = () => {
       if (!restaurantId) throw new Error('Restaurant not found');
 
       const { data, error } = await supabase
-        .from('promotions')
+        .from('promotions' as any)
         .insert({
           restaurant_id: restaurantId,
           ...input,
@@ -71,7 +71,7 @@ export const usePromotions = () => {
         .single();
 
       if (error) throw error;
-      return data as Promotion;
+      return data as unknown as Promotion;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
@@ -87,14 +87,14 @@ export const usePromotions = () => {
   const updatePromotion = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Promotion> & { id: string }) => {
       const { data, error } = await supabase
-        .from('promotions')
+        .from('promotions' as any)
         .update(updates)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data as Promotion;
+      return data as unknown as Promotion;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
@@ -110,7 +110,7 @@ export const usePromotions = () => {
   const deletePromotion = useMutation({
     mutationFn: async (promotionId: string) => {
       const { error } = await supabase
-        .from('promotions')
+        .from('promotions' as any)
         .delete()
         .eq('id', promotionId);
 
@@ -130,14 +130,14 @@ export const usePromotions = () => {
   const togglePromotion = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { data, error } = await supabase
-        .from('promotions')
+        .from('promotions' as any)
         .update({ is_active: !is_active })
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data as Promotion;
+      return data as unknown as Promotion;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });

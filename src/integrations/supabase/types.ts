@@ -44,73 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      configuration_audit_logs: {
-        Row: {
-          action: string
-          actor_user_id: string | null
-          area: string
-          changed_fields: string[]
-          changes: Json
-          created_at: string
-          entity_id: string
-          entity_type: string
-          id: string
-          metadata: Json
-          restaurant_id: string | null
-          target_user_id: string | null
-        }
-        Insert: {
-          action: string
-          actor_user_id?: string | null
-          area: string
-          changed_fields?: string[]
-          changes?: Json
-          created_at?: string
-          entity_id: string
-          entity_type: string
-          id?: string
-          metadata?: Json
-          restaurant_id?: string | null
-          target_user_id?: string | null
-        }
-        Update: {
-          action?: string
-          actor_user_id?: string | null
-          area?: string
-          changed_fields?: string[]
-          changes?: Json
-          created_at?: string
-          entity_id?: string
-          entity_type?: string
-          id?: string
-          metadata?: Json
-          restaurant_id?: string | null
-          target_user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "configuration_audit_logs_actor_user_id_fkey"
-            columns: ["actor_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "configuration_audit_logs_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "configuration_audit_logs_target_user_id_fkey"
-            columns: ["target_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_handoff_rules: {
         Row: {
           created_at: string | null
@@ -314,7 +247,6 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
-          order_position: number | null
           restaurant_id: string | null
           updated_at: string | null
         }
@@ -322,7 +254,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
-          order_position?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
@@ -330,7 +261,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
-          order_position?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
@@ -340,6 +270,73 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      configuration_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          area: string
+          changed_fields: string[]
+          changes: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+          restaurant_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          area: string
+          changed_fields?: string[]
+          changes?: Json
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json
+          restaurant_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          area?: string
+          changed_fields?: string[]
+          changes?: Json
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          restaurant_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuration_audit_logs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_logs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1398,235 +1395,42 @@ export type Database = {
         }
         Relationships: []
       }
-      coupons: {
-        Row: {
-          applicable_categories: string[] | null
-          applicable_products: string[] | null
-          applicable_to: string | null
-          code: string
-          created_at: string | null
-          description: string | null
-          discount_type: "percentage" | "fixed"
-          discount_value: number
-          id: string
-          is_active: boolean | null
-          max_uses: number | null
-          minimum_order_value: number | null
-          restaurant_id: string
-          title: string
-          updated_at: string | null
-          usage_count: number | null
-          valid_from: string
-          valid_until: string
-        }
-        Insert: {
-          applicable_categories?: string[] | null
-          applicable_products?: string[] | null
-          applicable_to?: string | null
-          code: string
-          created_at?: string | null
-          description?: string | null
-          discount_type: "percentage" | "fixed"
-          discount_value: number
-          id?: string
-          is_active?: boolean | null
-          max_uses?: number | null
-          minimum_order_value?: number | null
-          restaurant_id: string
-          title: string
-          updated_at?: string | null
-          usage_count?: number | null
-          valid_from: string
-          valid_until: string
-        }
-        Update: {
-          applicable_categories?: string[] | null
-          applicable_products?: string[] | null
-          applicable_to?: string | null
-          code?: string
-          created_at?: string | null
-          description?: string | null
-          discount_type?: "percentage" | "fixed"
-          discount_value?: number
-          id?: string
-          is_active?: boolean | null
-          max_uses?: number | null
-          minimum_order_value?: number | null
-          restaurant_id?: string
-          title?: string
-          updated_at?: string | null
-          usage_count?: number | null
-          valid_from?: string
-          valid_until?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coupons_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      coupon_usage: {
-        Row: {
-          coupon_id: string
-          created_at: string | null
-          customer_phone: string | null
-          discount_amount: number
-          id: string
-          order_id: string
-        }
-        Insert: {
-          coupon_id: string
-          created_at?: string | null
-          customer_phone?: string | null
-          discount_amount: number
-          id?: string
-          order_id: string
-        }
-        Update: {
-          coupon_id?: string
-          created_at?: string | null
-          customer_phone?: string | null
-          discount_amount?: number
-          id?: string
-          order_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coupon_usage_coupon_id_fkey"
-            columns: ["coupon_id"]
-            isOneToOne: false
-            referencedRelation: "coupons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coupon_usage_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      promotions: {
-        Row: {
-          applicable_to: "product" | "category" | "order"
-          created_at: string
-          created_by: string | null
-          description: string | null
-          discount_type: "percentage" | "fixed"
-          discount_value: number
-          id: string
-          is_active: boolean
-          min_order_value: number | null
-          name: string
-          restaurant_id: string
-          target_id: string | null
-          updated_at: string
-          valid_from: string
-          valid_until: string | null
-        }
-        Insert: {
-          applicable_to: "product" | "category" | "order"
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_type: "percentage" | "fixed"
-          discount_value: number
-          id?: string
-          is_active?: boolean
-          min_order_value?: number | null
-          name: string
-          restaurant_id: string
-          target_id?: string | null
-          updated_at?: string
-          valid_from?: string
-          valid_until?: string | null
-        }
-        Update: {
-          applicable_to?: "product" | "category" | "order"
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_type?: "percentage" | "fixed"
-          discount_value?: number
-          id?: string
-          is_active?: boolean
-          min_order_value?: number | null
-          name?: string
-          restaurant_id?: string
-          target_id?: string | null
-          updated_at?: string
-          valid_from?: string
-          valid_until?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "promotions_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       products: {
         Row: {
           available: boolean
           category_id: string | null
           created_at: string
-          created_by: string | null
           description: string | null
           id: string
-          image_storage_path: string | null
-          image_uploaded_at: string | null
-          image_uploaded_by: string | null
           image_url: string | null
           name: string
-          order_position: number | null
           price: number
           restaurant_id: string
           updated_at: string
-          updated_by: string | null
         }
         Insert: {
           available?: boolean
           category_id?: string | null
           created_at?: string
-          created_by?: string | null
           description?: string | null
           id?: string
-          image_storage_path?: string | null
-          image_uploaded_at?: string | null
-          image_uploaded_by?: string | null
           image_url?: string | null
           name: string
-          order_position?: number | null
           price: number
           restaurant_id: string
           updated_at?: string
-          updated_by?: string | null
         }
         Update: {
           available?: boolean
           category_id?: string | null
           created_at?: string
-          created_by?: string | null
           description?: string | null
           id?: string
-          image_storage_path?: string | null
-          image_uploaded_at?: string | null
-          image_uploaded_by?: string | null
           image_url?: string | null
           name?: string
-          order_position?: number | null
           price?: number
           restaurant_id?: string
           updated_at?: string
-          updated_by?: string | null
         }
         Relationships: [
           {
@@ -2369,29 +2173,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_public_menu_order: {
-        Args: { payload: Json }
-        Returns: {
-          coupon_code: string | null
-          delivery_order_id: string | null
-          discount_amount: number
-          fulfillment_type: string
-          order_id: string
-          order_number: string | null
-          total: number
-          tracking_id: string
-        }
+      audit_changed_fields: {
+        Args: { ignored_fields?: string[]; new_data: Json; old_data: Json }
+        Returns: Json
+      }
+      can_manage_restaurant_employees: {
+        Args: { target_restaurant_id: string }
+        Returns: boolean
       }
       create_default_employee_permissions: {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
-      }
-      get_public_order_tracking: {
-        Args: { p_tracking_id: string }
-        Returns: {
-          [key: string]: Json | undefined
-          history: Json[]
-        } | null
       }
       get_user_basic_info: {
         Args: { _user_id: string }
@@ -2412,25 +2204,23 @@ export type Database = {
           user_type: Database["public"]["Enums"]["user_type"]
         }[]
       }
+      insert_configuration_audit_log: {
+        Args: {
+          p_action: string
+          p_area: string
+          p_changes: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_metadata?: Json
+          p_restaurant_id: string
+          p_target_user_id?: string
+        }
+        Returns: string
+      }
       is_owner_or_manager: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_super_admin_v2: { Args: { user_id: string }; Returns: boolean }
       is_user_active: { Args: { _user_id: string }; Returns: boolean }
-      validate_public_coupon: {
-        Args: {
-          p_code: string
-          p_restaurant_id: string
-          p_order_value: number
-        }
-        Returns: {
-          code?: string
-          coupon_id?: string
-          discount?: number
-          message: string
-          title?: string
-          valid: boolean
-        }
-      }
       log_admin_activity: {
         Args: {
           action: string
@@ -2454,6 +2244,13 @@ export type Database = {
         }
         Returns: string
       }
+      user_has_restaurant_permission: {
+        Args: {
+          required_permission: Database["public"]["Enums"]["permission_type"]
+          target_restaurant_id: string
+        }
+        Returns: boolean
+      }
       user_has_role: {
         Args: { required_role: string; user_id: string }
         Returns: boolean
@@ -2464,16 +2261,11 @@ export type Database = {
         | "pdv_access"
         | "orders_view"
         | "orders_manage"
-        | "orders_metrics_view"
         | "products_view"
         | "products_manage"
         | "reports_view"
         | "settings_view"
         | "settings_manage"
-        | "settings_establishment_manage"
-        | "settings_system_manage"
-        | "settings_integrations_manage"
-        | "settings_audit_view"
         | "employees_manage"
         | "dashboard_view"
         | "subscription_view"
@@ -2483,6 +2275,11 @@ export type Database = {
         | "whatsapp_reply_as_human"
         | "whatsapp_view_all_conversations"
         | "whatsapp_configure_automation"
+        | "orders_metrics_view"
+        | "settings_establishment_manage"
+        | "settings_system_manage"
+        | "settings_integrations_manage"
+        | "settings_audit_view"
       user_type: "owner" | "employee" | "manager"
     }
     CompositeTypes: {
@@ -2615,16 +2412,11 @@ export const Constants = {
         "pdv_access",
         "orders_view",
         "orders_manage",
-        "orders_metrics_view",
         "products_view",
         "products_manage",
         "reports_view",
         "settings_view",
         "settings_manage",
-        "settings_establishment_manage",
-        "settings_system_manage",
-        "settings_integrations_manage",
-        "settings_audit_view",
         "employees_manage",
         "dashboard_view",
         "subscription_view",
@@ -2634,6 +2426,11 @@ export const Constants = {
         "whatsapp_reply_as_human",
         "whatsapp_view_all_conversations",
         "whatsapp_configure_automation",
+        "orders_metrics_view",
+        "settings_establishment_manage",
+        "settings_system_manage",
+        "settings_integrations_manage",
+        "settings_audit_view",
       ],
       user_type: ["owner", "employee", "manager"],
     },
