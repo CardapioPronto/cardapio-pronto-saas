@@ -7,6 +7,8 @@ interface RelatoriosParams {
   dateFrom: Date;
   dateTo: Date;
   tipo: string;
+  status?: string;
+  canal?: string;
 }
 
 interface RelatorioData {
@@ -15,11 +17,17 @@ interface RelatorioData {
   resumo: {
     totalVendas: number;
     totalPedidos: number;
+    pedidosFaturados: number;
     ticketMedio: number;
     pedidosCancelados: number;
     faturamentoCancelado: number;
   };
   status: Array<{ status: string; pedidos: number; total: number }>;
+  filtrosAplicados: {
+    regraFaturamento: string;
+    status: string;
+    canal: string;
+  };
 }
 
 type GraficoVendasItem = {
@@ -53,14 +61,31 @@ type OrderRelatorio = {
   created_at: string;
   customer_name: string | null;
   status: string;
+  source: string | null;
+  order_type: string;
   order_items?: OrderItemRelatorio[] | null;
+};
+
+const FATURAMENTO_STATUS = "finalizado";
+
+const aplicarFiltroCanal = <T extends { eq: (column: string, value: string) => T }>(query: T, canal?: string) => {
+  if (!canal || canal === "todos") return query;
+  const [tipoFiltro, valor] = canal.split(":");
+  if (!valor) return query;
+  return query.eq(tipoFiltro === "tipo" ? "order_type" : "source", valor);
 };
 
 export const useRelatoriosAvancados = (params: RelatoriosParams) => {
   const [data, setData] = useState<RelatorioData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { dateFrom: paramsDateFrom, dateTo: paramsDateTo, tipo } = params;
+  const {
+    dateFrom: paramsDateFrom,
+    dateTo: paramsDateTo,
+    tipo,
+    status = "todos",
+    canal = "todos"
+  } = params;
 
   const fetchRelatorio = useCallback(async () => {
     setLoading(true);
@@ -80,7 +105,7 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
       }
       
       // Buscar dados baseado no tipo de relatório
-      const { data: orders, error: ordersError } = await supabase
+      let ordersQuery = supabase
         .from('orders')
         .select(`
           id,
@@ -88,6 +113,8 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
           created_at,
           customer_name,
           status,
+          source,
+          order_type,
           order_items (
             id,
             product_name,
@@ -98,15 +125,22 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
         `)
         .eq('restaurant_id', restaurantId)
         .gte('created_at', dateFrom.toISOString())
-        .lte('created_at', dateTo.toISOString())
-        .order('created_at', { ascending: true });
+        .lte('created_at', dateTo.toISOString());
+
+      if (status !== "todos") {
+        ordersQuery = ordersQuery.eq("status", status);
+      }
+
+      ordersQuery = aplicarFiltroCanal(ordersQuery, canal);
+
+      const { data: orders, error: ordersError } = await ordersQuery.order('created_at', { ascending: true });
 
       if (ordersError) throw ordersError;
 
       // Processar dados para gráficos
       const rows = (orders || []) as OrderRelatorio[];
-      const pedidosValidos = rows.filter((order) => order.status !== 'cancelado');
-      const vendasPorDia = pedidosValidos.reduce<Record<string, GraficoVendasItem>>((acc, order) => {
+      const pedidosFaturaveis = rows.filter((order) => order.status === FATURAMENTO_STATUS);
+      const vendasPorDia = pedidosFaturaveis.reduce<Record<string, GraficoVendasItem>>((acc, order) => {
         const dia = new Date(order.created_at).toISOString().split('T')[0];
         if (!acc[dia]) {
           acc[dia] = { data: dia, vendas: 0, pedidos: 0 };
@@ -123,7 +157,7 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
       }
 
       // Processar produtos mais vendidos
-      const produtosVendidos = pedidosValidos.reduce<Record<string, ProdutoRelatorioAggregate>>((acc, order) => {
+      const produtosVendidos = pedidosFaturaveis.reduce<Record<string, ProdutoRelatorioAggregate>>((acc, order) => {
         order.order_items?.forEach((item) => {
           const key = item.product_id || item.product_name;
           if (!acc[key]) {
@@ -150,9 +184,10 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
         .slice(0, 10);
 
       // Calcular resumo
-      const totalVendas = pedidosValidos.reduce((sum, order) => sum + Number(order.total), 0) || 0;
-      const totalPedidos = pedidosValidos.length || 0;
-      const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+      const totalVendas = pedidosFaturaveis.reduce((sum, order) => sum + Number(order.total), 0) || 0;
+      const totalPedidos = rows.length || 0;
+      const pedidosFaturados = pedidosFaturaveis.length || 0;
+      const ticketMedio = pedidosFaturados > 0 ? totalVendas / pedidosFaturados : 0;
       const pedidosCancelados = rows.filter((order) => order.status === 'cancelado').length || 0;
       const faturamentoCancelado = rows
         ?.filter((order) => order.status === 'cancelado')
@@ -174,11 +209,17 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
         resumo: {
           totalVendas,
           totalPedidos,
+          pedidosFaturados,
           ticketMedio,
           pedidosCancelados,
           faturamentoCancelado
         },
-        status: Object.values(statusMap)
+        status: Object.values(statusMap),
+        filtrosAplicados: {
+          regraFaturamento: "Apenas pedidos finalizados entram em faturamento, ticket médio e gráficos de venda.",
+          status,
+          canal
+        }
       });
     } catch (err) {
       console.error('Erro ao buscar relatório:', err);
@@ -186,7 +227,7 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
     } finally {
       setLoading(false);
     }
-  }, [paramsDateFrom, paramsDateTo, tipo]);
+  }, [paramsDateFrom, paramsDateTo, tipo, status, canal]);
 
   return {
     data,

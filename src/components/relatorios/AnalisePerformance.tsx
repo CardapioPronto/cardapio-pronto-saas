@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, TrendingUp, TrendingDown, Activity, Target, AlertCircle } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, Activity, Target, AlertCircle, FileSpreadsheet, FileText } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAnalisePerformance } from "@/hooks/useAnalisePerformance";
+import { useExportacaoDados } from "@/hooks/useExportacaoDados";
 import { GraficoPerformance } from "./GraficoPerformance";
 import { MetricasPerformance } from "./MetricasPerformance";
 
@@ -16,15 +17,30 @@ export const AnalisePerformance = () => {
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
   const [periodoComparacao, setPeriodoComparacao] = useState<string>("mes-anterior");
+  const [canalFiltro, setCanalFiltro] = useState<string>("todos");
   
   const { data: performanceData, loading, error, refetch } = useAnalisePerformance({
     dateFrom,
     dateTo,
-    periodoComparacao
+    periodoComparacao,
+    canal: canalFiltro
   });
+  const { exportar, loading: exportando } = useExportacaoDados();
 
   const handleAnalisar = () => {
     refetch();
+  };
+
+  const handleExportar = async (formato: "excel" | "pdf") => {
+    await exportar({
+      dateFrom,
+      dateTo,
+      formato,
+      dados: ["performance"],
+      canal: canalFiltro,
+      periodoComparacao,
+      titulo: "Análise de Performance"
+    });
   };
 
   const periodoInvalido = dateFrom > dateTo;
@@ -81,7 +97,7 @@ export const AnalisePerformance = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Data Inicial */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Data Inicial</label>
@@ -153,6 +169,24 @@ export const AnalisePerformance = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Origem / Atendimento</label>
+              <Select value={canalFiltro} onValueChange={setCanalFiltro}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="source:app">PDV</SelectItem>
+                  <SelectItem value="source:cardapio">Cardápio digital</SelectItem>
+                  <SelectItem value="source:ifood">iFood</SelectItem>
+                  <SelectItem value="tipo:mesa">Mesa</SelectItem>
+                  <SelectItem value="tipo:balcao">Balcão</SelectItem>
+                  <SelectItem value="tipo:delivery">Delivery</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {periodoInvalido && (
@@ -162,10 +196,20 @@ export const AnalisePerformance = () => {
             </div>
           )}
 
-          <Button onClick={handleAnalisar} disabled={loading || periodoInvalido} className="w-full md:w-auto">
-            <Target className="mr-2 h-4 w-4" />
-            {loading ? "Analisando..." : "Analisar Performance"}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button onClick={handleAnalisar} disabled={loading || periodoInvalido} className="w-full sm:w-auto">
+              <Target className="mr-2 h-4 w-4" />
+              {loading ? "Analisando..." : "Analisar Performance"}
+            </Button>
+            <Button variant="outline" onClick={() => handleExportar("excel")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              XLSX
+            </Button>
+            <Button variant="outline" onClick={() => handleExportar("pdf")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
+              <FileText className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

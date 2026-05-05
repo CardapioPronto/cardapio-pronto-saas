@@ -7,6 +7,8 @@ interface AnaliseParams {
   dateFrom: Date;
   dateTo: Date;
   periodoComparacao: string;
+  status?: string;
+  canal?: string;
 }
 
 interface PerformanceData {
@@ -46,6 +48,15 @@ type DadosPeriodo = {
   orders: OrderPerformanceRow[];
 };
 
+const FATURAMENTO_STATUS = "finalizado";
+
+const aplicarFiltroCanal = <T extends { eq: (column: string, value: string) => T }>(query: T, canal?: string) => {
+  if (!canal || canal === "todos") return query;
+  const [tipoFiltro, valor] = canal.split(":");
+  if (!valor) return query;
+  return query.eq(tipoFiltro === "tipo" ? "order_type" : "source", valor);
+};
+
 const calcularPeriodoComparacao = (dateFrom: Date, dateTo: Date, tipo: string) => {
   switch (tipo) {
     case "mes-anterior":
@@ -69,16 +80,19 @@ const calcularPeriodoComparacao = (dateFrom: Date, dateTo: Date, tipo: string) =
   }
 };
 
-const buscarDadosPeriodo = async (from: Date, to: Date): Promise<DadosPeriodo> => {
+const buscarDadosPeriodo = async (from: Date, to: Date, status = "todos", canal = "todos"): Promise<DadosPeriodo> => {
   const restaurantId = await getCurrentRestaurantId();
   if (!restaurantId) throw new Error('Restaurant ID not found');
 
-  const { data: orders, error } = await supabase
+  let ordersQuery = supabase
     .from('orders')
     .select(`
       id,
       total,
       created_at,
+      status,
+      source,
+      order_type,
       order_items (
         id,
         quantity,
@@ -86,9 +100,17 @@ const buscarDadosPeriodo = async (from: Date, to: Date): Promise<DadosPeriodo> =
       )
     `)
     .eq('restaurant_id', restaurantId)
-    .neq('status', 'cancelado')
+    .eq('status', FATURAMENTO_STATUS)
     .gte('created_at', startOfDay(from).toISOString())
     .lte('created_at', endOfDay(to).toISOString());
+
+  if (status !== "todos") {
+    ordersQuery = ordersQuery.eq("status", status);
+  }
+
+  ordersQuery = aplicarFiltroCanal(ordersQuery, canal);
+
+  const { data: orders, error } = await ordersQuery;
 
   if (error) throw error;
 
@@ -102,7 +124,13 @@ const buscarDadosPeriodo = async (from: Date, to: Date): Promise<DadosPeriodo> =
   return { faturamento, pedidos, ticketMedio, produtosVendidos, orders: rows };
 };
 
-const buscarMediaPeriodosAnteriores = async (dateFrom: Date, dateTo: Date, quantidadePeriodos: number) => {
+const buscarMediaPeriodosAnteriores = async (
+  dateFrom: Date,
+  dateTo: Date,
+  quantidadePeriodos: number,
+  status = "todos",
+  canal = "todos"
+) => {
   const periodoInicio = startOfDay(dateFrom);
   const diasPeriodo = Math.max(1, differenceInCalendarDays(endOfDay(dateTo), periodoInicio) + 1);
   const resultados: DadosPeriodo[] = [];
@@ -110,7 +138,7 @@ const buscarMediaPeriodosAnteriores = async (dateFrom: Date, dateTo: Date, quant
   for (let index = 0; index < quantidadePeriodos; index += 1) {
     const periodoFim = subDays(periodoInicio, (index * diasPeriodo) + 1);
     const periodoComeco = subDays(periodoFim, diasPeriodo - 1);
-    resultados.push(await buscarDadosPeriodo(periodoComeco, periodoFim));
+    resultados.push(await buscarDadosPeriodo(periodoComeco, periodoFim, status, canal));
   }
 
   const faturamento = resultados.reduce((sum, item) => sum + item.faturamento, 0) / quantidadePeriodos;
@@ -135,7 +163,13 @@ export const useAnalisePerformance = (params: AnaliseParams) => {
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { dateFrom: paramsDateFrom, dateTo: paramsDateTo, periodoComparacao } = params;
+  const {
+    dateFrom: paramsDateFrom,
+    dateTo: paramsDateTo,
+    periodoComparacao,
+    status = "todos",
+    canal = "todos"
+  } = params;
 
   const fetchAnalise = useCallback(async () => {
     setLoading(true);
@@ -150,15 +184,17 @@ export const useAnalisePerformance = (params: AnaliseParams) => {
       }
       
       // Buscar dados do período atual
-      const dadosAtuais = await buscarDadosPeriodo(dateFrom, dateTo);
+      const dadosAtuais = await buscarDadosPeriodo(dateFrom, dateTo, status, canal);
       
       // Buscar dados do período de comparação
       const quantidadeMedia = periodoComparacao === "media-3meses" ? 3 : periodoComparacao === "media-6meses" ? 6 : 0;
       const dadosComparacao = quantidadeMedia > 0
-        ? await buscarMediaPeriodosAnteriores(dateFrom, dateTo, quantidadeMedia)
+        ? await buscarMediaPeriodosAnteriores(dateFrom, dateTo, quantidadeMedia, status, canal)
         : await buscarDadosPeriodo(
             calcularPeriodoComparacao(dateFrom, dateTo, periodoComparacao).from,
-            calcularPeriodoComparacao(dateFrom, dateTo, periodoComparacao).to
+            calcularPeriodoComparacao(dateFrom, dateTo, periodoComparacao).to,
+            status,
+            canal
           );
       const periodoComparacaoLabel = quantidadeMedia > 0
         ? `média dos ${quantidadeMedia} períodos anteriores`
@@ -230,7 +266,7 @@ export const useAnalisePerformance = (params: AnaliseParams) => {
     } finally {
       setLoading(false);
     }
-  }, [paramsDateFrom, paramsDateTo, periodoComparacao]);
+  }, [paramsDateFrom, paramsDateTo, periodoComparacao, status, canal]);
 
   return {
     data,

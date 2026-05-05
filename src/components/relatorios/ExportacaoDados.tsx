@@ -16,6 +16,8 @@ export const ExportacaoDados = () => {
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
   const [formato, setFormato] = useState<"excel" | "pdf">("excel");
   const [dados, setDados] = useState<string[]>(["vendas", "produtos"]);
+  const [statusFiltro, setStatusFiltro] = useState<string>("todos");
+  const [canalFiltro, setCanalFiltro] = useState<string>("todos");
   
   const { exportar, loading } = useExportacaoDados();
 
@@ -32,7 +34,10 @@ export const ExportacaoDados = () => {
       dateFrom,
       dateTo,
       formato,
-      dados
+      dados,
+      status: statusFiltro,
+      canal: canalFiltro,
+      titulo: "Exportação de Dados"
     });
   };
 
@@ -114,6 +119,43 @@ export const ExportacaoDados = () => {
             </div>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFiltro} onValueChange={setStatusFiltro}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="finalizado">Finalizados</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="preparo">Em preparo</SelectItem>
+                  <SelectItem value="em-andamento">Em andamento</SelectItem>
+                  <SelectItem value="cancelado">Cancelados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Origem / Atendimento</label>
+              <Select value={canalFiltro} onValueChange={setCanalFiltro}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="source:app">PDV</SelectItem>
+                  <SelectItem value="source:cardapio">Cardápio digital</SelectItem>
+                  <SelectItem value="source:ifood">iFood</SelectItem>
+                  <SelectItem value="tipo:mesa">Mesa</SelectItem>
+                  <SelectItem value="tipo:balcao">Balcão</SelectItem>
+                  <SelectItem value="tipo:delivery">Delivery</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Formato */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Formato de Exportação</label>
@@ -125,7 +167,7 @@ export const ExportacaoDados = () => {
                 <SelectItem value="excel">
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
-                    Excel (.xls)
+                    Excel (.xlsx)
                   </div>
                 </SelectItem>
                 <SelectItem value="pdf">
@@ -178,7 +220,7 @@ export const ExportacaoDados = () => {
             className="w-full"
           >
             <Download className="mr-2 h-4 w-4" />
-            {loading ? "Exportando..." : `Exportar ${formato.toUpperCase()}`}
+            {loading ? "Exportando..." : `Exportar ${formato === "excel" ? "XLSX" : "PDF"}`}
           </Button>
         </CardContent>
       </Card>

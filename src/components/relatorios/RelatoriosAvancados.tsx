@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, BarChart3, PieChart, TrendingUp, AlertCircle, Receipt, DollarSign, Ban } from "lucide-react";
+import { CalendarIcon, BarChart3, PieChart, TrendingUp, AlertCircle, Receipt, DollarSign, Ban, FileSpreadsheet, FileText } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useRelatoriosAvancados } from "@/hooks/useRelatoriosAvancados";
+import { useExportacaoDados } from "@/hooks/useExportacaoDados";
 import { GraficoVendasPeriodo } from "./GraficoVendasPeriodo";
 import { TabelaProdutosPeriodo } from "./TabelaProdutosPeriodo";
 
@@ -16,12 +17,17 @@ export const RelatoriosAvancados = () => {
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
   const [tipoRelatorio, setTipoRelatorio] = useState<string>("vendas");
+  const [statusFiltro, setStatusFiltro] = useState<string>("todos");
+  const [canalFiltro, setCanalFiltro] = useState<string>("todos");
   
   const { data: relatorioData, loading, error, refetch } = useRelatoriosAvancados({
     dateFrom,
     dateTo,
-    tipo: tipoRelatorio
+    tipo: tipoRelatorio,
+    status: statusFiltro,
+    canal: canalFiltro
   });
+  const { exportar, loading: exportando } = useExportacaoDados();
 
   const handlePresetSelect = (preset: string) => {
     const now = new Date();
@@ -59,6 +65,18 @@ export const RelatoriosAvancados = () => {
     refetch();
   };
 
+  const handleExportar = async (formato: "excel" | "pdf") => {
+    await exportar({
+      dateFrom,
+      dateTo,
+      formato,
+      dados: ["dashboard", "vendas", "produtos"],
+      status: statusFiltro,
+      canal: canalFiltro,
+      titulo: "Relatório Avançado"
+    });
+  };
+
   const periodoInvalido = dateFrom > dateTo;
 
   const formatarMoeda = (valor: number) =>
@@ -77,7 +95,7 @@ export const RelatoriosAvancados = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Período Rápido */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Período Rápido</label>
@@ -167,6 +185,41 @@ export const RelatoriosAvancados = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFiltro} onValueChange={setStatusFiltro}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="finalizado">Finalizados</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="preparo">Em preparo</SelectItem>
+                  <SelectItem value="em-andamento">Em andamento</SelectItem>
+                  <SelectItem value="cancelado">Cancelados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Origem / Atendimento</label>
+              <Select value={canalFiltro} onValueChange={setCanalFiltro}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="source:app">PDV</SelectItem>
+                  <SelectItem value="source:cardapio">Cardápio digital</SelectItem>
+                  <SelectItem value="source:ifood">iFood</SelectItem>
+                  <SelectItem value="tipo:mesa">Mesa</SelectItem>
+                  <SelectItem value="tipo:balcao">Balcão</SelectItem>
+                  <SelectItem value="tipo:delivery">Delivery</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {periodoInvalido && (
@@ -176,17 +229,27 @@ export const RelatoriosAvancados = () => {
             </div>
           )}
 
-          <Button onClick={handleGerarRelatorio} disabled={loading || periodoInvalido} className="w-full md:w-auto">
-            <TrendingUp className="mr-2 h-4 w-4" />
-            {loading ? "Gerando..." : "Gerar Relatório"}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button onClick={handleGerarRelatorio} disabled={loading || periodoInvalido} className="w-full sm:w-auto">
+              <TrendingUp className="mr-2 h-4 w-4" />
+              {loading ? "Gerando..." : "Gerar Relatório"}
+            </Button>
+            <Button variant="outline" onClick={() => handleExportar("excel")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              XLSX
+            </Button>
+            <Button variant="outline" onClick={() => handleExportar("pdf")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
+              <FileText className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Resultados do Relatório */}
       {relatorioData && (
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Faturamento</CardTitle>
@@ -194,7 +257,7 @@ export const RelatoriosAvancados = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatarMoeda(relatorioData.resumo.totalVendas)}</div>
-                <p className="text-xs text-muted-foreground">Pedidos cancelados não entram nesse total</p>
+                <p className="text-xs text-muted-foreground">Apenas pedidos finalizados entram nesse total</p>
               </CardContent>
             </Card>
 
@@ -205,7 +268,7 @@ export const RelatoriosAvancados = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{relatorioData.resumo.totalPedidos.toLocaleString('pt-BR')}</div>
-                <p className="text-xs text-muted-foreground">Pedidos válidos no período</p>
+                <p className="text-xs text-muted-foreground">{relatorioData.resumo.pedidosFaturados.toLocaleString('pt-BR')} finalizados</p>
               </CardContent>
             </Card>
 
