@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { User as AppUser } from '@/types/user';
@@ -12,7 +12,8 @@ interface UserSession {
   error: string | null;
 }
 
-const SESSION_TIMEOUT_MS = 10000;
+const SESSION_TIMEOUT_MS = 10_000;
+const DEBOUNCE_MS = 2_000;
 const PROFILE_UPDATED_EVENT = 'profile-updated';
 
 function withTimeout<T>(operation: PromiseLike<T>, timeoutMs: number, label: string): Promise<T> {
@@ -35,6 +36,8 @@ export const useUserSession = (): UserSession => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const lastUserIdRef = useRef<string | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const fetchUserProfile = useCallback(async (userId: string): Promise<AppUser | null> => {
     try {
@@ -64,12 +67,25 @@ export const useUserSession = (): UserSession => {
   useEffect(() => {
     let active = true;
 
-    const applySession = async (nextSession: Session | null, shouldShowLoading: boolean) => {
+    /**
+     * Aplica uma sessão recebida. Só atualiza o estado se o userId mudou
+     * (ou se é o carregamento inicial), evitando re-renders desnecessários.
+     */
+    const applySession = async (
+      nextSession: Session | null,
+      isInitial: boolean,
+    ) => {
       const requestId = ++requestIdRef.current;
-      if (shouldShowLoading) setLoading(true);
+      const nextUserId = nextSession?.user?.id ?? null;
+
+      // Se não é a carga inicial e o userId não mudou, não mexe em nada.
+      if (!isInitial && nextUserId === lastUserIdRef.current) return;
+
+      if (isInitial) setLoading(true);
 
       try {
         if (!active) return;
+        lastUserIdRef.current = nextUserId;
         setSession(nextSession);
         setAuthUser(nextSession?.user ?? null);
         setError(null);
@@ -93,9 +109,10 @@ export const useUserSession = (): UserSession => {
       }
     };
 
-    const refreshSession = async (shouldShowLoading = false) => {
+    /** Busca a sessão atual. `isInitial` mostra loading spinner. */
+    const refreshSession = async (isInitial = false) => {
       const requestId = ++requestIdRef.current;
-      if (shouldShowLoading) setLoading(true);
+      if (isInitial) setLoading(true);
 
       try {
         const { data: { session } } = await withTimeout(
@@ -104,7 +121,7 @@ export const useUserSession = (): UserSession => {
           'Busca da sessão',
         );
         if (!active || requestId !== requestIdRef.current) return;
-        await applySession(session, false);
+        await applySession(session, isInitial);
       } catch (err) {
         if (!active || requestId !== requestIdRef.current) return;
         console.error('Erro ao buscar sessão:', err);
@@ -116,34 +133,44 @@ export const useUserSession = (): UserSession => {
       }
     };
 
+    /** Debounced refresh para focus/visibility — evita cascatas */
+    const debouncedRefresh = () => {
+      if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = window.setTimeout(() => {
+        refreshSession(false);
+      }, DEBOUNCE_MS);
+    };
+
+    // Carga inicial
     refreshSession(true);
 
-    // Escutar mudanças na autenticação
+    // Escutar mudanças na autenticação — SEM await para não bloquear
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        await applySession(session, false);
-      }
+      (_event, session) => {
+        // Só atualizar se realmente mudou de usuário (login/logout)
+        const newId = session?.user?.id ?? null;
+        if (newId !== lastUserIdRef.current) {
+          applySession(session, false);
+        }
+      },
     );
 
     const handleVisible = () => {
-      if (document.visibilityState === 'visible') {
-        refreshSession(false);
-      }
+      if (document.visibilityState === 'visible') debouncedRefresh();
     };
 
-    const handleFocus = () => refreshSession(false);
     const handleProfileUpdated = () => refreshSession(false);
 
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
+    // Apenas visibilitychange (focus já é coberto por visibilitychange)
     document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
 
     return () => {
       active = false;
+      if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
       subscription.unsubscribe();
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
       document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated);
     };
   }, [fetchUserProfile]);
 
