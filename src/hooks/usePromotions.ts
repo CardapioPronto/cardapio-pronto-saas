@@ -25,7 +25,7 @@ export const usePromotions = () => {
         console.error('Error fetching promotions:', error);
         throw error;
       }
-      return data as Promotion[];
+      return data as unknown as Promotion[];
     },
     enabled: !!restaurantId,
   });
@@ -50,7 +50,7 @@ export const usePromotions = () => {
         console.error('Error fetching active promotions:', error);
         throw error;
       }
-      return data as Promotion[];
+      return data as unknown as Promotion[];
     },
     enabled: !!restaurantId,
     staleTime: 300000, // 5 minutes
@@ -71,7 +71,7 @@ export const usePromotions = () => {
         .single();
 
       if (error) throw error;
-      return data as Promotion;
+      return data as unknown as Promotion;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
@@ -94,7 +94,7 @@ export const usePromotions = () => {
         .single();
 
       if (error) throw error;
-      return data as Promotion;
+      return data as unknown as Promotion;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
@@ -137,7 +137,7 @@ export const usePromotions = () => {
         .single();
 
       if (error) throw error;
-      return data as Promotion;
+      return data as unknown as Promotion;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions', restaurantId] });
