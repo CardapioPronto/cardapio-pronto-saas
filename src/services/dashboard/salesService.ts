@@ -1,18 +1,25 @@
 
 import { supabase } from '@/lib/supabase';
-import { getCurrentRestaurantId } from '@/lib/supabase';
 import { RecentSale } from './types';
 
-export const getRecentSales = async (): Promise<RecentSale[]> => {
+const db = supabase as any;
+
+export const getRecentSales = async (
+  restaurantId: string,
+  includeFinancials = false
+): Promise<RecentSale[]> => {
   try {
-    const restaurantId = await getCurrentRestaurantId();
     if (!restaurantId) {
       throw new Error('Restaurant ID not found');
     }
 
-    const { data: orders, error } = await supabase
+    const columns = includeFinancials
+      ? 'id, customer_name, total, status, created_at'
+      : 'id, customer_name, status, created_at';
+
+    const { data: orders, error } = await db
       .from('orders')
-      .select('id, customer_name, total, status, created_at')
+      .select(columns)
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -22,7 +29,7 @@ export const getRecentSales = async (): Promise<RecentSale[]> => {
     return orders?.map(order => ({
       id: order.id,
       customer: order.customer_name,
-      amount: Number(order.total),
+      amount: includeFinancials ? Number(order.total || 0) : null,
       status: order.status,
       time: new Date(order.created_at).toLocaleTimeString('pt-BR', {
         hour: '2-digit',

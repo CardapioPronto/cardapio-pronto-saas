@@ -4,16 +4,19 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardDescription,
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PopularProduct } from "@/services/dashboardService";
+import { formatCurrency } from "@/lib/utils";
 
 interface PopularProductsProps {
   products: PopularProduct[];
+  canViewFinancials?: boolean;
 }
 
-function PopularProductsBase({ products }: PopularProductsProps) {
+function PopularProductsBase({ products, canViewFinancials = false }: PopularProductsProps) {
   // Calculate maximum sales to normalize popularity percentages
   const maxSales = useMemo(
     () => (products.length > 0 ? Math.max(...products.map((p) => p.sales)) : 1),
@@ -21,9 +24,12 @@ function PopularProductsBase({ products }: PopularProductsProps) {
   );
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Produtos Populares</CardTitle>
+        <div>
+          <CardTitle className="text-base font-semibold">Produtos populares</CardTitle>
+          <CardDescription>Mais vendidos nos últimos 30 dias</CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
         {products && products.length > 0 ? (
@@ -35,14 +41,16 @@ function PopularProductsBase({ products }: PopularProductsProps) {
               return (
                 <div key={product.id} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium leading-none">
+                    <p className="truncate text-sm font-medium leading-none" title={product.name}>
                       {product.name}
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-shrink-0 items-center gap-2">
                       <p className="text-xs text-muted-foreground">
                         {product.sales} un.
                       </p>
-                      <p className="text-xs font-medium">{popularity}%</p>
+                      {canViewFinancials && (
+                        <p className="text-xs font-medium">{formatCurrency(product.revenue)}</p>
+                      )}
                     </div>
                   </div>
                   <Progress value={popularity} className="h-1.5" />

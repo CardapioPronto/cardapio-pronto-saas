@@ -12,15 +12,21 @@ interface StatCardProps {
 }
 
 const StatCardBase = ({ title, value, change, icon: Icon, color }: StatCardProps) => {
+  const changeTone = change.startsWith("-")
+    ? "text-destructive"
+    : change.startsWith("+")
+      ? "text-green"
+      : "text-muted-foreground";
+
   return (
     <Card>
-      <CardContent className="p-6 flex items-center justify-between">
-        <div>
+      <CardContent className="flex min-h-32 items-center justify-between gap-4 p-5">
+        <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{title}</p>
-          <h3 className="text-2xl font-bold mt-1">{value}</h3>
-          <p className="text-xs text-green mt-1">{change} este mês</p>
+          <h3 className="mt-1 truncate text-2xl font-bold">{value}</h3>
+          <p className={`mt-2 text-xs ${changeTone}`}>{change}</p>
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
       </CardContent>

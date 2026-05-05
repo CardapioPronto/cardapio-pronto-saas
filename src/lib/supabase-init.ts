@@ -24,13 +24,13 @@ export async function initSupabase(): Promise<boolean> {
     // Verifica a sessão atual do usuário
     const { data, error: sessionError } = await supabase.auth.getSession();
     
-    if (sessionError) {
-      console.error('Erro ao verificar a sessão:', sessionError.message);
-    } else if (data?.session) {
-      console.log('Usuário já autenticado:', data.session.user.email);
-    } else {
-      console.log('Nenhum usuário autenticado.');
-    }
+    // if (sessionError) {
+    //   console.error('Erro ao verificar a sessão:', sessionError.message);
+    // } else if (data?.session) {
+    //   console.log('Usuário já autenticado:', data.session.user.email);
+    // } else {
+    //   console.log('Nenhum usuário autenticado.');
+    // }
     
     return true;
   } catch (error) {

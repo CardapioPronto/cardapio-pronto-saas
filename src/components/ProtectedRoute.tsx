@@ -47,9 +47,11 @@ function pickFallbackRoute(perms: PermissionType[]): string {
   if (perms.includes('orders_view')) return '/pedidos';
   if (
     perms.includes('whatsapp_manage')
+    || perms.includes('whatsapp_manage_instances')
     || perms.includes('whatsapp_take_conversations')
     || perms.includes('whatsapp_reply_as_human')
     || perms.includes('whatsapp_view_all_conversations')
+    || perms.includes('whatsapp_configure_automation')
   ) return '/atendimento';
   if (perms.includes('products_view')) return '/produtos';
   if (perms.includes('reports_view')) return '/relatorios';

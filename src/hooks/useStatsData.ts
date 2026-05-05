@@ -1,7 +1,8 @@
 
 import { useState } from "react";
-import { DollarSign, ShoppingCart, TrendingUp, Users, LucideIcon } from "lucide-react";
+import { DollarSign, PackageCheck, ShoppingCart, TrendingUp, LucideIcon } from "lucide-react";
 import { formatarMoeda } from "@/utils/dashboardUtils";
+import { DashboardStats } from "@/services/dashboardService";
 
 interface StatItem {
   title: string;
@@ -14,40 +15,42 @@ interface StatItem {
 export const useStatsData = () => {
   const [stats, setStats] = useState<StatItem[]>([
     {
-      title: "Vendas hoje",
-      value: "R$ 0,00",
-      change: "+0%",
-      icon: DollarSign,
-      color: "bg-green/10 text-green",
-    },
-    {
-      title: "Pedidos",
+      title: "Pedidos (30 dias)",
       value: "0",
-      change: "0%",
+      change: "Aguardando dados",
       icon: ShoppingCart,
       color: "bg-orange/10 text-orange",
     },
     {
-      title: "Clientes",
+      title: "Faturamento (30 dias)",
+      value: "R$ 0,00",
+      change: "Aguardando dados",
+      icon: DollarSign,
+      color: "bg-green/10 text-green",
+    },
+    {
+      title: "Itens vendidos",
       value: "0",
-      change: "0%",
-      icon: Users,
+      change: "Últimos 30 dias",
+      icon: PackageCheck,
       color: "bg-navy/10 text-navy",
     },
     {
-      title: "Faturamento mensal",
-      value: "R$ 0,00",
-      change: "0%",
+      title: "Pedidos em aberto",
+      value: "0",
+      change: "Operação atual",
       icon: TrendingUp,
       color: "bg-beige/30 text-navy",
     },
   ]);
 
-  const updateStats = (dashboardStats: any) => {
+  const updateStats = (dashboardStats: DashboardStats, canViewFinancials: boolean) => {
     const { 
       totalPedidos, 
       faturamento, 
-      produtosMaisVendidos, 
+      itensVendidos,
+      pedidosAbertos,
+      ticketMedio,
       crescimentoPedidos, 
       crescimentoFaturamento 
     } = dashboardStats;
@@ -59,29 +62,29 @@ export const useStatsData = () => {
       {
         title: "Pedidos (30 dias)",
         value: totalPedidos.toString(),
-        change: pedidosChange,
+        change: `${pedidosChange} vs. período anterior`,
         icon: ShoppingCart,
         color: "bg-orange/10 text-orange",
       },
       {
         title: "Faturamento (30 dias)",
-        value: formatarMoeda(faturamento),
-        change: faturamentoChange,
+        value: canViewFinancials ? formatarMoeda(faturamento) : "Restrito",
+        change: canViewFinancials ? `${faturamentoChange} vs. período anterior` : "Permissão financeira necessária",
         icon: DollarSign,
         color: "bg-green/10 text-green",
       },
       {
-        title: "Produtos Vendidos",
-        value: produtosMaisVendidos.toString(),
-        change: "0%",
-        icon: TrendingUp,
+        title: "Itens vendidos",
+        value: itensVendidos.toString(),
+        change: canViewFinancials ? `Ticket médio ${formatarMoeda(ticketMedio)}` : "Últimos 30 dias",
+        icon: PackageCheck,
         color: "bg-navy/10 text-navy",
       },
       {
-        title: "Avaliação Média",
-        value: "4.5",
-        change: "0%",
-        icon: Users,
+        title: "Pedidos em aberto",
+        value: pedidosAbertos.toString(),
+        change: pedidosAbertos > 0 ? "Precisam de acompanhamento" : "Operação em dia",
+        icon: TrendingUp,
         color: "bg-beige/30 text-navy",
       },
     ]);

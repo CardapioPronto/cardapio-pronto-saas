@@ -1,11 +1,22 @@
 
 import { supabase } from '@/lib/supabase';
-import { getCurrentRestaurantId } from '@/lib/supabase';
 import { DashboardStats } from './types';
 
-export const getDashboardStats = async (): Promise<DashboardStats> => {
+const db = supabase as any;
+const OPEN_ORDER_STATUSES = ['pendente', 'preparo', 'em-andamento', 'pending', 'preparing'];
+
+const isCanceled = (status?: string | null) => status === 'cancelado' || status === 'cancelled' || status === 'canceled';
+
+const calculateGrowth = (current: number, previous: number) => {
+  if (previous > 0) return ((current - previous) / previous) * 100;
+  return current > 0 ? 100 : 0;
+};
+
+export const getDashboardStats = async (
+  restaurantId: string,
+  includeFinancials = false
+): Promise<DashboardStats> => {
   try {
-    const restaurantId = await getCurrentRestaurantId();
     if (!restaurantId) {
       throw new Error('Restaurant ID not found');
     }
@@ -17,61 +28,66 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-    // Buscar pedidos dos últimos 30 dias
-    const { data: recentOrders, error: recentError } = await supabase
+    const orderColumns = includeFinancials ? 'id, total, status, created_at' : 'id, status, created_at';
+
+    const { data: recentOrders, error: recentError } = await db
       .from('orders')
-      .select('total, created_at')
+      .select(orderColumns)
       .eq('restaurant_id', restaurantId)
       .gte('created_at', thirtyDaysAgo.toISOString());
 
     if (recentError) throw recentError;
 
-    // Buscar pedidos de 30-60 dias atrás para comparação
-    const { data: previousOrders, error: previousError } = await supabase
+    const { data: previousOrders, error: previousError } = await db
       .from('orders')
-      .select('total, created_at')
+      .select(orderColumns)
       .eq('restaurant_id', restaurantId)
       .gte('created_at', sixtyDaysAgo.toISOString())
       .lt('created_at', thirtyDaysAgo.toISOString());
 
     if (previousError) throw previousError;
 
-    // Calcular estatísticas
+    const recentValidOrders = (recentOrders || []).filter((order: any) => !isCanceled(order.status));
+    const previousValidOrders = (previousOrders || []).filter((order: any) => !isCanceled(order.status));
     const totalPedidos = recentOrders?.length || 0;
-    const faturamento = recentOrders?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
+    const pedidosAbertos = (recentOrders || []).filter((order: any) => OPEN_ORDER_STATUSES.includes(order.status)).length;
+    const faturamento = includeFinancials
+      ? recentValidOrders.reduce((sum: number, order: any) => sum + Number(order.total || 0), 0)
+      : 0;
     
     const previousTotalPedidos = previousOrders?.length || 0;
-    const previousFaturamento = previousOrders?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
+    const previousFaturamento = includeFinancials
+      ? previousValidOrders.reduce((sum: number, order: any) => sum + Number(order.total || 0), 0)
+      : 0;
 
-    // Calcular crescimento
-    const crescimentoPedidos = previousTotalPedidos > 0 
-      ? ((totalPedidos - previousTotalPedidos) / previousTotalPedidos) * 100 
-      : totalPedidos > 0 ? 100 : 0;
+    const crescimentoPedidos = calculateGrowth(totalPedidos, previousTotalPedidos);
+    const crescimentoFaturamento = includeFinancials ? calculateGrowth(faturamento, previousFaturamento) : 0;
 
-    const crescimentoFaturamento = previousFaturamento > 0 
-      ? ((faturamento - previousFaturamento) / previousFaturamento) * 100 
-      : faturamento > 0 ? 100 : 0;
-
-    // Buscar produtos mais vendidos
-    const { data: topProducts, error: productsError } = await supabase
+    const { data: soldItems, error: productsError } = await db
       .from('order_items')
       .select(`
-        product_id,
         quantity,
-        orders!inner(restaurant_id, created_at)
+        orders!inner(restaurant_id, created_at, status)
       `)
       .eq('orders.restaurant_id', restaurantId)
       .gte('orders.created_at', thirtyDaysAgo.toISOString());
 
     if (productsError) throw productsError;
 
-    const produtosMaisVendidos = topProducts?.length || 0;
+    const itensVendidos = (soldItems || [])
+      .filter((item: any) => !isCanceled(item.orders?.status))
+      .reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0);
+
+    const ticketMedio = includeFinancials && recentValidOrders.length > 0
+      ? faturamento / recentValidOrders.length
+      : 0;
 
     return {
       totalPedidos,
       faturamento,
-      produtosMaisVendidos,
-      avaliacaoMedia: 4.5, // Pode ser implementado com sistema de avaliação
+      itensVendidos,
+      pedidosAbertos,
+      ticketMedio,
       crescimentoPedidos,
       crescimentoFaturamento,
     };
@@ -81,8 +97,9 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     return {
       totalPedidos: 0,
       faturamento: 0,
-      produtosMaisVendidos: 0,
-      avaliacaoMedia: 0,
+      itensVendidos: 0,
+      pedidosAbertos: 0,
+      ticketMedio: 0,
       crescimentoPedidos: 0,
       crescimentoFaturamento: 0,
     };

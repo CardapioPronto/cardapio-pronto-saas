@@ -5,9 +5,9 @@ import { getRecentSales, RecentSale } from "@/services/dashboardService";
 export const useRecentSales = () => {
   const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
 
-  const loadRecentSales = async () => {
+  const loadRecentSales = async (restaurantId: string, includeFinancials = false) => {
     try {
-      const sales = await getRecentSales();
+      const sales = await getRecentSales(restaurantId, includeFinancials);
       setRecentSales(sales);
     } catch (error) {
       console.error("Erro ao carregar vendas recentes:", error);

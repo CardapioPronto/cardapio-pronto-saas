@@ -1,11 +1,15 @@
 
 import { supabase } from '@/lib/supabase';
-import { getCurrentRestaurantId } from '@/lib/supabase';
 import { PopularProduct } from './types';
 
-export const getPopularProducts = async (): Promise<PopularProduct[]> => {
+const db = supabase as any;
+const isCanceled = (status?: string | null) => status === 'cancelado' || status === 'cancelled' || status === 'canceled';
+
+export const getPopularProducts = async (
+  restaurantId: string,
+  includeFinancials = false
+): Promise<PopularProduct[]> => {
   try {
-    const restaurantId = await getCurrentRestaurantId();
     if (!restaurantId) {
       throw new Error('Restaurant ID not found');
     }
@@ -14,40 +18,54 @@ export const getPopularProducts = async (): Promise<PopularProduct[]> => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: productSales, error } = await supabase
-      .from('order_items')
-      .select(`
+    const itemColumns = includeFinancials
+      ? `
         product_id,
         product_name,
         quantity,
         price,
-        products!inner(name, category_id),
-        orders!inner(restaurant_id, created_at)
-      `)
+        orders!inner(restaurant_id, created_at, status)
+      `
+      : `
+        product_id,
+        product_name,
+        quantity,
+        orders!inner(restaurant_id, created_at, status)
+      `;
+
+    const { data: productSales, error } = await db
+      .from('order_items')
+      .select(itemColumns)
       .eq('orders.restaurant_id', restaurantId)
       .gte('orders.created_at', thirtyDaysAgo.toISOString());
 
     if (error) throw error;
 
     // Agrupar por produto e calcular totais
-    const productMap = new Map();
+    const productMap = new Map<string, PopularProduct>();
     
-    productSales?.forEach(item => {
-      const productId = item.product_id;
-      if (productMap.has(productId)) {
+    productSales
+      ?.filter((item: any) => !isCanceled(item.orders?.status))
+      .forEach((item: any) => {
+        const productId = item.product_id || item.product_name;
+        const quantity = Number(item.quantity || 0);
+        const revenue = includeFinancials ? quantity * Number(item.price || 0) : 0;
         const existing = productMap.get(productId);
-        existing.sales += item.quantity;
-        existing.revenue += item.quantity * Number(item.price);
-      } else {
+
+        if (existing) {
+          existing.sales += quantity;
+          existing.revenue += revenue;
+          return;
+        }
+
         productMap.set(productId, {
           id: productId,
           name: item.product_name,
-          sales: item.quantity,
-          revenue: item.quantity * Number(item.price),
-          category: 'Produto' // Pode buscar da categoria se necessário
+          sales: quantity,
+          revenue,
+          category: 'Produto',
         });
-      }
-    });
+      });
 
     // Converter para array e ordenar por vendas
     return Array.from(productMap.values())

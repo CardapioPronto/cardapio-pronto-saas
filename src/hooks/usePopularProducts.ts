@@ -5,9 +5,9 @@ import { getPopularProducts, PopularProduct } from "@/services/dashboardService"
 export const usePopularProducts = () => {
   const [popularProducts, setPopularProducts] = useState<PopularProduct[]>([]);
 
-  const loadPopularProducts = async () => {
+  const loadPopularProducts = async (restaurantId: string, includeFinancials = false) => {
     try {
-      const products = await getPopularProducts();
+      const products = await getPopularProducts(restaurantId, includeFinancials);
       setPopularProducts(products);
     } catch (error) {
       console.error("Erro ao carregar produtos populares:", error);
