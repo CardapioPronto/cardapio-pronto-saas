@@ -47,22 +47,11 @@ export async function initSupabase(): Promise<boolean> {
   }
 }
 
-// Verifica e configura listeners para mudanças de autenticação
+/**
+ * Anteriormente registrava um segundo onAuthStateChange listener que duplicava
+ * o de useUserSession, causando re-renders extras. Agora é um no-op — toda a
+ * lógica de auth state vive em useUserSession.
+ */
 export function setupAuthListeners() {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN') {
-      console.log('Usuário autenticado:', session?.user?.email);
-      // Aqui você pode atualizar o estado global ou fazer outras ações necessárias
-    }
-    
-    if (event === 'SIGNED_OUT') {
-      console.log('Usuário desconectado');
-      // Limpar dados locais ou fazer outras ações necessárias quando o usuário desconectar
-    }
-  });
-
-  // Retorna a função para remover o listener quando necessário
-  return () => {
-    subscription.unsubscribe();
-  };
+  // noop — mantido para não quebrar App.tsx
 }
