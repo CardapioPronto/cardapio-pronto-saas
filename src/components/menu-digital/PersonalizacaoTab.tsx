@@ -537,7 +537,7 @@ const CategoriesOrderManager: React.FC<{ restaurantId: string }> = ({ restaurant
         .eq('restaurant_id', restaurantId)
         .order('order_position', { ascending: true });
       if (error) throw error;
-      return data as DraggableItem[];
+      return data as unknown as DraggableItem[];
     },
     enabled: !!restaurantId,
   });
@@ -568,7 +568,7 @@ const ProductsOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId
         .eq('restaurant_id', restaurantId)
         .order('order_position', { ascending: true });
       if (error) throw error;
-      return data as DraggableItem[];
+      return data as unknown as DraggableItem[];
     },
     enabled: !!restaurantId,
   });

@@ -23,7 +23,7 @@ export const useOrderPosition = (type: 'products' | 'categories', restaurantId?:
       const updates = items.map((item) =>
         supabase
           .from(table)
-          .update({ order_position: item.order_position })
+          .update({ order_position: item.order_position } as any)
           .eq('id', item.id)
       );
 
@@ -75,7 +75,7 @@ export const reorderItemsBatch = async (
   const updates = items.map((item) =>
     supabase
       .from(table)
-      .update({ order_position: item.order_position })
+      .update({ order_position: item.order_position } as any)
       .eq('id', item.id)
   );
 

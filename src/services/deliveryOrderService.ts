@@ -76,7 +76,7 @@ export const deliveryOrderService = {
       })),
     };
 
-    const { data, error } = await supabase.rpc('create_public_menu_order', {
+    const { data, error } = await supabase.rpc('create_public_menu_order' as any, {
       payload,
     });
 
@@ -134,7 +134,7 @@ export const deliveryOrderService = {
     title?: string;
     discount?: number;
   }> {
-    const { data, error } = await supabase.rpc('validate_public_coupon', {
+    const { data, error } = await supabase.rpc('validate_public_coupon' as any, {
       p_code: input.code.trim().toUpperCase(),
       p_restaurant_id: input.restaurant_id,
       p_order_value: input.subtotal,
@@ -151,7 +151,7 @@ export const deliveryOrderService = {
   },
 
   async getById(id: string) {
-    const { data, error } = await supabase.rpc('get_public_order_tracking', {
+    const { data, error } = await supabase.rpc('get_public_order_tracking' as any, {
       p_tracking_id: id,
     });
     if (error) throw error;
@@ -160,7 +160,7 @@ export const deliveryOrderService = {
 
   async getStatusHistory(id: string) {
     const data = await this.getById(id);
-    return data?.history || [];
+    return (data as any)?.history || [];
   },
 };
 
