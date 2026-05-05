@@ -1,7 +1,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface TabelaProdutosPeriodoProps {
-  data: any[];
+  data: Array<{
+    nome: string;
+    quantidade: number;
+    pedidos: number;
+    receita: number;
+  }>;
 }
 
 export const TabelaProdutosPeriodo = ({ data }: TabelaProdutosPeriodoProps) => {
@@ -12,6 +17,7 @@ export const TabelaProdutosPeriodo = ({ data }: TabelaProdutosPeriodoProps) => {
           <TableRow>
             <TableHead>Produto</TableHead>
             <TableHead className="text-right">Qtd</TableHead>
+            <TableHead className="text-right">Pedidos</TableHead>
             <TableHead className="text-right">Receita</TableHead>
           </TableRow>
         </TableHeader>
@@ -20,6 +26,7 @@ export const TabelaProdutosPeriodo = ({ data }: TabelaProdutosPeriodoProps) => {
             <TableRow key={index}>
               <TableCell className="font-medium">{produto.nome}</TableCell>
               <TableCell className="text-right">{produto.quantidade}</TableCell>
+              <TableCell className="text-right">{produto.pedidos}</TableCell>
               <TableCell className="text-right">
                 {new Intl.NumberFormat('pt-BR', {
                   style: 'currency',
@@ -30,7 +37,7 @@ export const TabelaProdutosPeriodo = ({ data }: TabelaProdutosPeriodoProps) => {
           ))}
           {data.length === 0 && (
             <TableRow>
-              <TableCell colSpan={3} className="text-center text-muted-foreground">
+              <TableCell colSpan={4} className="text-center text-muted-foreground">
                 Nenhum produto encontrado no período
               </TableCell>
             </TableRow>

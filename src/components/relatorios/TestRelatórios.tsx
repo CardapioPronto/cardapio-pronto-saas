@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
@@ -7,8 +6,6 @@ import { useExportacaoDados } from "@/hooks/useExportacaoDados";
 import { useAnalisePerformance } from "@/hooks/useAnalisePerformance";
 
 export const TestRelatorios = () => {
-  const [testResults, setTestResults] = useState<any>({});
-  
   // Test hooks initialization
   const relatoriosHook = useRelatoriosAvancados({
     dateFrom: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
@@ -24,18 +21,13 @@ export const TestRelatorios = () => {
     periodoComparacao: "mes-anterior"
   });
 
-  useEffect(() => {
-    // Test hook availability
-    setTestResults({
-      relatoriosHookAvailable: !!relatoriosHook,
-      exportacaoHookAvailable: !!exportacaoHook,
-      performanceHookAvailable: !!performanceHook,
-      relatoriosLoading: relatoriosHook.loading,
-      performanceLoading: performanceHook.loading,
-      relatoriosError: relatoriosHook.error,
-      performanceError: performanceHook.error
-    });
-  }, [relatoriosHook, exportacaoHook, performanceHook]);
+  const testResults = {
+    relatoriosHookAvailable: !!relatoriosHook,
+    exportacaoHookAvailable: !!exportacaoHook,
+    performanceHookAvailable: !!performanceHook,
+    relatoriosError: relatoriosHook.error,
+    performanceError: performanceHook.error
+  };
 
   const runTest = async (testName: string) => {
     try {

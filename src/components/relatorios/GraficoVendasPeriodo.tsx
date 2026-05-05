@@ -1,10 +1,22 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface GraficoVendasPeriodoProps {
-  data: any[];
+  data: Array<{
+    data: string;
+    vendas: number;
+    pedidos: number;
+  }>;
 }
 
 export const GraficoVendasPeriodo = ({ data }: GraficoVendasPeriodoProps) => {
+  if (!data.length) {
+    return (
+      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+        Nenhum dado encontrado no período
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data}>

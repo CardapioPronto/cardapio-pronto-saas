@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, BarChart3, PieChart, TrendingUp } from "lucide-react";
+import { CalendarIcon, BarChart3, PieChart, TrendingUp, AlertCircle, Receipt, DollarSign, Ban } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,14 @@ export const RelatoriosAvancados = () => {
   const handleGerarRelatorio = () => {
     refetch();
   };
+
+  const periodoInvalido = dateFrom > dateTo;
+
+  const formatarMoeda = (valor: number) =>
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(valor);
 
   return (
     <div className="space-y-6">
@@ -161,7 +169,14 @@ export const RelatoriosAvancados = () => {
             </div>
           </div>
 
-          <Button onClick={handleGerarRelatorio} disabled={loading} className="w-full md:w-auto">
+          {periodoInvalido && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              A data inicial deve ser anterior ou igual à data final.
+            </div>
+          )}
+
+          <Button onClick={handleGerarRelatorio} disabled={loading || periodoInvalido} className="w-full md:w-auto">
             <TrendingUp className="mr-2 h-4 w-4" />
             {loading ? "Gerando..." : "Gerar Relatório"}
           </Button>
@@ -170,30 +185,78 @@ export const RelatoriosAvancados = () => {
 
       {/* Resultados do Relatório */}
       {relatorioData && (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Gráfico de Vendas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <GraficoVendasPeriodo data={relatorioData.graficos} />
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Faturamento</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatarMoeda(relatorioData.resumo.totalVendas)}</div>
+                <p className="text-xs text-muted-foreground">Pedidos cancelados não entram nesse total</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChart className="h-5 w-5" />
-                Top Produtos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TabelaProdutosPeriodo data={relatorioData.produtos} />
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pedidos</CardTitle>
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{relatorioData.resumo.totalPedidos.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">Pedidos válidos no período</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatarMoeda(relatorioData.resumo.ticketMedio)}</div>
+                <p className="text-xs text-muted-foreground">Faturamento dividido por pedidos válidos</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cancelados</CardTitle>
+                <Ban className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{relatorioData.resumo.pedidosCancelados.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">{formatarMoeda(relatorioData.resumo.faturamentoCancelado)} desconsiderados</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Gráfico de Vendas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <GraficoVendasPeriodo data={relatorioData.graficos} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5" />
+                  Top Produtos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TabelaProdutosPeriodo data={relatorioData.produtos} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 

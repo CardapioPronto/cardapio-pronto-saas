@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { AlertCircle, CalendarIcon, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,8 @@ export const ExportacaoDados = () => {
     { id: "funcionarios", label: "Funcionários", desc: "Lista de funcionários e permissões" },
     { id: "dashboard", label: "Estatísticas", desc: "Resumo executivo do período" }
   ];
+
+  const periodoInvalido = dateFrom > dateTo;
 
   return (
     <div className="space-y-6">
@@ -123,7 +125,7 @@ export const ExportacaoDados = () => {
                 <SelectItem value="excel">
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
-                    Excel (.xlsx)
+                    Excel (.xls)
                   </div>
                 </SelectItem>
                 <SelectItem value="pdf">
@@ -163,9 +165,16 @@ export const ExportacaoDados = () => {
             </div>
           </div>
 
+          {periodoInvalido && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              A data inicial deve ser anterior ou igual à data final.
+            </div>
+          )}
+
           <Button 
             onClick={handleExportar} 
-            disabled={loading || dados.length === 0}
+            disabled={loading || dados.length === 0 || periodoInvalido}
             className="w-full"
           >
             <Download className="mr-2 h-4 w-4" />

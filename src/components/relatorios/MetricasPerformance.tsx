@@ -2,7 +2,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface MetricasPerformanceProps {
-  data: any[];
+  data: Array<{
+    nome: string;
+    valor: number;
+    formato: string;
+  }>;
 }
 
 export const MetricasPerformance = ({ data }: MetricasPerformanceProps) => {

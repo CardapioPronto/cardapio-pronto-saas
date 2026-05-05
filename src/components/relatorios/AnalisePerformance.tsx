@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, TrendingUp, TrendingDown, Activity, Target } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { CalendarIcon, TrendingUp, TrendingDown, Activity, Target, AlertCircle } from "lucide-react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAnalisePerformance } from "@/hooks/useAnalisePerformance";
@@ -26,6 +26,8 @@ export const AnalisePerformance = () => {
   const handleAnalisar = () => {
     refetch();
   };
+
+  const periodoInvalido = dateFrom > dateTo;
 
   const indicadores = [
     {
@@ -153,7 +155,14 @@ export const AnalisePerformance = () => {
             </div>
           </div>
 
-          <Button onClick={handleAnalisar} disabled={loading} className="w-full md:w-auto">
+          {periodoInvalido && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              A data inicial deve ser anterior ou igual à data final.
+            </div>
+          )}
+
+          <Button onClick={handleAnalisar} disabled={loading || periodoInvalido} className="w-full md:w-auto">
             <Target className="mr-2 h-4 w-4" />
             {loading ? "Analisando..." : "Analisar Performance"}
           </Button>
@@ -184,7 +193,7 @@ export const AnalisePerformance = () => {
                     "text-xs",
                     indicador.variacao >= 0 ? "text-green-600" : "text-red-600"
                   )}>
-                    {formatarVariacao(indicador.variacao)} em relação ao período anterior
+                    {formatarVariacao(indicador.variacao)} em relação a {performanceData.periodoComparacaoLabel}
                   </p>
                 </CardContent>
               </Card>
