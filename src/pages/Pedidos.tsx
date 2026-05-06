@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw, CalendarDays, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RealtimeChannel } from "@supabase/supabase-js";
-import { IfoodOrdersList } from "@/components/ifood/IfoodOrdersList";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
@@ -323,9 +322,6 @@ const Pedidos = () => {
 
   return (
     <DashboardLayout title="Pedidos">
-      {/* Lista de pedidos do iFood */}
-      <IfoodOrdersList canManageOrders={canManageOrders} />
-
       {canViewFinancials && (
         <div className="mb-4 grid gap-3 md:grid-cols-4">
           <Card>

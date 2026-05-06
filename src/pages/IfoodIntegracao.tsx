@@ -21,9 +21,10 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/components/ui/sonner";
-import { AlertCircle, CheckCircle } from "lucide-react";
-import { IfoodCredentials, hasIfoodCredentials, loadIfoodConfig, configureIfoodCredentials, testIfoodConnection, setIfoodIntegrationEnabled, configureIfoodPolling } from "@/services/ifoodService";
+import { AlertCircle, CheckCircle, RefreshCw, ShieldCheck, Wifi } from "lucide-react";
+import { IfoodCredentials, configureIfoodCredentials, pollIfoodEvents, setIfoodIntegrationEnabled, configureIfoodPolling, testIfoodConnection } from "@/services/ifoodService";
 import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -64,12 +65,14 @@ async function saveCredentialsHelper(
   restaurantId: string,
   credentials: IfoodCredentials,
   config: IfoodIntegrationConfig,
+  hasStoredCredentials: boolean,
+  setHasStoredCredentials: (value: boolean) => void,
   setIsConfiguring: (b: boolean) => void,
   toast: { success: (msg: string) => void; error: (msg: string) => void }
 ) {
   setIsConfiguring(true);
   try {
-    if (!credentials.clientId || !credentials.clientSecret || !credentials.merchantId) {
+    if (!credentials.clientId || (!credentials.clientSecret && !hasStoredCredentials) || !credentials.merchantId) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
@@ -78,16 +81,17 @@ async function saveCredentialsHelper(
       .select('restaurant_id')
       .eq('restaurant_id', restaurantId)
       .single();
+    const updatePayload = {
+      client_id: credentials.clientId,
+      merchant_id: credentials.merchantId,
+      restaurant_ifood_id: credentials.restaurantId ?? null,
+      updated_at: new Date().toISOString(),
+      ...(credentials.clientSecret ? { client_secret: credentials.clientSecret } : {})
+    };
     const supabaseOperation = existingConfig
       ? supabase
           .from('ifood_integration')
-          .update({
-            client_id: credentials.clientId,
-            client_secret: credentials.clientSecret,
-            merchant_id: credentials.merchantId,
-            restaurant_ifood_id: credentials.restaurantId ?? null,
-            updated_at: new Date().toISOString()
-          })
+          .update(updatePayload)
           .eq('restaurant_id', restaurantId)
       : supabase
           .from('ifood_integration')
@@ -109,6 +113,9 @@ async function saveCredentialsHelper(
       merchantId: credentials.merchantId,
       restaurantId: credentials.restaurantId
     });
+    if (credentials.clientSecret || hasStoredCredentials) {
+      setHasStoredCredentials(true);
+    }
     toast.success("Credenciais salvas com sucesso");
   } catch (error) {
     console.error("Erro ao salvar credenciais:", error);
@@ -119,6 +126,7 @@ async function saveCredentialsHelper(
 }
 
 async function testConnectionHelper(
+  restaurantId: string,
   setIsLoading: (b: boolean) => void,
   setTestResult: (result: { success: boolean; message: string } | null) => void,
   toast: { success: (msg: string) => void; error: (msg: string) => void }
@@ -126,11 +134,12 @@ async function testConnectionHelper(
   setIsLoading(true);
   setTestResult(null);
   try {
-    await testIfoodConnection();
+    const result = await testIfoodConnection(restaurantId);
     setTestResult({
-      success: true,
-      message: "Conexão estabelecida com sucesso!"
+      success: result.success,
+      message: result.message || "Conexão estabelecida com sucesso!"
     });
+    toast.success("Conexão com iFood validada");
   } catch (error) {
     console.error("Erro na conexão com iFood:", error);
     setTestResult({
@@ -139,6 +148,27 @@ async function testConnectionHelper(
     });
   } finally {
     setIsLoading(false);
+  }
+}
+
+async function pollNowHelper(
+  restaurantId: string,
+  setIsPollingNow: (b: boolean) => void,
+  setLastPollResult: (result: string | null) => void,
+) {
+  setIsPollingNow(true);
+  try {
+    const result = await pollIfoodEvents(restaurantId);
+    const message = `${result.eventsReceived} evento(s), ${result.eventsStored} armazenado(s), ${result.eventsAcknowledged} confirmado(s), ${result.ordersImported} pedido(s) importado(s).`;
+    setLastPollResult(message);
+    toast.success("Consulta ao iFood concluída");
+  } catch (error) {
+    console.error("Erro ao consultar eventos do iFood:", error);
+    const message = error instanceof Error ? error.message : "Falha ao consultar eventos do iFood";
+    setLastPollResult(message);
+    toast.error(message);
+  } finally {
+    setIsPollingNow(false);
   }
 }
 
@@ -214,7 +244,10 @@ const IfoodIntegracao = () => {
   const [activeTab, setActiveTab] = useState("geral");
   const [isLoading, setIsLoading] = useState(true);
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [isPollingNow, setIsPollingNow] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [lastPollResult, setLastPollResult] = useState<string | null>(null);
+  const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
   const [restaurantId, setRestaurantId] = useState<string>("");
 
   const [credentials, setCredentials] = useState<IfoodCredentials>({
@@ -249,32 +282,17 @@ const IfoodIntegracao = () => {
       if (data) {
         setCredentials({
           clientId: data.client_id,
-          clientSecret: data.client_secret,
+          clientSecret: "",
           merchantId: data.merchant_id,
           restaurantId: data.restaurant_ifood_id ?? ""
         });
+        setHasStoredCredentials(Boolean(data.client_secret));
 
         setConfig({
           isEnabled: data.is_enabled,
           pollingEnabled: data.polling_enabled,
           pollingInterval: data.polling_interval
         });
-      } else {
-        const localConfig = loadIfoodConfig();
-        if (localConfig.credentials) {
-          setCredentials({
-            clientId: localConfig.credentials.clientId ?? "",
-            clientSecret: localConfig.credentials.clientSecret ?? "",
-            merchantId: localConfig.credentials.merchantId ?? "",
-            restaurantId: localConfig.credentials.restaurantId ?? ""
-          });
-
-          setConfig({
-            isEnabled: localConfig.isEnabled ?? false,
-            pollingEnabled: localConfig.pollingEnabled ?? true,
-            pollingInterval: localConfig.pollingInterval ?? 60
-          });
-        }
       }
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
@@ -295,11 +313,15 @@ const IfoodIntegracao = () => {
       toast.error("ID do restaurante não encontrado");
       return;
     }
-    await saveCredentialsHelper(restaurantId, credentials, config, setIsConfiguring, toast);
+    await saveCredentialsHelper(restaurantId, credentials, config, hasStoredCredentials, setHasStoredCredentials, setIsConfiguring, toast);
   };
 
   const handleTestConnection = async () => {
-    await testConnectionHelper(setIsLoading, setTestResult, toast);
+    await testConnectionHelper(restaurantId, setIsLoading, setTestResult, toast);
+  };
+
+  const handlePollNow = async () => {
+    await pollNowHelper(restaurantId, setIsPollingNow, setLastPollResult);
   };
 
   const toggleIntegration = async (enabled: boolean) => {
@@ -317,6 +339,8 @@ const IfoodIntegracao = () => {
     }
     await updatePollingSettingsHelper(pollingEnabled, interval, restaurantId, config, setConfig, toast);
   };
+
+  const credentialsConfigured = Boolean(credentials.clientId && (credentials.clientSecret || hasStoredCredentials) && credentials.merchantId);
 
   if (isLoading) {
     return (
@@ -341,6 +365,15 @@ const IfoodIntegracao = () => {
   return (
     <DashboardLayout title="Integração com iFood">
       <div className="space-y-6">
+        <Alert className="border-orange/30 bg-orange/5">
+          <ShieldCheck className="h-4 w-4 text-orange" />
+          <AlertTitle>Integração preparada para homologação</AlertTitle>
+          <AlertDescription>
+            As chamadas sensíveis agora passam por Edge Function. O polling usa os endpoints atuais do iFood e registra eventos antes do ACK.
+            Para uso contínuo em produção, agende a função a cada 30 segundos no Supabase após validar as credenciais.
+          </AlertDescription>
+        </Alert>
+
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -365,7 +398,7 @@ const IfoodIntegracao = () => {
                   id="integration-status"
                   checked={config.isEnabled}
                   onCheckedChange={toggleIntegration}
-                  disabled={!hasIfoodCredentials() || isLoading}
+                  disabled={!credentialsConfigured || isLoading}
                 />
                 <Label htmlFor="integration-status">
                   {config.isEnabled ? 'Ativada' : 'Desativada'}
@@ -429,13 +462,13 @@ const IfoodIntegracao = () => {
                     <h3 className="text-lg font-medium mb-4">Status da configuração</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        {hasIfoodCredentials() ? (
+                        {credentialsConfigured ? (
                           <CheckCircle className="h-5 w-5 text-green mr-2" />
                         ) : (
                           <AlertCircle className="h-5 w-5 text-orange mr-2" />
                         )}
                         <span>
-                          Credenciais: {hasIfoodCredentials() ? "Configuradas" : "Não configuradas"}
+                          Credenciais: {credentialsConfigured ? "Configuradas" : "Não configuradas"}
                         </span>
                       </div>
                       
@@ -494,12 +527,14 @@ const IfoodIntegracao = () => {
                       <Input 
                         id="client-secret" 
                         type="password"
-                        placeholder="Seu Client Secret do iFood"
+                        placeholder={hasStoredCredentials ? "Secret já salvo. Preencha apenas para trocar." : "Seu Client Secret do iFood"}
                         value={credentials.clientSecret}
                         onChange={(e) => setCredentials({...credentials, clientSecret: e.target.value})}
                       />
                       <p className="text-sm text-muted-foreground">
-                        Chave secreta fornecida pelo iFood
+                        {hasStoredCredentials
+                          ? "Por segurança, o secret salvo não é exibido."
+                          : "Chave secreta fornecida pelo iFood"}
                       </p>
                     </div>
                     
@@ -540,7 +575,7 @@ const IfoodIntegracao = () => {
                       <Button 
                         variant="outline" 
                         onClick={handleTestConnection}
-                        disabled={!hasIfoodCredentials() || isLoading}
+                        disabled={!credentialsConfigured || isLoading}
                       >
                         {isLoading ? "Testando..." : "Testar Conexão"}
                       </Button>
@@ -587,7 +622,7 @@ const IfoodIntegracao = () => {
                       <Switch
                         checked={config.pollingEnabled}
                         onCheckedChange={(checked) => updatePollingSettings(checked)}
-                        disabled={!hasIfoodCredentials() || !config.isEnabled || isLoading}
+                        disabled={!credentialsConfigured || !config.isEnabled || isLoading}
                       />
                     </div>
                     
@@ -613,6 +648,37 @@ const IfoodIntegracao = () => {
                     </div>
                   </div>
                   
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="font-medium">Consulta manual</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Valide o token, consulte eventos pendentes e importe pedidos disponíveis sem depender do agendamento.
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handlePollNow}
+                        disabled={!credentialsConfigured || !config.isEnabled || isPollingNow}
+                        className="w-full sm:w-auto"
+                      >
+                        {isPollingNow ? (
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Wifi className="mr-2 h-4 w-4" />
+                        )}
+                        Consultar agora
+                      </Button>
+                    </div>
+                    {lastPollResult && (
+                      <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+                        {lastPollResult}
+                      </div>
+                    )}
+                  </div>
+
                   <Separator />
                   
                   <div className="space-y-4">

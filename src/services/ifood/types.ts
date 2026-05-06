@@ -17,6 +17,21 @@ export interface IfoodConfig {
   pollingInterval: number; // em segundos
 }
 
+export interface IfoodConnectionTestResult {
+  success: boolean;
+  merchantId?: string;
+  message?: string;
+}
+
+export interface IfoodPollResult {
+  success: boolean;
+  eventsReceived: number;
+  eventsStored: number;
+  eventsAcknowledged: number;
+  ordersImported: number;
+  message?: string;
+}
+
 export interface IfoodOrderItem {
   id: string;
   name: string;

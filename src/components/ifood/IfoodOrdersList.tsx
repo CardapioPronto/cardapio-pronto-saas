@@ -1,178 +1,41 @@
-
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Eye, RefreshCw, Loader2 } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
-
-import { IfoodOrder } from '@/services/ifoodService';
-import { getIfoodPendingOrders, loadIfoodConfig, updateIfoodOrderStatus } from '@/services/ifoodService';
-import { IfoodOrderBadge } from './IfoodOrderBadge';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import { AlertCircle, Settings } from "lucide-react";
+import { IfoodOrderBadge } from "./IfoodOrderBadge";
 
 interface IfoodOrdersListProps {
   canManageOrders: boolean;
 }
 
 export function IfoodOrdersList({ canManageOrders }: IfoodOrdersListProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [pendingOrders, setPendingOrders] = useState<IfoodOrder[]>([]);
-  const config = loadIfoodConfig();
-  
-  const fetchPendingOrders = async () => {
-    if (!config.isEnabled || !config.credentials) {
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const orders = await getIfoodPendingOrders();
-      setPendingOrders(orders);
-      
-      if (orders.length > 0) {
-        toast.success(`${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'} pendente${orders.length === 1 ? '' : 's'} do iFood.`);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar pedidos pendentes do iFood:', error);
-      toast.error('Erro ao buscar pedidos do iFood');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    if (config.isEnabled) {
-      fetchPendingOrders();
-    }
-  }, []);
-  
-  const acceptOrder = async (orderId: string) => {
-    try {
-      await updateIfoodOrderStatus(orderId, 'ACCEPTED');
-      // Atualiza a lista após aceitar o pedido
-      fetchPendingOrders();
-    } catch (error) {
-      console.error('Erro ao aceitar pedido:', error);
-    }
-  };
-  
-  const rejectOrder = async (orderId: string) => {
-    try {
-      await updateIfoodOrderStatus(orderId, 'CANCELLED', 'Indisponibilidade do estabelecimento');
-      // Atualiza a lista após rejeitar o pedido
-      fetchPendingOrders();
-    } catch (error) {
-      console.error('Erro ao rejeitar pedido:', error);
-    }
-  };
-  
-  // Se a integração não estiver configurada, não exibe nada
-  if (!config.isEnabled || !config.credentials) {
-    return null;
-  }
-  
   return (
     <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center">
-            <span>Pedidos iFood</span>
-            <IfoodOrderBadge className="ml-2" />
-          </CardTitle>
-          <CardDescription>
-            Pedidos recebidos através da integração com iFood
-          </CardDescription>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={fetchPendingOrders}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          <span className="ml-2">Atualizar</span>
-        </Button>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          Pedidos iFood
+          <IfoodOrderBadge />
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : pendingOrders.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Horário</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pendingOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">#{order.shortReference}</TableCell>
-                  <TableCell>{order.customer.name}</TableCell>
-                  <TableCell>
-                    {new Date(order.createdAt).toLocaleTimeString('pt-BR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </TableCell>
-                  <TableCell>R$ {order.total.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className="bg-orange/10 text-orange border-orange"
-                    >
-                      {order.status === 'PLACED' ? 'Novo' : 'Pendente'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {canManageOrders && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => acceptOrder(order.id)}
-                          >
-                            Aceitar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-500 text-red-500 hover:bg-red-500/10"
-                            onClick={() => rejectOrder(order.id)}
-                          >
-                            Rejeitar
-                          </Button>
-                        </>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhum pedido pendente do iFood no momento.
-          </div>
-        )}
+        <Alert className="border-orange/30 bg-orange/5">
+          <AlertCircle className="h-4 w-4 text-orange" />
+          <AlertTitle>Recepção centralizada no histórico</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Pedidos importados do iFood aparecem no histórico com a etiqueta iFood. A consulta manual e a configuração ficam na tela de integração.
+            </span>
+            {canManageOrders && (
+              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+                <Link to="/ifood-integracao">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configurar
+                </Link>
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
       </CardContent>
     </Card>
   );

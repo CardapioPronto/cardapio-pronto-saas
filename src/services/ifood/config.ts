@@ -11,9 +11,19 @@ export const ifoodConfig: IfoodConfig = {
   pollingInterval: 60 // 60 segundos
 };
 
-// Salvar configurações no localStorage
 export const saveIfoodConfig = (config: IfoodConfig): void => {
-  localStorage.setItem('ifoodConfig', JSON.stringify(config));
+  const safeConfig = {
+    ...config,
+    credentials: config.credentials
+      ? {
+          clientId: config.credentials.clientId,
+          clientSecret: '',
+          merchantId: config.credentials.merchantId,
+          restaurantId: config.credentials.restaurantId,
+        }
+      : null,
+  };
+  localStorage.setItem('ifoodConfig', JSON.stringify(safeConfig));
 };
 
 // Carregar configurações do localStorage
@@ -41,7 +51,7 @@ export const configureIfoodCredentials = (credentials: IfoodCredentials): void =
 // Verificar se as credenciais estão configuradas
 export const hasIfoodCredentials = (): boolean => {
   const config = loadIfoodConfig();
-  return !!(config.credentials?.clientId && config.credentials?.clientSecret && config.credentials?.merchantId);
+  return !!(config.credentials?.clientId && config.credentials?.merchantId);
 };
 
 // Habilitar ou desabilitar integração

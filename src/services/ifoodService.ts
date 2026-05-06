@@ -18,6 +18,7 @@ export {
 // Exportar funções da API
 export {
   testIfoodConnection,
+  pollIfoodEvents,
   getIfoodPendingOrders,
   getIfoodOrderDetails,
   updateIfoodOrderStatus,
