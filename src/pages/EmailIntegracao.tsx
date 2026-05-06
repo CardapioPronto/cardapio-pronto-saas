@@ -1,10 +1,10 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { EmailIntegrationForm } from "@/components/email/EmailIntegrationForm";
+import { EmailOperationsPanel } from "@/components/email/EmailOperationsPanel";
 
 const EmailIntegracao = () => {
   return (
     <DashboardLayout title="Integração de Email">
-      <EmailIntegrationForm scope="restaurant" />
+      <EmailOperationsPanel scope="restaurant" />
     </DashboardLayout>
   );
 };

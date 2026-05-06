@@ -24,6 +24,8 @@ export interface CreateDeliveryOrderInput {
   address?: DeliveryAddressInput;
   customer_name?: string;
   customer_phone?: string;
+  customer_email?: string;
+  accepts_marketing_email?: boolean;
   table_id?: string;
   payment_method?: string;
   change_for?: number;
@@ -49,6 +51,7 @@ export const deliveryOrderService = {
       table_id: input.table_id,
       customer_name: input.address?.customer_name || input.customer_name,
       customer_phone: input.address?.customer_phone || input.customer_phone,
+      customer_email: input.customer_email,
       address: input.address
         ? {
             customer_name: input.address.customer_name,
@@ -109,6 +112,25 @@ export const deliveryOrderService = {
         });
       } catch (e) {
         console.warn('Falha ao enviar WhatsApp (pedido salvo mesmo assim):', e);
+      }
+    }
+
+    if (input.customer_email) {
+      try {
+        await supabase.functions.invoke('email-dispatch', {
+          body: {
+            action: 'send_order_confirmation',
+            restaurant_id: input.restaurant_id,
+            order_id: result.order_id,
+            delivery_order_id: result.delivery_order_id,
+            tracking_id: result.tracking_id,
+            email: input.customer_email,
+            accepts_marketing: !!input.accepts_marketing_email,
+            origin: window.location.origin,
+          },
+        });
+      } catch (e) {
+        console.warn('Falha ao enviar confirmação por e-mail (pedido salvo mesmo assim):', e);
       }
     }
 

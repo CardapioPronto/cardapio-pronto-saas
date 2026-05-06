@@ -1,10 +1,10 @@
 import AdminLayout from "@/components/admin/AdminLayout";
-import { EmailIntegrationForm } from "@/components/email/EmailIntegrationForm";
+import { EmailOperationsPanel } from "@/components/email/EmailOperationsPanel";
 
 const AdminEmail = () => {
   return (
     <AdminLayout title="Configuração de Email">
-      <EmailIntegrationForm scope="system" />
+      <EmailOperationsPanel scope="system" />
     </AdminLayout>
   );
 };

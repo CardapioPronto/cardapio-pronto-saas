@@ -1,6 +1,7 @@
 // Pagar.me Webhook Receiver
 // URL: https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/pagarme-webhook
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { sendManagedEmail } from "../_shared/email-delivery.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,50 @@ async function processEvent(event: any): Promise<void> {
       .from("subscriptions")
       .update(update)
       .eq("pagarme_subscription_id", pagarmeSubId);
+
+    if (newStatus === "active") {
+      await sendSubscriptionReceipt(pagarmeSubId, charge).catch((error) =>
+        console.error("[pagarme-webhook] receipt email failed:", error),
+      );
+    }
   }
+}
+
+async function sendSubscriptionReceipt(pagarmeSubId: string, charge: any) {
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("id, restaurant_id, plan:plans(name), restaurants:restaurant_id(owner_id)")
+    .eq("pagarme_subscription_id", pagarmeSubId)
+    .maybeSingle();
+
+  if (!sub?.restaurant_id) return;
+
+  const { data: owner } = await supabase
+    .from("users")
+    .select("email, name")
+    .eq("id", (sub as any).restaurants?.owner_id)
+    .maybeSingle();
+
+  if (!owner?.email) return;
+
+  const amount = Number(charge.amount || charge.paid_amount || 0) / 100;
+  await sendManagedEmail({
+    admin: supabase,
+    restaurantId: sub.restaurant_id,
+    templateKey: "subscription_receipt",
+    emailType: "transactional",
+    to: owner.email,
+    recipientName: owner.name,
+    contextType: "subscription",
+    contextId: sub.id,
+    variables: {
+      plan_name: (sub as any).plan?.name || "Plano Pubfy",
+      amount: amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      status: charge.status || "paid",
+      paid_at: new Date().toLocaleString("pt-BR"),
+    },
+    metadata: { source: "pagarme_webhook", pagarme_subscription_id: pagarmeSubId },
+  });
 }
 
 Deno.serve(async (req) => {

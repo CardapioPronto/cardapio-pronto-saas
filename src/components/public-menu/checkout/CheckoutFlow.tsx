@@ -79,6 +79,8 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   const [customer, setCustomer] = useState({
     name: '',
     phone: '',
+    email: '',
+    acceptsEmailMarketing: false,
   });
 
   const [address, setAddress] = useState<DeliveryAddressInput>({
@@ -194,6 +196,10 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
       toast({ title: 'Telefone inválido', variant: 'destructive' });
       return false;
     }
+    if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+      toast({ title: 'E-mail inválido', variant: 'destructive' });
+      return false;
+    }
     return true;
   };
 
@@ -214,6 +220,10 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     }
     if (merged.customer_phone.replace(/\D/g, '').length < 10) {
       toast({ title: 'Telefone inválido', variant: 'destructive' });
+      return false;
+    }
+    if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+      toast({ title: 'E-mail inválido', variant: 'destructive' });
       return false;
     }
     return true;
@@ -252,6 +262,8 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         address: deliveryAddress,
         customer_name: customer.name,
         customer_phone: customer.phone,
+        customer_email: customer.email || undefined,
+        accepts_marketing_email: customer.acceptsEmailMarketing,
         payment_method: payment,
         change_for: payment === 'dinheiro' && changeFor ? Number(changeFor) : undefined,
         notes,
@@ -318,6 +330,16 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
             <>
               <Field label={needsCustomer ? 'Nome completo *' : 'Nome ou apelido'} value={customer.name} onChange={v => setCustomer(c => ({ ...c, name: v }))} />
               <Field label={needsCustomer ? 'Telefone (WhatsApp) *' : 'Telefone (opcional)'} value={customer.phone} onChange={v => setCustomer(c => ({ ...c, phone: v }))} placeholder="(11) 99999-9999" />
+              <Field label="E-mail para acompanhar o pedido" value={customer.email} onChange={v => setCustomer(c => ({ ...c, email: v }))} placeholder="voce@email.com" type="email" />
+              <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={customer.acceptsEmailMarketing}
+                  onChange={e => setCustomer(c => ({ ...c, acceptsEmailMarketing: e.target.checked }))}
+                  className="mt-0.5"
+                />
+                Quero receber novidades e cupons por e-mail.
+              </label>
               {fulfillmentType === 'table' && (
                 <p className="text-xs text-muted-foreground">
                   Seu pedido será enviado para a mesa vinculada ao QR Code.
@@ -330,6 +352,16 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
             <>
               <Field label="Nome completo *" value={customer.name} onChange={v => setCustomer(c => ({ ...c, name: v }))} />
               <Field label="Telefone (WhatsApp) *" value={customer.phone} onChange={v => setCustomer(c => ({ ...c, phone: v }))} placeholder="(11) 99999-9999" />
+              <Field label="E-mail para acompanhar o pedido" value={customer.email} onChange={v => setCustomer(c => ({ ...c, email: v }))} placeholder="voce@email.com" type="email" />
+              <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={customer.acceptsEmailMarketing}
+                  onChange={e => setCustomer(c => ({ ...c, acceptsEmailMarketing: e.target.checked }))}
+                  className="mt-0.5"
+                />
+                Quero receber novidades e cupons por e-mail.
+              </label>
               <div className="relative">
                 <Field label="CEP *" value={address.zip_code} onChange={v => setAddress(a => ({ ...a, zip_code: v }))} onBlur={handleCepBlur} placeholder="00000-000" />
                 {cepLoading && <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin" />}
@@ -390,6 +422,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
               ) : customer.name || customer.phone ? (
                 <Section title="Cliente">
                   <p className="text-muted-foreground">{customer.name || 'Cliente'}{customer.phone ? ` • ${customer.phone}` : ''}</p>
+                  {customer.email && <p className="text-muted-foreground">{customer.email}</p>}
                 </Section>
               ) : null}
               <Section title="Pagamento">

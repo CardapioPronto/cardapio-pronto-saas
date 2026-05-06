@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { sendManagedEmail } from "../_shared/email-delivery.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +10,7 @@ const corsHeaders = {
 type Scope = "system" | "restaurant";
 
 interface EmailSettingsPayload {
+  action?: "get" | "save" | "test";
   scope?: Scope;
   apiKey?: string;
   fromName?: string;
@@ -88,11 +89,21 @@ const hasIntegrationPermission = async (userId: string) => {
   return !!data;
 };
 
+const isSuperAdmin = async (userId: string) => {
+  const { data, error } = await admin.rpc("is_super_admin", { user_id: userId });
+  if (error) {
+    console.error("Erro ao verificar super admin:", error);
+    return false;
+  }
+  return !!data;
+};
+
 const resolveScope = async (scope: Scope, userId: string) => {
   const profile = await loadProfile(userId);
+  const superAdmin = profile.role === "super_admin" || await isSuperAdmin(userId);
 
   if (scope === "system") {
-    if (profile.role !== "super_admin") {
+    if (!superAdmin) {
       throw new Error("Apenas super admins podem gerenciar o e-mail global");
     }
     return { restaurantId: null as string | null };
@@ -102,7 +113,7 @@ const resolveScope = async (scope: Scope, userId: string) => {
     throw new Error("Restaurante não encontrado para este usuário");
   }
 
-  if (profile.role === "super_admin" || profile.user_type === "owner") {
+  if (superAdmin || profile.user_type === "owner") {
     return { restaurantId: profile.restaurant_id };
   }
 
@@ -176,21 +187,14 @@ const saveSettings = async (
   return data;
 };
 
-const sendTest = async (settings: any, testEmail: string) => {
+const sendLoggedTest = async (restaurantId: string | null, testEmail: string) => {
   assertEmail(testEmail, "E-mail de teste");
-
-  if (!settings?.is_enabled) throw new Error("Ative a integração antes de testar");
-  if (!settings?.api_key || settings.api_key === "configure-via-admin") {
-    throw new Error("Chave de API do Resend não configurada");
-  }
-
-  const resend = new Resend(settings.api_key);
-  const from = `${settings.from_name} <${settings.from_email}>`;
-
-  const response = await resend.emails.send({
-    from,
-    to: [testEmail],
-    reply_to: settings.reply_to || undefined,
+  return await sendManagedEmail({
+    admin,
+    restaurantId,
+    preferRestaurantConfig: !!restaurantId,
+    emailType: "test",
+    to: testEmail,
     subject: "Teste de envio Pubfy",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
@@ -198,9 +202,26 @@ const sendTest = async (settings: any, testEmail: string) => {
         <p>Este e-mail confirma que a configuração de envio do Pubfy está funcionando.</p>
       </div>
     `,
+    text: "Integração Resend ativa. Este e-mail confirma que a configuração de envio do Pubfy está funcionando.",
+    contextType: "email_settings",
+    metadata: { source: "settings_test" },
   });
+};
 
-  return response;
+const inferAction = (payload: EmailSettingsPayload, req: Request) => {
+  const queryAction = new URL(req.url).searchParams.get("action");
+  if (payload.action || queryAction) return payload.action || queryAction;
+  if (payload.testEmail) return "test";
+  if (
+    "apiKey" in payload ||
+    "fromName" in payload ||
+    "fromEmail" in payload ||
+    "replyTo" in payload ||
+    "isEnabled" in payload
+  ) {
+    return "save";
+  }
+  return "get";
 };
 
 serve(async (req: Request) => {
@@ -209,7 +230,7 @@ serve(async (req: Request) => {
   try {
     const user = await getAuthenticatedUser(req);
     const payload = (await req.json().catch(() => ({}))) as EmailSettingsPayload;
-    const action = new URL(req.url).searchParams.get("action") || "get";
+    const action = inferAction(payload, req);
     const scope = payload.scope || (new URL(req.url).searchParams.get("scope") as Scope) || "restaurant";
     const { restaurantId } = await resolveScope(scope, user.id);
 
@@ -223,8 +244,7 @@ serve(async (req: Request) => {
     }
 
     if (action === "test") {
-      const settings = await getSettings(restaurantId);
-      await sendTest(settings, payload.testEmail || user.email || "");
+      await sendLoggedTest(restaurantId, payload.testEmail || user.email || "");
       return jsonResponse({ success: true });
     }
 

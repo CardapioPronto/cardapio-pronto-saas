@@ -81,6 +81,12 @@ verify_jwt = false
 [functions.email-settings]
 verify_jwt = true
 
+[functions.email-dispatch]
+verify_jwt = false
+
+[functions.resend-webhook]
+verify_jwt = false
+
 [functions.create-employee]
 verify_jwt = true
 

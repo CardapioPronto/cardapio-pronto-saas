@@ -23,8 +23,8 @@ export interface EmailIntegrationSavePayload {
 }
 
 async function invokeEmailSettings<T>(action: string, body: Record<string, unknown>) {
-  const { data, error } = await supabase.functions.invoke<T>(`email-settings?action=${action}`, {
-    body,
+  const { data, error } = await supabase.functions.invoke<T>("email-settings", {
+    body: { ...body, action },
   });
 
   if (error) throw error;

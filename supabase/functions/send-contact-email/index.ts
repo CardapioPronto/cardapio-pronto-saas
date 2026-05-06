@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { sendManagedEmail } from "../_shared/email-delivery.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,40 +16,6 @@ interface ContactEmailRequest {
   message: string;
 }
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
-const getEmailConfig = async (supabase: ReturnType<typeof createClient>) => {
-  const { data } = await supabase
-    .from("email_settings")
-    .select("api_key, from_name, from_email, reply_to, is_enabled")
-    .is("restaurant_id", null)
-    .eq("provider", "resend")
-    .maybeSingle();
-
-  const apiKey = data?.is_enabled && data?.api_key !== "configure-via-admin"
-    ? data.api_key
-    : Deno.env.get("RESEND_API_KEY");
-  const fromName = data?.from_name || Deno.env.get("RESEND_FROM_NAME") || "Pubfy";
-  const fromEmail = data?.from_email || Deno.env.get("RESEND_FROM_EMAIL") || "contato@mail.pubfy.com.br";
-  const replyTo = data?.reply_to || Deno.env.get("RESEND_REPLY_TO") || "contato@pubfy.com.br";
-
-  if (!apiKey) {
-    throw new Error("Resend não configurado. Defina RESEND_API_KEY ou configure o e-mail global.");
-  }
-
-  return {
-    resend: new Resend(apiKey),
-    from: `${fromName} <${fromEmail}>`,
-    replyTo,
-  };
-};
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -64,12 +30,6 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const emailConfig = await getEmailConfig(supabase);
-    const safeName = escapeHtml(name);
-    const safeEmail = escapeHtml(email);
-    const safePhone = phone ? escapeHtml(phone) : "";
-    const safeSubject = escapeHtml(subject);
-    const safeMessage = escapeHtml(message);
 
     // Save message to database
     const { data: messageData, error: messageError } = await supabase
@@ -123,34 +83,16 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails to all recipients
     const emailPromises = recipients.map(async (recipient) => {
       try {
-        const emailResponse = await emailConfig.resend.emails.send({
-          from: emailConfig.from,
-          to: [recipient.email],
-          reply_to: emailConfig.replyTo || email,
-          subject: `Nova mensagem de contato: ${subject}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1e3a8a;">Nova mensagem de contato</h2>
-              
-              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>Nome:</strong> ${safeName}</p>
-                <p><strong>Email:</strong> ${safeEmail}</p>
-                ${safePhone ? `<p><strong>Telefone:</strong> ${safePhone}</p>` : ''}
-                <p><strong>Assunto:</strong> ${safeSubject}</p>
-              </div>
-              
-              <div style="margin: 20px 0;">
-                <p><strong>Mensagem:</strong></p>
-                <p style="white-space: pre-wrap;">${safeMessage}</p>
-              </div>
-              
-              <hr style="border: 1px solid #e5e7eb; margin: 20px 0;">
-              
-              <p style="color: #6b7280; font-size: 14px;">
-                Esta mensagem foi enviada através do formulário de contato do Pubfy.
-              </p>
-            </div>
-          `,
+        const emailResponse = await sendManagedEmail({
+          admin: supabase,
+          templateKey: "contact_notification",
+          emailType: "operational",
+          to: recipient.email,
+          recipientName: recipient.name,
+          contextType: "contact_message",
+          contextId: messageData.id,
+          variables: { name, email, phone: phone || "", subject, message },
+          metadata: { source: "contact_form", recipient_role: "admin" },
         });
 
         console.log(`Email sent to ${recipient.email}:`, emailResponse);
@@ -168,33 +110,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send confirmation email to the sender
     try {
-      await emailConfig.resend.emails.send({
-        from: emailConfig.from,
-        to: [email],
-        reply_to: emailConfig.replyTo || undefined,
-        subject: "Recebemos sua mensagem!",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #10b981;">Mensagem recebida com sucesso!</h2>
-            
-            <p>Olá ${safeName},</p>
-            
-            <p>Recebemos sua mensagem e entraremos em contato o mais breve possível.</p>
-            
-            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p><strong>Resumo da sua mensagem:</strong></p>
-              <p><strong>Assunto:</strong> ${safeSubject}</p>
-              <p style="white-space: pre-wrap;">${safeMessage}</p>
-            </div>
-            
-            <p>Obrigado por entrar em contato!</p>
-            
-            <p style="margin-top: 30px;">
-              Atenciosamente,<br>
-              <strong>Equipe Pubfy</strong>
-            </p>
-          </div>
-        `,
+      await sendManagedEmail({
+        admin: supabase,
+        templateKey: "contact_confirmation",
+        emailType: "transactional",
+        to: email,
+        recipientName: name,
+        contextType: "contact_message",
+        contextId: messageData.id,
+        variables: { name, subject, message },
+        metadata: { source: "contact_form", recipient_role: "sender" },
       });
       console.log("Confirmation email sent to sender");
     } catch (error) {

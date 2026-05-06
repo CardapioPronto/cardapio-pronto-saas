@@ -2,6 +2,7 @@
 // Cria customer + card + subscription no Pagar.me a partir de um plano local
 // sincronizado, e persiste a assinatura na tabela `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { sendManagedEmail } from "../_shared/email-delivery.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -309,6 +310,27 @@ Deno.serve(async (req) => {
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    try {
+      await sendManagedEmail({
+        admin,
+        restaurantId: restaurant.id,
+        templateKey: "subscription_created",
+        emailType: "transactional",
+        to: body.customer.email,
+        recipientName: body.customer.name,
+        contextType: "subscription",
+        contextId: inserted.id,
+        variables: {
+          customer_name: body.customer.name,
+          plan_name: plan.name,
+          status,
+        },
+        metadata: { source: "pagarme_create_subscription", billing_cycle: body.billing_cycle },
+      });
+    } catch (emailError) {
+      console.error("Failed to send subscription email:", emailError);
     }
 
     return new Response(
