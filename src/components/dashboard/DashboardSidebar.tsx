@@ -15,6 +15,7 @@ import {
   Tags,
   Shield,
   ShieldCheck,
+  Workflow,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   permissions?: PermissionType[];
+  activePaths?: string[];
   /** se true, exige TODAS as permissões; se false ou omitido, exige PELO MENOS UMA */
   all?: boolean;
 };
@@ -64,6 +66,19 @@ const communicationLinks: NavItem[] = [
       "whatsapp_view_all_conversations",
       "whatsapp_configure_automation",
     ],
+  },
+  {
+    to: "/automacoes",
+    label: "Automações",
+    icon: Workflow,
+    permissions: [
+      "settings_manage",
+      "settings_integrations_manage",
+      "whatsapp_manage",
+      "whatsapp_manage_instances",
+      "whatsapp_configure_automation",
+    ],
+    activePaths: ["/automacoes", "/email-integracao", "/ifood-integracao", "/pagarme-config"],
   },
 ];
 
@@ -105,7 +120,10 @@ const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
 
   const renderLink = (item: NavItem) => {
     const Icon = item.icon;
-    const active = location.pathname === item.to || (item.to === "/mesas" && location.pathname === "/areas");
+    const active =
+      location.pathname === item.to ||
+      (item.to === "/mesas" && location.pathname === "/areas") ||
+      !!item.activePaths?.includes(location.pathname);
     return (
       <Link
         key={item.to}

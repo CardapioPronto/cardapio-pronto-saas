@@ -36,6 +36,7 @@ const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
 const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
 const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
 const EmailIntegracao = lazy(() => import('@/pages/EmailIntegracao'));
+const Automacoes = lazy(() => import('@/pages/Automacoes'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
 const Atendimento = lazy(() => import('@/pages/Atendimento'));
@@ -186,6 +187,22 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage']} requireAny>
           <MainLayout>
             <EmailIntegracao />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/automacoes" element={
+        <ProtectedRoute
+          requiredPermissions={[
+            'settings_manage',
+            'settings_integrations_manage',
+            'whatsapp_manage',
+            'whatsapp_manage_instances',
+            'whatsapp_configure_automation',
+          ]}
+          requireAny
+        >
+          <MainLayout>
+            <Automacoes />
           </MainLayout>
         </ProtectedRoute>
       } />
