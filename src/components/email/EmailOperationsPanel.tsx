@@ -48,6 +48,15 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [saving, setSaving] = useState(false);
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || templates[0];
+  const isSystemScope = scope === "system";
+  const canEditSelected = Boolean(selectedTemplate && (isSystemScope || selectedTemplate.restaurant_id));
+  const templateTitle = isSystemScope ? "Templates do Pubfy" : "Templates do restaurante";
+  const templateDescription = isSystemScope
+    ? "Modelos globais usados por e-mails do sistema, assinatura, contato e recibos."
+    : "Modelos proprios deste restaurante. Templates globais do Pubfy ficam somente no dashboard de super admin.";
+  const emptyTemplatesMessage = isSystemScope
+    ? "Nenhum template global encontrado."
+    : "Nenhum template proprio ainda. Os e-mails automaticos continuam usando os modelos padrao do Pubfy.";
 
   const load = async () => {
     setLoading(true);
@@ -62,7 +71,10 @@ export function EmailOperationsPanel({ scope }: Props) {
       setLogs(logData);
       setContacts(contactData);
       setCampaigns(campaignData);
-      if (!selectedTemplateId && templateData[0]) setSelectedTemplateId(templateData[0].id);
+      setSelectedTemplateId((currentId) => {
+        if (currentId && templateData.some((template) => template.id === currentId)) return currentId;
+        return templateData[0]?.id ?? null;
+      });
     } catch (error) {
       console.error("Erro ao carregar operações de e-mail:", error);
       toast.error("Erro ao carregar operações de e-mail");
@@ -87,6 +99,10 @@ export function EmailOperationsPanel({ scope }: Props) {
 
   const handleSaveTemplate = async () => {
     if (!selectedTemplate) return;
+    if (!canEditSelected) {
+      toast.error("Templates globais do Pubfy devem ser gerenciados no dashboard de super admin.");
+      return;
+    }
     setSaving(true);
     try {
       const saved = await saveEmailTemplate(scope, selectedTemplate);
@@ -125,8 +141,8 @@ export function EmailOperationsPanel({ scope }: Props) {
         <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Templates</CardTitle>
-              <CardDescription>Modelos transacionais e comerciais.</CardDescription>
+              <CardTitle>{templateTitle}</CardTitle>
+              <CardDescription>{templateDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {templates.map((template) => (
@@ -142,7 +158,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                   <Badge variant="outline" className="mt-2">{template.category}</Badge>
                 </button>
               ))}
-              {!templates.length && <p className="text-sm text-muted-foreground">Nenhum template encontrado.</p>}
+              {!templates.length && <p className="text-sm text-muted-foreground">{emptyTemplatesMessage}</p>}
             </CardContent>
           </Card>
 
@@ -185,7 +201,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                     />
                   </div>
                   <div className="flex justify-end">
-                    <Button onClick={handleSaveTemplate} disabled={saving}>
+                    <Button onClick={handleSaveTemplate} disabled={saving || !canEditSelected}>
                       <Save className="mr-2 h-4 w-4" />
                       Salvar template
                     </Button>

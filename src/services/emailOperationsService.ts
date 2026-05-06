@@ -73,7 +73,7 @@ export async function listEmailTemplates(scope: EmailIntegrationScope) {
   let query = supabase.from("email_templates" as any).select("*").order("category").order("template_key");
   query = scope === "system"
     ? query.is("restaurant_id", null)
-    : query.or(`restaurant_id.is.null,restaurant_id.eq.${restaurantId}`);
+    : query.eq("restaurant_id", restaurantId);
   const { data, error } = await query;
   if (error) throw error;
   return (data || []) as EmailTemplate[];
@@ -81,11 +81,17 @@ export async function listEmailTemplates(scope: EmailIntegrationScope) {
 
 export async function saveEmailTemplate(scope: EmailIntegrationScope, template: Partial<EmailTemplate>) {
   const restaurantId = scope === "restaurant" ? await getCurrentRestaurantId() : null;
+  if (scope === "restaurant" && !restaurantId) {
+    throw new Error("Restaurante nao encontrado para salvar o template.");
+  }
+  if (scope === "restaurant" && !template.restaurant_id) {
+    throw new Error("Templates globais do Pubfy devem ser gerenciados no dashboard de super admin.");
+  }
   const { data: userData } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("email_templates" as any)
     .upsert({
-      id: scope === "system" || template.restaurant_id ? template.id : undefined,
+      id: template.id,
       restaurant_id: restaurantId,
       template_key: template.template_key,
       name: template.name,
