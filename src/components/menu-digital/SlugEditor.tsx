@@ -138,7 +138,7 @@ export const SlugEditor: React.FC<SlugEditorProps> = ({
 
   // Copy menu URL to clipboard
   const handleCopyUrl = () => {
-    const url = `${window.location.origin}/cardapio/${slug}`;
+    const url = `https://pubfy.com.br/cardapio/${slug}`;
     navigator.clipboard.writeText(url);
     toast.success('URL copiada para a área de transferência!');
   };

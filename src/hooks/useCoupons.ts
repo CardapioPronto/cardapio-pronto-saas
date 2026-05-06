@@ -74,22 +74,24 @@ export function useCoupons(restaurantId: string) {
       if (couponsError) throw couponsError;
       const typedCoupons = (couponsData || []) as unknown as Coupon[];
 
-      const { data: usageData, error: usageError } = await supabase
-        .from('coupon_usage' as any)
-        .select('coupon_id, discount_amount, id')
-        .in('coupon_id', typedCoupons.map((c) => c.id));
+      const couponIds = typedCoupons.map((c) => c.id).filter(Boolean);
 
-      if (usageError) throw usageError;
-      const typedUsage = (usageData || []) as unknown as { coupon_id: string; discount_amount: number; id: string }[];
+      let typedUsage: { coupon_id: string; id: string }[] = [];
+      if (couponIds.length > 0) {
+        const { data: usageData, error: usageError } = await supabase
+          .from('coupon_usage' as any)
+          .select('coupon_id, id')
+          .in('coupon_id', couponIds);
+
+        if (usageError) throw usageError;
+        typedUsage = (usageData || []) as unknown as { coupon_id: string; id: string }[];
+      }
 
       const stats: CouponStatistics = {
         totalCoupons: typedCoupons.length,
         activeCoupons: typedCoupons.filter((c) => c.is_active).length,
         totalUsed: typedUsage.length,
-        totalDiscountedAmount: typedUsage.reduce(
-          (sum, u) => sum + (u.discount_amount || 0),
-          0
-        ),
+        totalDiscountedAmount: 0,
         averageDiscountPerCoupon: 0,
       };
 
@@ -118,7 +120,7 @@ export function useCoupons(restaurantId: string) {
           stats.mostUsedCoupon = {
             code: mostUsedCoupon.code || mostUsedCoupon.id,
             usageCount: mostUsedCouponId[1],
-            discountAmount: couponUsages.reduce((sum, u) => sum + (u.discount_amount || 0), 0),
+            discountAmount: 0,
           };
         }
       }
