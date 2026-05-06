@@ -196,10 +196,7 @@ Deno.serve(async (req) => {
       plan_id: pagarmePlanId,
       customer_id: customer.id,
       payment_method: body.payment_method,
-    };
-    subscriptionPayload.boleto = {
-      instructions: "Pagar até a data de vencimento",
-      due_at: new Date(Date.now() + 3 * 86400000).toISOString(),
+      boleto_due_days: 3,
     };
     const subscription = await pagarme("/subscriptions", "POST", subscriptionPayload);
 

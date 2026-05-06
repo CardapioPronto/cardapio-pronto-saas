@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
 
     // Verifica posse: super admin ou owner do restaurante
     const { data: isSuperAdminData } = await admin.rpc("is_super_admin", {
-      _user_id: userData.user.id,
+      user_id: userData.user.id,
     });
     const { data: sub, error: subErr } = await admin
       .from("subscriptions")

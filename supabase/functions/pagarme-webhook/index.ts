@@ -15,37 +15,64 @@ const supabase = createClient(
 );
 
 const WEBHOOK_SECRET = Deno.env.get("PAGARME_WEBHOOK_SECRET") ?? "";
+const PAGARME_SECRET_KEY = Deno.env.get("PAGARME_SECRET_KEY") ?? "";
 
-// HMAC-SHA256 signature verification (Pagar.me v5 sends X-Hub-Signature)
-async function verifySignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
-  if (!WEBHOOK_SECRET) {
-    console.warn("[pagarme-webhook] PAGARME_WEBHOOK_SECRET not configured");
-    return false;
-  }
-  if (!signatureHeader) return false;
+function normalizeSignature(signatureHeader: string | null) {
+  return (signatureHeader ?? "")
+    .replace(/^sha1=/i, "")
+    .replace(/^sha256=/i, "")
+    .trim()
+    .toLowerCase();
+}
 
-  // Header may come as "sha256=abcdef..." or just "abcdef..."
-  const expected = signatureHeader.replace(/^sha256=/, "").trim().toLowerCase();
-
+async function hmacHex(rawBody: string, secret: string, hash: "SHA-1" | "SHA-256") {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(WEBHOOK_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash },
     false,
     ["sign"],
   );
   const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
-  const computed = Array.from(new Uint8Array(sigBuf))
+  return Array.from(new Uint8Array(sigBuf))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
 
-  // constant-time comparison
+function timingSafeEqualHex(computed: string, expected: string) {
   if (computed.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < computed.length; i++) {
     diff |= computed.charCodeAt(i) ^ expected.charCodeAt(i);
   }
   return diff === 0;
+}
+
+async function verifySignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
+  if (!signatureHeader) return false;
+
+  const expected = normalizeSignature(signatureHeader);
+  if (!expected) return false;
+
+  const secrets = [WEBHOOK_SECRET, PAGARME_SECRET_KEY].filter(Boolean);
+  if (secrets.length === 0) {
+    console.warn("[pagarme-webhook] PAGARME_WEBHOOK_SECRET/PAGARME_SECRET_KEY not configured");
+    return false;
+  }
+
+  for (const secret of secrets) {
+    for (const hash of ["SHA-256", "SHA-1"] as const) {
+      const computed = await hmacHex(rawBody, secret, hash);
+      if (timingSafeEqualHex(computed, expected)) return true;
+    }
+  }
+
+  return false;
+}
+
+function extractPagarmeSubscriptionId(type: string, data: any) {
+  if (type.startsWith("subscription.")) return data.id ?? data.subscription_id ?? null;
+  return data.subscription_id ?? data.subscription?.id ?? data.invoice?.subscription_id ?? null;
 }
 
 function mapStatus(pagarmeStatus: string): string {
@@ -136,11 +163,17 @@ async function processEvent(event: any): Promise<void> {
 async function sendSubscriptionReceipt(pagarmeSubId: string, charge: any) {
   const { data: sub } = await supabase
     .from("subscriptions")
-    .select("id, restaurant_id, plan:plans(name), restaurants:restaurant_id(owner_id)")
+    .select("id, restaurant_id, plan_id, restaurants:restaurant_id(owner_id)")
     .eq("pagarme_subscription_id", pagarmeSubId)
     .maybeSingle();
 
   if (!sub?.restaurant_id) return;
+
+  const { data: plan } = await supabase
+    .from("plans")
+    .select("name")
+    .eq("id", (sub as any).plan_id)
+    .maybeSingle();
 
   const { data: owner } = await supabase
     .from("users")
@@ -161,7 +194,7 @@ async function sendSubscriptionReceipt(pagarmeSubId: string, charge: any) {
     contextType: "subscription",
     contextId: sub.id,
     variables: {
-      plan_name: (sub as any).plan?.name || "Plano Pubfy",
+      plan_name: plan?.name || "Plano Pubfy",
       amount: amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
       status: charge.status || "paid",
       paid_at: new Date().toLocaleString("pt-BR"),
@@ -203,7 +236,7 @@ Deno.serve(async (req) => {
   const eventId = event.id ?? null;
   const eventType = event.type ?? "unknown";
   const data = event.data ?? {};
-  const pagarmeSubId = data.id ?? data.subscription_id ?? data.subscription?.id ?? null;
+  const pagarmeSubId = extractPagarmeSubscriptionId(eventType, data);
   const pagarmeCustomerId = data.customer?.id ?? data.customer_id ?? null;
 
   // Idempotency: skip already-processed events
