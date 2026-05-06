@@ -157,7 +157,7 @@ export const SlugEditor: React.FC<SlugEditorProps> = ({
             <Label>URL Pública</Label>
             <div className="flex items-center gap-2">
               <div className="flex-1 px-3 py-2 bg-muted rounded border text-sm truncate">
-                <span className="text-muted-foreground">cardapio.pronto.com.br/</span>
+                <span className="text-muted-foreground">pubfy.com.br/cardapio/</span>
                 <span className="font-semibold">{slug || restaurantId}</span>
               </div>
               <Button
@@ -191,7 +191,7 @@ export const SlugEditor: React.FC<SlugEditorProps> = ({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex items-center border rounded">
-                  <span className="px-3 py-2 text-muted-foreground text-sm">cardapio.pronto.com.br/</span>
+                  <span className="px-3 py-2 text-muted-foreground text-sm">pubfy.com.br/cardapio/</span>
                   <Input
                     id="slug-input"
                     value={slug}
