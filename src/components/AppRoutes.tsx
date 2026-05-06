@@ -35,6 +35,7 @@ const MenuDigital = lazy(() => import('@/pages/MenuDigital'));
 const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
 const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
 const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
+const EmailIntegracao = lazy(() => import('@/pages/EmailIntegracao'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
 const Atendimento = lazy(() => import('@/pages/Atendimento'));
@@ -50,6 +51,7 @@ const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactReci
 const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
 const AdminPagarmeWebhooks = lazy(() => import('@/pages/admin/AdminPagarmeWebhooks'));
 const AdminWhatsApp = lazy(() => import('@/pages/admin/AdminWhatsApp'));
+const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
 
 const RouteFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -180,6 +182,13 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/email-integracao" element={
+        <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage']} requireAny>
+          <MainLayout>
+            <EmailIntegracao />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/categorias" element={
         <ProtectedRoute requiredPermissions={['products_view']}>
           <MainLayout>
@@ -278,6 +287,11 @@ const AppRoutes = () => {
       <Route path="/admin/whatsapp" element={
         <AdminProtectedRoute>
           <AdminWhatsApp />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/email" element={
+        <AdminProtectedRoute>
+          <AdminEmail />
         </AdminProtectedRoute>
       } />
       

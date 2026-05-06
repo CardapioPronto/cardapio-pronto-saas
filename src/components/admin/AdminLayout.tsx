@@ -3,7 +3,7 @@ import React, { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 import { 
-  Users, Settings, CreditCard, Home, BarChart3, Shield, List, Database, Layers, BookOpen, Mail, MailOpen, Webhook, MessageCircle
+  Users, Settings, CreditCard, Home, BarChart3, Shield, List, Database, Layers, BookOpen, Mail, MailOpen, Webhook, MessageCircle, Send
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -20,6 +20,7 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
     { icon: CreditCard, label: "PagarMe", href: "/admin/pagarme" },
     { icon: Webhook, label: "Webhooks Pagar.me", href: "/admin/pagarme-webhooks" },
     { icon: MessageCircle, label: "WhatsApp", href: "/admin/whatsapp" },
+    { icon: Send, label: "Email", href: "/admin/email" },
     { icon: Users, label: "Clientes", href: "/admin/customers" },
     { icon: List, label: "Restaurantes", href: "/admin/restaurants" },
     { icon: Database, label: "Dados do Sistema", href: "/admin/data" },

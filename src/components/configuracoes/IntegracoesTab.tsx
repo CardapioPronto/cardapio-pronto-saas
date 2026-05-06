@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bot } from "lucide-react";
+import { Bot, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface IntegracoesTabProps {
@@ -75,6 +75,23 @@ export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => 
                 </div>
               </div>
               <Button disabled={!canManage} variant="outline" onClick={() => navigate("/ifood-integracao")}>Configurar</Button>
+            </div>
+          </div>
+
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-slate-900 rounded flex items-center justify-center text-white">
+                  <Mail className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Email Resend</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Envie emails pelo domínio e chave Resend do restaurante
+                  </p>
+                </div>
+              </div>
+              <Button disabled={!canManage} variant="outline" onClick={() => navigate("/email-integracao")}>Configurar</Button>
             </div>
           </div>
         </CardContent>
