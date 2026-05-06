@@ -70,20 +70,27 @@ export const useOrderPosition = (type: 'products' | 'categories', restaurantId?:
  */
 export const reorderItemsBatch = async (
   table: 'products' | 'categories',
-  items: Array<{ id: string; order_position: number }>
+  items: Array<{ id: string; order_position: number }>,
+  restaurantId?: string
 ) => {
-  const updates = items.map((item) =>
-    supabase
+  const updates = items.map((item) => {
+    let query = supabase
       .from(table)
       .update({ order_position: item.order_position } as any)
-      .eq('id', item.id)
-  );
+      .eq('id', item.id);
+
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
+    }
+
+    return query;
+  });
 
   const results = await Promise.all(updates);
-  const hasError = results.some((r) => r.error);
+  const firstError = results.find((r) => r.error)?.error;
 
-  if (hasError) {
-    throw new Error('Erro ao atualizar posições');
+  if (firstError) {
+    throw new Error(`Erro ao atualizar posições: ${firstError.message}`);
   }
 
   return true;

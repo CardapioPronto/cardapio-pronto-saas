@@ -545,7 +545,7 @@ const CategoriesOrderManager: React.FC<{ restaurantId: string }> = ({ restaurant
   });
 
   const handleReorder = async (items: Array<{ id: string; order_position: number }>) => {
-    await reorderItemsBatch('categories', items);
+    await reorderItemsBatch('categories', items, restaurantId);
     await queryClient.invalidateQueries({ queryKey: ['categories-order', restaurantId] });
     await queryClient.invalidateQueries({ queryKey: ['categories'] });
   };
@@ -580,7 +580,7 @@ const ProductsOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId
   });
 
   const handleReorder = async (items: Array<{ id: string; order_position: number }>) => {
-    await reorderItemsBatch('products', items);
+    await reorderItemsBatch('products', items, restaurantId);
     await queryClient.invalidateQueries({ queryKey: ['products-order', restaurantId] });
   };
 

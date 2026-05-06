@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, GripVertical, ChevronUp, ChevronDown, Search } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
 
 export interface DraggableItem {
   id: string;
@@ -18,6 +19,13 @@ interface ReorderListProps {
   isLoading?: boolean;
 }
 
+const sortOrderItems = (items: DraggableItem[]) =>
+  [...items].sort((a, b) => {
+    const positionDiff = (a.order_position ?? Number.MAX_SAFE_INTEGER) - (b.order_position ?? Number.MAX_SAFE_INTEGER);
+    if (positionDiff !== 0) return positionDiff;
+    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+  });
+
 export const ReorderList: React.FC<ReorderListProps> = ({
   items,
   title,
@@ -25,18 +33,14 @@ export const ReorderList: React.FC<ReorderListProps> = ({
   onReorder,
   isLoading = false,
 }) => {
-  const [localItems, setLocalItems] = useState<DraggableItem[]>(
-    [...items].sort((a, b) => (a.order_position || 0) - (b.order_position || 0))
-  );
+  const [localItems, setLocalItems] = useState<DraggableItem[]>(sortOrderItems(items));
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [search, setSearch] = useState('');
 
-  const sortedItems = useMemo(
-    () => [...items].sort((a, b) => (a.order_position || 0) - (b.order_position || 0)),
-    [items]
-  );
+  const sortedItems = useMemo(() => sortOrderItems(items), [items]);
 
   const normalizedSearch = search.trim().toLowerCase();
   const visibleItems = normalizedSearch
@@ -44,9 +48,9 @@ export const ReorderList: React.FC<ReorderListProps> = ({
     : localItems;
 
   useEffect(() => {
-    if (isSaving || isDragging) return;
+    if (isSaving || isDragging || isDirty) return;
     setLocalItems(sortedItems);
-  }, [isDragging, isSaving, sortedItems]);
+  }, [isDirty, isDragging, isSaving, sortedItems]);
 
   const getLocalIndex = (id: string) => localItems.findIndex((item) => item.id === id);
 
@@ -67,6 +71,7 @@ export const ReorderList: React.FC<ReorderListProps> = ({
 
     setLocalItems(newItems);
     setDraggedIndex(index);
+    setIsDirty(true);
   };
 
   const handleDragEnd = () => {
@@ -79,6 +84,7 @@ export const ReorderList: React.FC<ReorderListProps> = ({
     const newItems = Array.from(localItems);
     [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
     setLocalItems(newItems);
+    setIsDirty(true);
   };
 
   const moveDown = (index: number) => {
@@ -86,6 +92,7 @@ export const ReorderList: React.FC<ReorderListProps> = ({
     const newItems = Array.from(localItems);
     [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
     setLocalItems(newItems);
+    setIsDirty(true);
   };
 
   const handleSave = async () => {
@@ -96,20 +103,23 @@ export const ReorderList: React.FC<ReorderListProps> = ({
         order_position: index,
       }));
       await onReorder(reorderedItems);
+      setLocalItems(localItems.map((item, index) => ({ ...item, order_position: index })));
+      setIsDirty(false);
+      toast.success('Ordem salva com sucesso.');
     } catch (error) {
       console.error('Error saving order:', error);
-      // Reset to original order
-      setLocalItems([...items].sort((a, b) => (a.order_position || 0) - (b.order_position || 0)));
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar a ordem.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleReset = () => {
-    setLocalItems([...items].sort((a, b) => (a.order_position || 0) - (b.order_position || 0)));
+    setLocalItems(sortedItems);
+    setIsDirty(false);
   };
 
-  const hasChanges = JSON.stringify(localItems.map((i) => i.id)) !== JSON.stringify(sortedItems.map((i) => i.id));
+  const hasChanges = isDirty || JSON.stringify(localItems.map((i) => i.id)) !== JSON.stringify(sortedItems.map((i) => i.id));
 
   return (
     <Card className="overflow-hidden">
