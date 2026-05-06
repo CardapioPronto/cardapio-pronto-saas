@@ -71,59 +71,33 @@ export const useMySubscriptions = () => {
 
     setLoading(true);
     try {
-      const { data, error: fetchError } = await supabase
+      const { data: subsData, error: subsErr } = await supabase
         .from("subscriptions")
-        .select(`
-          *,
-          plan:plans!subscriptions_plan_id_fkey (
-            id,
-            name,
-            description,
-            price_monthly,
-            price_yearly,
-            trial_days,
-            pagarme_plan_id_monthly,
-            pagarme_plan_id_yearly,
-            pagarme_sync_status,
-            pagarme_payment_methods
-          )
-        `)
+        .select("*")
         .eq("restaurant_id", user.restaurant_id)
         .in("status", VISIBLE_STATUSES)
         .order("created_at", { ascending: false });
 
-      if (fetchError) {
-        // Fallback sem foreign key relationship (plan_id é texto)
-        const { data: fallbackData, error: fallbackErr } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("restaurant_id", user.restaurant_id)
-          .in("status", VISIBLE_STATUSES)
-          .order("created_at", { ascending: false });
+      if (subsErr) throw subsErr;
 
-        if (fallbackErr) throw fallbackErr;
+      const planIds = Array.from(
+        new Set((subsData ?? []).map((s) => s.plan_id).filter(Boolean))
+      );
 
-        const planIds = Array.from(
-          new Set((fallbackData ?? []).map((s) => s.plan_id).filter(Boolean))
-        );
-
-        let plansMap: Record<string, PlanSummary> = {};
-        if (planIds.length > 0) {
-          const { data: plansData } = await supabase
-            .from("plans")
-            .select("id, name, description, price_monthly, price_yearly, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_status")
-            .in("id", planIds as string[]);
-          plansMap = Object.fromEntries(((plansData ?? []) as unknown as PlanSummary[]).map((p) => [p.id, p]));
-        }
-
-        setSubscriptions(
-          ((fallbackData ?? []) as unknown as SubscriptionRow[]).map((s) =>
-            normalizeSubscription(s, plansMap[s.plan_id] ?? null),
-          )
-        );
-      } else {
-        setSubscriptions(((data ?? []) as unknown as SubscriptionRow[]).map((s) => normalizeSubscription(s)));
+      let plansMap: Record<string, PlanSummary> = {};
+      if (planIds.length > 0) {
+        const { data: plansData } = await supabase
+          .from("plans")
+          .select("id, name, description, price_monthly, price_yearly, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_status")
+          .in("id", planIds as string[]);
+        plansMap = Object.fromEntries(((plansData ?? []) as unknown as PlanSummary[]).map((p) => [p.id, p]));
       }
+
+      setSubscriptions(
+        ((subsData ?? []) as unknown as SubscriptionRow[]).map((s) =>
+          normalizeSubscription(s, plansMap[s.plan_id] ?? null),
+        )
+      );
       setError(null);
     } catch (err) {
       console.error("Erro ao buscar assinaturas:", err);
