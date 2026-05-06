@@ -53,7 +53,7 @@ export const MenuPreview = () => {
   const handleCopyLink = () => {
     if (!user?.restaurant_id) return;
     
-    const menuUrl = `${window.location.origin}/cardapio/${publicSlug || user.restaurant_id}`;
+    const menuUrl = `https://pubfy.com.br/cardapio/${publicSlug || user.restaurant_id}`;
     navigator.clipboard.writeText(menuUrl);
     
     toast({
