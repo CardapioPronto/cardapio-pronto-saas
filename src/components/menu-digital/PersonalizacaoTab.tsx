@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { menuThemeService } from '@/services/menuThemeService';
 import { DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useOrderPosition, reorderItemsBatch } from '@/hooks/useOrderPosition';
+import { reorderItemsBatch } from '@/hooks/useOrderPosition';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,6 +57,7 @@ export const PersonalizacaoTab = () => {
   const { user, loading: userLoading } = useCurrentUser();
   const restaurantId = user?.restaurant_id ?? '';
   const queryClient = useQueryClient();
+  const [orderTab, setOrderTab] = useState('categories');
 
   /* ---- Fetch restaurant data ---- */
   const { data: restaurant, isLoading: loadingRestaurant } = useQuery({
@@ -509,16 +510,16 @@ export const PersonalizacaoTab = () => {
       </Card>
 
       {/* Reordenar Categorias e Produtos */}
-      <Tabs defaultValue="categories" className="w-full">
-        <TabsList>
+      <Tabs value={orderTab} onValueChange={setOrderTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
           <TabsTrigger value="categories">Ordenar Categorias</TabsTrigger>
           <TabsTrigger value="products">Ordenar Produtos</TabsTrigger>
         </TabsList>
         <TabsContent value="categories" className="space-y-4">
-          <CategoriesOrderManager restaurantId={restaurantId} />
+          {orderTab === 'categories' && <CategoriesOrderManager restaurantId={restaurantId} />}
         </TabsContent>
         <TabsContent value="products" className="space-y-4">
-          <ProductsOrderManager restaurantId={restaurantId} />
+          {orderTab === 'products' && <ProductsOrderManager restaurantId={restaurantId} />}
         </TabsContent>
       </Tabs>
     </div>
@@ -527,15 +528,16 @@ export const PersonalizacaoTab = () => {
 
 // Sub-component for managing category order
 const CategoriesOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId }) => {
-  const { updateOrderPosition, reorderItems } = useOrderPosition('categories', restaurantId);
+  const queryClient = useQueryClient();
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ['categories', restaurantId],
+    queryKey: ['categories-order', restaurantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
         .select('id, name, order_position')
         .eq('restaurant_id', restaurantId)
-        .order('order_position', { ascending: true });
+        .order('order_position', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true });
       if (error) throw error;
       return data as unknown as DraggableItem[];
     },
@@ -544,6 +546,8 @@ const CategoriesOrderManager: React.FC<{ restaurantId: string }> = ({ restaurant
 
   const handleReorder = async (items: Array<{ id: string; order_position: number }>) => {
     await reorderItemsBatch('categories', items);
+    await queryClient.invalidateQueries({ queryKey: ['categories-order', restaurantId] });
+    await queryClient.invalidateQueries({ queryKey: ['categories'] });
   };
 
   return (
@@ -559,6 +563,7 @@ const CategoriesOrderManager: React.FC<{ restaurantId: string }> = ({ restaurant
 
 // Sub-component for managing product order
 const ProductsOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId }) => {
+  const queryClient = useQueryClient();
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products-order', restaurantId],
     queryFn: async () => {
@@ -566,7 +571,8 @@ const ProductsOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId
         .from('products')
         .select('id, name, order_position')
         .eq('restaurant_id', restaurantId)
-        .order('order_position', { ascending: true });
+        .order('order_position', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true });
       if (error) throw error;
       return data as unknown as DraggableItem[];
     },
@@ -575,6 +581,7 @@ const ProductsOrderManager: React.FC<{ restaurantId: string }> = ({ restaurantId
 
   const handleReorder = async (items: Array<{ id: string; order_position: number }>) => {
     await reorderItemsBatch('products', items);
+    await queryClient.invalidateQueries({ queryKey: ['products-order', restaurantId] });
   };
 
   return (
