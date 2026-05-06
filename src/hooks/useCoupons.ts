@@ -120,7 +120,7 @@ export function useCoupons(restaurantId: string) {
           stats.mostUsedCoupon = {
             code: mostUsedCoupon.code || mostUsedCoupon.id,
             usageCount: mostUsedCouponId[1],
-            discountAmount: couponUsages.reduce((sum, u) => sum + (u.discount_amount || 0), 0),
+            discountAmount: 0,
           };
         }
       }
