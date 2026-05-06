@@ -72,6 +72,13 @@ export const PlanosTable = ({
           .join(", "),
     },
     {
+      header: "E-mail",
+      accessorKey: (row: Plano) =>
+        row.email_campaigns_enabled
+          ? `${row.email_campaign_monthly_limit ?? 0}/mês · ${row.email_campaign_contact_limit ?? 0}/campanha`
+          : "Transacional",
+    },
+    {
       header: "Ativo",
       accessorKey: (row: Plano) => (row.is_active ? "✅" : "❌"),
     },

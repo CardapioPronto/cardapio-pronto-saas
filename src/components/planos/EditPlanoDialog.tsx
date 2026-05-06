@@ -49,6 +49,10 @@ export const EditPlanoDialog = ({
     "credit_card",
     "boleto",
   ]);
+  const [emailCampaignsEnabled, setEmailCampaignsEnabled] = useState(false);
+  const [emailCampaignMonthlyLimit, setEmailCampaignMonthlyLimit] = useState("0");
+  const [emailCampaignContactLimit, setEmailCampaignContactLimit] = useState("0");
+  const [emailCustomTemplatesEnabled, setEmailCustomTemplatesEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -60,6 +64,10 @@ export const EditPlanoDialog = ({
       setTrialDays(String(plano.trial_days ?? 14));
       setIsActive(plano.is_active);
       setPaymentMethods(plano.pagarme_payment_methods?.length ? plano.pagarme_payment_methods : ["credit_card", "boleto"]);
+      setEmailCampaignsEnabled(plano.email_campaigns_enabled ?? false);
+      setEmailCampaignMonthlyLimit(String(plano.email_campaign_monthly_limit ?? 0));
+      setEmailCampaignContactLimit(String(plano.email_campaign_contact_limit ?? 0));
+      setEmailCustomTemplatesEnabled(plano.email_custom_templates_enabled ?? true);
     }
   }, [plano]);
 
@@ -87,6 +95,10 @@ export const EditPlanoDialog = ({
         price_yearly: Number(yearly),
         trial_days: Number(trialDays) || 0,
         pagarme_payment_methods: paymentMethods,
+        email_campaigns_enabled: emailCampaignsEnabled,
+        email_campaign_monthly_limit: Number(emailCampaignMonthlyLimit) || 0,
+        email_campaign_contact_limit: Number(emailCampaignContactLimit) || 0,
+        email_custom_templates_enabled: emailCustomTemplatesEnabled,
         is_active: isActive,
       })
       .eq("id", plano.id);
@@ -169,6 +181,43 @@ export const EditPlanoDialog = ({
                   {option.label}
                 </label>
               ))}
+            </div>
+          </div>
+          <div className="space-y-3 rounded-md border p-3">
+            <Label>Recursos de e-mail por plano</Label>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Campanhas de e-mail</Label>
+                <p className="text-xs text-muted-foreground">Libera editor, seleção de público e botão de envio.</p>
+              </div>
+              <Switch checked={emailCampaignsEnabled} onCheckedChange={setEmailCampaignsEnabled} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Templates personalizados</Label>
+                <p className="text-xs text-muted-foreground">Permite copiar modelos autorizados do Pubfy para o restaurante.</p>
+              </div>
+              <Switch checked={emailCustomTemplatesEnabled} onCheckedChange={setEmailCustomTemplatesEnabled} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Envios/mês</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={emailCampaignMonthlyLimit}
+                  onChange={(e) => setEmailCampaignMonthlyLimit(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Contatos/campanha</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={emailCampaignContactLimit}
+                  onChange={(e) => setEmailCampaignContactLimit(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">

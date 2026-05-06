@@ -43,6 +43,10 @@ export function AddPlanoDialog({
     "credit_card",
     "boleto",
   ]);
+  const [emailCampaignsEnabled, setEmailCampaignsEnabled] = useState(false);
+  const [emailCampaignMonthlyLimit, setEmailCampaignMonthlyLimit] = useState("0");
+  const [emailCampaignContactLimit, setEmailCampaignContactLimit] = useState("0");
+  const [emailCustomTemplatesEnabled, setEmailCustomTemplatesEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const togglePaymentMethod = (method: PagarmePaymentMethod) => {
@@ -70,6 +74,10 @@ export function AddPlanoDialog({
       price_yearly: Number(yearly),
       trial_days: Number(trialDays) || 0,
       pagarme_payment_methods: paymentMethods,
+      email_campaigns_enabled: emailCampaignsEnabled,
+      email_campaign_monthly_limit: Number(emailCampaignMonthlyLimit) || 0,
+      email_campaign_contact_limit: Number(emailCampaignContactLimit) || 0,
+      email_custom_templates_enabled: emailCustomTemplatesEnabled,
       is_active: true,
       pagarme_sync_status: "pending",
     });
@@ -85,6 +93,10 @@ export function AddPlanoDialog({
       setYearly("");
       setTrialDays("14");
       setPaymentMethods(["credit_card", "boleto"]);
+      setEmailCampaignsEnabled(false);
+      setEmailCampaignMonthlyLimit("0");
+      setEmailCampaignContactLimit("0");
+      setEmailCustomTemplatesEnabled(true);
     } else {
       toast.error("Erro ao criar plano: " + error.message);
     }
@@ -152,6 +164,43 @@ export function AddPlanoDialog({
                   {option.label}
                 </label>
               ))}
+            </div>
+          </div>
+          <div className="space-y-3 rounded-md border p-3">
+            <Label>Recursos de e-mail por plano</Label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={emailCampaignsEnabled}
+                onCheckedChange={(checked) => setEmailCampaignsEnabled(Boolean(checked))}
+              />
+              Habilitar campanhas de e-mail
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={emailCustomTemplatesEnabled}
+                onCheckedChange={(checked) => setEmailCustomTemplatesEnabled(Boolean(checked))}
+              />
+              Permitir templates personalizados do restaurante
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Envios/mês</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={emailCampaignMonthlyLimit}
+                  onChange={(e) => setEmailCampaignMonthlyLimit(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Contatos/campanha</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={emailCampaignContactLimit}
+                  onChange={(e) => setEmailCampaignContactLimit(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full">

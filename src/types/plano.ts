@@ -15,6 +15,10 @@ export type Plano = {
     pagarme_sync_status?: 'pending' | 'synced' | 'error';
     pagarme_sync_error?: string | null;
     pagarme_payment_methods?: PagarmePaymentMethod[];
+    email_campaigns_enabled?: boolean;
+    email_campaign_monthly_limit?: number;
+    email_campaign_contact_limit?: number;
+    email_custom_templates_enabled?: boolean;
     features?: {
         feature: string;
         is_enabled: boolean;

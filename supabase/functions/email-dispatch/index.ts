@@ -60,6 +60,275 @@ const canManageRestaurant = async (userId: string, restaurantId: string) => {
   return !!permission;
 };
 
+const ALLOWED_RESTAURANT_TEMPLATE_KEYS = new Set(["order_confirmation", "campaign_basic"]);
+const MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST = 250;
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+const renderCampaignContent = (template: string, variables: Record<string, unknown>) =>
+  template.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_match, key) => {
+    const value = key.split(".").reduce<unknown>((acc, part) => {
+      if (acc && typeof acc === "object" && part in acc) return (acc as Record<string, unknown>)[part];
+      return "";
+    }, variables);
+    return escapeHtml(value);
+  });
+
+const getRestaurantEntitlement = async (restaurantId: string) => {
+  const { data: subscription } = await admin
+    .from("subscriptions")
+    .select("plan_id, status, start_date, created_at")
+    .eq("restaurant_id", restaurantId)
+    .in("status", ["active", "trialing", "past_due"])
+    .order("start_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!subscription?.plan_id) {
+    return {
+      planName: "Sem plano ativo",
+      campaignsEnabled: false,
+      monthlyLimit: 0,
+      contactLimit: 0,
+      customTemplatesEnabled: false,
+    };
+  }
+
+  const { data: plan } = await admin
+    .from("plans")
+    .select("name, email_campaigns_enabled, email_campaign_monthly_limit, email_campaign_contact_limit, email_custom_templates_enabled")
+    .eq("id", subscription.plan_id)
+    .maybeSingle();
+
+  return {
+    planName: plan?.name || "Plano atual",
+    campaignsEnabled: !!plan?.email_campaigns_enabled,
+    monthlyLimit: Number(plan?.email_campaign_monthly_limit || 0),
+    contactLimit: Number(plan?.email_campaign_contact_limit || 0),
+    customTemplatesEnabled: !!plan?.email_custom_templates_enabled,
+  };
+};
+
+const getCampaignUsage = async (restaurantId: string) => {
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+
+  const { count, error } = await admin
+    .from("email_send_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("restaurant_id", restaurantId)
+    .eq("email_type", "marketing")
+    .gte("created_at", monthStart.toISOString());
+
+  if (error) throw error;
+  return count || 0;
+};
+
+const copyAllowedTemplate = async (req: Request, body: any) => {
+  const user = await getUser(req);
+  if (!user) throw new Error("Usuário não autenticado");
+  if (!body.restaurant_id) throw new Error("Restaurante obrigatório");
+  if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
+
+  const templateKey = String(body.template_key || "");
+  if (!ALLOWED_RESTAURANT_TEMPLATE_KEYS.has(templateKey)) {
+    throw new Error("Este template é interno do Pubfy e não pode ser copiado para restaurantes.");
+  }
+
+  const entitlement = await getRestaurantEntitlement(body.restaurant_id);
+  if (templateKey === "campaign_basic" && !entitlement.campaignsEnabled) {
+    throw new Error("Campanhas por e-mail estão disponíveis apenas em planos avançados.");
+  }
+  if (!entitlement.customTemplatesEnabled) {
+    throw new Error("Templates personalizados não estão habilitados para o plano atual.");
+  }
+
+  const { data: baseTemplate, error: templateError } = await admin
+    .from("email_templates")
+    .select("*")
+    .is("restaurant_id", null)
+    .eq("template_key", templateKey)
+    .eq("is_enabled", true)
+    .maybeSingle();
+
+  if (templateError) throw templateError;
+  if (!baseTemplate) throw new Error("Template padrão não encontrado.");
+
+  const { data: copied, error } = await admin
+    .from("email_templates")
+    .upsert(
+      {
+        restaurant_id: body.restaurant_id,
+        template_key: baseTemplate.template_key,
+        name: baseTemplate.name,
+        description: baseTemplate.description,
+        category: baseTemplate.category,
+        subject: baseTemplate.subject,
+        html_content: baseTemplate.html_content,
+        text_content: baseTemplate.text_content,
+        variables: baseTemplate.variables,
+        is_enabled: true,
+        is_system: false,
+        updated_by: user.id,
+      },
+      { onConflict: "restaurant_id,template_key" },
+    )
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return { template: copied };
+};
+
+const sendCampaign = async (req: Request, body: any) => {
+  const user = await getUser(req);
+  if (!user) throw new Error("Usuário não autenticado");
+  if (!body.restaurant_id || !body.campaign_id) throw new Error("Campanha inválida");
+  if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
+
+  const entitlement = await getRestaurantEntitlement(body.restaurant_id);
+  if (!entitlement.campaignsEnabled) {
+    throw new Error(`O plano ${entitlement.planName} não inclui campanhas por e-mail.`);
+  }
+
+  const usedThisMonth = await getCampaignUsage(body.restaurant_id);
+  const remaining = Math.max(0, entitlement.monthlyLimit - usedThisMonth);
+  if (remaining <= 0) {
+    throw new Error("Limite mensal de campanhas por e-mail atingido para este plano.");
+  }
+
+  const { data: campaign, error: campaignError } = await admin
+    .from("email_campaigns")
+    .select("id, restaurant_id, name, subject, html_content, text_content, status, audience_filter")
+    .eq("id", body.campaign_id)
+    .eq("restaurant_id", body.restaurant_id)
+    .maybeSingle();
+
+  if (campaignError) throw campaignError;
+  if (!campaign) throw new Error("Campanha não encontrada.");
+  if (!["draft", "failed"].includes(campaign.status)) {
+    throw new Error("Somente campanhas em rascunho ou falhadas podem ser enviadas.");
+  }
+
+  const audience = campaign.audience_filter || {};
+  const audienceType = String(audience.type || "marketing_opt_in");
+  const days = Number(audience.days || 90);
+  const maxRecipients = Math.min(
+    remaining,
+    entitlement.contactLimit || remaining,
+    MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+  );
+
+  let contactQuery = admin
+    .from("restaurant_email_contacts")
+    .select("id, email, name, unsubscribe_token, last_order_at")
+    .eq("restaurant_id", body.restaurant_id)
+    .eq("accepts_marketing", true)
+    .is("unsubscribed_at", null)
+    .order("last_order_at", { ascending: false, nullsFirst: false })
+    .limit(maxRecipients);
+
+  if (audienceType === "recent_customers") {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    contactQuery = contactQuery.gte("last_order_at", since);
+  }
+
+  const { data: contacts, error: contactsError } = await contactQuery;
+  if (contactsError) throw contactsError;
+  if (!contacts?.length) throw new Error("Nenhum contato com opt-in encontrado para este público.");
+
+  const { data: restaurant } = await admin
+    .from("restaurants")
+    .select("name")
+    .eq("id", body.restaurant_id)
+    .maybeSingle();
+
+  await admin
+    .from("email_campaigns")
+    .update({
+      status: "sending",
+      recipient_count: contacts.length,
+      sent_count: 0,
+      failed_count: 0,
+      last_error: null,
+    })
+    .eq("id", campaign.id);
+
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+  const functionBaseUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/email-unsubscribe`;
+
+  for (const contact of contacts) {
+    const unsubscribeUrl = `${functionBaseUrl}?token=${encodeURIComponent(contact.unsubscribe_token || "")}`;
+    const variables = {
+      restaurant_name: restaurant?.name || "Restaurante",
+      contact_name: contact.name || "Cliente",
+      email: contact.email,
+      unsubscribe_url: unsubscribeUrl,
+    };
+    const html = `${renderCampaignContent(campaign.html_content, variables)}
+      <hr>
+      <p style="font-size:12px;color:#64748b;line-height:1.5">
+        Você recebeu este e-mail porque autorizou comunicações deste restaurante.
+        <a href="${unsubscribeUrl}">Descadastrar</a>
+      </p>`;
+    const text = campaign.text_content
+      ? `${renderCampaignContent(campaign.text_content, variables)}\n\nDescadastrar: ${unsubscribeUrl}`
+      : undefined;
+
+    try {
+      await sendManagedEmail({
+        admin,
+        restaurantId: body.restaurant_id,
+        preferRestaurantConfig: true,
+        emailType: "marketing",
+        to: contact.email,
+        recipientName: contact.name,
+        subject: campaign.subject,
+        html,
+        text,
+        contextType: "campaign",
+        contextId: campaign.id,
+        metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id },
+      });
+      sent += 1;
+    } catch (error) {
+      failed += 1;
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  await admin
+    .from("email_campaigns")
+    .update({
+      status: sent > 0 ? "sent" : "failed",
+      sent_at: sent > 0 ? new Date().toISOString() : null,
+      sent_count: sent,
+      failed_count: failed,
+      last_error: errors[0] || null,
+    })
+    .eq("id", campaign.id);
+
+  return {
+    sent,
+    failed,
+    recipient_count: contacts.length,
+    monthly_limit: entitlement.monthlyLimit,
+    used_this_month: usedThisMonth + sent + failed,
+    remaining_after: Math.max(0, remaining - sent - failed),
+    capped_at: MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+  };
+};
+
 const sendOrderConfirmation = async (body: any) => {
   const email = String(body.email || "").trim().toLowerCase();
   if (!isEmail(email)) throw new Error("E-mail do cliente inválido");
@@ -159,6 +428,14 @@ Deno.serve(async (req) => {
 
     if (action === "send_template") {
       return json({ success: true, ...(await sendTemplate(req, body)) });
+    }
+
+    if (action === "copy_allowed_template") {
+      return json({ success: true, ...(await copyAllowedTemplate(req, body)) });
+    }
+
+    if (action === "send_campaign") {
+      return json({ success: true, ...(await sendCampaign(req, body)) });
     }
 
     return json({ error: "Ação inválida" }, 400);

@@ -31,6 +31,10 @@ export const usePlanos = () => {
                 pagarme_sync_status: (item as any).pagarme_sync_status ?? 'pending',
                 pagarme_sync_error: (item as any).pagarme_sync_error ?? null,
                 pagarme_payment_methods: (item as any).pagarme_payment_methods ?? ['credit_card', 'boleto'],
+                email_campaigns_enabled: (item as any).email_campaigns_enabled ?? false,
+                email_campaign_monthly_limit: (item as any).email_campaign_monthly_limit ?? 0,
+                email_campaign_contact_limit: (item as any).email_campaign_contact_limit ?? 0,
+                email_custom_templates_enabled: (item as any).email_custom_templates_enabled ?? true,
                 features: item.plan_features?.map(f => ({
                     feature: f.feature,
                     is_enabled: f.is_enabled || false
