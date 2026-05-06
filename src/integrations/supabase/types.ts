@@ -1496,6 +1496,7 @@ export type Database = {
           image_uploaded_by: string | null
           image_url: string | null
           name: string
+          order_position: number | null
           price: number
           restaurant_id: string
           updated_at: string
@@ -1513,6 +1514,7 @@ export type Database = {
           image_uploaded_by?: string | null
           image_url?: string | null
           name: string
+          order_position?: number | null
           price: number
           restaurant_id: string
           updated_at?: string
@@ -1530,6 +1532,7 @@ export type Database = {
           image_uploaded_by?: string | null
           image_url?: string | null
           name?: string
+          order_position?: number | null
           price?: number
           restaurant_id?: string
           updated_at?: string
