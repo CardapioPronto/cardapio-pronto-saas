@@ -247,6 +247,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          order_position: number | null
           restaurant_id: string | null
           updated_at: string | null
         }
@@ -254,6 +255,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          order_position?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
@@ -261,6 +263,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          order_position?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
@@ -596,6 +599,88 @@ export type Database = {
           },
           {
             foreignKeyName: "conversation_threads_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_usage: {
+        Row: {
+          coupon_id: string
+          customer_identifier: string | null
+          id: string
+          order_id: string | null
+          used_at: string
+        }
+        Insert: {
+          coupon_id: string
+          customer_identifier?: string | null
+          id?: string
+          order_id?: string | null
+          used_at?: string
+        }
+        Update: {
+          coupon_id?: string
+          customer_identifier?: string | null
+          id?: string
+          order_id?: string | null
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usage_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_usage: number | null
+          restaurant_id: string
+          updated_at: string
+          usage_count: number
+          valid_until: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_usage?: number | null
+          restaurant_id: string
+          updated_at?: string
+          usage_count?: number
+          valid_until?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_usage?: number | null
+          restaurant_id?: string
+          updated_at?: string
+          usage_count?: number
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -1351,6 +1436,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          pagarme_payment_methods: string[] | null
           pagarme_plan_id_monthly: string | null
           pagarme_plan_id_yearly: string | null
           pagarme_sync_error: string | null
@@ -1367,6 +1453,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          pagarme_payment_methods?: string[] | null
           pagarme_plan_id_monthly?: string | null
           pagarme_plan_id_yearly?: string | null
           pagarme_sync_error?: string | null
@@ -1383,6 +1470,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          pagarme_payment_methods?: string[] | null
           pagarme_plan_id_monthly?: string | null
           pagarme_plan_id_yearly?: string | null
           pagarme_sync_error?: string | null
@@ -1400,37 +1488,52 @@ export type Database = {
           available: boolean
           category_id: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
+          image_storage_path: string | null
+          image_uploaded_at: string | null
+          image_uploaded_by: string | null
           image_url: string | null
           name: string
           price: number
           restaurant_id: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           available?: boolean
           category_id?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
+          image_storage_path?: string | null
+          image_uploaded_at?: string | null
+          image_uploaded_by?: string | null
           image_url?: string | null
           name: string
           price: number
           restaurant_id: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           available?: boolean
           category_id?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
+          image_storage_path?: string | null
+          image_uploaded_at?: string | null
+          image_uploaded_by?: string | null
           image_url?: string | null
           name?: string
           price?: number
           restaurant_id?: string
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -1442,6 +1545,56 @@ export type Database = {
           },
           {
             foreignKeyName: "products_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean
+          name: string
+          restaurant_id: string
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          restaurant_id: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          restaurant_id?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
