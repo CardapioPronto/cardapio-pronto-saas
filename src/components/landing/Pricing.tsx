@@ -7,10 +7,10 @@ import { useActivePlan } from "@/hooks/useActivePlan";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const benefits = [
-  { icon: ShoppingBag, text: "Venda mais com cardápio digital profissional" },
-  { icon: MessageCircle, text: "Automatize pedidos pelo WhatsApp" },
-  { icon: LayoutGrid, text: "Organize seu negócio com mais controle" },
-  { icon: Zap, text: "Tudo em um só lugar, simples de usar" },
+  { icon: ShoppingBag, text: "Cardapio digital, produtos, cupons e promocoes" },
+  { icon: MessageCircle, text: "Atendimento e automacoes pelo WhatsApp" },
+  { icon: LayoutGrid, text: "PDV, mesas, pedidos e equipe no mesmo painel" },
+  { icon: Zap, text: "Relatorios e configuracoes para operar com controle" },
 ];
 
 const Pricing = () => {
@@ -33,13 +33,13 @@ const Pricing = () => {
       <div className="container mx-auto px-6">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-            Um plano. Tudo o que seu restaurante precisa.
+            Comece com tudo liberado e prove valor antes de pagar.
           </h2>
           <p className="text-lg text-navy/70">
             Comece grátis por {trialDays} dias. Sem cartão. Sem complicação.
           </p>
 
-          <div className="mt-8 inline-flex items-center bg-white border border-gray-200 p-1 rounded-full shadow-sm">
+          <div className="mt-8 inline-flex items-center bg-white border border-gray-200 p-1 rounded-lg shadow-sm">
             <button
               onClick={() => setAnnual(false)}
               className={`px-5 py-2 rounded-full text-sm font-medium transition ${
@@ -65,15 +65,15 @@ const Pricing = () => {
         </div>
 
         <div className="max-w-md mx-auto">
-          <div className="relative rounded-3xl bg-white border-2 border-green shadow-2xl shadow-green/10 overflow-hidden">
-            <div className="absolute -top-px left-1/2 -translate-x-1/2 bg-green text-white text-xs font-bold py-1.5 px-5 rounded-b-xl flex items-center gap-1.5">
+          <div className="relative rounded-lg bg-white border-2 border-green shadow-2xl shadow-green/10 overflow-hidden">
+            <div className="absolute -top-px left-1/2 -translate-x-1/2 bg-green text-white text-xs font-bold py-1.5 px-5 rounded-b-lg flex items-center gap-1.5">
               <Sparkles size={12} /> PLANO RECOMENDADO
             </div>
 
             <div className="p-8 pt-12 text-center">
               <h3 className="text-2xl font-bold text-navy">{planName}</h3>
               <p className="mt-2 text-sm text-navy/60">
-                Tudo que você precisa para vender mais
+                Ferramentas essenciais para operar e vender melhor
               </p>
 
               <div className="mt-6 flex items-baseline justify-center">
@@ -100,7 +100,7 @@ const Pricing = () => {
                 </p>
               )}
 
-              <div className="mt-6 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-full">
+              <div className="mt-6 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-lg">
                 <Sparkles size={14} />
                 <span className="text-sm font-semibold">{trialDays} dias grátis</span>
               </div>
@@ -110,14 +110,14 @@ const Pricing = () => {
 
               <div className="mt-8 space-y-3">
                 <Link to="/teste-gratis" className="block">
-                  <Button className="w-full h-12 bg-green hover:bg-green-dark text-white text-base font-semibold rounded-xl">
+                  <Button className="w-full h-12 bg-green hover:bg-green-dark text-white text-base font-semibold rounded-lg">
                     Começar teste grátis
                   </Button>
                 </Link>
                 <Link to="/contato" className="block">
                   <Button
                     variant="outline"
-                    className="w-full h-11 border-navy/20 text-navy hover:bg-navy/5 rounded-xl"
+                    className="w-full h-11 border-navy/20 text-navy hover:bg-navy/5 rounded-lg"
                   >
                     Falar com especialista
                   </Button>
@@ -129,7 +129,7 @@ const Pricing = () => {
               <ul className="space-y-3">
                 {benefits.map((b, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <span className="shrink-0 w-7 h-7 rounded-lg bg-green/10 text-green flex items-center justify-center">
+                    <span className="shrink-0 w-7 h-7 rounded-md bg-green/10 text-green flex items-center justify-center">
                       <b.icon size={15} />
                     </span>
                     <span className="text-sm text-navy/80 pt-0.5">{b.text}</span>

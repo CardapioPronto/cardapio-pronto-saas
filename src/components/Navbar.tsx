@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, BarChart3, QrCode, ShoppingCart } from "lucide-react";
 import pubfyLogo from "@/assets/pubfy-navbar-logo.png";
 
 const Navbar = () => {
@@ -19,7 +19,7 @@ const Navbar = () => {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-offwhite/95 backdrop-blur-md shadow-sm py-2" : "bg-transparent py-4"
+        isScrolled ? "bg-offwhite/95 backdrop-blur-md shadow-sm py-2" : "bg-offwhite/95 backdrop-blur-md shadow-sm py-3"
       }`}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
@@ -36,17 +36,23 @@ const Navbar = () => {
             <button className="flex items-center text-navy hover:text-orange transition-colors">
               Soluções <ChevronDown size={16} className="ml-1" />
             </button>
-            <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out">
-              <div className="py-1">
-                <Link to="/cardapio-digital" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
-                  Cardápio Digital
-                </Link>
-                <Link to="/pdv-online" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
-                  PDV Online
-                </Link>
-                <Link to="/gestao-completa" className="block px-4 py-2 text-sm text-navy hover:bg-beige/20">
-                  Gestão Completa
-                </Link>
+            <div className="absolute left-1/2 mt-3 w-[420px] -translate-x-1/2 rounded-lg bg-white p-3 shadow-xl ring-1 ring-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out">
+              <div className="space-y-1">
+                {solutionLinks.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="flex gap-3 rounded-md px-3 py-3 text-navy transition hover:bg-offwhite"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-green/10 text-green">
+                      <item.icon size={19} />
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold">{item.title}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-navy/60">{item.description}</span>
+                    </span>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
@@ -73,7 +79,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile menu button */}
-        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden flex items-center">
+        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden flex items-center text-navy">
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
@@ -85,15 +91,11 @@ const Navbar = () => {
             <Link to="/" className="text-navy py-2 border-b border-beige">
               Início
             </Link>
-            <Link to="/cardapio-digital" className="text-navy py-2 border-b border-beige">
-              Cardápio Digital
-            </Link>
-            <Link to="/pdv-online" className="text-navy py-2 border-b border-beige">
-              PDV Online
-            </Link>
-            <Link to="/gestao-completa" className="text-navy py-2 border-b border-beige">
-              Gestão Completa
-            </Link>
+            {solutionLinks.map((item) => (
+              <Link key={item.to} to={item.to} className="text-navy py-2 border-b border-beige">
+                {item.title}
+              </Link>
+            ))}
             <Link to="/precos" className="text-navy py-2 border-b border-beige">
               Preços
             </Link>
@@ -121,3 +123,23 @@ const Navbar = () => {
 };
 
 export default Navbar;
+  const solutionLinks = [
+    {
+      to: "/cardapio-digital",
+      title: "Cardapio e QR Code",
+      description: "Menu publico, temas, fotos e pedidos pelo celular.",
+      icon: QrCode,
+    },
+    {
+      to: "/pdv-online",
+      title: "PDV e Pedidos",
+      description: "Mesa, comanda, delivery e fila de preparo no navegador.",
+      icon: ShoppingCart,
+    },
+    {
+      to: "/gestao-completa",
+      title: "Gestao e Relatorios",
+      description: "Indicadores, equipe, permissoes e integracoes.",
+      icon: BarChart3,
+    },
+  ];

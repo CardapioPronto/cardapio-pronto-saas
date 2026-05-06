@@ -1,90 +1,134 @@
 import { Button } from "@/components/ui/button";
+import { ArrowRight, CheckCircle2, Clock, QrCode, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Hero = () => {
   return (
-    <div className="relative bg-offwhite overflow-hidden pt-24 pb-16 md:pt-32 md:pb-24">
-      {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full">
-        <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-beige/20 blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-80 h-80 rounded-full bg-green/10 blur-3xl"></div>
-      </div>
+    <section className="relative min-h-[720px] overflow-hidden bg-navy pt-24 text-white md:pt-28">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(27,29,43,0.94) 0%, rgba(27,29,43,0.86) 42%, rgba(27,29,43,0.42) 100%), url('https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1800&q=85')",
+        }}
+      />
 
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-          {/* Left content */}
-          <div className="w-full lg:w-1/2 space-y-6">
-            <div>
-              <span className="inline-block py-1 px-3 rounded-full bg-orange/10 text-orange text-sm font-medium mb-4">
-                Novidade: QR Code Personalizado Grátis
-              </span>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                <span className="text-navy block">Sistema completo para </span>
-                <span className="text-orange block">bares e restaurantes</span>
-              </h1>
-            </div>
-            
-            <p className="text-lg md:text-xl text-navy/80 max-w-lg">
-              Cardápio digital, PDV online e gestão completa em uma única plataforma. 
-              Aumente suas vendas e simplifique sua operação diária.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/teste-gratis">
-                <Button size="lg" className="bg-green hover:bg-green-dark text-white text-lg px-8 py-6 w-full sm:w-auto">
-                  Começar teste grátis
-                </Button>
-              </Link>
-              <Link to="/demonstracao">
-                <Button variant="outline" size="lg" className="border-green hover:bg-green/10 text-navy text-lg px-8 py-6 w-full sm:w-auto">
-                  Ver demonstração
-                </Button>
-              </Link>
-            </div>
-            
-            <div className="flex items-center gap-2 pt-4">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-beige flex items-center justify-center text-navy font-medium">J</div>
-                <div className="w-8 h-8 rounded-full bg-green flex items-center justify-center text-white font-medium">M</div>
-                <div className="w-8 h-8 rounded-full bg-orange flex items-center justify-center text-white font-medium">C</div>
-              </div>
-              <p className="text-sm text-navy/70">
-                +500 estabelecimentos já utilizam nossa plataforma
-              </p>
-            </div>
+      <div className="container relative z-10 mx-auto px-6">
+        <div className="max-w-3xl py-16 md:py-24">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur">
+            <QrCode size={16} className="text-beige" />
+            Cardapio digital, PDV, pedidos e atendimento em uma unica plataforma
           </div>
-          
-          {/* Right content - Device mockup */}
-          <div className="w-full lg:w-1/2 flex justify-center">
-            <div className="relative animate-float">
-              {/* Phone mockup */}
-              <div className="relative z-20">
-                <div className="w-64 md:w-80 h-auto rounded-3xl border-8 border-navy shadow-xl overflow-hidden">
-                  <img 
-                    src="https://images.unsplash.com/photo-1526069631228-723c945bea6b?auto=format&fit=crop&w=800&q=80" 
-                    alt="Cardápio digital do Pubfy" 
-                    className="w-full h-auto"
-                  />
+
+          <h1 className="max-w-4xl text-4xl font-bold leading-tight md:text-6xl lg:text-7xl">
+            Venda mais no salao, delivery e WhatsApp com uma operacao mais simples.
+          </h1>
+
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/80 md:text-xl">
+            O Pubfy centraliza cardapio por QR Code, PDV online, mesas, pedidos, cupons, relatorios, equipe e automacoes para o restaurante trabalhar com menos erro e mais velocidade.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link to="/teste-gratis">
+              <Button size="lg" className="h-14 w-full bg-orange px-7 text-base font-semibold text-white hover:bg-orange/90 sm:w-auto">
+                Comecar teste gratis
+                <ArrowRight size={18} className="ml-2" />
+              </Button>
+            </Link>
+            <Link to="/demonstracao">
+              <Button size="lg" variant="outline" className="h-14 w-full border-white/70 bg-white/10 px-7 text-base font-semibold text-white hover:bg-white/20 sm:w-auto">
+                Ver demonstracao
+              </Button>
+            </Link>
+          </div>
+
+          <div className="mt-8 grid gap-3 text-sm text-white/90 sm:grid-cols-3">
+            {["Sem cartao no teste", "Implantacao guiada", "Acesso pelo navegador"].map((item) => (
+              <div key={item} className="flex items-center gap-2">
+                <CheckCircle2 size={17} className="shrink-0 text-green-light" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative -mb-20 grid gap-5 pb-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+          <div className="overflow-hidden rounded-lg border border-white/20 bg-white shadow-2xl shadow-black/30">
+            <div className="flex items-center justify-between border-b border-gray-100 bg-offwhite/70 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">Painel operacional</p>
+                <p className="font-semibold text-navy">Pedidos de hoje</p>
+              </div>
+              <div className="rounded-md bg-green px-3 py-1 text-xs font-semibold text-white">Ao vivo</div>
+            </div>
+            <div className="grid gap-0 md:grid-cols-[0.9fr_1.1fr]">
+              <div className="border-b border-gray-100 p-5 md:border-b-0 md:border-r">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    ["Vendas", "R$ 2.840"],
+                    ["Pedidos", "86"],
+                    ["Ticket medio", "R$ 33,02"],
+                    ["Tempo medio", "11 min"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-md border border-gray-100 bg-white p-4">
+                      <p className="text-xs text-navy/55">{label}</p>
+                      <p className="mt-1 text-xl font-bold text-navy">{value}</p>
+                    </div>
+                  ))}
                 </div>
-                {/* QR code */}
-                <div className="absolute -right-10 -bottom-10 w-24 h-24 bg-white p-2 rounded-lg shadow-lg">
-                  <div className="w-full h-full border border-gray-200 rounded flex items-center justify-center">
-                    <span className="text-xs text-navy font-medium">QR Code</span>
+                <div className="mt-4 rounded-md bg-navy p-4 text-white">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <TrendingUp size={17} className="text-green-light" />
+                    Produtos em destaque
+                  </div>
+                  <div className="mt-4 space-y-3 text-sm">
+                    {["Combo burger", "Pizza margherita", "Suco natural"].map((item, index) => (
+                      <div key={item} className="flex items-center justify-between">
+                        <span>{item}</span>
+                        <span className="text-white/70">{32 - index * 7} vendas</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-
-              {/* Tablet mockup behind phone */}
-              <div className="absolute -right-20 top-10 z-10">
-                <div className="w-48 md:w-64 h-auto rounded-2xl border-8 border-navy/80 shadow-lg overflow-hidden">
-                  <div className="bg-white aspect-[3/4]"></div>
+              <div className="bg-white p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="font-semibold text-navy">Fila de pedidos</p>
+                  <Clock size={18} className="text-orange" />
+                </div>
+                <div className="space-y-3">
+                  {[
+                    ["Mesa 08", "2 itens", "Preparando", "bg-orange/10 text-orange"],
+                    ["Delivery", "4 itens", "Novo", "bg-green/10 text-green"],
+                    ["WhatsApp", "1 item", "Confirmar", "bg-beige/30 text-navy"],
+                    ["Mesa 12", "3 itens", "Pronto", "bg-navy/10 text-navy"],
+                  ].map(([origin, items, status, color]) => (
+                    <div key={origin} className="flex items-center justify-between rounded-md border border-gray-100 p-3">
+                      <div>
+                        <p className="font-medium text-navy">{origin}</p>
+                        <p className="text-xs text-navy/55">{items}</p>
+                      </div>
+                      <span className={`rounded-md px-3 py-1 text-xs font-semibold ${color}`}>{status}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 lg:pb-10">
+            <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
+              <p className="text-3xl font-bold">14 dias</p>
+              <p className="mt-1 text-sm text-white/72">para testar sem cartao</p>
+            </div>
+            <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
+              <p className="text-3xl font-bold">QR Code</p>
+              <p className="mt-1 text-sm text-white/72">cardapio pronto para divulgar</p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
