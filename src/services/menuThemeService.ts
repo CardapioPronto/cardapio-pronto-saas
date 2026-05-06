@@ -113,28 +113,31 @@ export const menuThemeService = {
         throw new Error('Restaurante não encontrado. Verifique o link do cardápio.');
       }
 
-      // Buscar categorias e produtos
+      // Buscar categorias e produtos respeitando a ordenação configurada pelo restaurante
       const { data: categories, error: categoriesError } = await supabase
         .from('categories')
-        .select(`
-          id,
-          name,
-          products:products(
-            id,
-            name,
-            description,
-            price,
-            image_url,
-            available,
-            category_id
-          )
-        `)
+        .select('id, name, order_position')
         .eq('restaurant_id', restaurant.id)
-        .order('name');
+        .order('order_position', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true });
 
       if (categoriesError) {
         console.error('Categories error:', categoriesError);
         throw new Error(`Erro ao buscar categorias: ${categoriesError.message}`);
+      }
+
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, description, price, image_url, available, category_id, order_position')
+        .eq('restaurant_id', restaurant.id)
+        .eq('available', true)
+        .not('category_id', 'is', null)
+        .order('order_position', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true });
+
+      if (productsError) {
+        console.error('Products error:', productsError);
+        throw new Error(`Erro ao buscar produtos: ${productsError.message}`);
       }
 
       // Buscar configuração do tema
@@ -156,16 +159,23 @@ export const menuThemeService = {
         slug: restaurant.slug || restaurant.id // fallback se slug for null
       };
 
-      const transformedCategories = (categories || [])
+      const orderedProducts = [...(products || [])].sort(sortMenuItems);
+      const productsByCategory = orderedProducts.reduce<Record<string, typeof orderedProducts>>((acc, product) => {
+        if (!product.category_id) return acc;
+        acc[product.category_id] = acc[product.category_id] || [];
+        acc[product.category_id].push(product);
+        return acc;
+      }, {});
+
+      const transformedCategories = [...(categories || [])]
+        .sort(sortMenuItems)
         .map(category => ({
           ...category,
-          products: category.products
-            .filter((p: any) => p.available !== false)
-            .map((product: any) => ({
-              ...product,
-              description: product.description || undefined,
-              image_url: product.image_url || undefined,
-            })),
+          products: (productsByCategory[category.id] || []).map((product: any) => ({
+            ...product,
+            description: product.description || undefined,
+            image_url: product.image_url || undefined,
+          })),
         }))
         .filter(cat => cat.products && cat.products.length > 0);
       
@@ -330,4 +340,15 @@ export const menuThemeService = {
       throw error;
     }
   }
+};
+
+const sortMenuItems = <T extends { name?: string | null; order_position?: number | null }>(a: T, b: T) => {
+  const aPosition = a.order_position ?? Number.MAX_SAFE_INTEGER;
+  const bPosition = b.order_position ?? Number.MAX_SAFE_INTEGER;
+
+  if (aPosition !== bPosition) {
+    return aPosition - bPosition;
+  }
+
+  return (a.name || '').localeCompare(b.name || '', 'pt-BR');
 };

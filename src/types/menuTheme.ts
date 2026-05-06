@@ -61,6 +61,7 @@ export interface MenuData {
   categories: Array<{
     id: string;
     name: string;
+    order_position?: number | null;
     products: Array<{
       id: string;
       name: string;
@@ -69,6 +70,7 @@ export interface MenuData {
       image_url?: string;
       available: boolean;
       category_id?: string;
+      order_position?: number | null;
     }>;
   }>;
   theme: ThemeConfig;
