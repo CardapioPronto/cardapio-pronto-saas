@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
@@ -10,6 +11,8 @@ interface IntegracoesTabProps {
 }
 
 export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
       {/* Integrações Disponíveis */}
@@ -37,7 +40,7 @@ export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => 
                   </p>
                 </div>
               </div>
-              <Button disabled={!canManage} onClick={() => window.location.href = "/atendimento"}>Configurar</Button>
+              <Button disabled={!canManage} onClick={() => navigate("/atendimento")}>Configurar</Button>
             </div>
           </div>
 
@@ -54,7 +57,7 @@ export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => 
                   </p>
                 </div>
               </div>
-              <Button disabled={!canManage} onClick={() => window.location.href = "/pagarme-config"}>Configurar</Button>
+              <Button disabled={!canManage} onClick={() => navigate("/pagarme-config")}>Configurar</Button>
             </div>
           </div>
           
@@ -71,7 +74,7 @@ export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => 
                   </p>
                 </div>
               </div>
-              <Button disabled={!canManage} variant="outline" onClick={() => window.location.href = "/ifood-integracao"}>Configurar</Button>
+              <Button disabled={!canManage} variant="outline" onClick={() => navigate("/ifood-integracao")}>Configurar</Button>
             </div>
           </div>
         </CardContent>

@@ -38,11 +38,8 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
 
   try {
     const now = new Date();
-    const nowIso = now.toISOString();
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(now.getDate() + 7);
 
     const [
       restaurantResult,
@@ -50,8 +47,6 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       categoriesResult,
       ordersResult,
       tablesResult,
-      couponsResult,
-      promotionsResult,
       threadsResult,
       instancesResult,
       menuConfigResult,
@@ -79,20 +74,6 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
         .select('id, status')
         .eq('restaurant_id', restaurantId),
       db
-        .from('coupons')
-        .select('id, valid_until')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true)
-        .lte('valid_from', nowIso)
-        .gte('valid_until', nowIso),
-      db
-        .from('promotions')
-        .select('id')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true)
-        .lte('valid_from', nowIso)
-        .or(`valid_until.is.null,valid_until.gte.${nowIso}`),
-      db
         .from('conversation_threads')
         .select('id, status, unread_count')
         .eq('restaurant_id', restaurantId)
@@ -115,8 +96,6 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       categoriesResult.error,
       ordersResult.error,
       tablesResult.error,
-      couponsResult.error,
-      promotionsResult.error,
       threadsResult.error,
       instancesResult.error,
       menuConfigResult.error,
@@ -127,7 +106,6 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
     const products = productsResult.error ? [] : productsResult.data || [];
     const orders = ordersResult.error ? [] : ordersResult.data || [];
     const tables = tablesResult.error ? [] : tablesResult.data || [];
-    const coupons = couponsResult.error ? [] : couponsResult.data || [];
     const threads = threadsResult.error ? [] : threadsResult.data || [];
     const instances = instancesResult.error ? [] : instancesResult.data || [];
 
@@ -153,12 +131,9 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       occupiedTables: tables.filter((table: any) => table.status === 'ocupada').length,
       reservedTables: tables.filter((table: any) => table.status === 'reservada').length,
       unavailableTables: tables.filter((table: any) => table.status === 'indisponivel').length,
-      activeCoupons: coupons.length,
-      expiringCoupons: coupons.filter((coupon: any) => {
-        const validUntil = new Date(coupon.valid_until);
-        return validUntil <= sevenDaysFromNow;
-      }).length,
-      activePromotions: promotionsResult.error ? 0 : promotionsResult.data?.length || 0,
+      activeCoupons: 0,
+      expiringCoupons: 0,
+      activePromotions: 0,
       whatsappInstances: instances.length,
       whatsappConnectedInstances,
       whatsappNeedsAttention: instances.filter((instance: any) => instance.status !== 'CONNECTED' || !instance.webhook_url).length,

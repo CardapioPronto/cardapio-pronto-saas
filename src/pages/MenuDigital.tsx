@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 // cache-bust: refresh dynamic import after dev server restart
 import { MenuThemeSelector } from "@/components/menu-digital/MenuThemeSelector";
@@ -13,6 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const MenuDigital = () => {
+  const [activeTab, setActiveTab] = useState("themes");
+
   return (
     <DashboardLayout title="Cardápio Digital">
       <div className="space-y-6">
@@ -24,7 +26,7 @@ const MenuDigital = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="themes" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="themes">Temas</TabsTrigger>
                 <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
@@ -35,30 +37,32 @@ const MenuDigital = () => {
               </TabsList>
               
               <TabsContent value="themes" className="space-y-4">
-                <MenuThemeSelector />
+                {activeTab === "themes" && <MenuThemeSelector />}
               </TabsContent>
 
               <TabsContent value="personalizacao" className="space-y-4">
-                <PersonalizacaoTab />
+                {activeTab === "personalizacao" && <PersonalizacaoTab />}
               </TabsContent>
 
               <TabsContent value="cupons" className="space-y-4">
-                <CouponsManager />
+                {activeTab === "cupons" && <CouponsManager />}
               </TabsContent>
 
               <TabsContent value="performance" className="space-y-4">
-                <PerformanceDashboard />
+                {activeTab === "performance" && <PerformanceDashboard />}
               </TabsContent>
               
               <TabsContent value="preview" className="space-y-4">
-                <MenuPreview />
+                {activeTab === "preview" && <MenuPreview />}
               </TabsContent>
 
               <TabsContent value="qrcode" className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <QRCodeGenerator />
-                  <QRCodeInstructions />
-                </div>
+                {activeTab === "qrcode" && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <QRCodeGenerator />
+                    <QRCodeInstructions />
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
