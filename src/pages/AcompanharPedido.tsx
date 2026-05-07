@@ -455,22 +455,13 @@ export default function AcompanharPedido() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Endereço de entrega
+                Entrega
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
-              <p className="font-medium">{order.customer_name}</p>
               <p className="text-muted-foreground">
-                {order.address?.street || order.street}, {order.address?.number || order.number}
-                {(order.address?.complement || order.complement) ? ` - ${order.address?.complement || order.complement}` : ''}
+                O endereço foi registrado com segurança e está disponível apenas para a loja.
               </p>
-              <p className="text-muted-foreground">
-                {order.address?.neighborhood || order.neighborhood} • {order.address?.city || order.city}/{order.address?.state || order.state}
-              </p>
-              <p className="text-muted-foreground">CEP: {order.address?.zip_code || order.zip_code}</p>
-              {(order.address?.reference_point || order.reference_point) && (
-                <p className="text-muted-foreground italic">Ref: {order.address?.reference_point || order.reference_point}</p>
-              )}
             </CardContent>
           </Card>
         ) : (

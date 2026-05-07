@@ -93,9 +93,6 @@ verify_jwt = false
 [functions.create-employee]
 verify_jwt = true
 
-[functions.create-initial-admin]
-verify_jwt = false
-
 [functions.pagarme-webhook]
 verify_jwt = false
 
