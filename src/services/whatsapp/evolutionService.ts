@@ -238,7 +238,7 @@ export class EvolutionService {
     callback: (message: WhatsAppChatMessage) => void
   ) {
     return supabase
-      .channel('whatsapp-chat-changes')
+      .channel(`whatsapp-chat-${restaurantId}`, { config: { private: true } })
       .on(
         'postgres_changes',
         {

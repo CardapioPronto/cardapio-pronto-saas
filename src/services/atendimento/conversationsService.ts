@@ -212,9 +212,9 @@ export const ConversationsService = {
     return (data || []) as ConversationAssignment[];
   },
 
-  subscribeToMessages(threadId: string, callback: (msg: ConversationMessage) => void) {
+  subscribeToMessages(threadId: string, restaurantId: string, callback: (msg: ConversationMessage) => void) {
     return supabase
-      .channel(`messages-${threadId}`)
+      .channel(`messages-${restaurantId}-${threadId}`, { config: { private: true } })
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -228,7 +228,7 @@ export const ConversationsService = {
 
   subscribeToThreads(restaurantId: string, callback: (thread: ConversationThread) => void) {
     return supabase
-      .channel(`threads-${restaurantId}`)
+      .channel(`threads-${restaurantId}`, { config: { private: true } })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

@@ -42,14 +42,14 @@ export const useConversationDetail = (threadId: string | null) => {
 
   // Realtime messages
   useEffect(() => {
-    if (!threadId) return;
+    if (!threadId || !thread?.restaurant_id) return;
 
-    const channel = ConversationsService.subscribeToMessages(threadId, (newMsg) => {
+    const channel = ConversationsService.subscribeToMessages(threadId, thread.restaurant_id, (newMsg) => {
       setMessages(prev => [...prev, newMsg]);
     });
 
     return () => { supabase.removeChannel(channel); };
-  }, [threadId]);
+  }, [threadId, thread?.restaurant_id]);
 
   const sendMessage = async (content: string, isInternal = false) => {
     if (!threadId || !user?.id || !thread?.restaurant_id) return;
