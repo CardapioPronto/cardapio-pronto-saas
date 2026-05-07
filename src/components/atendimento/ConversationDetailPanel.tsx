@@ -182,9 +182,9 @@ const ConversationDetailPanel = ({
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-card">
+      <div className="shrink-0 px-4 py-3 border-b bg-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -243,7 +243,7 @@ const ConversationDetailPanel = ({
 
       {/* Human active warning */}
       {thread.status === 'human_active' && (
-        <Alert className="mx-3 mt-2 border-green-200 bg-green-50/80 dark:bg-green-900/10 dark:border-green-800/30">
+        <Alert className="mx-3 mt-2 shrink-0 border-green-200 bg-green-50/80 dark:bg-green-900/10 dark:border-green-800/30">
           <AlertTriangle className="h-4 w-4 text-green-700 dark:text-green-400" />
           <AlertDescription className="text-xs text-green-800 dark:text-green-300">
             IA pausada durante atendimento humano. Devolva para a IA quando finalizar.
@@ -252,7 +252,7 @@ const ConversationDetailPanel = ({
       )}
 
       {thread.status === 'waiting_human' && (
-        <Alert className="mx-3 mt-2 border-yellow-200 bg-yellow-50/80 dark:bg-yellow-900/10 dark:border-yellow-800/30">
+        <Alert className="mx-3 mt-2 shrink-0 border-yellow-200 bg-yellow-50/80 dark:bg-yellow-900/10 dark:border-yellow-800/30">
           <AlertTriangle className="h-4 w-4 text-yellow-700 dark:text-yellow-400" />
           <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-300">
             Cliente aguardando atendimento humano. Assuma a conversa para responder.
@@ -261,8 +261,8 @@ const ConversationDetailPanel = ({
       )}
 
       {/* Content area with tabs */}
-      <Tabs defaultValue="messages" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-3 mt-2 w-auto self-start">
+      <Tabs defaultValue="messages" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <TabsList className="mx-3 mt-2 w-auto shrink-0 self-start">
           <TabsTrigger value="messages" className="gap-1.5 text-xs">
             <MessageSquare className="h-3.5 w-3.5" />
             Mensagens
@@ -273,9 +273,9 @@ const ConversationDetailPanel = ({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="messages" className="flex-1 flex flex-col min-h-0 m-0">
+        <TabsContent value="messages" className="m-0 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
           {/* Messages timeline */}
-          <ScrollArea className="flex-1 px-4 py-2" ref={scrollRef}>
+          <ScrollArea className="min-h-0 px-4 py-2" ref={scrollRef}>
             <div className="space-y-1">
               {messages.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -298,7 +298,7 @@ const ConversationDetailPanel = ({
 
           {/* Message input */}
           {thread.status !== 'closed' && (
-            <div className="p-3 border-t bg-card">
+            <div className="shrink-0 p-3 border-t bg-card">
               {thread.status === 'human_active' && canReply ? (
                 <div className="flex gap-2">
                   <Input
@@ -328,8 +328,8 @@ const ConversationDetailPanel = ({
           )}
         </TabsContent>
 
-        <TabsContent value="notes" className="flex-1 flex flex-col min-h-0 m-0">
-          <ScrollArea className="flex-1 px-4 py-2">
+        <TabsContent value="notes" className="m-0 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
+          <ScrollArea className="min-h-0 px-4 py-2">
             <div className="space-y-2">
               {notes.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -359,7 +359,7 @@ const ConversationDetailPanel = ({
               )}
             </div>
           </ScrollArea>
-          <div className="p-3 border-t bg-card">
+          <div className="shrink-0 p-3 border-t bg-card">
             <div className="flex gap-2">
               <Textarea
                 placeholder="Adicionar nota interna para a equipe..."
