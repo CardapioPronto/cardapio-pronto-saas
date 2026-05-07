@@ -75,6 +75,11 @@ function extractPagarmeSubscriptionId(type: string, data: any) {
   return data.subscription_id ?? data.subscription?.id ?? data.invoice?.subscription_id ?? null;
 }
 
+function extractPagarmeOrderId(type: string, data: any) {
+  if (type.startsWith("order.")) return data.id ?? null;
+  return data.order?.id ?? data.order_id ?? null;
+}
+
 function mapStatus(pagarmeStatus: string): string {
   switch (pagarmeStatus) {
     case "active":
@@ -133,7 +138,10 @@ async function processEvent(event: any): Promise<void> {
   if (type.startsWith("charge.") || type.startsWith("invoice.")) {
     const charge = data;
     const pagarmeSubId = charge.subscription_id ?? charge.subscription?.id ?? charge.invoice?.subscription_id;
-    if (!pagarmeSubId) return;
+    if (!pagarmeSubId) {
+      await processOrderPaymentEvent(type, charge);
+      return;
+    }
 
     let newStatus: string | null = null;
     if (type === "charge.paid" || type === "invoice.paid") newStatus = "active";
@@ -157,6 +165,126 @@ async function processEvent(event: any): Promise<void> {
         console.error("[pagarme-webhook] receipt email failed:", error),
       );
     }
+  }
+
+  if (type.startsWith("order.")) {
+    await processOrderPaymentEvent(type, data);
+  }
+}
+
+async function processOrderPaymentEvent(type: string, data: any) {
+  const pagarmeOrderId = extractPagarmeOrderId(type, data);
+  const pagarmeChargeId = data.id && type.startsWith("charge.")
+    ? data.id
+    : data.charge?.id ?? data.charges?.[0]?.id ?? null;
+  const metadataOrderId = data.metadata?.order_id ?? data.order?.metadata?.order_id ?? null;
+  const newPaymentStatus = mapOrderPaymentStatus(type, data.status);
+
+  if (!newPaymentStatus) return;
+
+  let paymentQuery = (supabase as any)
+    .from("order_payments")
+    .select("*");
+
+  if (metadataOrderId) {
+    paymentQuery = paymentQuery.eq("order_id", metadataOrderId);
+  } else if (pagarmeOrderId) {
+    paymentQuery = paymentQuery.eq("provider_order_id", pagarmeOrderId);
+  } else if (pagarmeChargeId) {
+    paymentQuery = paymentQuery.eq("provider_charge_id", pagarmeChargeId);
+  } else {
+    return;
+  }
+
+  const { data: payment } = await paymentQuery
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!payment?.order_id) return;
+
+  const paidAt = newPaymentStatus === "paid" ? new Date().toISOString() : payment.paid_at;
+  await (supabase as any)
+    .from("order_payments")
+    .update({
+      status: newPaymentStatus,
+      paid_at: paidAt,
+      provider_order_id: pagarmeOrderId ?? payment.provider_order_id,
+      provider_charge_id: pagarmeChargeId ?? payment.provider_charge_id,
+      raw_response: data,
+    })
+    .eq("id", payment.id);
+
+  const orderStatus = newPaymentStatus === "paid"
+    ? "pendente"
+    : newPaymentStatus === "pending"
+      ? "aguardando_pagamento"
+      : "pagamento_falhou";
+
+  await supabase
+    .from("orders")
+    .update({
+      payment_status: newPaymentStatus,
+      payment_provider: "pagarme",
+      payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
+      paid_at: paidAt,
+      status: orderStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", payment.order_id);
+
+  await (supabase as any)
+    .from("delivery_orders")
+    .update({
+      payment_status: newPaymentStatus,
+      payment_provider: "pagarme",
+      payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
+      paid_at: paidAt,
+      status: newPaymentStatus === "paid"
+        ? "pending"
+        : newPaymentStatus === "pending"
+          ? "awaiting_payment"
+          : "payment_failed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("order_id", payment.order_id);
+
+  if (newPaymentStatus === "paid") {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("restaurant_id, order_type, table_id")
+      .eq("id", payment.order_id)
+      .maybeSingle();
+
+    if (order?.order_type === "mesa" && order.table_id) {
+      await supabase
+        .from("mesas")
+        .update({ status: "ocupada", updated_at: new Date().toISOString() })
+        .eq("id", order.table_id)
+        .eq("restaurant_id", order.restaurant_id);
+    }
+  }
+}
+
+function mapOrderPaymentStatus(type: string, status?: string): string | null {
+  if (type === "order.paid" || type === "charge.paid") return "paid";
+  if (type === "order.payment_failed" || type === "charge.payment_failed") return "failed";
+  if (type === "order.canceled" || type === "charge.canceled") return "canceled";
+  if (type === "charge.refunded") return "refunded";
+
+  switch (status) {
+    case "paid":
+      return "paid";
+    case "failed":
+      return "failed";
+    case "canceled":
+      return "canceled";
+    case "refunded":
+      return "refunded";
+    case "pending":
+      return "pending";
+    default:
+      return null;
   }
 }
 
@@ -237,6 +365,8 @@ Deno.serve(async (req) => {
   const eventType = event.type ?? "unknown";
   const data = event.data ?? {};
   const pagarmeSubId = extractPagarmeSubscriptionId(eventType, data);
+  const pagarmeOrderId = extractPagarmeOrderId(eventType, data);
+  const metadataOrderId = data.metadata?.order_id ?? data.order?.metadata?.order_id ?? null;
   const pagarmeCustomerId = data.customer?.id ?? data.customer_id ?? null;
 
   // Idempotency: skip already-processed events
@@ -261,6 +391,8 @@ Deno.serve(async (req) => {
       event_id: eventId,
       event_type: eventType,
       pagarme_subscription_id: pagarmeSubId,
+      pagarme_order_id: pagarmeOrderId,
+      order_id: metadataOrderId,
       pagarme_customer_id: pagarmeCustomerId,
       payload: event,
       signature_valid: signatureValid,

@@ -55,8 +55,8 @@ const Automacoes = () => {
       canAccess: canManageIntegrations,
     },
     {
-      title: "Pagar.me",
-      description: "Configuração de pagamentos online e credenciais do gateway.",
+      title: "Recebimentos Online",
+      description: "PIX online para pedidos do cardápio, delivery e QR Code de mesa.",
       href: "/pagarme-config",
       icon: CreditCard,
       badge: "Financeiro",

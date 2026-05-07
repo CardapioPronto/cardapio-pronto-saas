@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MenuData } from '@/types/menuTheme';
 import { useCart, formatBRL } from '../cart/CartContext';
 import {
   deliveryOrderService,
+  OnlineOrderPayment,
   lookupCep,
   DeliveryAddressInput,
   FulfillmentType,
@@ -18,6 +19,8 @@ interface Props {
 
 const PAYMENT_LABELS: Record<string, string> = {
   pix: 'PIX',
+  pix_online: 'PIX online',
+  credit_card_online: 'Cartão online',
   dinheiro: 'Dinheiro',
   cartao_credito: 'Cartão de crédito',
   cartao_debito: 'Cartão de débito',
@@ -36,6 +39,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   const navigate = useNavigate();
   const primary = data.theme.colors.primary;
   const dCfg = data.deliveryConfig;
+  const paymentCfg = data.paymentSettings;
   const context = data.context;
 
   const availableFulfillmentTypes = useMemo<FulfillmentType[]>(() => {
@@ -55,9 +59,20 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
 
   const needsAddress = fulfillmentType === 'delivery';
   const needsCustomer = fulfillmentType === 'delivery' || fulfillmentType === 'pickup';
-  const paymentMethods = fulfillmentType === 'table' || fulfillmentType === 'counter'
-    ? ['local']
-    : (dCfg?.payment_methods?.length ? dCfg.payment_methods : ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito']);
+  const getPaymentMethods = (type: FulfillmentType) => {
+    const offlineMethods = type === 'table' || type === 'counter'
+      ? ['local']
+      : (dCfg?.payment_methods?.length ? dCfg.payment_methods : ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito']);
+
+    const onlineMethods = paymentCfg?.enabled && paymentCfg.allowedFulfillment.includes(type)
+      ? paymentCfg.methods
+          .filter(method => method === 'pix')
+          .map(method => method === 'pix' ? 'pix_online' : 'credit_card_online')
+      : [];
+
+    return [...onlineMethods, ...offlineMethods];
+  };
+  const paymentMethods = getPaymentMethods(fulfillmentType);
   const deliveryFee = needsAddress ? dCfg?.delivery_fee || 0 : 0;
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
@@ -75,6 +90,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   );
   const [submitting, setSubmitting] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [onlinePayment, setOnlinePayment] = useState<OnlineOrderPayment | null>(null);
 
   const [customer, setCustomer] = useState({
     name: '',
@@ -100,6 +116,12 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   const [notes, setNotes] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
 
+  useEffect(() => {
+    if (!paymentMethods.includes(payment)) {
+      setPayment(paymentMethods[0] || 'pix');
+    }
+  }, [payment, paymentMethods]);
+
   const moveBack = () => {
     if (step === 'fulfillment') onClose();
     else if (step === 'customer') {
@@ -116,9 +138,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
 
   const handleFulfillmentChange = (type: FulfillmentType) => {
     setFulfillmentType(type);
-    const nextPaymentMethods = type === 'table' || type === 'counter'
-      ? ['local']
-      : (dCfg?.payment_methods?.length ? dCfg.payment_methods : ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito']);
+    const nextPaymentMethods = getPaymentMethods(type);
     setPayment(nextPaymentMethods[0] || 'pix');
   };
 
@@ -200,6 +220,10 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
       toast({ title: 'E-mail inválido', variant: 'destructive' });
       return false;
     }
+    if (payment === 'pix_online' && customer.phone.replace(/\D/g, '').length < 10) {
+      toast({ title: 'Telefone obrigatório', description: 'Informe o WhatsApp para gerar o pagamento online.', variant: 'destructive' });
+      return false;
+    }
     return true;
   };
 
@@ -246,6 +270,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   const submit = async () => {
     setSubmitting(true);
     try {
+      setOnlinePayment(null);
       const deliveryAddress = needsAddress
         ? {
             ...address,
@@ -272,6 +297,14 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         estimated_delivery_minutes: dCfg?.estimated_delivery_minutes,
       });
       setCreatedId(result.id);
+      if (payment === 'pix_online') {
+        const paymentResult = await deliveryOrderService.createOnlinePayment({
+          order_id: result.order_id,
+          tracking_id: result.id,
+          payment_method: 'pix',
+        });
+        setOnlinePayment(paymentResult);
+      }
       setStep('success');
       clear();
     } catch (e: unknown) {
@@ -392,6 +425,11 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
               {payment === 'dinheiro' && (
                 <Field label="Precisa de troco para?" value={changeFor} onChange={setChangeFor} placeholder="Ex: 100" type="number" />
               )}
+              {payment === 'pix_online' && (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  O pedido será enviado após gerar a cobrança. O restaurante acompanha a confirmação pelo painel.
+                </p>
+              )}
               <div>
                 <label className="text-sm font-medium block mb-1">Observações do pedido</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full p-2 border border-border rounded-lg text-sm" placeholder="Ex: sem cebola, ponto da carne, pagamento no caixa..." />
@@ -487,6 +525,31 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
               >
                 Acompanhar pedido
               </button>
+              {onlinePayment?.qr_code && (
+                <div className="rounded-xl border border-border bg-muted/30 p-3 text-left">
+                  <p className="mb-2 text-sm font-semibold">PIX copia e cola</p>
+                  <textarea
+                    readOnly
+                    value={onlinePayment.qr_code}
+                    rows={4}
+                    className="w-full resize-none rounded-lg border border-border bg-background p-2 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(onlinePayment.qr_code || '')}
+                    className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium"
+                  >
+                    Copiar código PIX
+                  </button>
+                </div>
+              )}
+              {onlinePayment?.qr_code_url && (
+                <img
+                  src={onlinePayment.qr_code_url}
+                  alt="QR Code PIX"
+                  className="mx-auto h-44 w-44 rounded-lg border border-border bg-white p-2"
+                />
+              )}
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 
 import { Product, Category } from "@/types";
 
-export type PedidoStatus = 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado';
+export type PedidoStatus = 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado' | 'aguardando_pagamento' | 'pagamento_falhou';
 export type HistoricoStatusFiltro = PedidoStatus | 'todos';
 export type HistoricoPeriodoFiltro = 'hoje' | 'ontem' | '7dias' | 'mes' | 'personalizado';
 
@@ -59,5 +59,7 @@ export interface Pedido {
   status: PedidoStatus;
   timestamp: Date;
   total: number;
+  payment_method?: string | null;
+  payment_status?: string | null;
   source?: 'app' | 'ifood' | 'whatsapp' | 'cardapio';
 }

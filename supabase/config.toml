@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.pagarme-webhook]
 verify_jwt = false
+
+[functions.pagarme-create-order-payment]
+verify_jwt = false

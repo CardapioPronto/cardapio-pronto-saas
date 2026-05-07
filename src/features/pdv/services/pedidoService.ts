@@ -21,6 +21,8 @@ type PedidoQueryRow = {
   order_type: string;
   table_id: string | null;
   total: number;
+  payment_method: string | null;
+  payment_status: string | null;
   order_items?: Array<{
     id: string;
     product_id: string | null;
@@ -305,6 +307,8 @@ export async function listarPedidos(
       status: pedido.status as PedidoStatus,
       timestamp: new Date(pedido.created_at),
       total: pedido.total,
+      payment_method: pedido.payment_method,
+      payment_status: pedido.payment_status,
       source: pedido.source as Pedido['source']
     })) satisfies Pedido[];
 

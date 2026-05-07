@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Clock,
   CheckCircle2,
@@ -26,7 +27,11 @@ type StatusKey =
   | 'preparing'
   | 'out_for_delivery'
   | 'delivered'
-  | 'cancelled';
+  | 'cancelled'
+  | 'awaiting_payment'
+  | 'payment_failed'
+  | 'aguardando_pagamento'
+  | 'pagamento_falhou';
 
 const STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
   { key: 'pending', label: 'Pedido recebido', icon: Clock },
@@ -50,6 +55,10 @@ const STATUS_INDEX: Record<StatusKey, number> = {
   out_for_delivery: 3,
   delivered: 4,
   cancelled: -1,
+  awaiting_payment: 0,
+  payment_failed: -1,
+  aguardando_pagamento: 0,
+  pagamento_falhou: -1,
 };
 
 function brl(v: number | string) {
@@ -186,7 +195,9 @@ export default function AcompanharPedido() {
 
   const restaurant = order.restaurant;
   const currentStatus = order.status as StatusKey;
-  const isCancelled = currentStatus === 'cancelled';
+  const isAwaitingPayment = order.payment_status === 'pending' || currentStatus === 'awaiting_payment' || currentStatus === 'aguardando_pagamento';
+  const isPaymentFailed = order.payment_status === 'failed' || currentStatus === 'payment_failed' || currentStatus === 'pagamento_falhou';
+  const isCancelled = currentStatus === 'cancelled' || isPaymentFailed;
   const statusFlow = order.fulfillment_type === 'delivery' ? STATUS_FLOW : LOCAL_STATUS_FLOW;
   const currentIdx = Math.min(STATUS_INDEX[currentStatus] ?? 0, statusFlow.length - 1);
   const isDelivery = order.fulfillment_type === 'delivery';
@@ -242,10 +253,19 @@ export default function AcompanharPedido() {
               Pedido <span className="font-mono">#{order.id.substring(0, 8).toUpperCase()}</span>
             </p>
             <h2 className="text-2xl font-bold">
-              {isCancelled
+              {isAwaitingPayment
+                ? 'Aguardando pagamento'
+                : isPaymentFailed
+                  ? 'Pagamento não confirmado'
+                  : isCancelled
                 ? 'Pedido cancelado'
                 : statusFlow[currentIdx]?.label || 'Recebido'}
             </h2>
+            {isAwaitingPayment && (
+              <p className="text-sm text-muted-foreground">
+                Assim que o pagamento for confirmado, o pedido entra no painel da loja.
+              </p>
+            )}
             {!isCancelled && isDelivery && order.estimated_delivery_minutes && currentStatus !== 'delivered' && (
               <p className="text-sm text-muted-foreground">
                 Tempo estimado de entrega: <strong>{order.estimated_delivery_minutes} min</strong>
@@ -260,7 +280,17 @@ export default function AcompanharPedido() {
             <CardTitle className="text-base">Acompanhe seu pedido</CardTitle>
           </CardHeader>
           <CardContent>
-            {isCancelled ? (
+            {isPaymentFailed ? (
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-destructive">Pagamento não confirmado</p>
+                  <p className="text-sm text-muted-foreground">
+                    Entre em contato com a loja ou refaça o pedido.
+                  </p>
+                </div>
+              </div>
+            ) : isCancelled ? (
               <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/30">
                 <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <div>
@@ -326,6 +356,42 @@ export default function AcompanharPedido() {
           </CardContent>
         </Card>
 
+        {order.payment_status === 'pending' && order.payment?.qr_code && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Pagamento PIX</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {order.payment.qr_code_url && (
+                <img
+                  src={order.payment.qr_code_url}
+                  alt="QR Code PIX"
+                  className="mx-auto h-48 w-48 rounded-lg border bg-white p-2"
+                />
+              )}
+              <div>
+                <Label className="mb-2 block text-sm">PIX copia e cola</Label>
+                <textarea
+                  readOnly
+                  value={order.payment.qr_code}
+                  rows={4}
+                  className="w-full resize-none rounded-md border bg-background p-2 text-xs"
+                />
+              </div>
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(order.payment.qr_code);
+                  toast.success('Código PIX copiado');
+                }}
+              >
+                Copiar código PIX
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Resumo do pedido */}
         <Card>
           <CardHeader>
@@ -337,7 +403,7 @@ export default function AcompanharPedido() {
                 {order.items.map((item: any) => (
                   <div key={item.id} className="flex justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium">{item.quantity}x {item.name}</p>
+                      <p className="font-medium">{item.quantity}x {item.name || item.product_name}</p>
                       {item.observations && (
                         <p className="text-xs text-muted-foreground">Obs: {item.observations}</p>
                       )}
@@ -364,7 +430,15 @@ export default function AcompanharPedido() {
             {order.payment_method && (
               <div className="flex justify-between pt-2">
                 <span className="text-muted-foreground">Pagamento</span>
-                <span className="capitalize">{order.payment_method}</span>
+                <span className="capitalize">
+                  {String(order.payment_method).replace('_online', ' online').replaceAll('_', ' ')}
+                </span>
+              </div>
+            )}
+            {order.payment_status && order.payment_status !== 'not_required' && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status do pagamento</span>
+                <span className="capitalize">{String(order.payment_status).replaceAll('_', ' ')}</span>
               </div>
             )}
             {order.change_for && (
@@ -387,15 +461,15 @@ export default function AcompanharPedido() {
             <CardContent className="text-sm space-y-1">
               <p className="font-medium">{order.customer_name}</p>
               <p className="text-muted-foreground">
-                {order.street}, {order.number}
-                {order.complement ? ` - ${order.complement}` : ''}
+                {order.address?.street || order.street}, {order.address?.number || order.number}
+                {(order.address?.complement || order.complement) ? ` - ${order.address?.complement || order.complement}` : ''}
               </p>
               <p className="text-muted-foreground">
-                {order.neighborhood} • {order.city}/{order.state}
+                {order.address?.neighborhood || order.neighborhood} • {order.address?.city || order.city}/{order.address?.state || order.state}
               </p>
-              <p className="text-muted-foreground">CEP: {order.zip_code}</p>
-              {order.reference_point && (
-                <p className="text-muted-foreground italic">Ref: {order.reference_point}</p>
+              <p className="text-muted-foreground">CEP: {order.address?.zip_code || order.zip_code}</p>
+              {(order.address?.reference_point || order.reference_point) && (
+                <p className="text-muted-foreground italic">Ref: {order.address?.reference_point || order.reference_point}</p>
               )}
             </CardContent>
           </Card>

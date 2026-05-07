@@ -274,6 +274,8 @@ const Pedidos = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pendente": return "bg-orange/10 text-orange hover:bg-orange/20";
+      case "aguardando_pagamento": return "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20";
+      case "pagamento_falhou": return "bg-red-500/10 text-red-500 hover:bg-red-500/20";
       case "preparo": 
       case "em-andamento": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
       case "finalizado": return "bg-green/10 text-green hover:bg-green/20";
@@ -286,6 +288,8 @@ const Pedidos = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pendente": return <Clock className="h-4 w-4 mr-1" />;
+      case "aguardando_pagamento": return <Clock className="h-4 w-4 mr-1" />;
+      case "pagamento_falhou": return <XCircle className="h-4 w-4 mr-1" />;
       case "preparo":
       case "em-andamento": return <Package className="h-4 w-4 mr-1" />;
       case "finalizado": return <CheckCircle className="h-4 w-4 mr-1" />;
@@ -484,9 +488,20 @@ const Pedidos = () => {
                       <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedido.status)}`}>
                         {getStatusIcon(pedido.status)}
                         <span className="capitalize">
-                          {pedido.status === "preparo" || pedido.status === "em-andamento" ? "Em preparo" : pedido.status}
+                          {pedido.status === "preparo" || pedido.status === "em-andamento"
+                            ? "Em preparo"
+                            : pedido.status === "aguardando_pagamento"
+                              ? "Aguardando pagamento"
+                              : pedido.status === "pagamento_falhou"
+                                ? "Pagamento falhou"
+                                : pedido.status}
                         </span>
                       </Badge>
+                      {pedido.payment_status && pedido.payment_status !== "not_required" && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Pagamento: {pedido.payment_status}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Dialog>
@@ -516,9 +531,21 @@ const Pedidos = () => {
                                 <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedidoDetalhes.status)}`}>
                                   {getStatusIcon(pedidoDetalhes.status)}
                                   <span className="capitalize">
-                                    {pedidoDetalhes.status === "preparo" || pedidoDetalhes.status === "em-andamento" ? "Em preparo" : pedidoDetalhes.status}
+                                    {pedidoDetalhes.status === "preparo" || pedidoDetalhes.status === "em-andamento"
+                                      ? "Em preparo"
+                                      : pedidoDetalhes.status === "aguardando_pagamento"
+                                        ? "Aguardando pagamento"
+                                        : pedidoDetalhes.status === "pagamento_falhou"
+                                          ? "Pagamento falhou"
+                                          : pedidoDetalhes.status}
                                   </span>
                                 </Badge>
+                                {pedidoDetalhes.payment_method && (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    Pagamento: {pedidoDetalhes.payment_method.replace("_online", " online").replaceAll("_", " ")}
+                                    {pedidoDetalhes.payment_status ? ` • ${pedidoDetalhes.payment_status}` : ""}
+                                  </p>
+                                )}
                               </div>
                               
                               <div className="space-y-4">

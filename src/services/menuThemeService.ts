@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MenuTheme, RestaurantMenuConfig, DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
+import { restaurantPaymentService } from '@/services/restaurantPaymentService';
 
 export const menuThemeService = {
   // Buscar todos os temas disponíveis
@@ -145,6 +146,7 @@ export const menuThemeService = {
 
       // Buscar configuração de delivery (restaurant_settings)
       const deliveryConfig = await this.getDeliveryConfig(restaurant.id);
+      const paymentSettings = await this.getPublicPaymentSettings(restaurant.id);
       
       // Transformar os dados para o formato esperado
       const transformedRestaurant = {
@@ -184,6 +186,7 @@ export const menuThemeService = {
         categories: transformedCategories,
         config,
         deliveryConfig,
+        paymentSettings,
       };
     } catch (error) {
       console.error('Erro na função getPublicMenuData:', error);
@@ -227,6 +230,16 @@ export const menuThemeService = {
       );
     if (error) throw error;
     return config;
+  },
+
+  async getPublicPaymentSettings(restaurantId: string) {
+    try {
+      const settings = await restaurantPaymentService.getSettings(restaurantId);
+      return restaurantPaymentService.toPublic(settings);
+    } catch (error) {
+      console.warn('Falha ao buscar configurações públicas de pagamento', error);
+      return restaurantPaymentService.toPublic(null);
+    }
   },
 
   // Atualizar dados do restaurante (banner, logo, etc.)

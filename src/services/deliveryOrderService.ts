@@ -35,6 +35,15 @@ export interface CreateDeliveryOrderInput {
   estimated_delivery_minutes?: number;
 }
 
+export interface OnlineOrderPayment {
+  status: string;
+  payment_method: string;
+  qr_code?: string | null;
+  qr_code_url?: string | null;
+  expires_at?: string | null;
+  amount?: number;
+}
+
 export const deliveryOrderService = {
   async create(input: CreateDeliveryOrderInput): Promise<{
     id: string;
@@ -143,6 +152,20 @@ export const deliveryOrderService = {
       discount_amount: Number(result.discount_amount || 0),
       total: Number(result.total || 0),
     };
+  },
+
+  async createOnlinePayment(input: {
+    order_id: string;
+    tracking_id: string;
+    payment_method: 'pix';
+  }): Promise<OnlineOrderPayment> {
+    const { data, error } = await supabase.functions.invoke('pagarme-create-order-payment', {
+      body: input,
+    });
+
+    if (error) throw error;
+    if ((data as any)?.error) throw new Error((data as any).error);
+    return data as OnlineOrderPayment;
   },
 
   async validateCoupon(input: {

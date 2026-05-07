@@ -75,6 +75,7 @@ export interface MenuData {
   }>;
   theme: ThemeConfig;
   deliveryConfig?: DeliveryConfig;
+  paymentSettings?: PublicPaymentSettings;
   context?: {
     fulfillmentType?: 'delivery' | 'pickup' | 'table' | 'counter';
     tableId?: string;
@@ -100,3 +101,10 @@ export const DEFAULT_DELIVERY_CONFIG: DeliveryConfig = {
   payment_methods: ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito'],
   pickup_enabled: true,
 };
+
+export interface PublicPaymentSettings {
+  enabled: boolean;
+  methods: Array<'pix' | 'credit_card'>;
+  allowedFulfillment: Array<'delivery' | 'pickup' | 'table' | 'counter'>;
+  onboardingStatus: 'not_started' | 'pending' | 'approved' | 'rejected';
+}

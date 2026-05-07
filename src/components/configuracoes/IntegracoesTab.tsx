@@ -51,9 +51,9 @@ export const IntegracoesTab: React.FC<IntegracoesTabProps> = ({ canManage }) => 
                   P
                 </div>
                 <div>
-                  <h3 className="font-medium">Pagar.me</h3>
+                  <h3 className="font-medium">Recebimentos Online</h3>
                   <p className="text-sm text-muted-foreground">
-                    Integração para pagamentos online
+                    Configure PIX online para pedidos do cardápio
                   </p>
                 </div>
               </div>

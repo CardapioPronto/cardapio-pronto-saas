@@ -49,6 +49,7 @@ const CardapioPublico = () => {
           categories: data.categories,
           theme: themeConfig,
           deliveryConfig: data.deliveryConfig,
+          paymentSettings: data.paymentSettings,
           context: getPublicMenuContext(),
         });
         
