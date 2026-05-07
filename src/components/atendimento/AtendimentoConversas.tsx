@@ -199,7 +199,7 @@ const AtendimentoConversas = () => {
       </div>
 
       {/* Conversation Detail */}
-      <div className="flex-1 min-w-0">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         {selectedThreadId ? (
           <ConversationDetailPanel
             {...conversationDetail}
