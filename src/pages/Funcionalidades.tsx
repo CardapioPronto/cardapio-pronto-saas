@@ -70,15 +70,15 @@ const features = [
     ]
   },
   {
-    title: "Modo Offline",
+    title: "Modo Offline (em desenvolvimento)",
     icon: <Wifi className="h-10 w-10 text-green" />,
-    description: "Continue vendendo mesmo se sua internet cair. O sistema sincroniza automaticamente quando a conexão voltar.",
+    description: "Estamos preparando uma operação offline para vendas básicas no PDV, com fila local e sincronização quando a conexão voltar.",
     benefits: [
-      "Funcionamento sem internet",
-      "Sincronização automática",
-      "Backup local de segurança",
-      "Proteção contra perda de dados",
-      "Operação contínua em qualquer situação"
+      "Planejado para pedidos de balcão e mesa",
+      "Fila local de pedidos pendentes",
+      "Sincronização ao reconectar",
+      "Redução do risco de perda de vendas",
+      "Base para aplicativo Android e iOS"
     ]
   },
   {
