@@ -234,8 +234,11 @@ export const menuThemeService = {
 
   async getPublicPaymentSettings(restaurantId: string) {
     try {
-      const settings = await restaurantPaymentService.getSettings(restaurantId);
-      return restaurantPaymentService.toPublic(settings);
+      const { data, error } = await supabase.rpc('get_public_restaurant_payment_settings' as any, {
+        p_restaurant_id: restaurantId,
+      });
+      if (error) throw error;
+      return (data || restaurantPaymentService.toPublic(null)) as ReturnType<typeof restaurantPaymentService.toPublic>;
     } catch (error) {
       console.warn('Falha ao buscar configurações públicas de pagamento', error);
       return restaurantPaymentService.toPublic(null);
