@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,22 +7,26 @@ import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useKitchenOrders } from "@/features/kitchen/useKitchenOrders";
+import { supabase } from "@/integrations/supabase/client";
 import type { KitchenOrder } from "@/features/kitchen/types";
 import type { PedidoStatus } from "@/features/pdv/types";
 import { cn } from "@/lib/utils";
 import {
+  ArrowLeft,
   BellRing,
   CheckCircle2,
   ChefHat,
   Clock3,
   Loader2,
-  Maximize2,
+  Expand,
+  Minimize,
   PackageCheck,
   RefreshCw,
   RotateCcw,
   Truck,
   XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type Column = {
   id: "pendente" | "preparo" | "pronto";
@@ -127,7 +131,7 @@ const KitchenOrderCard = ({ order, now, canManage, updating, onChangeStatus }: K
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-sm font-semibold">#{shortId}</span>
-              <Badge className={sourceBadgeClass(order)}>{sourceLabel(order)}</Badge>
+              <Badge className={cn("h-6", sourceBadgeClass(order))}>{sourceLabel(order)}</Badge>
               <Badge variant="outline">{statusLabel(order.status)}</Badge>
             </div>
             <p className="mt-2 truncate text-sm font-medium">{order.tableLabel}</p>
@@ -153,11 +157,27 @@ const KitchenOrderCard = ({ order, now, canManage, updating, onChangeStatus }: K
                       Obs: {item.observations}
                     </p>
                   )}
+                  {item.addons.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {item.addons.map((addon, index) => (
+                        <Badge key={`${addon.name}-${index}`} variant="secondary" className="font-normal">
+                          {addon.quantity && addon.quantity > 1 ? `${addon.quantity}x ` : ""}
+                          {addon.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {order.notes && (
+          <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Obs. do pedido: {order.notes}
+          </p>
+        )}
 
         {order.paymentStatus && order.paymentStatus !== "not_required" && (
           <p className="rounded-md border bg-background px-3 py-2 text-xs text-muted-foreground">
@@ -211,10 +231,14 @@ const KitchenOrderCard = ({ order, now, canManage, updating, onChangeStatus }: K
 const Cozinha = () => {
   const { user } = useCurrentUser();
   const { hasPermission } = usePermissionsV2();
+  const navigate = useNavigate();
   const restaurantId = user?.restaurant_id;
+  const canViewDashboard = hasPermission("dashboard_view");
   const canManageOrders = hasPermission("orders_manage");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("todos");
   const [now, setNow] = useState(Date.now());
+  const [restaurantName, setRestaurantName] = useState("Pubfy");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const {
     orders,
     loading,
@@ -231,13 +255,58 @@ const Cozinha = () => {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadRestaurantName = async () => {
+      if (!restaurantId) {
+        setRestaurantName("Pubfy");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("restaurants")
+        .select("name")
+        .eq("id", restaurantId)
+        .maybeSingle();
+
+      if (!active) return;
+      if (!error && data?.name) setRestaurantName(data.name);
+    };
+
+    void loadRestaurantName();
+
+    return () => {
+      active = false;
+    };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   const filteredOrders = useMemo(
     () => orders.filter((order) => orderMatchesSource(order, sourceFilter)),
     [orders, sourceFilter]
   );
 
-  const requestFullscreen = () => {
-    document.documentElement.requestFullscreen?.().catch(() => undefined);
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        return;
+      }
+
+      await document.exitFullscreen();
+    } catch (error) {
+      console.error("Erro ao alternar tela cheia:", error);
+      toast.error("Não foi possível alternar a tela cheia neste navegador.");
+    }
   };
 
   const handleStatus = (orderId: string, status: PedidoStatus) => {
@@ -245,37 +314,77 @@ const Cozinha = () => {
   };
 
   return (
-    <DashboardLayout title="Cozinha">
-      <div className="space-y-5">
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-md border bg-white p-4">
-            <p className="text-xs text-muted-foreground">Entrada</p>
-            <p className="mt-1 text-2xl font-semibold">{summary.waiting}</p>
-          </div>
-          <div className="rounded-md border bg-white p-4">
-            <p className="text-xs text-muted-foreground">Em preparo</p>
-            <p className="mt-1 text-2xl font-semibold">{summary.preparing}</p>
-          </div>
-          <div className="rounded-md border bg-white p-4">
-            <p className="text-xs text-muted-foreground">Prontos</p>
-            <p className="mt-1 text-2xl font-semibold">{summary.ready}</p>
-          </div>
-          <div className="rounded-md border bg-white p-4">
-            <p className="text-xs text-muted-foreground">Canais externos</p>
-            <p className="mt-1 text-2xl font-semibold">{summary.delivery}</p>
-          </div>
-        </section>
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-zinc-50">
+      <header className="shrink-0 border-b bg-background shadow-sm">
+        <div className="flex flex-col gap-3 px-3 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            {canViewDashboard && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/dashboard")}
+                aria-label="Voltar ao dashboard"
+                title="Voltar ao dashboard"
+                className="shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
 
-        <section className="flex flex-col gap-3 rounded-md border bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <ChefHat className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="truncate text-base font-semibold leading-tight sm:text-lg">
+                  {restaurantName}
+                </h1>
+                <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
+                  Cozinha
+                </Badge>
+              </div>
+              <p className="truncate text-xs text-muted-foreground">
+                Mural de produção em tempo real
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <Badge variant="secondary" className="justify-center gap-1.5 py-1.5">
+              <Clock3 className="h-3.5 w-3.5" />
+              {summary.waiting}
+              <span className="hidden sm:inline">entrada</span>
+            </Badge>
+            <Badge variant="secondary" className="justify-center gap-1.5 py-1.5">
+              <ChefHat className="h-3.5 w-3.5" />
+              {summary.preparing}
+              <span className="hidden sm:inline">preparo</span>
+            </Badge>
+            <Badge variant="secondary" className="justify-center gap-1.5 py-1.5">
+              <PackageCheck className="h-3.5 w-3.5" />
+              {summary.ready}
+              <span className="hidden sm:inline">pronto</span>
+            </Badge>
+            <Badge variant="outline" className="justify-center gap-1.5 py-1.5">
+              <Truck className="h-3.5 w-3.5" />
+              {summary.delivery}
+              <span className="hidden sm:inline">externos</span>
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t px-3 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant={sourceFilter === "todos" ? "default" : "outline"} onClick={() => setSourceFilter("todos")}>
+            <Button type="button" size="sm" variant={sourceFilter === "todos" ? "default" : "outline"} onClick={() => setSourceFilter("todos")}>
               Todos
             </Button>
-            <Button size="sm" variant={sourceFilter === "delivery" ? "default" : "outline"} onClick={() => setSourceFilter("delivery")}>
+            <Button type="button" size="sm" variant={sourceFilter === "delivery" ? "default" : "outline"} onClick={() => setSourceFilter("delivery")}>
               <Truck className="mr-2 h-4 w-4" />
               Delivery, iFood e WhatsApp
             </Button>
-            <Button size="sm" variant={sourceFilter === "salao" ? "default" : "outline"} onClick={() => setSourceFilter("salao")}>
+            <Button type="button" size="sm" variant={sourceFilter === "salao" ? "default" : "outline"} onClick={() => setSourceFilter("salao")}>
               Salão e balcão
             </Button>
           </div>
@@ -286,31 +395,33 @@ const Cozinha = () => {
               Som
               <Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} />
             </label>
-            <Button size="sm" variant="outline" onClick={refresh} disabled={loading}>
+            <Button type="button" size="sm" variant="outline" onClick={refresh} disabled={loading}>
               <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
               Atualizar
             </Button>
-            <Button size="sm" variant="outline" onClick={requestFullscreen}>
-              <Maximize2 className="mr-2 h-4 w-4" />
-              Tela cheia
+            <Button type="button" size="sm" variant="outline" onClick={toggleFullscreen}>
+              {isFullscreen ? <Minimize className="mr-2 h-4 w-4" /> : <Expand className="mr-2 h-4 w-4" />}
+              {isFullscreen ? "Sair" : "Tela cheia"}
             </Button>
           </div>
-        </section>
+        </div>
+      </header>
 
+      <main className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 lg:p-5">
         {!canManageOrders && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             Seu usuário pode visualizar a cozinha, mas precisa da permissão Gerenciar Pedidos para alterar status.
           </div>
         )}
 
-        <section className="grid gap-4 xl:grid-cols-3">
+        <section className="mx-auto grid w-full max-w-[1800px] gap-4 xl:grid-cols-3">
           {columns.map((column) => {
             const Icon = column.icon;
             const columnOrders = filteredOrders.filter((order) => column.statuses.includes(order.status));
 
             return (
-              <div key={column.id} className={cn("min-h-[480px] rounded-md border bg-muted/25", column.className)}>
-                <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white/95 p-4 backdrop-blur">
+              <div key={column.id} className={cn("min-h-[520px] rounded-md border bg-muted/25", column.className)}>
+                <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white/95 p-3 backdrop-blur lg:p-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="rounded-md bg-muted p-2">
                       <Icon className="h-5 w-5" />
@@ -350,8 +461,8 @@ const Cozinha = () => {
             );
           })}
         </section>
-      </div>
-    </DashboardLayout>
+      </main>
+    </div>
   );
 };
 

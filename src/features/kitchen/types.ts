@@ -9,6 +9,10 @@ export interface KitchenOrderItem {
   quantity: number;
   price: number;
   observations?: string | null;
+  addons: Array<{
+    name: string;
+    quantity?: number | null;
+  }>;
 }
 
 export interface KitchenOrder {
@@ -21,6 +25,7 @@ export interface KitchenOrder {
   status: PedidoStatus;
   paymentMethod?: string | null;
   paymentStatus?: string | null;
+  notes?: string | null;
   tableLabel: string;
   total: number;
   createdAt: string;

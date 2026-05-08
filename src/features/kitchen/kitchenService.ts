@@ -27,12 +27,18 @@ type KitchenOrderRow = {
     quantity: number;
     price: number;
     observations: string | null;
+    addons?: unknown;
   }> | null;
   mesa?: {
     id: string;
     name: string | null;
     number: string | null;
   } | null;
+};
+
+type DeliveryOrderNotesRow = {
+  order_id: string | null;
+  notes: string | null;
 };
 
 const tableLabelFor = (order: KitchenOrderRow) => {
@@ -43,7 +49,24 @@ const tableLabelFor = (order: KitchenOrderRow) => {
   return "Balcao";
 };
 
-const mapOrder = (order: KitchenOrderRow): KitchenOrder => ({
+const normalizeAddons = (addons: unknown): KitchenOrderItem["addons"] => {
+  if (!Array.isArray(addons)) return [];
+
+  return addons
+    .map((addon) => {
+      if (!addon || typeof addon !== "object") return null;
+      const row = addon as Record<string, unknown>;
+      const name = String(row.name || row.title || row.label || "").trim();
+      if (!name) return null;
+      return {
+        name,
+        quantity: typeof row.quantity === "number" ? row.quantity : null,
+      };
+    })
+    .filter(Boolean) as KitchenOrderItem["addons"];
+};
+
+const mapOrder = (order: KitchenOrderRow, notes?: string | null): KitchenOrder => ({
   id: order.id,
   orderNumber: order.order_number,
   customerName: order.customer_name,
@@ -53,6 +76,7 @@ const mapOrder = (order: KitchenOrderRow): KitchenOrder => ({
   status: order.status as PedidoStatus,
   paymentMethod: order.payment_method,
   paymentStatus: order.payment_status,
+  notes,
   tableLabel: tableLabelFor(order),
   total: Number(order.total || 0),
   createdAt: order.created_at,
@@ -63,6 +87,7 @@ const mapOrder = (order: KitchenOrderRow): KitchenOrder => ({
     quantity: Number(item.quantity || 0),
     price: Number(item.price || 0),
     observations: item.observations,
+    addons: normalizeAddons(item.addons),
   })),
 });
 
@@ -88,7 +113,8 @@ export async function listKitchenOrders(restaurantId: string) {
         product_name,
         quantity,
         price,
-        observations
+        observations,
+        addons
       ),
       mesa:mesas (
         id,
@@ -102,7 +128,25 @@ export async function listKitchenOrders(restaurantId: string) {
     .limit(120);
 
   if (error) throw error;
-  return ((data || []) as KitchenOrderRow[]).map(mapOrder);
+
+  const rows = (data || []) as KitchenOrderRow[];
+  const orderIds = rows.map((order) => order.id);
+  const notesByOrderId = new Map<string, string | null>();
+
+  if (orderIds.length > 0) {
+    const { data: deliveryRows, error: deliveryError } = await supabase
+      .from("delivery_orders")
+      .select("order_id, notes")
+      .in("order_id", orderIds);
+
+    if (deliveryError) throw deliveryError;
+
+    for (const deliveryOrder of (deliveryRows || []) as DeliveryOrderNotesRow[]) {
+      if (deliveryOrder.order_id) notesByOrderId.set(deliveryOrder.order_id, deliveryOrder.notes);
+    }
+  }
+
+  return rows.map((order) => mapOrder(order, notesByOrderId.get(order.id)));
 }
 
 export async function updateKitchenOrderStatus(orderId: string, status: PedidoStatus) {
