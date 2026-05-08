@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUserSession } from '@/hooks/useUserSession';
 import { Loader2 } from 'lucide-react';
+import { SubscriptionBlocker } from '@/components/subscription/SubscriptionBlocker';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -24,9 +25,13 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  const bypassSubscriptionGate = location.pathname.startsWith('/assinaturas');
+
   return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto">{children}</main>
-    </div>
+    <SubscriptionBlocker disabled={bypassSubscriptionGate}>
+      <div className="min-h-screen bg-background">
+        <main className="mx-auto">{children}</main>
+      </div>
+    </SubscriptionBlocker>
   );
 };

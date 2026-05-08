@@ -16,13 +16,32 @@ interface ContactEmailRequest {
   message: string;
 }
 
+const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const normalizeText = (value: unknown, maxLength: number) =>
+  String(value ?? "").trim().replace(/\s+/g, " ").slice(0, maxLength);
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { name, email, phone, subject, message }: ContactEmailRequest = await req.json();
+    const body: ContactEmailRequest = await req.json();
+    const name = normalizeText(body.name, 120);
+    const email = normalizeText(body.email, 180).toLowerCase();
+    const phone = normalizeText(body.phone, 40);
+    const subject = normalizeText(body.subject, 160);
+    const message = String(body.message ?? "").trim().slice(0, 5000);
+
+    if (!name || !isEmail(email) || !subject || message.length < 10) {
+      return new Response(
+        JSON.stringify({ error: "Dados do contato inválidos" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
 
     console.log("Processing contact form submission:", { name, email, subject });
 
@@ -30,6 +49,28 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentCount, error: rateError } = await supabase
+      .from("contact_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("email", email)
+      .gte("created_at", oneHourAgo);
+
+    if (rateError) {
+      console.error("Error checking contact rate limit:", rateError);
+      throw rateError;
+    }
+
+    if ((recentCount || 0) >= 3) {
+      return new Response(
+        JSON.stringify({ error: "Muitas mensagens enviadas em pouco tempo" }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
 
     // Save message to database
     const { data: messageData, error: messageError } = await supabase

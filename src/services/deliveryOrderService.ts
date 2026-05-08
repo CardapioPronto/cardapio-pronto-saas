@@ -109,6 +109,7 @@ export const deliveryOrderService = {
         await supabase.functions.invoke('send-delivery-whatsapp', {
           body: {
             delivery_order_id: result.delivery_order_id,
+            tracking_id: result.tracking_id,
             items: input.items.map(i => ({
               product_id: i.product_id,
               name: i.name,

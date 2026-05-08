@@ -26,6 +26,7 @@ interface ItemPayload {
 
 interface RequestBody {
   delivery_order_id: string;
+  tracking_id?: string;
   items: ItemPayload[];
   event?: 'created' | 'status_changed';
   new_status?: string;
@@ -41,6 +42,8 @@ interface RestaurantPayload {
 interface DeliveryOrderPayload {
   id: string;
   restaurant_id: string;
+  order_id: string;
+  created_at?: string | null;
   customer_name: string;
   customer_phone: string;
   street: string;
@@ -59,6 +62,7 @@ interface DeliveryOrderPayload {
   estimated_delivery_minutes?: number | null;
   notes?: string | null;
   whatsapp_send_attempts?: number | null;
+  whatsapp_sent_at?: string | null;
   restaurant?: RestaurantPayload | null;
 }
 
@@ -86,6 +90,76 @@ function formatPhoneBR(raw: string): string {
   if (!digits) return '';
   if (digits.startsWith('55')) return digits;
   return `55${digits}`;
+}
+
+async function getUser(req: Request, supabase: ReturnType<typeof createClient>) {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const { data } = await supabase.auth.getUser(token);
+  return data.user ?? null;
+}
+
+async function canManageRestaurant(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  restaurantId: string,
+) {
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { user_id: userId });
+  if (isSuperAdmin) return true;
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('restaurant_id, user_type')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profile?.restaurant_id !== restaurantId) return false;
+  if (profile?.user_type === 'owner') return true;
+
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('id, user_type')
+    .eq('user_id', userId)
+    .eq('restaurant_id', restaurantId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!employee?.id) return false;
+  if (employee.user_type === 'manager') return true;
+
+  const { data: permission } = await supabase
+    .from('employee_permissions')
+    .select('permission')
+    .eq('employee_id', employee.id)
+    .in('permission', ['orders_manage', 'whatsapp_manage'])
+    .limit(1)
+    .maybeSingle();
+
+  return !!permission;
+}
+
+async function loadOrderItems(
+  supabase: ReturnType<typeof createClient>,
+  orderId: string,
+  fallbackItems: ItemPayload[],
+): Promise<ItemPayload[]> {
+  const { data: items, error } = await supabase
+    .from('order_items')
+    .select('product_id, product_name, quantity, price, observations, addons')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  if (!items?.length) return fallbackItems || [];
+
+  return items.map((item: any) => ({
+    product_id: item.product_id,
+    name: item.product_name,
+    quantity: Number(item.quantity || 1),
+    price: Number(item.price || 0),
+    observations: item.observations,
+    addons: Array.isArray(item.addons) ? item.addons : [],
+  }));
 }
 
 function buildOrderMessage(order: DeliveryOrderPayload, items: ItemPayload[]): string {
@@ -184,7 +258,7 @@ serve(async (req) => {
     }
 
     const body = (await req.json()) as RequestBody;
-    const { delivery_order_id, items, event = 'created', new_status } = body;
+    const { delivery_order_id, tracking_id, items, event = 'created', new_status } = body;
 
     if (!delivery_order_id) {
       return new Response(JSON.stringify({ error: 'delivery_order_id é obrigatório' }), {
@@ -205,6 +279,43 @@ serve(async (req) => {
     }
 
     const deliveryOrder = order as DeliveryOrderPayload;
+
+    const user = await getUser(req, supabase);
+    const isPrivilegedCaller = user
+      ? await canManageRestaurant(supabase, user.id, deliveryOrder.restaurant_id)
+      : false;
+
+    if (event === 'status_changed' && !isPrivilegedCaller) {
+      return new Response(JSON.stringify({ error: 'Sem permissão para enviar atualização de status' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (event === 'created') {
+      if (tracking_id !== deliveryOrder.id) {
+        return new Response(JSON.stringify({ error: 'Código de acompanhamento inválido' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const createdAt = deliveryOrder.created_at ? new Date(deliveryOrder.created_at).getTime() : NaN;
+      if (!isPrivilegedCaller && Number.isFinite(createdAt) && Date.now() - createdAt > 15 * 60 * 1000) {
+        return new Response(JSON.stringify({ error: 'Janela de notificação expirada' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (deliveryOrder.whatsapp_sent_at) {
+        return new Response(
+          JSON.stringify({ success: true, event, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
     const restaurant = deliveryOrder.restaurant;
     const storePhoneRaw = restaurant?.phone_whatsapp || restaurant?.phone;
     if (!storePhoneRaw) {
@@ -228,6 +339,7 @@ serve(async (req) => {
     // 3) Montar mensagem de acordo com o evento
     let target: string;
     let text: string;
+    const trustedItems = await loadOrderItems(supabase, deliveryOrder.order_id, items || []);
 
     if (event === 'status_changed' && new_status) {
       // notifica o CLIENTE
@@ -236,7 +348,7 @@ serve(async (req) => {
     } else {
       // notifica a LOJA
       target = formatPhoneBR(storePhoneRaw);
-      text = buildOrderMessage(deliveryOrder, items || []);
+      text = buildOrderMessage(deliveryOrder, trustedItems);
     }
 
     if (!target) throw new Error('Número de destino inválido.');

@@ -1,18 +1,22 @@
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 
-export const SubscriptionBlocker = () => {
+interface SubscriptionBlockerProps {
+  children?: ReactNode;
+  disabled?: boolean;
+}
+
+export const SubscriptionBlocker = ({ children, disabled = false }: SubscriptionBlockerProps) => {
   const navigate = useNavigate();
   const { hasActiveSubscription, isInTrial, daysLeftInTrial, isLoading } = useSubscriptionStatus();
 
-  const shouldBlock = !isLoading && !hasActiveSubscription && (!isInTrial || daysLeftInTrial <= 0);
+  const shouldBlock = !disabled && !isLoading && !hasActiveSubscription && (!isInTrial || daysLeftInTrial <= 0);
 
   useEffect(() => {
-    // Se não tiver assinatura ativa e o trial expirou, redirecionar para assinaturas
     if (shouldBlock) {
       const timer = setTimeout(() => {
         navigate('/assinaturas');
@@ -21,8 +25,21 @@ export const SubscriptionBlocker = () => {
     }
   }, [shouldBlock, navigate]);
 
+  if (disabled) {
+    return <>{children}</>;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <span className="text-lg font-medium">Verificando assinatura...</span>
+      </div>
+    );
+  }
+
   if (!shouldBlock) {
-    return null;
+    return <>{children}</>;
   }
 
   return (

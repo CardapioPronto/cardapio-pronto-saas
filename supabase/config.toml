@@ -52,7 +52,7 @@ secret = ""
 redirect_uri = ""
 
 [functions.create-storage-buckets]
-verify_jwt = false
+verify_jwt = true
 
 [functions.evolution-api]
 verify_jwt = false
@@ -70,19 +70,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-ai-response]
-verify_jwt = false
+verify_jwt = true
 
 [functions.seed-blog-posts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-contact-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.email-settings]
 verify_jwt = true
 
 [functions.email-dispatch]
-verify_jwt = false
+verify_jwt = true
 
 [functions.email-unsubscribe]
 verify_jwt = false
@@ -93,8 +93,14 @@ verify_jwt = false
 [functions.create-employee]
 verify_jwt = true
 
+[functions.create-trial-subscription]
+verify_jwt = true
+
 [functions.pagarme-webhook]
 verify_jwt = false
 
 [functions.pagarme-create-order-payment]
-verify_jwt = false
+verify_jwt = true
+
+[functions.send-delivery-whatsapp]
+verify_jwt = true

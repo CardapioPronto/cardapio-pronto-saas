@@ -1,46 +1,25 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Cria uma assinatura de trial de 7 dias para um novo restaurante
+ * Cria uma assinatura de trial para um novo restaurante via Edge Function.
+ * A inserção direta foi removida para manter a tabela subscriptions protegida por RLS.
  */
 export const createTrialSubscription = async (restaurantId: string) => {
   try {
-    // Buscar o plano Profissional (plano padrão para trial)
-    const { data: plan, error: planError } = await supabase
-      .from('plans')
-      .select('id')
-      .eq('name', 'Profissional')
-      .single();
+    const { data, error } = await supabase.functions.invoke('create-trial-subscription', {
+      body: { restaurant_id: restaurantId },
+    });
 
-    if (planError || !plan) {
-      console.error('Erro ao buscar plano:', planError);
-      return { success: false, error: 'Plano não encontrado' };
+    if (error) {
+      console.error('Erro ao criar trial:', error);
+      return { success: false, error: error.message };
     }
 
-    // Calcular data de expiração do trial (7 dias)
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
-
-    // Criar assinatura de trial
-    const { data: subscription, error: subError } = await supabase
-      .from('subscriptions')
-      .insert({
-        restaurant_id: restaurantId,
-        plan_id: plan.id,
-        status: 'active',
-        is_trial: true,
-        trial_ends_at: trialEndsAt.toISOString(),
-        start_date: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (subError) {
-      console.error('Erro ao criar trial:', subError);
-      return { success: false, error: subError.message };
+    if ((data as { success?: boolean; error?: string } | null)?.success === false) {
+      return { success: false, error: (data as { error?: string }).error || 'Erro ao criar trial' };
     }
 
-    return { success: true, subscription };
+    return { success: true, subscription: (data as { subscription?: unknown })?.subscription };
   } catch (error) {
     console.error('Erro inesperado ao criar trial:', error);
     return { success: false, error: 'Erro inesperado' };

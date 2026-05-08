@@ -6,6 +6,55 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ALLOWED_PROVIDERS = new Set(['gemini', 'chatgpt']);
+
+async function getUser(req: Request, supabase: ReturnType<typeof createClient>) {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+
+  const { data } = await supabase.auth.getUser(token);
+  return data.user ?? null;
+}
+
+async function canUseRestaurantAi(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  restaurantId: string,
+) {
+  const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { user_id: userId });
+  if (isSuperAdmin) return true;
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('restaurant_id, user_type')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profile?.restaurant_id !== restaurantId) return false;
+  if (profile?.user_type === 'owner') return true;
+
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('id, user_type')
+    .eq('user_id', userId)
+    .eq('restaurant_id', restaurantId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!employee?.id) return false;
+  if (employee.user_type === 'manager') return true;
+
+  const { data: permission } = await supabase
+    .from('employee_permissions')
+    .select('permission')
+    .eq('employee_id', employee.id)
+    .in('permission', ['whatsapp_configure_automation', 'whatsapp_manage'])
+    .limit(1)
+    .maybeSingle();
+
+  return !!permission;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -17,6 +66,35 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const user = await getUser(req, supabase);
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Usuário não autenticado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!restaurantId || !(await canUseRestaurantAi(supabase, user.id, restaurantId))) {
+      return new Response(
+        JSON.stringify({ error: 'Sem permissão para gerar respostas deste restaurante' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!ALLOWED_PROVIDERS.has(provider)) {
+      return new Response(
+        JSON.stringify({ error: 'Provedor de IA inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!String(message || '').trim() || String(message).length > 4000) {
+      return new Response(
+        JSON.stringify({ error: 'Mensagem inválida' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     // Get restaurant info and AI settings
     const { data: integration } = await supabase

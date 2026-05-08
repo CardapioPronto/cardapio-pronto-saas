@@ -1,0 +1,42 @@
+name: Production Readiness
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  validate:
+    name: Validate app and production guardrails
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://example.supabase.co
+      VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production preflight
+        run: npm run preflight:prod
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint debt report
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build

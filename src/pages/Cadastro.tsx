@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
 import { RestaurantInfoForm } from "@/components/cadastro/RestaurantInfoForm";
 import { FormFooter } from "@/components/cadastro/FormFooter";
+import { createTrialSubscription } from "@/services/subscriptionManagementService";
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -98,8 +99,15 @@ export default function Cadastro() {
         setError("Erro ao vincular restaurante ao usuário.");
       }
 
-      // Note: Subscription creation is now handled securely by payment processing systems
-      // during the subscription flow to prevent fake subscriptions
+      const trialResult = await createTrialSubscription(restaurantData.id);
+      if (!trialResult.success) {
+        setError("Conta criada, mas não foi possível iniciar o teste grátis.");
+        toast({
+          variant: "destructive",
+          title: "Teste grátis não iniciado",
+          description: "Acesse Assinaturas após entrar para regularizar o plano.",
+        });
+      }
 
       toast({
         title: "Cadastro realizado com sucesso!",

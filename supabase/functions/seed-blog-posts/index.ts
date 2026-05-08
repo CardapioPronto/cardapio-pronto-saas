@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function requireSuperAdmin(req: Request, supabaseClient: ReturnType<typeof createClient>) {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!token) return false;
+
+  const { data: authData } = await supabaseClient.auth.getUser(token);
+  if (!authData.user) return false;
+
+  const { data: isSuperAdmin } = await supabaseClient.rpc('is_super_admin', {
+    user_id: authData.user.id,
+  });
+
+  return !!isSuperAdmin;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,6 +36,16 @@ serve(async (req) => {
         }
       }
     );
+
+    if (!(await requireSuperAdmin(req, supabaseClient))) {
+      return new Response(
+        JSON.stringify({ error: 'Sem permissão para popular posts do blog' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     const blogPosts = [
       {

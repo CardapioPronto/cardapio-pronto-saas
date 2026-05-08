@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json() as Body;
     if (!body.order_id) return json({ error: "order_id is required" }, 400);
+    if (!body.tracking_id) return json({ error: "tracking_id is required" }, 400);
     if (body.payment_method !== "pix") {
       return json({ error: "Only PIX online is available for public order payments" }, 400);
     }
@@ -180,6 +181,23 @@ Deno.serve(async (req) => {
     if (!order) return json({ error: "Order not found" }, 404);
     if (order.source !== "cardapio") return json({ error: "Only public menu orders can use this payment flow" }, 400);
     if (order.payment_method !== "pix_online") return json({ error: "Order is not configured for PIX online" }, 400);
+
+    let trackingMatchesOrder = body.tracking_id === order.id;
+    if (!trackingMatchesOrder) {
+      const { data: deliveryTracking, error: trackingError } = await (supabase as any)
+        .from("delivery_orders")
+        .select("id")
+        .eq("id", body.tracking_id)
+        .eq("order_id", order.id)
+        .maybeSingle();
+
+      if (trackingError) throw trackingError;
+      trackingMatchesOrder = !!deliveryTracking;
+    }
+
+    if (!trackingMatchesOrder) {
+      return json({ error: "Invalid order tracking token" }, 403);
+    }
 
     const createdAt = new Date(order.created_at).getTime();
     if (Number.isFinite(createdAt) && Date.now() - createdAt > 30 * 60 * 1000) {

@@ -333,15 +333,42 @@ const sendOrderConfirmation = async (body: any) => {
   const email = String(body.email || "").trim().toLowerCase();
   if (!isEmail(email)) throw new Error("E-mail do cliente inválido");
   if (!body.order_id || !body.restaurant_id) throw new Error("Pedido inválido");
+  if (!body.tracking_id) throw new Error("Código de acompanhamento obrigatório");
 
   const { data: order, error } = await admin
     .from("orders")
-    .select("id, restaurant_id, order_number, customer_name, customer_phone, total, status")
+    .select("id, restaurant_id, order_number, customer_name, customer_phone, customer_email, total, status, created_at")
     .eq("id", body.order_id)
     .eq("restaurant_id", body.restaurant_id)
     .maybeSingle();
 
   if (error || !order) throw new Error("Pedido não encontrado");
+
+  let trackingMatchesOrder = body.tracking_id === order.id;
+  if (!trackingMatchesOrder) {
+    const { data: deliveryTracking, error: trackingError } = await admin
+      .from("delivery_orders")
+      .select("id")
+      .eq("id", body.tracking_id)
+      .eq("order_id", order.id)
+      .maybeSingle();
+
+    if (trackingError) throw trackingError;
+    trackingMatchesOrder = !!deliveryTracking;
+  }
+
+  if (!trackingMatchesOrder) {
+    throw new Error("Código de acompanhamento inválido");
+  }
+
+  const createdAt = new Date(order.created_at).getTime();
+  if (Number.isFinite(createdAt) && Date.now() - createdAt > 60 * 60 * 1000) {
+    throw new Error("Janela de envio da confirmação expirada");
+  }
+
+  if (order.customer_email && String(order.customer_email).toLowerCase() !== email) {
+    throw new Error("E-mail diferente do informado no pedido");
+  }
 
   const { data: restaurant } = await admin
     .from("restaurants")
