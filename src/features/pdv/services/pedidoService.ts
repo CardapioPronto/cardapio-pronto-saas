@@ -73,7 +73,7 @@ const formatMesaDisplay = (pedido: PedidoQueryRow) => {
   return 'Mesa';
 };
 
-const OPEN_TABLE_STATUSES: PedidoStatus[] = ['pendente', 'preparo', 'em-andamento'];
+const OPEN_TABLE_STATUSES: PedidoStatus[] = ['pendente', 'preparo', 'em-andamento', 'pronto'];
 
 const notifyMesasChanged = (restaurantId: string) => {
   window.dispatchEvent(new CustomEvent('mesas:changed', { detail: { restaurantId } }));

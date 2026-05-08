@@ -43,6 +43,12 @@ export const PedidoHistoricoItem = ({
           icon: <Package className="h-4 w-4 mr-1" />,
           bgClass: "bg-blue-100 text-blue-800"
         };
+      case "pronto":
+        return {
+          label: "Pronto",
+          icon: <CheckCircle className="h-4 w-4 mr-1" />,
+          bgClass: "bg-emerald-100 text-emerald-800"
+        };
       case "finalizado":
         return {
           label: "Finalizado",
@@ -176,10 +182,20 @@ export const PedidoHistoricoItem = ({
         {canManageOrders && (pedido.status === 'preparo' || pedido.status === 'em-andamento') && (
           <Button 
             variant="outline" 
+            onClick={() => alterarStatusPedido(pedido.id, 'pronto')}
+            className="border-green-500 text-green-500 hover:bg-green-50"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" /> Marcar como pronto
+          </Button>
+        )}
+        
+        {canManageOrders && pedido.status === 'pronto' && (
+          <Button 
+            variant="outline" 
             onClick={() => alterarStatusPedido(pedido.id, 'finalizado')}
             className="border-green-500 text-green-500 hover:bg-green-50"
           >
-            <CheckCircle className="h-4 w-4 mr-1" /> Marcar como finalizado
+            <CheckCircle className="h-4 w-4 mr-1" /> Finalizar pedido
           </Button>
         )}
         

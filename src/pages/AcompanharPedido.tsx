@@ -25,11 +25,18 @@ type StatusKey =
   | 'pending'
   | 'confirmed'
   | 'preparing'
+  | 'ready'
   | 'out_for_delivery'
   | 'delivered'
   | 'cancelled'
   | 'awaiting_payment'
   | 'payment_failed'
+  | 'pendente'
+  | 'preparo'
+  | 'em-andamento'
+  | 'pronto'
+  | 'finalizado'
+  | 'cancelado'
   | 'aguardando_pagamento'
   | 'pagamento_falhou';
 
@@ -37,6 +44,7 @@ const STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
   { key: 'pending', label: 'Pedido recebido', icon: Clock },
   { key: 'confirmed', label: 'Confirmado pela loja', icon: CheckCircle2 },
   { key: 'preparing', label: 'Em preparo', icon: ChefHat },
+  { key: 'ready', label: 'Pronto para saída', icon: PackageCheck },
   { key: 'out_for_delivery', label: 'Saiu para entrega', icon: Bike },
   { key: 'delivered', label: 'Entregue', icon: PackageCheck },
 ];
@@ -45,6 +53,7 @@ const LOCAL_STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
   { key: 'pending', label: 'Pedido recebido', icon: Clock },
   { key: 'confirmed', label: 'Confirmado pela loja', icon: CheckCircle2 },
   { key: 'preparing', label: 'Em preparo', icon: ChefHat },
+  { key: 'ready', label: 'Pronto para retirada', icon: PackageCheck },
   { key: 'delivered', label: 'Pronto/concluído', icon: PackageCheck },
 ];
 
@@ -52,11 +61,18 @@ const STATUS_INDEX: Record<StatusKey, number> = {
   pending: 0,
   confirmed: 1,
   preparing: 2,
-  out_for_delivery: 3,
-  delivered: 4,
+  ready: 3,
+  out_for_delivery: 4,
+  delivered: 5,
   cancelled: -1,
   awaiting_payment: 0,
   payment_failed: -1,
+  pendente: 0,
+  preparo: 2,
+  'em-andamento': 2,
+  pronto: 3,
+  finalizado: 5,
+  cancelado: -1,
   aguardando_pagamento: 0,
   pagamento_falhou: -1,
 };
@@ -197,7 +213,7 @@ export default function AcompanharPedido() {
   const currentStatus = order.status as StatusKey;
   const isAwaitingPayment = order.payment_status === 'pending' || currentStatus === 'awaiting_payment' || currentStatus === 'aguardando_pagamento';
   const isPaymentFailed = order.payment_status === 'failed' || currentStatus === 'payment_failed' || currentStatus === 'pagamento_falhou';
-  const isCancelled = currentStatus === 'cancelled' || isPaymentFailed;
+  const isCancelled = currentStatus === 'cancelled' || currentStatus === 'cancelado' || isPaymentFailed;
   const statusFlow = order.fulfillment_type === 'delivery' ? STATUS_FLOW : LOCAL_STATUS_FLOW;
   const currentIdx = Math.min(STATUS_INDEX[currentStatus] ?? 0, statusFlow.length - 1);
   const isDelivery = order.fulfillment_type === 'delivery';
@@ -266,7 +282,7 @@ export default function AcompanharPedido() {
                 Assim que o pagamento for confirmado, o pedido entra no painel da loja.
               </p>
             )}
-            {!isCancelled && isDelivery && order.estimated_delivery_minutes && currentStatus !== 'delivered' && (
+            {!isCancelled && isDelivery && order.estimated_delivery_minutes && currentStatus !== 'delivered' && currentStatus !== 'finalizado' && (
               <p className="text-sm text-muted-foreground">
                 Tempo estimado de entrega: <strong>{order.estimated_delivery_minutes} min</strong>
               </p>

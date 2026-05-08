@@ -181,6 +181,7 @@ export const HistoricoPedidos = ({
                 <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
                 <SelectItem value="preparo">Em preparo</SelectItem>
+                <SelectItem value="pronto">Pronto</SelectItem>
                 <SelectItem value="finalizado">Finalizado</SelectItem>
                 <SelectItem value="cancelado">Cancelado</SelectItem>
               </SelectContent>

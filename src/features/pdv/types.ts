@@ -1,7 +1,7 @@
 
 import { Product, Category } from "@/types";
 
-export type PedidoStatus = 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'cancelado' | 'aguardando_pagamento' | 'pagamento_falhou';
+export type PedidoStatus = 'em-andamento' | 'finalizado' | 'pendente' | 'preparo' | 'pronto' | 'cancelado' | 'aguardando_pagamento' | 'pagamento_falhou';
 export type HistoricoStatusFiltro = PedidoStatus | 'todos';
 export type HistoricoPeriodoFiltro = 'hoje' | 'ontem' | '7dias' | 'mes' | 'personalizado';
 

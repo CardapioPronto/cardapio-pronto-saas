@@ -278,6 +278,7 @@ const Pedidos = () => {
       case "pagamento_falhou": return "bg-red-500/10 text-red-500 hover:bg-red-500/20";
       case "preparo": 
       case "em-andamento": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
+      case "pronto": return "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20";
       case "finalizado": return "bg-green/10 text-green hover:bg-green/20";
       case "cancelado": return "bg-red-500/10 text-red-500 hover:bg-red-500/20";
       default: return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
@@ -292,6 +293,7 @@ const Pedidos = () => {
       case "pagamento_falhou": return <XCircle className="h-4 w-4 mr-1" />;
       case "preparo":
       case "em-andamento": return <Package className="h-4 w-4 mr-1" />;
+      case "pronto":
       case "finalizado": return <CheckCircle className="h-4 w-4 mr-1" />;
       case "cancelado": return <XCircle className="h-4 w-4 mr-1" />;
       default: return <Clock className="h-4 w-4 mr-1" />;
@@ -432,6 +434,7 @@ const Pedidos = () => {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="preparo">Em preparo</SelectItem>
+                  <SelectItem value="pronto">Pronto</SelectItem>
                   <SelectItem value="finalizado">Finalizado</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
@@ -490,6 +493,8 @@ const Pedidos = () => {
                         <span className="capitalize">
                           {pedido.status === "preparo" || pedido.status === "em-andamento"
                             ? "Em preparo"
+                            : pedido.status === "pronto"
+                              ? "Pronto"
                             : pedido.status === "aguardando_pagamento"
                               ? "Aguardando pagamento"
                               : pedido.status === "pagamento_falhou"
@@ -533,6 +538,8 @@ const Pedidos = () => {
                                   <span className="capitalize">
                                     {pedidoDetalhes.status === "preparo" || pedidoDetalhes.status === "em-andamento"
                                       ? "Em preparo"
+                                      : pedidoDetalhes.status === "pronto"
+                                        ? "Pronto"
                                       : pedidoDetalhes.status === "aguardando_pagamento"
                                         ? "Aguardando pagamento"
                                         : pedidoDetalhes.status === "pagamento_falhou"
@@ -602,9 +609,19 @@ const Pedidos = () => {
                                           size="sm" 
                                           variant="outline"
                                           className="border-green text-green hover:bg-green/10"
+                                          onClick={() => handleAlterarStatus(pedidoDetalhes.id, "pronto")}
+                                        >
+                                          <CheckCircle className="h-4 w-4 mr-1" /> Pronto
+                                        </Button>
+                                      )}
+                                      {pedidoDetalhes.status === "pronto" && (
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          className="border-green text-green hover:bg-green/10"
                                           onClick={() => handleAlterarStatus(pedidoDetalhes.id, "finalizado")}
                                         >
-                                          <CheckCircle className="h-4 w-4 mr-1" /> Concluído
+                                          <CheckCircle className="h-4 w-4 mr-1" /> Finalizar
                                         </Button>
                                       )}
                                       <Button 

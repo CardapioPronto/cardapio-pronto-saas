@@ -10,6 +10,7 @@ const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Produtos = lazy(() => import('@/pages/Produtos'));
 const Pedidos = lazy(() => import('@/pages/Pedidos'));
+const Cozinha = lazy(() => import('@/pages/Cozinha'));
 const FuncionariosV2 = lazy(() => import('@/pages/FuncionariosV2'));
 const Categorias = lazy(() => import('@/pages/Categorias'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
@@ -145,6 +146,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['orders_view']}>
           <MainLayout>
             <Pedidos />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/cozinha" element={
+        <ProtectedRoute requiredPermissions={['orders_view']}>
+          <MainLayout>
+            <Cozinha />
           </MainLayout>
         </ProtectedRoute>
       } />

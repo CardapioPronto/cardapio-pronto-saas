@@ -16,6 +16,7 @@ import {
   Shield,
   ShieldCheck,
   Workflow,
+  ChefHat,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ const operationalLinks: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: Home, permissions: ["dashboard_view"] },
   { to: "/pdv", label: "PDV", icon: CreditCard, permissions: ["pdv_access"] },
   { to: "/pedidos", label: "Pedidos", icon: ShoppingBasket, permissions: ["orders_view"] },
+  { to: "/cozinha", label: "Cozinha", icon: ChefHat, permissions: ["orders_view"] },
   { to: "/produtos", label: "Produtos", icon: Package2, permissions: ["products_view"] },
   { to: "/categorias", label: "Categorias", icon: Tags, permissions: ["products_view"] },
   { to: "/cardapio", label: "Menu Digital", icon: Store, permissions: ["products_view"] },

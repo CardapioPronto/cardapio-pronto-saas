@@ -34,7 +34,7 @@ export function useDashboardNotifications() {
           .from("orders")
           .select("id", { count: "exact", head: true })
           .eq("restaurant_id", user.restaurant_id)
-          .in("status", ["pendente", "preparo", "em-andamento", "pending", "preparing"]),
+          .in("status", ["pendente", "preparo", "em-andamento", "pronto", "pending", "preparing", "ready"]),
         db
           .from("conversation_threads")
           .select("id, status, unread_count")
