@@ -24,6 +24,12 @@ interface LocalPlan {
   pagarme_plan_id_yearly: string | null;
 }
 
+type PagarmePlanResponse = {
+  id?: string;
+};
+
+type PagarmeRequestData = PagarmePlanResponse | { raw: string } | null;
+
 const DEFAULT_PAYMENT_METHODS = ["credit_card", "boleto"];
 const ALLOWED_PAYMENT_METHODS = new Set([
   "credit_card",
@@ -79,7 +85,7 @@ async function pagarmeRequest(
   path: string,
   method: string,
   body?: unknown,
-): Promise<{ ok: boolean; status: number; data: any }> {
+): Promise<{ ok: boolean; status: number; data: PagarmeRequestData }> {
   const res = await fetch(`${PAGARME_API_URL}${path}`, {
     method,
     headers: {
@@ -89,13 +95,17 @@ async function pagarmeRequest(
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
-  let data: any = null;
+  let data: PagarmeRequestData = null;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
     data = { raw: text };
   }
   return { ok: res.ok, status: res.status, data };
+}
+
+function getPagarmePlanId(data: PagarmeRequestData) {
+  return data && "id" in data && typeof data.id === "string" ? data.id : null;
 }
 
 async function upsertPagarmePlan(
@@ -119,7 +129,9 @@ async function upsertPagarmePlan(
             `Pagar.me create failed: ${JSON.stringify(created.data)}`,
           );
         }
-        return created.data.id as string;
+        const createdId = getPagarmePlanId(created.data);
+        if (!createdId) throw new Error("Pagar.me create response missing id");
+        return createdId;
       }
       throw new Error(`Pagar.me update failed: ${JSON.stringify(res.data)}`);
     }
@@ -132,7 +144,9 @@ async function upsertPagarmePlan(
       `Pagar.me create failed (${created.status}): ${JSON.stringify(created.data)}`,
     );
   }
-  return created.data.id as string;
+  const createdId = getPagarmePlanId(created.data);
+  if (!createdId) throw new Error("Pagar.me create response missing id");
+  return createdId;
 }
 
 Deno.serve(async (req) => {

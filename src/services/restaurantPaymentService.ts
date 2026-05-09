@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export type OnlinePaymentMethod = "pix" | "credit_card";
 export type PaymentFulfillment = "delivery" | "pickup" | "table" | "counter";
@@ -29,6 +30,9 @@ export interface PublicRestaurantPaymentSettings {
   onboardingStatus: RestaurantPaymentSettings["onboarding_status"];
 }
 
+type RestaurantPaymentSettingsRow = Database["public"]["Tables"]["restaurant_payment_settings"]["Row"];
+type RestaurantPaymentSettingsInsert = Database["public"]["Tables"]["restaurant_payment_settings"]["Insert"];
+
 const DEFAULT_SETTINGS = (restaurantId: string): RestaurantPaymentSettings => ({
   restaurant_id: restaurantId,
   provider: "pagarme",
@@ -47,16 +51,48 @@ const DEFAULT_SETTINGS = (restaurantId: string): RestaurantPaymentSettings => ({
   metadata: {},
 });
 
-const normalize = (row: Partial<RestaurantPaymentSettings>, restaurantId: string): RestaurantPaymentSettings => ({
-  ...DEFAULT_SETTINGS(restaurantId),
-  ...row,
-  enabled_methods: (row.enabled_methods?.length ? row.enabled_methods : ["pix"]) as OnlinePaymentMethod[],
-  commission_value: Number(row.commission_value || 0),
-});
+const PAYMENT_METHODS = new Set<OnlinePaymentMethod>(["pix", "credit_card"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeMethods(methods?: string[] | null): OnlinePaymentMethod[] {
+  const validMethods = (methods || []).filter((method): method is OnlinePaymentMethod =>
+    PAYMENT_METHODS.has(method as OnlinePaymentMethod),
+  );
+  return validMethods.length ? validMethods : ["pix"];
+}
+
+function normalize(row: Partial<RestaurantPaymentSettingsRow>, restaurantId: string): RestaurantPaymentSettings {
+  return {
+    ...DEFAULT_SETTINGS(restaurantId),
+    id: row.id,
+    restaurant_id: row.restaurant_id || restaurantId,
+    provider: "pagarme",
+    marketplace_mode: row.marketplace_mode === "direct" ? "direct" : "split",
+    is_enabled: Boolean(row.is_enabled),
+    onboarding_status: ["pending", "approved", "rejected"].includes(String(row.onboarding_status))
+      ? row.onboarding_status as RestaurantPaymentSettings["onboarding_status"]
+      : "not_started",
+    recipient_id: row.recipient_id ?? null,
+    enabled_methods: normalizeMethods(row.enabled_methods),
+    allow_delivery: row.allow_delivery ?? true,
+    allow_pickup: row.allow_pickup ?? true,
+    allow_table: row.allow_table ?? false,
+    allow_counter: row.allow_counter ?? false,
+    commission_type: ["percentage", "flat"].includes(String(row.commission_type))
+      ? row.commission_type as RestaurantPaymentSettings["commission_type"]
+      : "none",
+    commission_value: Number(row.commission_value || 0),
+    notes: row.notes ?? null,
+    metadata: isRecord(row.metadata) ? row.metadata : {},
+  };
+}
 
 export const restaurantPaymentService = {
   async getSettings(restaurantId: string): Promise<RestaurantPaymentSettings> {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("restaurant_payment_settings")
       .select("*")
       .eq("restaurant_id", restaurantId)
@@ -67,7 +103,7 @@ export const restaurantPaymentService = {
   },
 
   async saveSettings(settings: RestaurantPaymentSettings): Promise<RestaurantPaymentSettings> {
-    const payload = {
+    const payload: RestaurantPaymentSettingsInsert = {
       restaurant_id: settings.restaurant_id,
       provider: "pagarme",
       marketplace_mode: settings.marketplace_mode,
@@ -82,10 +118,10 @@ export const restaurantPaymentService = {
       commission_type: settings.commission_type,
       commission_value: Number(settings.commission_value || 0),
       notes: settings.notes?.trim() || null,
-      metadata: settings.metadata || {},
+      metadata: (settings.metadata || {}) as Json,
     };
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("restaurant_payment_settings")
       .upsert(payload, { onConflict: "restaurant_id" })
       .select("*")

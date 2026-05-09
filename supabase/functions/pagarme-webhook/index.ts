@@ -17,6 +17,48 @@ const supabase = createClient(
 const WEBHOOK_SECRET = Deno.env.get("PAGARME_WEBHOOK_SECRET") ?? "";
 const PAGARME_SECRET_KEY = Deno.env.get("PAGARME_SECRET_KEY") ?? "";
 
+type PagarmeNestedObject = {
+  id?: string | null;
+  subscription_id?: string | null;
+  metadata?: { order_id?: string | null } | null;
+};
+
+type PagarmeData = {
+  id?: string | null;
+  status?: string | null;
+  subscription_id?: string | null;
+  order_id?: string | null;
+  next_billing_at?: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  interval?: string | null;
+  amount?: number | null;
+  paid_amount?: number | null;
+  metadata?: { order_id?: string | null } | null;
+  subscription?: PagarmeNestedObject | null;
+  invoice?: PagarmeNestedObject | null;
+  order?: PagarmeNestedObject | null;
+  charge?: PagarmeNestedObject | null;
+  charges?: PagarmeNestedObject[] | null;
+  customer?: PagarmeNestedObject | null;
+  customer_id?: string | null;
+  [key: string]: unknown;
+};
+
+type PagarmeEvent = {
+  id?: string | null;
+  type?: string | null;
+  data?: PagarmeData | null;
+  [key: string]: unknown;
+};
+
+type SubscriptionWithRestaurant = {
+  id: string;
+  restaurant_id: string;
+  plan_id: string;
+  restaurants?: { owner_id?: string | null } | null;
+};
+
 function normalizeSignature(signatureHeader: string | null) {
   return (signatureHeader ?? "")
     .replace(/^sha1=/i, "")
@@ -70,12 +112,12 @@ async function verifySignature(rawBody: string, signatureHeader: string | null):
   return false;
 }
 
-function extractPagarmeSubscriptionId(type: string, data: any) {
+function extractPagarmeSubscriptionId(type: string, data: PagarmeData) {
   if (type.startsWith("subscription.")) return data.id ?? data.subscription_id ?? null;
   return data.subscription_id ?? data.subscription?.id ?? data.invoice?.subscription_id ?? null;
 }
 
-function extractPagarmeOrderId(type: string, data: any) {
+function extractPagarmeOrderId(type: string, data: PagarmeData) {
   if (type.startsWith("order.")) return data.id ?? null;
   return data.order?.id ?? data.order_id ?? null;
 }
@@ -101,7 +143,7 @@ function mapStatus(pagarmeStatus: string): string {
   }
 }
 
-async function processEvent(event: any): Promise<void> {
+async function processEvent(event: PagarmeEvent): Promise<void> {
   const type: string = event.type ?? "";
   const data = event.data ?? {};
 
@@ -115,7 +157,7 @@ async function processEvent(event: any): Promise<void> {
       ? "canceled"
       : mapStatus(subscription.status ?? "active");
 
-    const update: Record<string, any> = {
+    const update: Record<string, string | null> = {
       status: newStatus,
       updated_at: new Date().toISOString(),
     };
@@ -148,7 +190,7 @@ async function processEvent(event: any): Promise<void> {
     else if (type === "charge.payment_failed" || type === "invoice.payment_failed") newStatus = "past_due";
     else if (type === "charge.refunded") newStatus = "canceled";
 
-    const update: Record<string, any> = {
+    const update: Record<string, string | null> = {
       last_payment_at: new Date().toISOString(),
       last_payment_status: charge.status ?? type,
       updated_at: new Date().toISOString(),
@@ -172,7 +214,7 @@ async function processEvent(event: any): Promise<void> {
   }
 }
 
-async function processOrderPaymentEvent(type: string, data: any) {
+async function processOrderPaymentEvent(type: string, data: PagarmeData) {
   const pagarmeOrderId = extractPagarmeOrderId(type, data);
   const pagarmeChargeId = data.id && type.startsWith("charge.")
     ? data.id
@@ -182,7 +224,7 @@ async function processOrderPaymentEvent(type: string, data: any) {
 
   if (!newPaymentStatus) return;
 
-  let paymentQuery = (supabase as any)
+  let paymentQuery = supabase
     .from("order_payments")
     .select("*");
 
@@ -204,7 +246,7 @@ async function processOrderPaymentEvent(type: string, data: any) {
   if (!payment?.order_id) return;
 
   const paidAt = newPaymentStatus === "paid" ? new Date().toISOString() : payment.paid_at;
-  await (supabase as any)
+  await supabase
     .from("order_payments")
     .update({
       status: newPaymentStatus,
@@ -233,7 +275,7 @@ async function processOrderPaymentEvent(type: string, data: any) {
     })
     .eq("id", payment.order_id);
 
-  await (supabase as any)
+  await supabase
     .from("delivery_orders")
     .update({
       payment_status: newPaymentStatus,
@@ -288,25 +330,29 @@ function mapOrderPaymentStatus(type: string, status?: string): string | null {
   }
 }
 
-async function sendSubscriptionReceipt(pagarmeSubId: string, charge: any) {
-  const { data: sub } = await supabase
+async function sendSubscriptionReceipt(pagarmeSubId: string, charge: PagarmeData) {
+  const { data: subData } = await supabase
     .from("subscriptions")
     .select("id, restaurant_id, plan_id, restaurants:restaurant_id(owner_id)")
     .eq("pagarme_subscription_id", pagarmeSubId)
     .maybeSingle();
 
+  const sub = subData as SubscriptionWithRestaurant | null;
   if (!sub?.restaurant_id) return;
 
   const { data: plan } = await supabase
     .from("plans")
     .select("name")
-    .eq("id", (sub as any).plan_id)
+    .eq("id", sub.plan_id)
     .maybeSingle();
+
+  const ownerId = sub.restaurants?.owner_id;
+  if (!ownerId) return;
 
   const { data: owner } = await supabase
     .from("users")
     .select("email, name")
-    .eq("id", (sub as any).restaurants?.owner_id)
+    .eq("id", ownerId)
     .maybeSingle();
 
   if (!owner?.email) return;
@@ -351,9 +397,9 @@ Deno.serve(async (req) => {
 
   const signatureValid = await verifySignature(rawBody, signatureHeader);
 
-  let event: any;
+  let event: PagarmeEvent;
   try {
-    event = JSON.parse(rawBody);
+    event = JSON.parse(rawBody) as PagarmeEvent;
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), {
       status: 400,

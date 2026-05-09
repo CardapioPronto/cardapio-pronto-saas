@@ -12,27 +12,87 @@ const corsHeaders = {
 
 const PAGARME_API_URL = "https://api.pagar.me/core/v5";
 
+type PagarmeErrorPayload = {
+  message?: string;
+  errors?: Array<{ message?: string }>;
+  raw?: string;
+};
+
+type PagarmeTransaction = {
+  transaction_type?: string | null;
+  due_at?: string | null;
+  url?: string | null;
+  pdf?: string | null;
+  barcode?: string | null;
+  line?: string | null;
+  qr_code?: string | null;
+  qr_code_url?: string | null;
+  expires_at?: string | null;
+  card?: {
+    brand?: string | null;
+    last_four_digits?: string | null;
+  } | null;
+  acquirer_tid?: string | null;
+  acquirer_nsu?: string | null;
+};
+
+type PagarmeCharge = {
+  id?: string | null;
+  status?: string | null;
+  amount?: number | null;
+  paid_amount?: number | null;
+  payment_method?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
+  last_transaction?: PagarmeTransaction | null;
+};
+
+type PagarmeChargesList = {
+  data?: PagarmeCharge[];
+};
+
+type PagarmeSubscription = {
+  current_cycle?: { charges?: PagarmeCharge[] } | null;
+  invoices?: Array<{ charges?: PagarmeCharge[] }> | null;
+};
+
+type SubscriptionWithRestaurant = {
+  id: string;
+  restaurant_id: string;
+  pagarme_subscription_id: string | null;
+  restaurants?: { owner_id?: string | null } | null;
+};
+
 function authHeader() {
   const key = Deno.env.get("PAGARME_SECRET_KEY");
   if (!key) throw new Error("PAGARME_SECRET_KEY not configured");
   return `Basic ${btoa(key + ":")}`;
 }
 
-async function pagarme(path: string) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function pagarmeErrorMessage(data: unknown, status: number) {
+  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
+  return payload?.message || payload?.errors?.[0]?.message || `HTTP ${status}`;
+}
+
+async function pagarme<T>(path: string): Promise<T> {
   const res = await fetch(`${PAGARME_API_URL}${path}`, {
     headers: { Authorization: authHeader(), "Content-Type": "application/json" },
   });
   const text = await res.text();
-  let data: any = null;
+  let data: unknown = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
   if (!res.ok) {
-    const msg = data?.message || data?.errors?.[0]?.message || `HTTP ${res.status}`;
+    const msg = pagarmeErrorMessage(data, res.status);
     throw new Error(`Pagar.me GET ${path}: ${msg}`);
   }
-  return data;
+  return data as T;
 }
 
-function extractReceipt(charge: any) {
+function extractReceipt(charge: PagarmeCharge | null) {
   if (!charge) return null;
   const tx = charge.last_transaction ?? null;
   const method = (charge.payment_method ?? tx?.transaction_type ?? "").toLowerCase();
@@ -103,13 +163,14 @@ Deno.serve(async (req) => {
     const { data: isSuperAdminData } = await admin.rpc("is_super_admin", {
       user_id: userData.user.id,
     });
-    const { data: sub, error: subErr } = await admin
+    const { data: subData, error: subErr } = await admin
       .from("subscriptions")
       .select("id, restaurant_id, pagarme_subscription_id, restaurants!inner(owner_id)")
       .eq("id", subscriptionId)
       .maybeSingle();
-    if (subErr || !sub) throw new Error("Subscription not found");
-    const isOwner = (sub as any).restaurants?.owner_id === userData.user.id;
+    if (subErr || !subData) throw new Error("Subscription not found");
+    const sub = subData as SubscriptionWithRestaurant;
+    const isOwner = sub.restaurants?.owner_id === userData.user.id;
     if (!isSuperAdminData && !isOwner) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -118,18 +179,18 @@ Deno.serve(async (req) => {
     if (!sub.pagarme_subscription_id) throw new Error("Subscription is not linked to Pagar.me");
 
     // Tenta listar charges da assinatura (mais confiável p/ recibos)
-    let charges: any[] = [];
+    let charges: PagarmeCharge[] = [];
     try {
-      const list = await pagarme(
+      const list = await pagarme<PagarmeChargesList>(
         `/charges?subscription_id=${encodeURIComponent(sub.pagarme_subscription_id)}&size=10`,
       );
       charges = list?.data ?? [];
     } catch (_e) { /* fallback abaixo */ }
 
     // Fallback: busca a assinatura e extrai charge do current_cycle / invoices
-    let fallbackCharge: any = null;
+    let fallbackCharge: PagarmeCharge | null = null;
     if (charges.length === 0) {
-      const subscription = await pagarme(
+      const subscription = await pagarme<PagarmeSubscription>(
         `/subscriptions/${encodeURIComponent(sub.pagarme_subscription_id)}`,
       );
       fallbackCharge =

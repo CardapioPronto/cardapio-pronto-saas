@@ -29,10 +29,10 @@ export function useActivePlan() {
         setPlan({
           id: data.id,
           name: data.name,
-          description: (data as any).description ?? null,
+          description: data.description ?? null,
           price_monthly: Number(data.price_monthly),
           price_yearly: Number(data.price_yearly),
-          trial_days: (data as any).trial_days ?? 14,
+          trial_days: data.trial_days ?? 14,
         });
       }
       setLoading(false);

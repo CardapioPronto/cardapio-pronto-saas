@@ -1,6 +1,13 @@
 
 import { supabase } from '@/lib/supabase';
 import { PostgrestError } from '@supabase/supabase-js';
+import type { Database, Json } from '@/integrations/supabase/types';
+
+type SystemAdmin = Database['public']['Tables']['system_admins']['Row'];
+type SystemSetting = Database['public']['Tables']['system_settings']['Row'];
+type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
+type Subscription = Database['public']['Tables']['subscriptions']['Row'];
+type Restaurant = Database['public']['Tables']['restaurants']['Row'];
 
 // Interface para criar/atualizar um super admin
 interface SuperAdminData {
@@ -9,25 +16,6 @@ interface SuperAdminData {
 }
 
 // Interface para configurações do sistema
-interface SystemSetting {
-  key: string;
-  value: any;
-  description: string;
-  updated_at: string;
-  updated_by?: string | null; // Changed from string | undefined to string | null
-}
-
-// Interface para logs de atividade
-interface ActivityLog {
-  id: string;
-  user_id: string;
-  action: string;
-  entity_type: string;
-  entity_id: string;
-  details?: any;
-  created_at: string;
-}
-
 // Interface para assinaturas com dados do cliente
 interface SubscriptionWithClient {
   id: string;
@@ -53,7 +41,7 @@ export async function checkCurrentUserIsSuperAdmin(): Promise<boolean> {
 }
 
 // Função para listar todos os super admins
-export async function listSuperAdmins(): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+export async function listSuperAdmins(): Promise<{ data: SystemAdmin[] | null; error: PostgrestError | null }> {
   return await supabase
     .from('system_admins')
     .select(`
@@ -66,7 +54,7 @@ export async function listSuperAdmins(): Promise<{ data: any[] | null; error: Po
 }
 
 // Função para adicionar um super admin
-export async function addSuperAdmin(data: SuperAdminData): Promise<{ data: any | null; error: PostgrestError | null }> {
+export async function addSuperAdmin(data: SuperAdminData): Promise<{ data: SystemAdmin[] | null; error: PostgrestError | null }> {
   const { data: currentUser } = await supabase.auth.getUser();
   
   return await supabase
@@ -100,7 +88,7 @@ export async function listSystemSettings(): Promise<{ data: SystemSetting[] | nu
 }
 
 // Função para atualizar uma configuração do sistema
-export async function updateSystemSetting(key: string, value: any): Promise<{ data: any | null; error: PostgrestError | null }> {
+export async function updateSystemSetting(key: string, value: Json): Promise<{ data: SystemSetting[] | null; error: PostgrestError | null }> {
   const { data: currentUser } = await supabase.auth.getUser();
   
   return await supabase
@@ -115,7 +103,7 @@ export async function updateSystemSetting(key: string, value: any): Promise<{ da
 }
 
 // Função para registrar atividade de admin
-export async function logAdminActivity(action: string, entityType: string, entityId: string, details: any = null): Promise<{ data: any | null; error: PostgrestError | null }> {
+export async function logAdminActivity(action: string, entityType: string, entityId: string, details: Json = null): Promise<{ data: string | null; error: PostgrestError | null }> {
   const { data: currentUser } = await supabase.auth.getUser();
   
   if (!currentUser.user) {
@@ -166,7 +154,7 @@ export async function listAllSubscriptions(): Promise<{ data: SubscriptionWithCl
 }
 
 // Função para atualizar status de uma assinatura
-export async function updateSubscriptionStatus(id: string, status: string): Promise<{ data: any | null; error: PostgrestError | null }> {
+export async function updateSubscriptionStatus(id: string, status: string): Promise<{ data: Subscription[] | null; error: PostgrestError | null }> {
   const result = await supabase
     .from('subscriptions')
     .update({ status, updated_at: new Date().toISOString() })
@@ -189,8 +177,8 @@ export async function updateSubscriptionStatus(id: string, status: string): Prom
 interface UserData {
   id: string;
   email?: string;
-  app_metadata?: Record<string, any>;
-  user_metadata?: Record<string, any>;
+  app_metadata?: Record<string, Json>;
+  user_metadata?: Record<string, Json>;
   created_at?: string;
 }
 
@@ -229,7 +217,7 @@ export async function getUsersByIds(ids: string[]): Promise<{ data: UserData[] |
 }
 
 // Função para listar todos os restaurantes
-export async function listAllRestaurants(): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+export async function listAllRestaurants(): Promise<{ data: Restaurant[] | null; error: PostgrestError | null }> {
   return await supabase
     .from('restaurants')
     .select('*')

@@ -63,7 +63,7 @@ const AdminPagarme = () => {
             .from("restaurants")
             .select("id, name, owner_id")
             .order("name", { ascending: true }),
-          (supabase as any)
+          supabase
             .from("restaurant_payment_settings")
             .select("*"),
         ]);

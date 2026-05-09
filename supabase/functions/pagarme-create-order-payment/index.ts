@@ -22,6 +22,49 @@ type Body = {
   payment_method?: "pix";
 };
 
+type PagarmeErrorPayload = {
+  message?: string;
+  errors?: Array<{ message?: string }>;
+};
+
+type PaymentSettings = {
+  is_enabled?: boolean | null;
+  onboarding_status?: string | null;
+  enabled_methods?: string[] | null;
+  marketplace_mode?: string | null;
+  recipient_id?: string | null;
+  commission_type?: "none" | "percentage" | "flat" | string | null;
+  commission_value?: number | string | null;
+};
+
+type OrderItemRow = {
+  id: string;
+  product_name: string | null;
+  quantity: number | null;
+  price: number | string | null;
+};
+
+type PagarmeTransaction = {
+  qr_code?: string | null;
+  qrcode?: string | null;
+  qr_code_url?: string | null;
+  qrcode_url?: string | null;
+  expires_at?: string | null;
+};
+
+type PagarmeCharge = {
+  id?: string | null;
+  status?: string | null;
+  last_transaction?: PagarmeTransaction | null;
+  lastTransaction?: PagarmeTransaction | null;
+};
+
+type PagarmeOrder = {
+  id?: string | null;
+  status?: string | null;
+  charges?: PagarmeCharge[] | null;
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -52,7 +95,16 @@ function phoneObject(phone?: string | null) {
   };
 }
 
-async function pagarme(path: string, method: string, body?: unknown) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function pagarmeErrorMessage(data: unknown) {
+  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
+  return payload?.message || payload?.errors?.[0]?.message || JSON.stringify(data);
+}
+
+async function pagarme<T>(path: string, method: string, body?: unknown): Promise<T> {
   if (!PAGARME_SECRET_KEY) throw new Error("PAGARME_SECRET_KEY is not configured");
 
   const res = await fetch(`https://api.pagar.me/core/v5${path}`, {
@@ -64,16 +116,16 @@ async function pagarme(path: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data: unknown = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data?.message || data?.errors?.[0]?.message || JSON.stringify(data);
+    const msg = pagarmeErrorMessage(data);
     throw new Error(`Pagar.me ${method} ${path}: ${msg}`);
   }
 
-  return data;
+  return data as T;
 }
 
-function buildSplit(settings: any, amountInCents: number) {
+function buildSplit(settings: PaymentSettings, amountInCents: number) {
   if (!settings?.recipient_id) return undefined;
 
   const restaurantRecipient = String(settings.recipient_id);
@@ -185,7 +237,7 @@ Deno.serve(async (req) => {
 
     let trackingMatchesOrder = body.tracking_id === order.id;
     if (!trackingMatchesOrder) {
-      const { data: deliveryTracking, error: trackingError } = await (supabase as any)
+      const { data: deliveryTracking, error: trackingError } = await supabase
         .from("delivery_orders")
         .select("id")
         .eq("id", body.tracking_id)
@@ -205,7 +257,7 @@ Deno.serve(async (req) => {
       return json({ error: "Payment creation window expired for this order" }, 400);
     }
 
-    const { data: existingPayment } = await (supabase as any)
+    const { data: existingPayment } = await supabase
       .from("order_payments")
       .select("*")
       .eq("order_id", order.id)
@@ -226,13 +278,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: settings, error: settingsError } = await (supabase as any)
+    const { data: settingsData, error: settingsError } = await supabase
       .from("restaurant_payment_settings")
       .select("*")
       .eq("restaurant_id", order.restaurant_id)
       .maybeSingle();
 
     if (settingsError) throw settingsError;
+    const settings = settingsData as PaymentSettings | null;
     if (!settings?.is_enabled || settings.onboarding_status !== "approved") {
       return json({ error: "Online payments are not enabled for this restaurant" }, 400);
     }
@@ -265,10 +318,10 @@ Deno.serve(async (req) => {
     };
     if (split) payment.split = split;
 
-    const pagarmeOrder = await pagarme("/orders", "POST", {
+    const pagarmeOrder = await pagarme<PagarmeOrder>("/orders", "POST", {
       code: order.order_number || order.id,
       closed: true,
-      items: items.map((item: any) => ({
+      items: (items as OrderItemRow[]).map((item) => ({
         amount: cents(Number(item.price || 0)),
         description: item.product_name || "Item",
         quantity: Number(item.quantity || 1),
@@ -289,19 +342,19 @@ Deno.serve(async (req) => {
       },
     });
 
-    const charge = pagarmeOrder.charges?.[0] ?? {};
-    const tx = charge.last_transaction ?? charge.lastTransaction ?? {};
-    const status = mapPaymentStatus(charge.status ?? pagarmeOrder.status);
+    const charge = pagarmeOrder.charges?.[0] ?? null;
+    const tx = charge?.last_transaction ?? charge?.lastTransaction ?? {};
+    const status = mapPaymentStatus(charge?.status ?? pagarmeOrder.status ?? undefined);
     const paidAt = status === "paid" ? new Date().toISOString() : null;
 
-    const { data: savedPayment, error: paymentError } = await (supabase as any)
+    const { data: savedPayment, error: paymentError } = await supabase
       .from("order_payments")
       .insert({
         restaurant_id: order.restaurant_id,
         order_id: order.id,
         provider: "pagarme",
         provider_order_id: pagarmeOrder.id ?? null,
-        provider_charge_id: charge.id ?? null,
+        provider_charge_id: charge?.id ?? null,
         status,
         payment_method: "pix",
         amount: Number(order.total || 0),
@@ -321,18 +374,18 @@ Deno.serve(async (req) => {
       .update({
         payment_status: status,
         payment_provider: "pagarme",
-        payment_reference: pagarmeOrder.id ?? charge.id ?? null,
+        payment_reference: pagarmeOrder.id ?? charge?.id ?? null,
         paid_at: paidAt,
         status: status === "paid" ? "pendente" : "aguardando_pagamento",
       })
       .eq("id", order.id);
 
-    await (supabase as any)
+    await supabase
       .from("delivery_orders")
       .update({
         payment_status: status,
         payment_provider: "pagarme",
-        payment_reference: pagarmeOrder.id ?? charge.id ?? null,
+        payment_reference: pagarmeOrder.id ?? charge?.id ?? null,
         paid_at: paidAt,
         status: status === "paid" ? "pending" : "awaiting_payment",
       })

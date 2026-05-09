@@ -16,7 +16,7 @@ export const usePromotions = () => {
       if (!restaurantId) return [];
 
       const { data, error } = await supabase
-        .from('promotions' as any)
+        .from('promotions')
         .select('*')
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
@@ -38,7 +38,7 @@ export const usePromotions = () => {
 
       const now = new Date().toISOString();
       const { data, error } = await supabase
-        .from('promotions' as any)
+        .from('promotions')
         .select('*')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
@@ -62,7 +62,7 @@ export const usePromotions = () => {
       if (!restaurantId) throw new Error('Restaurant not found');
 
       const { data, error } = await supabase
-        .from('promotions' as any)
+        .from('promotions')
         .insert({
           restaurant_id: restaurantId,
           ...input,
@@ -87,7 +87,7 @@ export const usePromotions = () => {
   const updatePromotion = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Promotion> & { id: string }) => {
       const { data, error } = await supabase
-        .from('promotions' as any)
+        .from('promotions')
         .update(updates)
         .eq('id', id)
         .select()
@@ -110,7 +110,7 @@ export const usePromotions = () => {
   const deletePromotion = useMutation({
     mutationFn: async (promotionId: string) => {
       const { error } = await supabase
-        .from('promotions' as any)
+        .from('promotions')
         .delete()
         .eq('id', promotionId);
 
@@ -130,7 +130,7 @@ export const usePromotions = () => {
   const togglePromotion = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { data, error } = await supabase
-        .from('promotions' as any)
+        .from('promotions')
         .update({ is_active: !is_active })
         .eq('id', id)
         .select()

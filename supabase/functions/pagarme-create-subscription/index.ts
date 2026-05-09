@@ -38,13 +38,43 @@ interface RequestBody {
   card: CardInput;
 }
 
+type PagarmeErrorPayload = {
+  message?: string;
+  errors?: Array<{ message?: string }>;
+  raw?: string;
+};
+
+type PagarmeCustomer = {
+  id?: string;
+};
+
+type PagarmeCard = {
+  id?: string;
+};
+
+type PagarmeSubscription = {
+  id?: string;
+  status?: string;
+  next_billing_at?: string | null;
+  current_period_end?: string | null;
+};
+
 function authHeader() {
   const key = Deno.env.get("PAGARME_SECRET_KEY");
   if (!key) throw new Error("PAGARME_SECRET_KEY not configured");
   return `Basic ${btoa(key + ":")}`;
 }
 
-async function pagarme(path: string, method: string, body?: unknown) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function pagarmeErrorMessage(data: unknown, status: number) {
+  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
+  return payload?.message || payload?.errors?.[0]?.message || `HTTP ${status}`;
+}
+
+async function pagarme<T>(path: string, method: string, body?: unknown): Promise<T> {
   const res = await fetch(`${PAGARME_API_URL}${path}`, {
     method,
     headers: {
@@ -54,38 +84,40 @@ async function pagarme(path: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
-  let data: any = null;
+  let data: unknown = null;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
     data = { raw: text };
   }
   if (!res.ok) {
-    const msg = data?.message || data?.errors?.[0]?.message || `HTTP ${res.status}`;
+    const msg = pagarmeErrorMessage(data, res.status);
     throw new Error(`Pagar.me ${method} ${path}: ${msg}`);
   }
-  return data;
+  return data as T;
 }
 
 function digits(s: string) {
   return (s || "").replace(/\D/g, "");
 }
 
-function validateBody(b: any): RequestBody {
-  if (!b || typeof b !== "object") throw new Error("Invalid body");
+function validateBody(b: unknown): RequestBody {
+  if (!isRecord(b)) throw new Error("Invalid body");
+  const customer = isRecord(b.customer) ? b.customer : null;
+  const card = isRecord(b.card) ? b.card : null;
   if (!b.local_plan_id) throw new Error("local_plan_id is required");
   if (b.billing_cycle !== "monthly" && b.billing_cycle !== "yearly") {
     throw new Error("billing_cycle must be monthly or yearly");
   }
-  if (!b.customer?.name || !b.customer?.email || !b.customer?.document || !b.customer?.phone) {
+  if (!customer?.name || !customer.email || !customer.document || !customer.phone) {
     throw new Error("customer fields are required");
   }
   if (
-    !b.card?.number ||
-    !b.card?.holder_name ||
-    !b.card?.exp_month ||
-    !b.card?.exp_year ||
-    !b.card?.cvv
+    !card?.number ||
+    !card.holder_name ||
+    !card.exp_month ||
+    !card.exp_year ||
+    !card.cvv
   ) {
     throw new Error("card fields are required");
   }
@@ -212,7 +244,7 @@ Deno.serve(async (req) => {
     const areaCode = phoneDigits.slice(0, 2);
     const phoneNumber = phoneDigits.slice(2);
 
-    const customer = await pagarme("/customers", "POST", {
+    const customer = await pagarme<PagarmeCustomer>("/customers", "POST", {
       name: body.customer.name,
       email: body.customer.email,
       document: docDigits,
@@ -226,24 +258,27 @@ Deno.serve(async (req) => {
         },
       },
     });
+    if (!customer.id) throw new Error("Pagar.me customer response missing id");
 
     // 4) Card
-    const card = await pagarme(`/customers/${customer.id}/cards`, "POST", {
+    const card = await pagarme<PagarmeCard>(`/customers/${customer.id}/cards`, "POST", {
       number: digits(body.card.number),
       holder_name: body.card.holder_name,
       exp_month: Number(body.card.exp_month),
       exp_year: Number(body.card.exp_year) < 100 ? 2000 + Number(body.card.exp_year) : Number(body.card.exp_year),
       cvv: String(body.card.cvv),
     });
+    if (!card.id) throw new Error("Pagar.me card response missing id");
 
     // 5) Subscription
-    const subscription = await pagarme("/subscriptions", "POST", {
+    const subscription = await pagarme<PagarmeSubscription>("/subscriptions", "POST", {
       plan_id: pagarmePlanId,
       customer_id: customer.id,
       card_id: card.id,
       payment_method: "credit_card",
       installments: 1,
     });
+    if (!subscription.id) throw new Error("Pagar.me subscription response missing id");
 
     // 6) Datas
     const now = new Date();

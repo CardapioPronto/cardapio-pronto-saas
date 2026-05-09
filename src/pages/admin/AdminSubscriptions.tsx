@@ -25,8 +25,21 @@ import { toast } from '@/components/ui/sonner';
 import { Edit2, Loader2 } from 'lucide-react';
 import { listAllSubscriptions, updateSubscriptionStatus } from '@/services/adminService';
 
+type AdminSubscription = {
+  id: string;
+  restaurant_id: string;
+  restaurant?: {
+    name?: string | null;
+    owner_id?: string | null;
+  } | null;
+  plan_id: string;
+  status: string;
+  start_date: string;
+  end_date: string | null;
+};
+
 const AdminSubscriptions = () => {
-  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<AdminSubscription | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -12,13 +12,38 @@ const corsHeaders = {
 
 const PAGARME_API_URL = "https://api.pagar.me/core/v5";
 
+type PagarmeErrorPayload = {
+  message?: string;
+  errors?: Array<{ message?: string }>;
+  raw?: string;
+};
+
+type SubscriptionWithRestaurant = {
+  id: string;
+  restaurant_id: string;
+  plan_id: string;
+  pagarme_subscription_id: string | null;
+  billing_cycle: string | null;
+  status: string;
+  restaurants?: { owner_id?: string | null } | null;
+};
+
 function authHeader() {
   const key = Deno.env.get("PAGARME_SECRET_KEY");
   if (!key) throw new Error("PAGARME_SECRET_KEY not configured");
   return `Basic ${btoa(key + ":")}`;
 }
 
-async function pagarme(path: string, method: string, body?: unknown) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function pagarmeErrorMessage(data: unknown, status: number) {
+  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
+  return payload?.message || payload?.errors?.[0]?.message || `HTTP ${status}`;
+}
+
+async function pagarme<T>(path: string, method: string, body?: unknown): Promise<T> {
   const res = await fetch(`${PAGARME_API_URL}${path}`, {
     method,
     headers: {
@@ -28,13 +53,13 @@ async function pagarme(path: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
-  let data: any = null;
+  let data: unknown = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
   if (!res.ok) {
-    const msg = data?.message || data?.errors?.[0]?.message || `HTTP ${res.status}`;
+    const msg = pagarmeErrorMessage(data, res.status);
     throw new Error(`Pagar.me ${method} ${path}: ${msg}`);
   }
-  return data;
+  return data as T;
 }
 
 Deno.serve(async (req) => {
@@ -80,18 +105,19 @@ Deno.serve(async (req) => {
     );
 
     // Carrega a subscription e valida ownership
-    const { data: sub, error: subErr } = await admin
+    const { data: subData, error: subErr } = await admin
       .from("subscriptions")
       .select("id, restaurant_id, plan_id, pagarme_subscription_id, billing_cycle, status, restaurants:restaurant_id(owner_id)")
       .eq("id", subscription_id)
       .maybeSingle();
 
-    if (subErr || !sub) {
+    if (subErr || !subData) {
       return new Response(JSON.stringify({ error: "Subscription not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const isOwner = (sub as any).restaurants?.owner_id === userId;
+    const sub = subData as SubscriptionWithRestaurant;
+    const isOwner = sub.restaurants?.owner_id === userId;
     const { data: isAdmin } = await admin.rpc("is_super_admin", { user_id: userId });
     if (!isOwner && !isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -105,7 +131,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "cancel") {
-      await pagarme(`/subscriptions/${sub.pagarme_subscription_id}`, "DELETE");
+      await pagarme<unknown>(`/subscriptions/${sub.pagarme_subscription_id}`, "DELETE");
       const { data: updated } = await admin
         .from("subscriptions")
         .update({ status: "canceled", end_date: new Date().toISOString() })
@@ -141,7 +167,7 @@ Deno.serve(async (req) => {
           status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const result = await pagarme(
+      const result = await pagarme<{ next_billing_at?: string | null }>(
         `/subscriptions/${sub.pagarme_subscription_id}/plan`,
         "PATCH",
         { plan_id: newPagarmePlanId },

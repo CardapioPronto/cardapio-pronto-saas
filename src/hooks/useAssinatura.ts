@@ -16,7 +16,7 @@ export const useAssinatura = () => {
   });
 
   // Processar nova assinatura
-  const handleSubscriptionSuccess = (subscriptionData: any, selectedPlanId?: string) => {
+  const handleSubscriptionSuccess = (subscriptionData: Assinatura, selectedPlanId?: string) => {
     if (selectedPlanId) {
       setAssinatura({
         ...subscriptionData,

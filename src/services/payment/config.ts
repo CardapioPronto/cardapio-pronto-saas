@@ -37,8 +37,12 @@ export const configurePaymentService = (apiKey: string, isLive = false) => {
   console.log(`Pagar.me configurado: ${isLive ? 'Produção' : 'Homologação'}`);
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 // Função para fazer requisições à API do Pagar.me
-export const pagarmeRequest = async (endpoint: string, method: string, data?: any) => {
+export const pagarmeRequest = async <T = unknown>(endpoint: string, method: string, data?: unknown): Promise<T> => {
   try {
     const url = `${config.apiUrl}/${endpoint}`;
     
@@ -58,7 +62,7 @@ export const pagarmeRequest = async (endpoint: string, method: string, data?: an
       body: data ? JSON.stringify(data) : undefined
     });
     
-    const responseData = await response.json();
+    const responseData: unknown = await response.json();
     
     if (config.debug) {
       console.log(`[Pagar.me] Status da resposta: ${response.status}`);
@@ -66,10 +70,13 @@ export const pagarmeRequest = async (endpoint: string, method: string, data?: an
     }
     
     if (!response.ok) {
-      throw new Error(`Erro na API Pagar.me: ${responseData.message || response.statusText}`);
+      const message = isRecord(responseData) && typeof responseData.message === 'string'
+        ? responseData.message
+        : response.statusText;
+      throw new Error(`Erro na API Pagar.me: ${message}`);
     }
     
-    return responseData;
+    return responseData as T;
   } catch (error) {
     console.error('[Pagar.me] Erro na requisição:', error);
     throw error;

@@ -23,7 +23,7 @@ export function useCoupons(restaurantId: string) {
       if (!restaurantId) return [];
 
       const { data, error } = await supabase
-        .from('coupons' as any)
+        .from('coupons')
         .select('*')
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
@@ -44,7 +44,7 @@ export function useCoupons(restaurantId: string) {
       if (!restaurantId) return [];
 
       const { data, error } = await supabase
-        .from('coupons' as any)
+        .from('coupons')
         .select('*')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
@@ -67,7 +67,7 @@ export function useCoupons(restaurantId: string) {
       if (!restaurantId) return null;
 
       const { data: couponsData, error: couponsError } = await supabase
-        .from('coupons' as any)
+        .from('coupons')
         .select('id, code, is_active, valid_until, usage_count, discount_value, discount_type')
         .eq('restaurant_id', restaurantId);
 
@@ -79,7 +79,7 @@ export function useCoupons(restaurantId: string) {
       let typedUsage: { coupon_id: string; id: string }[] = [];
       if (couponIds.length > 0) {
         const { data: usageData, error: usageError } = await supabase
-          .from('coupon_usage' as any)
+          .from('coupon_usage')
           .select('coupon_id, id')
           .in('coupon_id', couponIds);
 
@@ -116,7 +116,6 @@ export function useCoupons(restaurantId: string) {
       if (mostUsedCouponId) {
         const mostUsedCoupon = typedCoupons.find((c) => c.id === mostUsedCouponId[0]);
         if (mostUsedCoupon) {
-          const couponUsages = typedUsage.filter((u) => u.coupon_id === mostUsedCouponId[0]);
           stats.mostUsedCoupon = {
             code: mostUsedCoupon.code || mostUsedCoupon.id,
             usageCount: mostUsedCouponId[1],
@@ -134,7 +133,7 @@ export function useCoupons(restaurantId: string) {
   const createCoupon = useMutation({
     mutationFn: async (formData: CouponFormData) => {
       const { data, error } = await supabase
-        .from('coupons' as any)
+        .from('coupons')
         .insert({
           restaurant_id: restaurantId,
           code: formData.code || generateCouponCode(),
@@ -167,7 +166,7 @@ export function useCoupons(restaurantId: string) {
   const updateCoupon = useMutation({
     mutationFn: async (data: { id: string; formData: CouponFormData }) => {
       const { error } = await supabase
-        .from('coupons' as any)
+        .from('coupons')
         .update({
           title: data.formData.title,
           description: data.formData.description,
@@ -196,7 +195,7 @@ export function useCoupons(restaurantId: string) {
   // Delete coupon
   const deleteCoupon = useMutation({
     mutationFn: async (couponId: string) => {
-      const { error } = await supabase.from('coupons' as any).delete().eq('id', couponId);
+      const { error } = await supabase.from('coupons').delete().eq('id', couponId);
 
       if (error) throw error;
     },
@@ -211,7 +210,7 @@ export function useCoupons(restaurantId: string) {
   const toggleCouponStatus = useMutation({
     mutationFn: async (data: { id: string; isActive: boolean }) => {
       const { error } = await supabase
-        .from('coupons' as any)
+        .from('coupons')
         .update({ is_active: data.isActive })
         .eq('id', data.id);
 
@@ -246,7 +245,7 @@ export async function validateCouponForOrder(
 ): Promise<{ valid: boolean; discount?: number; message: string }> {
   try {
     const { data: coupon, error } = await supabase
-      .from('coupons' as any)
+      .from('coupons')
       .select('*')
       .eq('restaurant_id', restaurantId)
       .eq('code', couponCode.trim().toUpperCase())
