@@ -15,7 +15,7 @@ export interface RestaurantMenuConfig {
   restaurant_id: string;
   theme_id: string;
   custom_colors: Record<string, string>;
-  custom_settings: Record<string, any>;
+  custom_settings: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -104,7 +104,7 @@ async function getCurrentRestaurantId() {
 
 export async function listEmailTemplates(scope: EmailIntegrationScope) {
   const restaurantId = scope === "restaurant" ? await getCurrentRestaurantId() : null;
-  let query = supabase.from("email_templates" as any).select("*").order("category").order("template_key");
+  let query = supabase.from("email_templates").select("*").order("category").order("template_key");
   query = scope === "system"
     ? query.is("restaurant_id", null)
     : query.eq("restaurant_id", restaurantId);
@@ -123,7 +123,7 @@ export async function saveEmailTemplate(scope: EmailIntegrationScope, template: 
   }
   const { data: userData } = await supabase.auth.getUser();
   const { data, error } = await supabase
-    .from("email_templates" as any)
+    .from("email_templates")
     .upsert({
       id: template.id,
       restaurant_id: restaurantId,
@@ -163,7 +163,7 @@ export async function copyAllowedEmailTemplate(templateKey: "order_confirmation"
 
 export async function listEmailLogs(scope: EmailIntegrationScope, limit = 50) {
   let query = supabase
-    .from("email_send_logs" as any)
+    .from("email_send_logs")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -182,7 +182,7 @@ export async function listEmailContacts(scope: EmailIntegrationScope, limit = 50
   if (scope !== "restaurant") return [];
   const restaurantId = await getCurrentRestaurantId();
   const { data, error } = await supabase
-    .from("restaurant_email_contacts" as any)
+    .from("restaurant_email_contacts")
     .select("*")
     .eq("restaurant_id", restaurantId)
     .order("created_at", { ascending: false })
@@ -195,7 +195,7 @@ export async function listEmailCampaigns(scope: EmailIntegrationScope, limit = 5
   if (scope !== "restaurant") return [];
   const restaurantId = await getCurrentRestaurantId();
   const { data, error } = await supabase
-    .from("email_campaigns" as any)
+    .from("email_campaigns")
     .select("*")
     .eq("restaurant_id", restaurantId)
     .order("created_at", { ascending: false })
@@ -222,7 +222,7 @@ export async function saveEmailCampaign(campaign: Partial<EmailCampaign>) {
   };
 
   const { data, error } = await supabase
-    .from("email_campaigns" as any)
+    .from("email_campaigns")
     .upsert(payload)
     .select("*")
     .single();
@@ -259,7 +259,7 @@ export async function sendEmailCampaign(campaignId: string) {
 
 export async function getEmailCampaignMetrics(campaignId: string): Promise<EmailCampaignMetrics> {
   const { data, error } = await supabase
-    .from("email_send_logs" as any)
+    .from("email_send_logs")
     .select("status")
     .eq("context_type", "campaign")
     .eq("context_id", campaignId)
@@ -303,7 +303,7 @@ export async function getEmailCampaignEntitlement(): Promise<EmailCampaignEntitl
   }
 
   const { data: subscriptions } = await supabase
-    .from("subscriptions" as any)
+    .from("subscriptions")
     .select("plan_id, status, start_date, created_at")
     .eq("restaurant_id", restaurantId)
     .in("status", ["active", "trialing", "past_due"])
@@ -325,7 +325,7 @@ export async function getEmailCampaignEntitlement(): Promise<EmailCampaignEntitl
   }
 
   const { data: plan } = await supabase
-    .from("plans" as any)
+    .from("plans")
     .select("name, email_campaigns_enabled, email_campaign_monthly_limit, email_campaign_contact_limit, email_custom_templates_enabled")
     .eq("id", subscription.plan_id)
     .maybeSingle();
@@ -335,7 +335,7 @@ export async function getEmailCampaignEntitlement(): Promise<EmailCampaignEntitl
   monthStart.setUTCHours(0, 0, 0, 0);
 
   const { count } = await supabase
-    .from("email_send_logs" as any)
+    .from("email_send_logs")
     .select("id", { count: "exact", head: true })
     .eq("restaurant_id", restaurantId)
     .eq("email_type", "marketing")

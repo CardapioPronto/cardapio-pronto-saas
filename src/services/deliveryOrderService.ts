@@ -44,6 +44,93 @@ export interface OnlineOrderPayment {
   amount?: number;
 }
 
+type JsonRecord = Record<string, unknown>;
+
+type PublicMenuOrderResult = {
+  tracking_id: string;
+  order_id: string;
+  delivery_order_id: string | null;
+  order_number: string | null;
+  fulfillment_type: FulfillmentType;
+  discount_amount?: number;
+  total?: number;
+};
+
+type CouponValidationResult = {
+  valid: boolean;
+  message: string;
+  code?: string;
+  title?: string;
+  discount?: number;
+};
+
+type OnlineOrderPaymentResponse = OnlineOrderPayment & {
+  error?: string;
+};
+
+type ViaCepResponse = {
+  erro?: boolean;
+  logradouro?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+};
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const readString = (record: JsonRecord, key: string): string | undefined =>
+  typeof record[key] === 'string' ? record[key] : undefined;
+
+const readNumber = (record: JsonRecord, key: string): number | undefined =>
+  typeof record[key] === 'number' ? record[key] : undefined;
+
+const readNullableString = (record: JsonRecord, key: string): string | null => {
+  const value = record[key];
+  return typeof value === 'string' ? value : null;
+};
+
+const isFulfillmentType = (value: unknown): value is FulfillmentType =>
+  value === 'delivery' || value === 'pickup' || value === 'table' || value === 'counter';
+
+const parseCreateOrderResult = (value: Json): PublicMenuOrderResult => {
+  if (!isRecord(value)) {
+    throw new Error('Resposta invalida ao criar pedido.');
+  }
+
+  const trackingId = readString(value, 'tracking_id');
+  const orderId = readString(value, 'order_id');
+  const fulfillmentType = value.fulfillment_type;
+
+  if (!trackingId || !orderId || !isFulfillmentType(fulfillmentType)) {
+    throw new Error('Resposta incompleta ao criar pedido.');
+  }
+
+  return {
+    tracking_id: trackingId,
+    order_id: orderId,
+    delivery_order_id: readNullableString(value, 'delivery_order_id'),
+    order_number: readNullableString(value, 'order_number'),
+    fulfillment_type: fulfillmentType,
+    discount_amount: readNumber(value, 'discount_amount'),
+    total: readNumber(value, 'total'),
+  };
+};
+
+const parseCouponValidation = (value: Json): CouponValidationResult => {
+  if (!isRecord(value)) {
+    throw new Error('Resposta invalida ao validar cupom.');
+  }
+
+  return {
+    valid: value.valid === true,
+    message: readString(value, 'message') || '',
+    code: readString(value, 'code'),
+    title: readString(value, 'title'),
+    discount: readNumber(value, 'discount'),
+  };
+};
+
 export const deliveryOrderService = {
   async create(input: CreateDeliveryOrderInput): Promise<{
     id: string;
@@ -88,21 +175,13 @@ export const deliveryOrderService = {
       })),
     };
 
-    const { data, error } = await supabase.rpc('create_public_menu_order' as any, {
+    const { data, error } = await supabase.rpc('create_public_menu_order', {
       payload,
     });
 
     if (error) throw error;
 
-    const result = data as {
-      tracking_id: string;
-      order_id: string;
-      delivery_order_id: string | null;
-      order_number: string | null;
-      fulfillment_type: FulfillmentType;
-      discount_amount?: number;
-      total?: number;
-    };
+    const result = parseCreateOrderResult(data);
 
     if (input.fulfillment_type === 'delivery' && result.delivery_order_id) {
       try {
@@ -160,44 +239,33 @@ export const deliveryOrderService = {
     tracking_id: string;
     payment_method: 'pix';
   }): Promise<OnlineOrderPayment> {
-    const { data, error } = await supabase.functions.invoke('pagarme-create-order-payment', {
+    const { data, error } = await supabase.functions.invoke<OnlineOrderPaymentResponse>('pagarme-create-order-payment', {
       body: input,
     });
 
     if (error) throw error;
-    if ((data as any)?.error) throw new Error((data as any).error);
-    return data as OnlineOrderPayment;
+    if (!data) throw new Error('Resposta vazia ao criar pagamento.');
+    if (data.error) throw new Error(data.error);
+    return data;
   },
 
   async validateCoupon(input: {
     restaurant_id: string;
     code: string;
     subtotal: number;
-  }): Promise<{
-    valid: boolean;
-    message: string;
-    code?: string;
-    title?: string;
-    discount?: number;
-  }> {
-    const { data, error } = await supabase.rpc('validate_public_coupon' as any, {
+  }): Promise<CouponValidationResult> {
+    const { data, error } = await supabase.rpc('validate_public_coupon', {
       p_code: input.code.trim().toUpperCase(),
       p_restaurant_id: input.restaurant_id,
       p_order_value: input.subtotal,
     });
 
     if (error) throw error;
-    return data as {
-      valid: boolean;
-      message: string;
-      code?: string;
-      title?: string;
-      discount?: number;
-    };
+    return parseCouponValidation(data);
   },
 
   async getById(id: string) {
-    const { data, error } = await supabase.rpc('get_public_order_tracking' as any, {
+    const { data, error } = await supabase.rpc('get_public_order_tracking', {
       p_tracking_id: id,
     });
     if (error) throw error;
@@ -206,7 +274,7 @@ export const deliveryOrderService = {
 
   async getStatusHistory(id: string) {
     const data = await this.getById(id);
-    return (data as any)?.history || [];
+    return isRecord(data) && Array.isArray(data.history) ? data.history : [];
   },
 };
 
@@ -222,7 +290,7 @@ export async function lookupCep(cep: string): Promise<{
   try {
     const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = await res.json() as ViaCepResponse;
     if (data.erro) return null;
     return {
       street: data.logradouro || '',

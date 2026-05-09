@@ -2,6 +2,55 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MenuTheme, RestaurantMenuConfig, DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
 import { restaurantPaymentService } from '@/services/restaurantPaymentService';
+import type { Json } from '@/integrations/supabase/types';
+import type { PostgrestError } from '@supabase/supabase-js';
+
+type JsonRecord = Record<string, unknown>;
+
+type PublicRestaurantRow = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  banner_url: string | null;
+  slug: string | null;
+  address: string | null;
+  phone: string | null;
+  phone_whatsapp: string | null;
+  business_hours: string | null;
+  category: string | null;
+  active: boolean | null;
+};
+
+type PublicPaymentSettings = ReturnType<typeof restaurantPaymentService.toPublic>;
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const toRecord = (value: Json | null | undefined): JsonRecord =>
+  isRecord(value) ? value : {};
+
+const toStringRecord = (value: Json | null | undefined): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(toRecord(value)).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+  );
+
+const toJson = (value: Record<string, unknown>): Json => value as unknown as Json;
+
+const toDeliveryConfig = (value: Json | null | undefined): DeliveryConfig => {
+  const record = toRecord(value);
+
+  return {
+    delivery_enabled: typeof record.delivery_enabled === 'boolean' ? record.delivery_enabled : DEFAULT_DELIVERY_CONFIG.delivery_enabled,
+    delivery_fee: typeof record.delivery_fee === 'number' ? record.delivery_fee : DEFAULT_DELIVERY_CONFIG.delivery_fee,
+    min_order_value: typeof record.min_order_value === 'number' ? record.min_order_value : DEFAULT_DELIVERY_CONFIG.min_order_value,
+    estimated_delivery_minutes: typeof record.estimated_delivery_minutes === 'number' ? record.estimated_delivery_minutes : DEFAULT_DELIVERY_CONFIG.estimated_delivery_minutes,
+    delivery_radius_km: typeof record.delivery_radius_km === 'number' ? record.delivery_radius_km : DEFAULT_DELIVERY_CONFIG.delivery_radius_km,
+    payment_methods: Array.isArray(record.payment_methods)
+      ? record.payment_methods.filter((method): method is string => typeof method === 'string')
+      : DEFAULT_DELIVERY_CONFIG.payment_methods,
+    pickup_enabled: typeof record.pickup_enabled === 'boolean' ? record.pickup_enabled : DEFAULT_DELIVERY_CONFIG.pickup_enabled,
+  };
+};
 
 export const menuThemeService = {
   // Buscar todos os temas disponíveis
@@ -66,8 +115,8 @@ export const menuThemeService = {
       // Transformar os tipos para compatibilidade
       return {
         ...data,
-        custom_colors: (data.custom_colors as Record<string, string>) || {},
-        custom_settings: (data.custom_settings as Record<string, any>) || {}
+        custom_colors: toStringRecord(data.custom_colors),
+        custom_settings: toRecord(data.custom_settings)
       };
     } catch (error) {
       console.error('Erro na função getRestaurantMenuConfig:', error);
@@ -82,8 +131,8 @@ export const menuThemeService = {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
       const columns = 'id, name, logo_url, banner_url, slug, address, phone, phone_whatsapp, business_hours, category, active';
 
-      let restaurant: any = null;
-      let restaurantError: any = null;
+      let restaurant: PublicRestaurantRow | null = null;
+      let restaurantError: PostgrestError | null = null;
 
       if (isUuid) {
         const res = await supabase
@@ -173,7 +222,7 @@ export const menuThemeService = {
         .sort(sortMenuItems)
         .map(category => ({
           ...category,
-          products: (productsByCategory[category.id] || []).map((product: any) => ({
+          products: (productsByCategory[category.id] || []).map(product => ({
             ...product,
             description: product.description || undefined,
             image_url: product.image_url || undefined,
@@ -209,7 +258,7 @@ export const menuThemeService = {
         return DEFAULT_DELIVERY_CONFIG;
       }
       if (!data) return DEFAULT_DELIVERY_CONFIG;
-      return { ...DEFAULT_DELIVERY_CONFIG, ...((data.setting_value as Partial<DeliveryConfig>) || {}) };
+      return toDeliveryConfig(data.setting_value);
     } catch (e) {
       console.warn('Falha em getDeliveryConfig', e);
       return DEFAULT_DELIVERY_CONFIG;
@@ -224,7 +273,7 @@ export const menuThemeService = {
         {
           restaurant_id: restaurantId,
           setting_key: 'delivery_config',
-          setting_value: config as any,
+          setting_value: toJson(config as unknown as Record<string, unknown>),
         },
         { onConflict: 'restaurant_id,setting_key' }
       );
@@ -234,11 +283,11 @@ export const menuThemeService = {
 
   async getPublicPaymentSettings(restaurantId: string) {
     try {
-      const { data, error } = await supabase.rpc('get_public_restaurant_payment_settings' as any, {
+      const { data, error } = await supabase.rpc('get_public_restaurant_payment_settings', {
         p_restaurant_id: restaurantId,
       });
       if (error) throw error;
-      return (data || restaurantPaymentService.toPublic(null)) as ReturnType<typeof restaurantPaymentService.toPublic>;
+      return (data || restaurantPaymentService.toPublic(null)) as PublicPaymentSettings;
     } catch (error) {
       console.warn('Falha ao buscar configurações públicas de pagamento', error);
       return restaurantPaymentService.toPublic(null);
@@ -283,7 +332,7 @@ export const menuThemeService = {
     restaurantId: string, 
     themeId: string, 
     customColors: Record<string, string> = {},
-    customSettings: Record<string, any> = {}
+    customSettings: Record<string, unknown> = {}
   ): Promise<RestaurantMenuConfig> {
     if (!restaurantId) {
       throw new Error('Restaurant ID é obrigatório');
@@ -309,7 +358,7 @@ export const menuThemeService = {
           .update({
             theme_id: themeId,
             custom_colors: customColors,
-            custom_settings: customSettings,
+            custom_settings: toJson(customSettings),
             updated_at: new Date().toISOString()
           })
           .eq('id', existingConfig.id)
@@ -323,8 +372,8 @@ export const menuThemeService = {
 
         return {
           ...data,
-          custom_colors: (data.custom_colors as Record<string, string>) || {},
-          custom_settings: (data.custom_settings as Record<string, any>) || {}
+          custom_colors: toStringRecord(data.custom_colors),
+          custom_settings: toRecord(data.custom_settings)
         };
       } else {
         // Criar nova configuração
@@ -334,7 +383,7 @@ export const menuThemeService = {
             restaurant_id: restaurantId,
             theme_id: themeId,
             custom_colors: customColors,
-            custom_settings: customSettings,
+            custom_settings: toJson(customSettings),
             is_active: true
           })
           .select()
@@ -347,8 +396,8 @@ export const menuThemeService = {
         
         return {
           ...data,
-          custom_colors: (data.custom_colors as Record<string, string>) || {},
-          custom_settings: (data.custom_settings as Record<string, any>) || {}
+          custom_colors: toStringRecord(data.custom_colors),
+          custom_settings: toRecord(data.custom_settings)
         };
       }
     } catch (error) {
