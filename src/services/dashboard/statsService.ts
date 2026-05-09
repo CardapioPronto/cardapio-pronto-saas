@@ -2,10 +2,27 @@
 import { supabase } from '@/lib/supabase';
 import { DashboardStats } from './types';
 
-const db = supabase as any;
+const db = supabase;
 const OPEN_ORDER_STATUSES = ['pendente', 'preparo', 'em-andamento', 'pending', 'preparing'];
 
 const isCanceled = (status?: string | null) => status === 'cancelado' || status === 'cancelled' || status === 'canceled';
+
+type DashboardOrderRow = {
+  id: string;
+  total?: number | null;
+  status: string | null;
+  created_at: string | null;
+};
+
+type SoldItemRow = {
+  quantity: number | null;
+  orders?: { status?: string | null } | { status?: string | null }[] | null;
+};
+
+const getJoinedOrderStatus = (item: SoldItemRow) => {
+  const order = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+  return order?.status || null;
+};
 
 const calculateGrowth = (current: number, previous: number) => {
   if (previous > 0) return ((current - previous) / previous) * 100;
@@ -47,17 +64,19 @@ export const getDashboardStats = async (
 
     if (previousError) throw previousError;
 
-    const recentValidOrders = (recentOrders || []).filter((order: any) => !isCanceled(order.status));
-    const previousValidOrders = (previousOrders || []).filter((order: any) => !isCanceled(order.status));
+    const recentOrderRows = (recentOrders || []) as DashboardOrderRow[];
+    const previousOrderRows = (previousOrders || []) as DashboardOrderRow[];
+    const recentValidOrders = recentOrderRows.filter((order) => !isCanceled(order.status));
+    const previousValidOrders = previousOrderRows.filter((order) => !isCanceled(order.status));
     const totalPedidos = recentOrders?.length || 0;
-    const pedidosAbertos = (recentOrders || []).filter((order: any) => OPEN_ORDER_STATUSES.includes(order.status)).length;
+    const pedidosAbertos = recentOrderRows.filter((order) => OPEN_ORDER_STATUSES.includes(order.status || '')).length;
     const faturamento = includeFinancials
-      ? recentValidOrders.reduce((sum: number, order: any) => sum + Number(order.total || 0), 0)
+      ? recentValidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
       : 0;
     
     const previousTotalPedidos = previousOrders?.length || 0;
     const previousFaturamento = includeFinancials
-      ? previousValidOrders.reduce((sum: number, order: any) => sum + Number(order.total || 0), 0)
+      ? previousValidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
       : 0;
 
     const crescimentoPedidos = calculateGrowth(totalPedidos, previousTotalPedidos);
@@ -74,9 +93,10 @@ export const getDashboardStats = async (
 
     if (productsError) throw productsError;
 
-    const itensVendidos = (soldItems || [])
-      .filter((item: any) => !isCanceled(item.orders?.status))
-      .reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0);
+    const soldItemRows = (soldItems || []) as SoldItemRow[];
+    const itensVendidos = soldItemRows
+      .filter((item) => !isCanceled(getJoinedOrderStatus(item)))
+      .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
     const ticketMedio = includeFinancials && recentValidOrders.length > 0
       ? faturamento / recentValidOrders.length

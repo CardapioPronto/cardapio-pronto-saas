@@ -2,7 +2,15 @@
 import { supabase } from '@/lib/supabase';
 import { RecentSale } from './types';
 
-const db = supabase as any;
+const db = supabase;
+
+type RecentOrderRow = {
+  id: string;
+  customer_name: string | null;
+  total?: number | null;
+  status: string | null;
+  created_at: string | null;
+};
 
 export const getRecentSales = async (
   restaurantId: string,
@@ -26,16 +34,18 @@ export const getRecentSales = async (
 
     if (error) throw error;
 
-    return orders?.map(order => ({
+    const orderRows = (orders || []) as RecentOrderRow[];
+
+    return orderRows.map(order => ({
       id: order.id,
-      customer: order.customer_name,
+      customer: order.customer_name || 'Cliente',
       amount: includeFinancials ? Number(order.total || 0) : null,
-      status: order.status,
-      time: new Date(order.created_at).toLocaleTimeString('pt-BR', {
+      status: order.status || 'pendente',
+      time: new Date(order.created_at || Date.now()).toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit'
       })
-    })) || [];
+    }));
   } catch (error) {
     console.error('Erro ao buscar vendas recentes:', error);
     return [];

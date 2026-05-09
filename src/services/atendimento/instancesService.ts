@@ -1,18 +1,37 @@
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppInstance, CreateInstanceInput } from "@/types/atendimento";
 
-// Cast to any until Supabase types are regenerated with new columns
-const db = supabase as any;
+const db = supabase;
 
-function getEvolutionStatus(data: any): InstanceStatus {
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null;
+}
+
+function readPath(value: unknown, ...path: string[]) {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+function readString(value: unknown, ...path: string[]) {
+  const raw = readPath(value, ...path);
+  return raw === undefined || raw === null || raw === '' ? null : String(raw);
+}
+
+function getEvolutionStatus(data: unknown): InstanceStatus {
   const rawState =
-    data?._pubfy?.status ||
-    data?.instance?.state ||
-    data?.instance?.connectionState ||
-    data?.state ||
-    data?.connectionState?.state ||
-    data?.connectionState ||
-    data?.status;
+    readString(data, '_pubfy', 'status') ||
+    readString(data, 'instance', 'state') ||
+    readString(data, 'instance', 'connectionState') ||
+    readString(data, 'state') ||
+    readString(data, 'connectionState', 'state') ||
+    readString(data, 'connectionState') ||
+    readString(data, 'status');
 
   const state = String(rawState || '').toLowerCase();
   if (['connected', 'open', 'connect', 'online'].includes(state)) return 'CONNECTED';
@@ -20,13 +39,13 @@ function getEvolutionStatus(data: any): InstanceStatus {
   return 'DISCONNECTED';
 }
 
-function getEvolutionPhone(data: any): string | null {
+function getEvolutionPhone(data: unknown): string | null {
   const raw =
-    data?._pubfy?.phoneNumber ||
-    data?.instance?.phoneNumber ||
-    data?.instance?.ownerJid ||
-    data?.phoneNumber ||
-    data?.ownerJid;
+    readString(data, '_pubfy', 'phoneNumber') ||
+    readString(data, 'instance', 'phoneNumber') ||
+    readString(data, 'instance', 'ownerJid') ||
+    readString(data, 'phoneNumber') ||
+    readString(data, 'ownerJid');
 
   if (!raw) return null;
   const digits = String(raw).split('@')[0].replace(/\D/g, '');
@@ -91,13 +110,13 @@ export const InstancesService = {
 
       if (evoError) {
         console.error('Evolution API create error:', evoError);
-      } else if (evoResult?.instance) {
+      } else if (isRecord(readPath(evoResult, 'instance'))) {
         // Update DB with Evolution instance ID
         await db
           .from('whatsapp_instances')
           .update({
-            evolution_instance_id: evoResult.instance?.instanceName || null,
-            webhook_url: evoResult?._pubfy?.webhookUrl || null,
+            evolution_instance_id: readString(evoResult, 'instance', 'instanceName'),
+            webhook_url: readString(evoResult, '_pubfy', 'webhookUrl'),
             status: 'CREATED',
           })
           .eq('id', data.id);
@@ -156,7 +175,7 @@ export const InstancesService = {
   },
 
   async toggleAutomation(id: string, enabled: boolean): Promise<WhatsAppInstance> {
-    return this.update(id, { automation_enabled: enabled } as any);
+    return this.update(id, { automation_enabled: enabled });
   },
 
   async connectInstance(instanceId: string, restaurantId: string): Promise<{ qrcode?: string }> {
@@ -177,7 +196,7 @@ export const InstancesService = {
       await this.update(instanceId, {
         status: 'CONNECTING',
         qrcode_base64: data.base64,
-      } as any);
+      });
     }
 
     return { qrcode: data?.base64 };
@@ -198,7 +217,7 @@ export const InstancesService = {
     await this.update(instanceId, {
       status: 'DISCONNECTED',
       qrcode_base64: null,
-    } as any);
+    });
   },
 
   async refreshStatus(instanceId: string, restaurantId: string): Promise<InstanceStatus> {
@@ -223,7 +242,7 @@ export const InstancesService = {
       status: newStatus,
       qrcode_base64: newStatus === 'CONNECTED' ? null : instance.qrcode_base64,
       phone_number: newStatus === 'CONNECTED' ? phoneNumber || instance.phone_number : null,
-    } as any);
+    });
 
     return newStatus;
   },
@@ -244,8 +263,8 @@ export const InstancesService = {
     if (data?.error) throw new Error(data.error);
 
     await this.update(instanceId, {
-      webhook_url: data?._pubfy?.webhookUrl || 'configured',
-    } as any);
+      webhook_url: readString(data, '_pubfy', 'webhookUrl') || 'configured',
+    });
   },
 };
 

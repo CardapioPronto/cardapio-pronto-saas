@@ -1,8 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ConversationThread, ConversationMessage, ConversationNote, ConversationAssignment, ThreadStatus } from "@/types/atendimento";
 
-// Helper for new tables not yet in generated Supabase types
-const db = supabase as any;
+const db = supabase;
 
 function escapePostgrestSearch(value: string): string {
   return value.replace(/[%_*(),.]/g, '\\$&').trim();

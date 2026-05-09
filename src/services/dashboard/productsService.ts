@@ -2,8 +2,21 @@
 import { supabase } from '@/lib/supabase';
 import { PopularProduct } from './types';
 
-const db = supabase as any;
+const db = supabase;
 const isCanceled = (status?: string | null) => status === 'cancelado' || status === 'cancelled' || status === 'canceled';
+
+type ProductSaleRow = {
+  product_id: string | null;
+  product_name: string | null;
+  quantity: number | null;
+  price?: number | null;
+  orders?: { status?: string | null } | { status?: string | null }[] | null;
+};
+
+const getJoinedOrderStatus = (item: ProductSaleRow) => {
+  const order = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+  return order?.status || null;
+};
 
 export const getPopularProducts = async (
   restaurantId: string,
@@ -44,10 +57,12 @@ export const getPopularProducts = async (
     // Agrupar por produto e calcular totais
     const productMap = new Map<string, PopularProduct>();
     
-    productSales
-      ?.filter((item: any) => !isCanceled(item.orders?.status))
-      .forEach((item: any) => {
-        const productId = item.product_id || item.product_name;
+    const productSaleRows = (productSales || []) as ProductSaleRow[];
+
+    productSaleRows
+      .filter((item) => !isCanceled(getJoinedOrderStatus(item)))
+      .forEach((item) => {
+        const productId = item.product_id || item.product_name || 'produto-sem-id';
         const quantity = Number(item.quantity || 0);
         const revenue = includeFinancials ? quantity * Number(item.price || 0) : 0;
         const existing = productMap.get(productId);
@@ -60,7 +75,7 @@ export const getPopularProducts = async (
 
         productMap.set(productId, {
           id: productId,
-          name: item.product_name,
+          name: item.product_name || 'Produto',
           sales: quantity,
           revenue,
           category: 'Produto',

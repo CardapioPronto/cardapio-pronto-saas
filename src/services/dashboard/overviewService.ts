@@ -1,9 +1,15 @@
 import { supabase } from '@/lib/supabase';
 import { DashboardOverview } from './types';
 
-const db = supabase as any;
+const db = supabase;
 const OPEN_ORDER_STATUSES = ['pendente', 'preparo', 'em-andamento', 'pending', 'preparing'];
 const PREPARING_STATUSES = ['preparo', 'em-andamento', 'preparing'];
+
+type ProductAvailabilityRow = { available: boolean | null };
+type OpenOrderRow = { status: string | null; created_at: string | null };
+type TableStatusRow = { status: string | null };
+type ThreadSummaryRow = { status: string | null; unread_count: number | null };
+type WhatsAppInstanceSummaryRow = { status: string | null; webhook_url: string | null };
 
 const emptyOverview: DashboardOverview = {
   restaurantName: 'Restaurante',
@@ -103,16 +109,16 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       console.warn('Métrica parcial do dashboard indisponível:', error);
     });
 
-    const products = productsResult.error ? [] : productsResult.data || [];
-    const orders = ordersResult.error ? [] : ordersResult.data || [];
-    const tables = tablesResult.error ? [] : tablesResult.data || [];
-    const threads = threadsResult.error ? [] : threadsResult.data || [];
-    const instances = instancesResult.error ? [] : instancesResult.data || [];
+    const products = (productsResult.error ? [] : productsResult.data || []) as ProductAvailabilityRow[];
+    const orders = (ordersResult.error ? [] : ordersResult.data || []) as OpenOrderRow[];
+    const tables = (tablesResult.error ? [] : tablesResult.data || []) as TableStatusRow[];
+    const threads = (threadsResult.error ? [] : threadsResult.data || []) as ThreadSummaryRow[];
+    const instances = (instancesResult.error ? [] : instancesResult.data || []) as WhatsAppInstanceSummaryRow[];
 
-    const availableProducts = products.filter((product: any) => product.available !== false).length;
-    const openOrdersToday = orders.filter((order: any) => new Date(order.created_at) >= startOfToday).length;
+    const availableProducts = products.filter((product) => product.available !== false).length;
+    const openOrdersToday = orders.filter((order) => new Date(order.created_at || 0) >= startOfToday).length;
     const overdueOpenOrders = Math.max(0, orders.length - openOrdersToday);
-    const whatsappConnectedInstances = instances.filter((instance: any) => instance.status === 'CONNECTED').length;
+    const whatsappConnectedInstances = instances.filter((instance) => instance.status === 'CONNECTED').length;
 
     return {
       restaurantName: restaurantResult.error ? 'Restaurante' : restaurantResult.data?.name || 'Restaurante',
@@ -125,20 +131,20 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       openOrders: orders.length,
       openOrdersToday,
       overdueOpenOrders,
-      pendingOrders: orders.filter((order: any) => order.status === 'pendente' || order.status === 'pending').length,
-      preparingOrders: orders.filter((order: any) => PREPARING_STATUSES.includes(order.status)).length,
+      pendingOrders: orders.filter((order) => order.status === 'pendente' || order.status === 'pending').length,
+      preparingOrders: orders.filter((order) => PREPARING_STATUSES.includes(order.status || '')).length,
       totalTables: tables.length,
-      occupiedTables: tables.filter((table: any) => table.status === 'ocupada').length,
-      reservedTables: tables.filter((table: any) => table.status === 'reservada').length,
-      unavailableTables: tables.filter((table: any) => table.status === 'indisponivel').length,
+      occupiedTables: tables.filter((table) => table.status === 'ocupada').length,
+      reservedTables: tables.filter((table) => table.status === 'reservada').length,
+      unavailableTables: tables.filter((table) => table.status === 'indisponivel').length,
       activeCoupons: 0,
       expiringCoupons: 0,
       activePromotions: 0,
       whatsappInstances: instances.length,
       whatsappConnectedInstances,
-      whatsappNeedsAttention: instances.filter((instance: any) => instance.status !== 'CONNECTED' || !instance.webhook_url).length,
-      waitingHuman: threads.filter((thread: any) => thread.status === 'waiting_human').length,
-      unreadMessages: threads.reduce((sum: number, thread: any) => sum + Number(thread.unread_count || 0), 0),
+      whatsappNeedsAttention: instances.filter((instance) => instance.status !== 'CONNECTED' || !instance.webhook_url).length,
+      waitingHuman: threads.filter((thread) => thread.status === 'waiting_human').length,
+      unreadMessages: threads.reduce((sum, thread) => sum + Number(thread.unread_count || 0), 0),
       menuThemeConfigured: menuConfigResult.error ? false : (menuConfigResult.count || 0) > 0,
     };
   } catch (error) {

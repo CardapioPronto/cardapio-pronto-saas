@@ -1,8 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AutomationSettings, AIHandoffRule, UpdateAutomationInput, HandoffRuleType } from "@/types/atendimento";
+import type { Database } from "@/integrations/supabase/types";
 
-// Helper for new tables not yet in generated Supabase types
-const db = supabase as any;
+const db = supabase;
+type AutomationSettingsUpdate = Database['public']['Tables']['automation_settings']['Update'];
 
 export const AutomationService = {
   async getSettings(instanceId: string): Promise<AutomationSettings | null> {
@@ -22,7 +23,7 @@ export const AutomationService = {
       .upsert({
         instance_id: instanceId,
         restaurant_id: restaurantId,
-        ...updates,
+        ...(updates as AutomationSettingsUpdate),
       }, { onConflict: 'instance_id' })
       .select()
       .single();
