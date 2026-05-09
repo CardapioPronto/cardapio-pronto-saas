@@ -100,19 +100,19 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [ ] Criar RPC ou Edge Function para criar pedido de PDV de forma atomica.
-- [ ] Recalcular total no servidor usando produtos do banco.
-- [ ] Validar disponibilidade de produtos no servidor.
-- [ ] Validar restaurante e permissao do usuario no servidor.
-- [ ] Inserir `orders` e `order_items` na mesma transacao.
-- [ ] Atualizar mesa na mesma transacao quando aplicavel.
-- [ ] Retornar pedido normalizado para o front.
-- [ ] Criar RPC para alterar status de pedido de forma atomica.
-- [ ] Sincronizar status de `delivery_orders` e mesa de forma consistente.
-- [ ] Bloquear transicoes invalidas ou documentar transicoes permitidas.
-- [ ] Revisar calculo de resumo do historico para considerar apenas status faturaveis.
-- [ ] Reduzir consultas duplicadas em `listarPedidos`.
-- [ ] Adicionar indices se necessario para historico por restaurante/data/status.
+- [x] Criar RPC ou Edge Function para criar pedido de PDV de forma atomica.
+- [x] Recalcular total no servidor usando produtos do banco.
+- [x] Validar disponibilidade de produtos no servidor.
+- [x] Validar restaurante e permissao do usuario no servidor.
+- [x] Inserir `orders` e `order_items` na mesma transacao.
+- [x] Atualizar mesa na mesma transacao quando aplicavel.
+- [x] Retornar pedido normalizado para o front.
+- [x] Criar RPC para alterar status de pedido de forma atomica.
+- [x] Sincronizar status de `delivery_orders` e mesa de forma consistente.
+- [x] Bloquear transicoes invalidas ou documentar transicoes permitidas.
+- [x] Revisar calculo de resumo do historico para considerar apenas status faturaveis.
+- [x] Reduzir consultas duplicadas em `listarPedidos`.
+- [x] Adicionar indices se necessario para historico por restaurante/data/status.
 
 Criterio de aceite:
 
@@ -124,7 +124,14 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- 2026-05-09: Criada migration `20260509120000_create_pos_order_transaction_rpcs.sql` com RPCs `create_pos_order(payload jsonb)` e `update_order_status(p_order_id uuid, p_status text)`.
+- 2026-05-09: `create_pos_order` recalcula total no banco, valida restaurante, permissao `pdv_access`, produtos, disponibilidade, mesa ativa e grava pedido/itens/mesa na mesma transacao.
+- 2026-05-09: `update_order_status` valida permissao `orders_manage`, bloqueia transicoes invalidas, atualiza mesa na mesma transacao e usa o trigger existente `sync_delivery_order_status_from_order` para sincronizar `delivery_orders`.
+- 2026-05-09: RPCs aplicadas no banco remoto e confirmadas via `pg_proc`.
+- 2026-05-09: `listarPedidos` deixou de buscar `order_items` duas vezes e o resumo financeiro passou a considerar apenas pedidos `finalizado`.
+- 2026-05-09: Criados indices `idx_orders_restaurant_created_status` e `idx_orders_restaurant_table_status`.
+- 2026-05-09: `npm run typecheck`, `npm run preflight:prod`, `npx eslint .` e `npm run build` passaram.
+- Pendente: teste manual no navegador criando pedido mesa/balcao, cancelando/finalizando, validando mesa livre/ocupada, cozinha e historico.
 
 ---
 
@@ -462,3 +469,4 @@ Evidencia:
 | --- | --- | --- | --- |
 | 2026-05-09 | Auditoria inicial | Concluida | Base compila, mas ainda nao recomendada para producao comercial ampla. |
 | 2026-05-09 | Bloco 1 | Implementado tecnicamente | Dependencias de producao sem vulnerabilidades conhecidas; `xlsx` removido; pendente teste manual de exportacao com dados reais. |
+| 2026-05-09 | Bloco 2 | Implementado tecnicamente | PDV e status de pedidos migrados para RPCs transacionais; pendente teste manual completo em mesa/balcao/cozinha. |

@@ -3065,6 +3065,20 @@ export type Database = {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
       }
+      create_pos_order: {
+        Args: { payload: Json }
+        Returns: {
+          id: string
+          order_id: string
+          order_number: string
+          order_type: string
+          restaurant_id: string
+          source: string
+          status: string
+          table_id: string | null
+          total: number
+        }
+      }
       create_public_menu_order: { Args: { payload: Json }; Returns: Json }
       get_public_order_tracking: {
         Args: { p_tracking_id: string }
@@ -3147,6 +3161,16 @@ export type Database = {
           target_restaurant_id: string
         }
         Returns: boolean
+      }
+      update_order_status: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: {
+          id: string
+          restaurant_id: string
+          status: string
+          table_id: string | null
+          table_status: string | null
+        }
       }
       user_has_role: {
         Args: { required_role: string; user_id: string }

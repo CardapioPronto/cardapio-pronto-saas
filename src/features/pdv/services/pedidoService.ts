@@ -9,7 +9,6 @@ import {
   PedidoStatus,
 } from "../types";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
-import { mesasService } from "@/services/mesasService";
 import { toast } from "sonner";
 
 type PedidoQueryRow = {
@@ -38,16 +37,6 @@ type PedidoQueryRow = {
   } | null;
 };
 
-type OrderItemQueryRow = {
-  id: string;
-  order_id: string;
-  product_id: string | null;
-  product_name: string;
-  quantity: number;
-  price: number;
-  observations: string | null;
-};
-
 interface ListarPedidosOptions {
   dataInicio?: string;
   dataFim?: string;
@@ -74,6 +63,7 @@ const formatMesaDisplay = (pedido: PedidoQueryRow) => {
 };
 
 const OPEN_TABLE_STATUSES: PedidoStatus[] = ['pendente', 'preparo', 'em-andamento', 'pronto'];
+const FATURAMENTO_STATUS: PedidoStatus = 'finalizado';
 
 const notifyMesasChanged = (restaurantId: string) => {
   window.dispatchEvent(new CustomEvent('mesas:changed', { detail: { restaurantId } }));
@@ -82,7 +72,7 @@ const notifyMesasChanged = (restaurantId: string) => {
 const montarResumoPedidos = (pedidos: PedidoResumoRow[] = []): HistoricoPedidosResumo => ({
   totalPedidos: pedidos.length,
   totalVendido: pedidos
-    .filter((pedido) => pedido.status !== 'cancelado')
+    .filter((pedido) => pedido.status === FATURAMENTO_STATUS)
     .reduce((total, pedido) => total + Number(pedido.total || 0), 0),
   pedidosAbertos: pedidos.filter((pedido) => OPEN_TABLE_STATUSES.includes(pedido.status as PedidoStatus)).length,
   cancelados: pedidos.filter((pedido) => pedido.status === 'cancelado').length,
@@ -92,8 +82,8 @@ export async function salvarPedido(
   restaurantId: string,
   mesaOuBalcao: string,
   itensPedido: ItemPedido[],
-  totalPedido: number,
-  employeeId: string,
+  _totalPedido: number,
+  _employeeId: string,
   nomeCliente?: string,
   telefoneCliente?: string,
   mesaId?: string
@@ -108,68 +98,37 @@ export async function salvarPedido(
       return { success: false, error: new Error('Mesa não selecionada') };
     }
     
-    // 1. Inserir o pedido principal
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
+    const { data: order, error: orderError } = await supabase.rpc('create_pos_order', {
+      payload: {
         restaurant_id: restaurantId,
-        employee_id: employeeId,
-        customer_name: nomeCliente || (isMesa ? 'Cliente local' : 'Cliente balcão'),
-        customer_phone: telefoneCliente || null,
         order_type: isMesa ? 'mesa' : 'balcao',
         table_id: tableId,
-        status: 'pendente',
-        total: totalPedido,
-        source: 'app'
-      })
-      .select()
-      .single();
+        customer_name: nomeCliente || undefined,
+        customer_phone: telefoneCliente || undefined,
+        items: itensPedido.map((item) => ({
+          product_id: item.produto.id,
+          quantity: item.quantidade,
+          observations: item.observacao || undefined,
+        })),
+      },
+    });
 
-    if (orderError) {
+    if (orderError || !order) {
       console.error('Erro ao criar pedido:', orderError);
       toast.error('Erro ao salvar o pedido. Por favor, tente novamente.');
-      return { success: false, error: orderError };
+      return { success: false, error: orderError || new Error('Pedido não retornado') };
     }
 
-    // 2. Inserir os itens do pedido
-    const orderItems = itensPedido.map(item => ({
-      order_id: order.id,
-      product_id: item.produto.id,
-      product_name: item.produto.name,
-      quantity: item.quantidade,
-      price: item.produto.price,
-      observations: item.observacao || null
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-
-    if (itemsError) {
-      console.error('Erro ao criar itens do pedido:', itemsError);
-      toast.error('Erro ao salvar os itens do pedido.');
-      await supabase.from('orders').delete().eq('id', order.id);
-      return { success: false, error: itemsError };
-    }
-
-    // 3. Atualizar status da mesa se for pedido de mesa
     if (isMesa && mesaId) {
-      try {
-        await mesasService.updateMesaStatus(mesaId, 'ocupada');
-        notifyMesasChanged(restaurantId);
-      } catch (mesaError) {
-        console.error('Erro ao atualizar status da mesa:', mesaError);
-        // Não falhar o pedido por erro na atualização da mesa
-      }
+      notifyMesasChanged(restaurantId);
     }
 
-    // 4. Enviar notificação via WhatsApp se configurado e telefone fornecido
-    if (telefoneCliente && order?.id) {
+    if (telefoneCliente && order.order_id) {
       try {
         await WhatsAppService.sendOrderConfirmation(
           restaurantId,
           telefoneCliente,
-          String(order.id)
+          String(order.order_id)
         );
       } catch (whatsappError) {
         console.error('Erro ao enviar notificação WhatsApp:', whatsappError);
@@ -264,27 +223,6 @@ export async function listarPedidos(
     }
 
     const rows = (data || []) as PedidoQueryRow[];
-    const orderIds = rows.map((pedido) => pedido.id);
-    const itemsByOrderId = new Map<string, OrderItemQueryRow[]>();
-
-    if (orderIds.length > 0) {
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select('id, order_id, product_id, product_name, quantity, price, observations')
-        .in('order_id', orderIds)
-        .order('created_at', { ascending: true });
-
-      if (itemsError) {
-        console.error('Erro ao buscar itens dos pedidos:', itemsError);
-        return { success: false, error: itemsError };
-      }
-
-      for (const item of (itemsData || []) as OrderItemQueryRow[]) {
-        const items = itemsByOrderId.get(item.order_id) || [];
-        items.push(item);
-        itemsByOrderId.set(item.order_id, items);
-      }
-    }
 
     const pedidosFormatados = rows.map((pedido) => ({
       id: pedido.id,
@@ -292,7 +230,7 @@ export async function listarPedidos(
       table_id: pedido.table_id,
       cliente: pedido.customer_name || undefined,
       clientName: pedido.customer_name || undefined,
-      itensPedido: (itemsByOrderId.get(pedido.id) || pedido.order_items || []).map((item) => ({
+      itensPedido: (pedido.order_items || []).map((item) => ({
         produto: {
           id: item.product_id || item.id,
           name: item.product_name,
@@ -326,27 +264,10 @@ export async function listarPedidos(
 
 export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoStatus) {
   try {
-    // Primeiro, buscar informações do pedido para poder liberar a mesa se necessário
-    const { data: orderData, error: fetchError } = await supabase
-      .from('orders')
-      .select('table_id, restaurant_id, order_type')
-      .eq('id', pedidoId)
-      .single();
-
-    if (fetchError) {
-      console.error('Erro ao buscar pedido:', fetchError);
-      toast.error('Erro ao buscar informações do pedido.');
-      return { success: false, error: fetchError };
-    }
-
-    // Atualizar o status do pedido
-    const { error } = await supabase
-      .from('orders')
-      .update({
-        status: novoStatus,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', pedidoId);
+    const { data, error } = await supabase.rpc('update_order_status', {
+      p_order_id: pedidoId,
+      p_status: novoStatus,
+    });
 
     if (error) {
       console.error('Erro ao alterar status do pedido:', error);
@@ -354,39 +275,12 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoSt
       return { success: false, error };
     }
 
-    if (OPEN_TABLE_STATUSES.includes(novoStatus) && orderData.order_type === 'mesa' && orderData.table_id) {
-      try {
-        await mesasService.updateMesaStatus(orderData.table_id, 'ocupada');
-        notifyMesasChanged(orderData.restaurant_id);
-      } catch (mesaError) {
-        console.error('Erro ao ocupar mesa:', mesaError);
-      }
-    }
-
-    // Se ainda existirem pedidos abertos na mesa, ela permanece ocupada.
-    if ((novoStatus === 'finalizado' || novoStatus === 'cancelado') && orderData.order_type === 'mesa' && orderData.table_id) {
-      try {
-        const { data: pedidosAbertos, error: pedidosAbertosError } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('restaurant_id', orderData.restaurant_id)
-          .eq('table_id', orderData.table_id)
-          .in('status', OPEN_TABLE_STATUSES)
-          .neq('id', pedidoId);
-
-        if (pedidosAbertosError) throw pedidosAbertosError;
-
-        const mesaStatus = pedidosAbertos && pedidosAbertos.length > 0 ? 'ocupada' : 'livre';
-        await mesasService.updateMesaStatus(orderData.table_id, mesaStatus);
-        notifyMesasChanged(orderData.restaurant_id);
-      } catch (mesaError) {
-        console.error('Erro ao liberar mesa:', mesaError);
-        // Não falhar a operação por erro na liberação da mesa
-      }
+    if (data?.restaurant_id && data?.table_id) {
+      notifyMesasChanged(String(data.restaurant_id));
     }
 
     toast.success(`Status do pedido atualizado para ${novoStatus}`);
-    return { success: true };
+    return { success: true, data };
   } catch (error) {
     console.error('Erro ao alterar status:', error);
     toast.error('Erro ao processar a alteração de status.');
