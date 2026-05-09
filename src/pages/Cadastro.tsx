@@ -1,22 +1,24 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { MailCheck } from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
 import { RestaurantInfoForm } from "@/components/cadastro/RestaurantInfoForm";
 import { FormFooter } from "@/components/cadastro/FormFooter";
-import { createTrialSubscription } from "@/services/subscriptionManagementService";
+
+const OWNER_EMAIL_VERIFICATION_TTL_HOURS = 24;
 
 export default function Cadastro() {
-  const navigate = useNavigate();
   const { signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,92 +31,44 @@ export default function Cadastro() {
   const [category, setCategory] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
-      // Realizar o cadastro no Supabase
-      const { error: signUpError } = await signUp(email, password, {
-        name,
-        phone,
+      const verificationExpiresAt = new Date(
+        Date.now() + OWNER_EMAIL_VERIFICATION_TTL_HOURS * 60 * 60 * 1000,
+      ).toISOString();
+
+      const { error: signUpError } = await signUp(email.trim().toLowerCase(), password, {
+        name: name.trim(),
+        phone: phone.trim() || null,
+        role: "restaurant_owner",
+        user_type: "owner",
+        signup_intent: "owner_signup",
+        verification_expires_at: verificationExpiresAt,
+        pending_restaurant: {
+          name: restaurantName.trim(),
+          phone: phone.trim() || null,
+          address: address.trim(),
+          cnpj: cnpj.trim() || null,
+          logo_url: logoUrl.trim() || null,
+          category: category.trim() || null,
+        },
       });
 
       if (signUpError) {
         throw signUpError;
       }
 
-      const { data: user } = await supabase.auth.getUser();
-
-      if (!user || !user.user) {
-        throw new Error("Falha ao obter informações do usuário após cadastro");
-      }
-
-      // Insere o usuário na tabela public.users
-      const { error: insertUserError } = await supabase.from("users").insert([
-        {
-          id: user.user.id,
-          name,
-          email,
-        },
-      ]);
-
-      if (insertUserError) {
-        setError("Erro ao criar usuário na tabela pública.");
-      }
-
-      // Cria o restaurante
-      const { data: restaurantData, error: restaurantError } = await supabase
-        .from("restaurants")
-        .insert([
-          {
-            name: restaurantName,
-            owner_id: user.user.id,
-            phone,
-            address,
-            cnpj,
-            logo_url: logoUrl,
-            category,
-          },
-        ])
-        .select()
-        .single();
-
-      if (restaurantError || !restaurantData) {
-        setError("Erro ao criar restaurante.");
-        setLoading(false);
-        return;
-      }
-
-      // Atualiza o usuário com o restaurant_id
-      const { error: userUpdateError } = await supabase
-        .from("users")
-        .update({ restaurant_id: restaurantData.id })
-        .eq("id", user.user.id);
-
-      if (userUpdateError) {
-        setError("Erro ao vincular restaurante ao usuário.");
-      }
-
-      const trialResult = await createTrialSubscription(restaurantData.id);
-      if (!trialResult.success) {
-        setError("Conta criada, mas não foi possível iniciar o teste grátis.");
-        toast({
-          variant: "destructive",
-          title: "Teste grátis não iniciado",
-          description: "Acesse Assinaturas após entrar para regularizar o plano.",
-        });
-      }
-
       toast({
-        title: "Cadastro realizado com sucesso!",
-        description: "Você será redirecionado para o dashboard.",
+        title: "Confirme seu e-mail",
+        description: `Enviamos um link de verificação. Ele expira em ${OWNER_EMAIL_VERIFICATION_TTL_HOURS} horas.`,
       });
 
-      navigate("/dashboard");
+      setVerificationSent(true);
     } catch (error) {
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -129,6 +83,51 @@ export default function Cadastro() {
       setLoading(false);
     }
   };
+
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-beige/20 px-4">
+        <Card className="w-full max-w-lg shadow-lg">
+          <CardHeader className="space-y-4 text-center">
+            <div className="flex justify-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green/10 text-green">
+                <MailCheck className="h-7 w-7" aria-hidden="true" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <CardTitle className="text-2xl font-bold">
+                Verifique seu e-mail
+              </CardTitle>
+              <CardDescription>
+                Enviamos um link para {email.trim().toLowerCase()}. O estabelecimento
+                e o teste grátis serão criados somente após a confirmação.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-center text-navy/70">
+              O link expira em {OWNER_EMAIL_VERIFICATION_TTL_HOURS} horas. Se a
+              confirmação não for concluída nesse prazo, o cadastro pendente será
+              removido automaticamente.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <Button asChild className="w-full bg-green hover:bg-green-dark text-white">
+              <Link to="/login">Ir para login</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setVerificationSent(false)}
+            >
+              Editar cadastro
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-beige/20 px-4">

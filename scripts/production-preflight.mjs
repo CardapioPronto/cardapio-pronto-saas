@@ -15,11 +15,19 @@ function functionBlock(config, functionName) {
   return config.match(pattern)?.[1] ?? null;
 }
 
+function authEmailConfirmationsEnabled(config) {
+  return /\[auth\.email\][\s\S]*?enable_confirmations\s*=\s*true[\s\S]*?\[auth\.sms\]/m.test(config);
+}
+
 const config = read("supabase/config.toml");
+const cadastro = read("src/pages/Cadastro.tsx");
 const createEmployee = read("supabase/functions/create-employee/index.ts");
+const finalizeOwnerSignup = read("supabase/functions/finalize-owner-signup/index.ts");
+const cleanupOwnerSignups = read("supabase/functions/cleanup-unverified-owner-signups/index.ts");
 const checkoutMigration = read("supabase/migrations/20260507123000_harden_public_menu_order_integrity.sql");
 const mainLayout = read("src/layouts/MainLayout.tsx");
 const supabaseClient = read("src/integrations/supabase/client.ts");
+const userSession = read("src/hooks/useUserSession.ts");
 
 for (const functionName of [
   "create-storage-buckets",
@@ -29,6 +37,7 @@ for (const functionName of [
   "email-dispatch",
   "create-employee",
   "create-trial-subscription",
+  "finalize-owner-signup",
   "pagarme-create-order-payment",
   "send-delivery-whatsapp",
 ]) {
@@ -38,6 +47,39 @@ for (const functionName of [
     `${functionName} should not be anonymously callable without a Supabase JWT`,
   );
 }
+
+check(
+  "Owner signup requires email confirmation",
+  authEmailConfirmationsEnabled(config),
+  "owner account creation must not be immediately active without email verification",
+);
+
+check(
+  "Owner signup form does not create restaurant before verification",
+  cadastro.includes("signup_intent: \"owner_signup\"")
+    && cadastro.includes("pending_restaurant")
+    && !cadastro.includes(".from(\"restaurants\")")
+    && !cadastro.includes("createTrialSubscription"),
+  "Cadastro should store pending metadata only; final creation must happen after confirmed email",
+);
+
+check(
+  "Verified owner signup is finalized server-side",
+  userSession.includes("finalizeOwnerSignupIfNeeded")
+    && finalizeOwnerSignup.includes("email_confirmed_at")
+    && finalizeOwnerSignup.includes("ensureTrialSubscription")
+    && finalizeOwnerSignup.includes("upsert"),
+  "finalize-owner-signup must create the restaurant/trial only after a confirmed authenticated owner session",
+);
+
+check(
+  "Expired unverified owner signups can be cleaned safely",
+  functionBlock(config, "cleanup-unverified-owner-signups") === "false"
+    && cleanupOwnerSignups.includes("OWNER_SIGNUP_CLEANUP_SECRET")
+    && cleanupOwnerSignups.includes("signup_intent !== \"owner_signup\"")
+    && cleanupOwnerSignups.includes("auth.admin.deleteUser"),
+  "cleanup-unverified-owner-signups should require an internal secret and only delete expired pending owner signups",
+);
 
 check(
   "Employee creation uses authenticated caller as creator",

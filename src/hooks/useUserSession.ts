@@ -1,8 +1,9 @@
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { User as AppUser } from '@/types/user';
+import { finalizeOwnerSignupIfNeeded } from '@/services/ownerSignupService';
 
 interface UserSession {
   session: Session | null;
@@ -91,6 +92,17 @@ export const useUserSession = (): UserSession => {
         setError(null);
 
         if (nextSession?.user) {
+          const finalizeResult = await finalizeOwnerSignupIfNeeded(nextSession.user);
+          if (finalizeResult.expired) {
+            await supabase.auth.signOut();
+            if (!active || requestId !== requestIdRef.current) return;
+            setSession(null);
+            setAuthUser(null);
+            setAppUser(null);
+            setError('Cadastro expirado. Faça um novo cadastro para validar seu e-mail.');
+            return;
+          }
+
           const profile = await fetchUserProfile(nextSession.user.id);
           if (!active || requestId !== requestIdRef.current) return;
           setAppUser(profile);
