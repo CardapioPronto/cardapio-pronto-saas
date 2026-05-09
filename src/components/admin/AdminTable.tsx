@@ -14,7 +14,7 @@ interface AdminTableProps<T> {
   emptyMessage?: string;
 }
 
-export const AdminTable = <T extends Record<string, any>>({
+export const AdminTable = <T extends Record<string, unknown>>({
   data,
   isLoading,
   columns,
@@ -47,7 +47,7 @@ export const AdminTable = <T extends Record<string, any>>({
                     ? column.cell(row)
                     : typeof column.accessorKey === 'function'
                     ? column.accessorKey(row)
-                    : row[column.accessorKey]?.toString() || ''}
+                    : String(row[column.accessorKey] ?? '')}
                 </TableCell>
               ))}
             </TableRow>

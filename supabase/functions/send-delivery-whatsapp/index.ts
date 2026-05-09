@@ -73,6 +73,15 @@ interface EvolutionSendResult {
   [key: string]: unknown;
 }
 
+interface OrderItemRow {
+  product_id: string;
+  product_name: string;
+  quantity: number | string | null;
+  price: number | string | null;
+  observations?: string | null;
+  addons?: Array<{ name: string; price?: number }> | null;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pending: '🕒 Aguardando confirmação',
   confirmed: '✅ Pedido confirmado',
@@ -153,7 +162,7 @@ async function loadOrderItems(
   if (error) throw error;
   if (!items?.length) return fallbackItems || [];
 
-  return items.map((item: any) => ({
+  return (items as OrderItemRow[]).map((item) => ({
     product_id: item.product_id,
     name: item.product_name,
     quantity: Number(item.quantity || 1),

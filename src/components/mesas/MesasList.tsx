@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit, Trash2, Users, MapPin, Search, TableIcon } from "lucide-react";
-import { Mesa } from "@/types/mesa";
+import { Mesa, UpdateMesaData } from "@/types/mesa";
 import { Area } from "@/types/area";
 import { MesaStatusBadge } from "./MesaStatusBadge";
 import { EditMesaDialog } from "./EditMesaDialog";
@@ -13,7 +13,7 @@ import { DeleteMesaDialog } from "./DeleteMesaDialog";
 interface MesasListProps {
   mesas: Mesa[];
   areas: Area[];
-  onUpdate: (id: string, data: any) => Promise<Mesa>;
+  onUpdate: (id: string, data: UpdateMesaData) => Promise<Mesa>;
   onDelete: (id: string) => Promise<void>;
   loading?: boolean;
 }

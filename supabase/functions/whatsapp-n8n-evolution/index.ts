@@ -9,6 +9,20 @@ const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
 const N8N_INTERNAL_API_KEY = Deno.env.get("N8N_INTERNAL_API_KEY");
 
+type JsonRecord = Record<string, unknown>;
+
+type EvolutionWorkflowBody = {
+  instanceName?: unknown;
+  action?: unknown;
+  messageId?: unknown;
+  remoteJid?: unknown;
+  fromMe?: unknown;
+  messageKey?: unknown;
+  message?: unknown;
+  number?: unknown;
+  text?: unknown;
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -62,19 +76,36 @@ async function callEvolution(path: string, body: Record<string, unknown>) {
   return result;
 }
 
-function buildMediaMessage(body: any) {
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function firstPresent(...values: unknown[]) {
+  return values.find((value) => value !== undefined && value !== null && value !== "") ?? "";
+}
+
+function readRecordPath(value: unknown, ...path: string[]) {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+function buildMediaMessage(body: EvolutionWorkflowBody) {
   const key = {
     id: body.messageId,
     remoteJid: body.remoteJid,
     fromMe: body.fromMe === true,
-    ...body.messageKey,
+    ...(isRecord(body.messageKey) ? body.messageKey : {}),
   };
 
   return {
     key: Object.fromEntries(
       Object.entries(key).filter(([, value]) => value !== undefined && value !== null && value !== ""),
     ),
-    ...(body.message && typeof body.message === "object" ? body.message : {}),
+    ...(isRecord(body.message) ? body.message : {}),
   };
 }
 
@@ -83,7 +114,7 @@ serve(async (req) => {
 
   try {
     ensureN8nRequest(req);
-    const body = await req.json();
+    const body = (await req.json()) as EvolutionWorkflowBody;
     const instanceName = String(body.instanceName || "").trim();
 
     if (!instanceName) throw new Error("instanceName ausente");
@@ -102,16 +133,20 @@ serve(async (req) => {
       return jsonResponse({
         ...((result && typeof result === "object") ? result as Record<string, unknown> : { result }),
         base64:
-          (result as any)?.base64 ||
-          (result as any)?.data ||
-          (result as any)?.media ||
-          (result as any)?.file ||
-          (result as any)?.message?.base64 ||
+          firstPresent(
+            readRecordPath(result, "base64"),
+            readRecordPath(result, "data"),
+            readRecordPath(result, "media"),
+            readRecordPath(result, "file"),
+            readRecordPath(result, "message", "base64"),
+          ) ||
           "",
         mimeType:
-          (result as any)?.mimetype ||
-          (result as any)?.mimeType ||
-          (result as any)?.message?.mimetype ||
+          firstPresent(
+            readRecordPath(result, "mimetype"),
+            readRecordPath(result, "mimeType"),
+            readRecordPath(result, "message", "mimetype"),
+          ) ||
           "audio/ogg",
       });
     }
@@ -127,9 +162,10 @@ serve(async (req) => {
     }
 
     throw new Error(`Acao nao suportada: ${body.action || "vazia"}`);
-  } catch (error: any) {
+  } catch (error) {
     console.error("whatsapp-n8n-evolution error", error);
-    const status = error.message === "Unauthorized n8n request" ? 401 : 500;
-    return jsonResponse({ error: error.message || "Erro interno" }, status);
+    const message = error instanceof Error ? error.message : "Erro interno";
+    const status = message === "Unauthorized n8n request" ? 401 : 500;
+    return jsonResponse({ error: message }, status);
   }
 });

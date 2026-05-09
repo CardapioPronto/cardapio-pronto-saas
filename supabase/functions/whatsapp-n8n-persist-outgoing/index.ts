@@ -83,9 +83,10 @@ serve(async (req) => {
       sentText: item.outboundText,
       evolution: sendResult || null,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("whatsapp-n8n-persist-outgoing error", error);
-    const status = error.message === "Unauthorized n8n request" ? 401 : 500;
-    return jsonResponse({ error: error.message || "Erro interno" }, status);
+    const message = error instanceof Error ? error.message : "Erro interno";
+    const status = message === "Unauthorized n8n request" ? 401 : 500;
+    return jsonResponse({ error: message }, status);
   }
 });

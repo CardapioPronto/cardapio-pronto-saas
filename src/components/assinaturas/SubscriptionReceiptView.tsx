@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -206,7 +206,7 @@ const SubscriptionReceiptView = ({ subscriptionId, onBack }: Props) => {
   const [latest, setLatest] = useState<PagarmeReceipt | null>(null);
   const [lastPaid, setLastPaid] = useState<PagarmeReceipt | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -218,9 +218,9 @@ const SubscriptionReceiptView = ({ subscriptionId, onBack }: Props) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [subscriptionId]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [subscriptionId]);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-4">

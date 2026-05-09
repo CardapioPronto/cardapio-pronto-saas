@@ -14,6 +14,10 @@ import { PlanoFeaturesDialog } from "@/components/planos/PlanoFeaturesDialog";
 import { Plano } from "@/types/plano";
 import { toast } from '@/components/ui/sonner';
 
+type FunctionErrorWithContext = Error & {
+    context?: Response;
+};
+
 export default function Planos() {
     const { planos, fetchPlanos } = usePlanos();
     const [open, setOpen] = useState(false);
@@ -53,11 +57,11 @@ export default function Planos() {
             body: { plan_id: plano.id },
           });
           if (error) {
-            const context = (error as any).context;
+            const context = (error as FunctionErrorWithContext).context;
             let details = "";
             if (context?.clone) {
               try {
-                const payload = await context.clone().json();
+                const payload = await context.clone().json() as { error?: string; message?: string };
                 details = payload?.error || payload?.message || JSON.stringify(payload);
               } catch {
                 try {
@@ -72,8 +76,9 @@ export default function Planos() {
           if (data?.success === false) throw new Error(data.error || "Falha ao sincronizar");
           toast.success("Plano sincronizado com o Pagar.me");
           await fetchPlanos();
-        } catch (e: any) {
-          toast.error("Erro ao sincronizar: " + (e?.message || "desconhecido"));
+        } catch (e) {
+          const message = e instanceof Error ? e.message : "desconhecido";
+          toast.error("Erro ao sincronizar: " + message);
           await fetchPlanos();
         } finally {
           setSyncingId(null);

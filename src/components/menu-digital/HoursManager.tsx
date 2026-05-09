@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { saveRestaurantHours } from '@/hooks/useIsRestaurantOpen';
@@ -23,11 +23,7 @@ export const HoursManager: React.FC<HoursManagerProps> = ({ restaurantId, onSave
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadHours();
-  }, [restaurantId]);
-
-  const loadHours = async () => {
+  const loadHours = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -43,7 +39,7 @@ export const HoursManager: React.FC<HoursManagerProps> = ({ restaurantId, onSave
       }
 
       if (data?.setting_value) {
-        const hoursData = data.setting_value as any;
+        const hoursData = data.setting_value as Partial<RestaurantHours>;
         setHours({
           opening_time: hoursData.opening_time || '10:00',
           closing_time: hoursData.closing_time || '23:00',
@@ -54,7 +50,11 @@ export const HoursManager: React.FC<HoursManagerProps> = ({ restaurantId, onSave
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadHours();
+  }, [loadHours]);
 
   const saveHoursMutation = useMutation({
     mutationFn: async () => {
@@ -75,8 +75,8 @@ export const HoursManager: React.FC<HoursManagerProps> = ({ restaurantId, onSave
       toast.success('Horários atualizados com sucesso!');
       onSave?.(savedHours);
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Erro ao salvar horários');
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar horários');
     },
   });
 

@@ -51,7 +51,7 @@ const Contato = () => {
       setTelefone("");
       setAssunto("suporte");
       setMensagem("");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error sending message:", error);
       toast({
         title: "Erro ao enviar mensagem",

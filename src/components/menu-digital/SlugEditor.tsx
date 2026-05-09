@@ -19,14 +19,14 @@ const normalizeSlug = (input: string): string => {
   return input
     .toLowerCase()
     .trim()
-    .replace(/[^\w\-]/g, '') // Remove special characters except hyphens
-    .replace(/\-+/g, '-') // Replace multiple hyphens with single
-    .replace(/^\-|\-$/g, ''); // Remove leading/trailing hyphens
+    .replace(/[^\w-]/g, '') // Remove special characters except hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 };
 
 // Check if slug is valid (minimum 3 chars, no spaces)
 const isSlugValid = (slug: string): boolean => {
-  return slug.length >= 3 && /^[a-z0-9\-]+$/.test(slug);
+  return slug.length >= 3 && /^[a-z0-9-]+$/.test(slug);
 };
 
 export const SlugEditor: React.FC<SlugEditorProps> = ({

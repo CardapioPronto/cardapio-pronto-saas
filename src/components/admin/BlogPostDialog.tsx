@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BlogPost } from '@/types/blog';
 
 const CATEGORIES = ['Tecnologia', 'Gestão', 'Inovação', 'Análise', 'Dicas', 'Marketing', 'Tendências'];
 
@@ -40,7 +41,7 @@ type BlogPostFormData = z.infer<typeof blogPostSchema>;
 interface BlogPostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  post?: any;
+  post?: BlogPost | null;
 }
 
 export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps) {

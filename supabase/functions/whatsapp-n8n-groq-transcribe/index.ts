@@ -62,7 +62,7 @@ serve(async (req) => {
     });
 
     const text = await groqResponse.text();
-    let result: any = null;
+    let result: { text?: string; raw?: string } | null = null;
     try {
       result = text ? JSON.parse(text) : null;
     } catch {
@@ -77,9 +77,10 @@ serve(async (req) => {
       text: result?.text || "",
       groq: result,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("whatsapp-n8n-groq-transcribe error", error);
-    const status = error.message === "Unauthorized n8n request" ? 401 : 500;
-    return jsonResponse({ error: error.message || "Erro interno" }, status);
+    const message = error instanceof Error ? error.message : "Erro interno";
+    const status = message === "Unauthorized n8n request" ? 401 : 500;
+    return jsonResponse({ error: message }, status);
   }
 });

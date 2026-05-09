@@ -12,6 +12,64 @@ const N8N_INTERNAL_API_KEY = Deno.env.get("N8N_INTERNAL_API_KEY");
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
+type JsonRecord = Record<string, unknown>;
+
+type BusinessDay = {
+  enabled?: boolean;
+  start?: string;
+  end?: string;
+};
+
+type BusinessHours = Partial<Record<"sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat", BusinessDay>>;
+
+type AutomationSettings = {
+  additional_instructions?: unknown;
+  business_hours_only?: boolean | null;
+  business_hours?: BusinessHours | string | null;
+  ai_enabled?: boolean | null;
+  bot_name?: string | null;
+  ai_persona?: string | null;
+  use_menu_knowledge?: boolean | null;
+  auto_handoff_enabled?: boolean | null;
+};
+
+type IncomingWorkflowItem = {
+  instanceName?: string;
+  remoteJid?: string;
+  customerPhone?: string;
+  customerName?: string;
+  receivedAt?: string;
+  sender?: unknown;
+  webhookUrl?: unknown;
+  body?: JsonRecord & {
+    sender?: unknown;
+    destination?: unknown;
+  };
+  transcription?: unknown;
+  userMessage?: unknown;
+  messageType?: unknown;
+  messageId?: unknown;
+};
+
+type HandoffRule = {
+  rule_type?: string | null;
+  rule_value?: string | null;
+  priority?: number | null;
+};
+
+type ProductSummary = {
+  name?: string | null;
+  description?: string | null;
+  price?: number | string | null;
+};
+
+type RecentOrderSummary = {
+  id?: string | null;
+  status?: string | null;
+  total?: number | string | null;
+  created_at?: string | null;
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -29,27 +87,43 @@ function ensureN8nRequest(req: Request) {
   }
 }
 
-function fallbackFrom(settings: any) {
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function parseRecord(value: unknown) {
+  if (typeof value !== "string") return isRecord(value) ? value : null;
+
   try {
-    const extra = JSON.parse(settings?.additional_instructions || "{}");
-    return extra.fallback_message || "Vou transferir voce para um atendente humano.";
+    const parsed = JSON.parse(value);
+    return isRecord(parsed) ? parsed : null;
   } catch {
-    return "Vou transferir voce para um atendente humano.";
+    return null;
   }
 }
 
-function isInsideBusinessHours(settings: any) {
+function fallbackFrom(settings: AutomationSettings) {
+  const extra = parseRecord(settings.additional_instructions);
+  const fallback = extra?.fallback_message;
+  return typeof fallback === "string" && fallback.trim()
+    ? fallback
+    : "Vou transferir voce para um atendente humano.";
+}
+
+function parseBusinessHours(value: AutomationSettings["business_hours"]) {
+  if (typeof value === "string") return parseRecord(value) as BusinessHours | null;
+  return value || null;
+}
+
+function isInsideBusinessHours(settings: AutomationSettings) {
   if (!settings?.business_hours_only || !settings.business_hours) return true;
 
-  const hours =
-    typeof settings.business_hours === "string"
-      ? JSON.parse(settings.business_hours)
-      : settings.business_hours;
+  const hours = parseBusinessHours(settings.business_hours);
 
   const now = new Date();
-  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getDay()];
+  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getDay()] as keyof BusinessHours;
   const day = hours?.[dayKey];
-  if (!day?.enabled) return false;
+  if (!day?.enabled || !day.start || !day.end) return false;
 
   const hhmm = now.toISOString().slice(11, 16);
   return hhmm >= day.start && hhmm <= day.end;
@@ -65,12 +139,12 @@ function normalizePhone(raw: unknown) {
   return digits || null;
 }
 
-function isAudioMessage(item: any) {
+function isAudioMessage(item: IncomingWorkflowItem) {
   const messageType = String(item.messageType || "").toLowerCase();
   return messageType.includes("audio");
 }
 
-function buildIncomingContent(item: any) {
+function buildIncomingContent(item: IncomingWorkflowItem) {
   const transcript = String(item.transcription || item.userMessage || "").trim();
   if (isAudioMessage(item)) {
     return transcript || "[Audio sem transcricao]";
@@ -79,14 +153,18 @@ function buildIncomingContent(item: any) {
   return String(item.userMessage || "").trim() || "[Mensagem sem texto]";
 }
 
-function buildIncomingPreview(item: any) {
+function buildIncomingPreview(item: IncomingWorkflowItem) {
   const content = buildIncomingContent(item);
   const prefix = isAudioMessage(item) ? "Audio: " : "";
   return `${prefix}${content}`.slice(0, 120);
 }
 
-async function loadContext(supabase: SupabaseClient, item: any) {
-  const required = ["instanceName", "remoteJid", "customerPhone"];
+async function loadContext(supabase: SupabaseClient, item: IncomingWorkflowItem) {
+  const required: Array<keyof Pick<IncomingWorkflowItem, "instanceName" | "remoteJid" | "customerPhone">> = [
+    "instanceName",
+    "remoteJid",
+    "customerPhone",
+  ];
   for (const key of required) {
     if (!item[key]) throw new Error(`Campo obrigatorio ausente no workflow: ${key}`);
   }
@@ -185,7 +263,7 @@ async function loadContext(supabase: SupabaseClient, item: any) {
     if (result.error) throw result.error;
   }
 
-  const settings = settingsResult.data || {
+  const settings = (settingsResult.data || {
     ai_enabled: true,
     bot_name: "Atendente Virtual",
     ai_persona: "Atendente simpatico e profissional",
@@ -193,11 +271,11 @@ async function loadContext(supabase: SupabaseClient, item: any) {
     auto_handoff_enabled: true,
     auto_handoff_confidence_threshold: 0.3,
     welcome_message: "Ola! Como posso ajudar?",
-  };
+  }) as AutomationSettings;
   const restaurant = restaurantResult.data || { id: restaurantId, name: "Loja" };
-  const rules = rulesResult.data || [];
-  const products = productsResult.data || [];
-  const recentOrders = recentOrdersResult.data || [];
+  const rules = (rulesResult.data || []) as HandoffRule[];
+  const products = (productsResult.data || []) as ProductSummary[];
+  const recentOrders = (recentOrdersResult.data || []) as RecentOrderSummary[];
 
   let thread = threadResult.data;
   const incomingContent = buildIncomingContent(item);
@@ -256,10 +334,10 @@ async function loadContext(supabase: SupabaseClient, item: any) {
 
   const lower = String(item.userMessage || "").toLowerCase();
   const keywordRules = rules.filter(
-    (rule: any) =>
+    (rule) =>
       ["keyword", "customer_request"].includes(rule.rule_type) && rule.rule_value,
   );
-  const matchedRule = keywordRules.find((rule: any) =>
+  const matchedRule = keywordRules.find((rule) =>
     lower.includes(String(rule.rule_value).toLowerCase()),
   );
   const outsideHours = !isInsideBusinessHours(settings);
@@ -291,7 +369,7 @@ async function loadContext(supabase: SupabaseClient, item: any) {
       ? "Cardapio nao habilitado para IA."
       : products
           .map(
-            (product: any) =>
+            (product) =>
               `- ${product.name}: R$ ${formatMoney(product.price)}${
                 product.description ? ` | ${product.description}` : ""
               }`,
@@ -301,7 +379,7 @@ async function loadContext(supabase: SupabaseClient, item: any) {
   const ordersSummary =
     recentOrders
       .map(
-        (order: any) =>
+        (order) =>
           `- Pedido ${String(order.id).slice(0, 8)}: ${order.status}, total R$ ${formatMoney(
             order.total,
           )}, criado em ${order.created_at}`,
@@ -309,7 +387,7 @@ async function loadContext(supabase: SupabaseClient, item: any) {
       .join("\n") || "Nenhum pedido recente encontrado para este telefone.";
 
   const handoffSummary =
-    keywordRules.map((rule: any) => rule.rule_value).filter(Boolean).join(", ") ||
+    keywordRules.map((rule) => rule.rule_value).filter(Boolean).join(", ") ||
     "sem palavras-chave configuradas";
 
   const systemPrompt = `Voce e ${
@@ -359,13 +437,14 @@ serve(async (req) => {
 
   try {
     ensureN8nRequest(req);
-    const item = await req.json();
+    const item = (await req.json()) as IncomingWorkflowItem;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const result = await loadContext(supabase, item);
     return jsonResponse(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error("whatsapp-n8n-context error", error);
-    const status = error.message === "Unauthorized n8n request" ? 401 : 500;
-    return jsonResponse({ error: error.message || "Erro interno" }, status);
+    const message = error instanceof Error ? error.message : "Erro interno";
+    const status = message === "Unauthorized n8n request" ? 401 : 500;
+    return jsonResponse({ error: message }, status);
   }
 });

@@ -18,8 +18,57 @@ import {
   Wifi,
   Share2,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+type NavigatorWithShare = Navigator & {
+  share?: (data: ShareData) => Promise<void>;
+};
+
+interface TrackingRestaurant {
+  name?: string | null;
+  logo_url?: string | null;
+  phone_whatsapp?: string | null;
+}
+
+interface TrackingHistoryItem {
+  new_status: StatusKey | string;
+  created_at: string;
+}
+
+interface TrackingOrderItem {
+  id: string;
+  name?: string | null;
+  product_name?: string | null;
+  quantity: number | string;
+  price: number | string;
+  observations?: string | null;
+}
+
+interface TrackingPayment {
+  qr_code?: string | null;
+  qr_code_url?: string | null;
+}
+
+interface TrackingOrder {
+  id: string;
+  status: StatusKey | string;
+  payment_status?: string | null;
+  fulfillment_type?: string | null;
+  estimated_delivery_minutes?: number | null;
+  payment?: TrackingPayment | null;
+  items?: TrackingOrderItem[];
+  subtotal: number | string;
+  delivery_fee?: number | string | null;
+  total: number | string;
+  payment_method?: string | null;
+  change_for?: number | string | null;
+  customer_name?: string | null;
+  created_at: string;
+  restaurant?: TrackingRestaurant | null;
+  history?: TrackingHistoryItem[];
+}
 
 type StatusKey =
   | 'pending'
@@ -40,7 +89,7 @@ type StatusKey =
   | 'aguardando_pagamento'
   | 'pagamento_falhou';
 
-const STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
+const STATUS_FLOW: { key: StatusKey; label: string; icon: LucideIcon }[] = [
   { key: 'pending', label: 'Pedido recebido', icon: Clock },
   { key: 'confirmed', label: 'Confirmado pela loja', icon: CheckCircle2 },
   { key: 'preparing', label: 'Em preparo', icon: ChefHat },
@@ -49,7 +98,7 @@ const STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
   { key: 'delivered', label: 'Entregue', icon: PackageCheck },
 ];
 
-const LOCAL_STATUS_FLOW: { key: StatusKey; label: string; icon: any }[] = [
+const LOCAL_STATUS_FLOW: { key: StatusKey; label: string; icon: LucideIcon }[] = [
   { key: 'pending', label: 'Pedido recebido', icon: Clock },
   { key: 'confirmed', label: 'Confirmado pela loja', icon: CheckCircle2 },
   { key: 'preparing', label: 'Em preparo', icon: ChefHat },
@@ -97,8 +146,8 @@ function formatDate(iso: string) {
 
 export default function AcompanharPedido() {
   const { id } = useParams<{ id: string }>();
-  const [order, setOrder] = useState<any | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [order, setOrder] = useState<TrackingOrder | null>(null);
+  const [history, setHistory] = useState<TrackingHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,16 +160,20 @@ export default function AcompanharPedido() {
     const shareText = `Acompanhe seu pedido #${shortId} em tempo real:\n${trackingUrl}`;
 
     // 1) Web Share API (mobile)
-    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+    const shareNavigator = typeof navigator !== 'undefined'
+      ? navigator as NavigatorWithShare
+      : null;
+
+    if (shareNavigator?.share) {
       try {
-        await (navigator as any).share({
+        await shareNavigator.share({
           title: `Pedido #${shortId}`,
           text: shareText,
           url: trackingUrl,
         });
         return;
-      } catch (e: any) {
-        if (e?.name === 'AbortError') return; // usuário cancelou
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return; // usuário cancelou
       }
     }
 
@@ -139,14 +192,14 @@ export default function AcompanharPedido() {
   }
 
   const loadOrder = async (trackingId: string, cancelled?: () => boolean) => {
-    const o = await deliveryOrderService.getById(trackingId);
+    const o = await deliveryOrderService.getById(trackingId) as TrackingOrder | null;
     if (cancelled?.()) return;
     if (!o) {
       setError('Pedido não encontrado.');
       return;
     }
     setOrder(o);
-    setHistory((o as any).history || []);
+    setHistory(o.history || []);
     setLive(true);
     setError(null);
   };
@@ -160,8 +213,8 @@ export default function AcompanharPedido() {
       try {
         setLoading(true);
         await loadOrder(id, () => cancelled);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || 'Erro ao carregar pedido.');
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Erro ao carregar pedido.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -398,7 +451,7 @@ export default function AcompanharPedido() {
                 type="button"
                 className="w-full"
                 onClick={() => {
-                  navigator.clipboard.writeText(order.payment.qr_code);
+                  navigator.clipboard.writeText(order.payment?.qr_code ?? '');
                   toast.success('Código PIX copiado');
                 }}
               >
@@ -414,9 +467,9 @@ export default function AcompanharPedido() {
             <CardTitle className="text-base">Resumo do pedido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {Array.isArray(order.items) && order.items.length > 0 && (
+            {order.items && order.items.length > 0 && (
               <div className="space-y-2 pb-3 border-b">
-                {order.items.map((item: any) => (
+                {order.items.map((item) => (
                   <div key={item.id} className="flex justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-medium">{item.quantity}x {item.name || item.product_name}</p>

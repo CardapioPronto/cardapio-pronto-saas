@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, MapPin, TableIcon } from "lucide-react";
-import { Area } from "@/types/area";
+import { Area, UpdateAreaData } from "@/types/area";
 import { Mesa } from "@/types/mesa";
 import { EditAreaDialog } from "./EditAreaDialog";
 import { DeleteAreaDialog } from "./DeleteAreaDialog";
@@ -11,7 +11,7 @@ import { DeleteAreaDialog } from "./DeleteAreaDialog";
 interface AreasListProps {
   areas: Area[];
   mesas?: Mesa[];
-  onUpdate: (id: string, data: any) => Promise<Area>;
+  onUpdate: (id: string, data: UpdateAreaData) => Promise<Area>;
   onDelete: (id: string) => Promise<void>;
   loading?: boolean;
 }
