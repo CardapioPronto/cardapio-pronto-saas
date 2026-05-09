@@ -1,7 +1,9 @@
 import * as Sentry from "@sentry/react";
 
-const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
-const appVersion = import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_SENTRY_RELEASE;
+const publicSentryDsn = "https://0a4145edff0c18f81723f0feca265622@o4511357542203392.ingest.us.sentry.io/4511357548822528";
+
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN || publicSentryDsn;
+const appVersion = import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_SENTRY_RELEASE || "pubfy@0.0.1";
 const environment = import.meta.env.VITE_SENTRY_ENVIRONMENT
   || import.meta.env.MODE
   || (import.meta.env.PROD ? "production" : "development");
@@ -32,7 +34,7 @@ export function initObservability() {
     dsn: sentryDsn,
     environment,
     release: appVersion,
-    tracesSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE, 0),
+    tracesSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE, 0.1),
     beforeSend(event) {
       return scrubEvent(event);
     },

@@ -95,7 +95,8 @@ check(
     && app.includes("<ErrorBoundary>")
     && app.includes("QueryCache")
     && errorBoundary.includes("captureException(error")
-    && frontendObservability.includes("VITE_SENTRY_DSN"),
+    && frontendObservability.includes("VITE_SENTRY_DSN")
+    && frontendObservability.includes("ingest.us.sentry.io"),
   "React errors and query/mutation failures should be captured by Sentry when VITE_SENTRY_DSN is configured",
 );
 
