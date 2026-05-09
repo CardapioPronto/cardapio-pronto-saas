@@ -15,6 +15,12 @@ type Plan = {
   price_monthly: number | null;
 };
 
+type Restaurant = {
+  id: string;
+  owner_id: string;
+  created_at?: string | null;
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -41,6 +47,18 @@ function chooseTrialPlan(plans: Plan[]) {
   })[0];
 }
 
+function trialWindow(anchor: string | null | undefined, trialDays: number) {
+  const parsedAnchor = anchor ? Date.parse(anchor) : NaN;
+  const trialStart = Number.isFinite(parsedAnchor) ? new Date(parsedAnchor) : new Date();
+  const trialEndsAt = new Date(trialStart.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+  return {
+    trialStart,
+    trialEndsAt,
+    status: trialEndsAt.getTime() >= Date.now() ? "trialing" : "canceled",
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ success: false, error: "Method not allowed" }, 405);
@@ -60,9 +78,9 @@ serve(async (req) => {
 
     const { data: restaurant, error: restaurantError } = await supabase
       .from("restaurants")
-      .select("id, owner_id")
+      .select("id, owner_id, created_at")
       .eq("id", restaurant_id)
-      .maybeSingle();
+      .maybeSingle() as { data: Restaurant | null; error: Error | null };
 
     if (restaurantError) throw restaurantError;
     if (!restaurant || restaurant.owner_id !== user.id) {
@@ -92,22 +110,22 @@ serve(async (req) => {
     if (!plan) return json({ success: false, error: "Nenhum plano ativo encontrado" }, 400);
 
     const trialDays = Math.max(1, Number(plan.trial_days || 14));
-    const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+    const { trialStart, trialEndsAt, status } = trialWindow(restaurant.created_at, trialDays);
 
     const { data: subscription, error: subscriptionError } = await supabase
       .from("subscriptions")
       .insert({
         restaurant_id,
         plan_id: plan.id,
-        status: "trialing",
+        status,
         is_trial: true,
         billing_cycle: "monthly",
-        start_date: now.toISOString(),
-        trial_start: now.toISOString(),
+        start_date: trialStart.toISOString(),
+        trial_start: trialStart.toISOString(),
         trial_ends_at: trialEndsAt.toISOString(),
-        current_period_start: now.toISOString(),
+        current_period_start: trialStart.toISOString(),
         current_period_end: trialEndsAt.toISOString(),
+        end_date: status === "canceled" ? trialEndsAt.toISOString() : null,
       })
       .select("*")
       .single();

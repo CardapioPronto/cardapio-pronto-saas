@@ -84,6 +84,18 @@ function chooseTrialPlan(plans: Plan[]) {
   })[0];
 }
 
+function trialWindow(anchor: string | null | undefined, trialDays: number) {
+  const parsedAnchor = anchor ? Date.parse(anchor) : NaN;
+  const trialStart = Number.isFinite(parsedAnchor) ? new Date(parsedAnchor) : new Date();
+  const trialEndsAt = new Date(trialStart.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+  return {
+    trialStart,
+    trialEndsAt,
+    status: trialEndsAt.getTime() >= Date.now() ? "trialing" : "canceled",
+  };
+}
+
 async function getUser(req: Request, supabase: SupabaseAdmin): Promise<AuthUser | null> {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
@@ -141,6 +153,14 @@ async function ensureTrialSubscription(supabase: SupabaseAdmin, restaurantId: st
   if (existingError) throw existingError;
   if (existingSubscription) return existingSubscription;
 
+  const { data: restaurant, error: restaurantError } = await supabase
+    .from("restaurants")
+    .select("created_at")
+    .eq("id", restaurantId)
+    .maybeSingle();
+
+  if (restaurantError) throw restaurantError;
+
   const { data: plans, error: planError } = await supabase
     .from("plans")
     .select("id, name, trial_days, price_monthly")
@@ -151,22 +171,25 @@ async function ensureTrialSubscription(supabase: SupabaseAdmin, restaurantId: st
   if (!plan) throw new Error("Nenhum plano ativo encontrado");
 
   const trialDays = Math.max(1, Number(plan.trial_days || 14));
-  const now = new Date();
-  const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+  const { trialStart, trialEndsAt, status } = trialWindow(
+    typeof restaurant?.created_at === "string" ? restaurant.created_at : null,
+    trialDays,
+  );
 
   const { data: subscription, error: subscriptionError } = await supabase
     .from("subscriptions")
     .insert({
       restaurant_id: restaurantId,
       plan_id: plan.id,
-      status: "trialing",
+      status,
       is_trial: true,
       billing_cycle: "monthly",
-      start_date: now.toISOString(),
-      trial_start: now.toISOString(),
+      start_date: trialStart.toISOString(),
+      trial_start: trialStart.toISOString(),
       trial_ends_at: trialEndsAt.toISOString(),
-      current_period_start: now.toISOString(),
+      current_period_start: trialStart.toISOString(),
       current_period_end: trialEndsAt.toISOString(),
+      end_date: status === "canceled" ? trialEndsAt.toISOString() : null,
     })
     .select("*")
     .single();
