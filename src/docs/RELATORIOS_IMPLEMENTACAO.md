@@ -14,7 +14,7 @@
 
 #### 2. **Exportação de Dados** (`/relatorios` > Exportação)
 - ✅ Seleção de período personalizado
-- ✅ Formato Excel/PDF (JSON temporariamente)
+- ✅ Formato CSV/PDF
 - ✅ Tipos de dados configuráveis:
   - Relatório de Vendas (pedidos, valores, status)
   - Produtos (lista completa com preços)
@@ -72,8 +72,8 @@
 ### 📈 Próximas Melhorias Recomendadas
 
 1. **Bibliotecas de Exportação**:
-   - Implementar `xlsx` para Excel real
-   - Implementar `jsPDF` para PDF real
+   - Avaliar exportação XLSX server-side apenas se houver demanda real
+   - Manter PDF real com `jsPDF`
 
 2. **Melhorias de UX**:
    - Filtros avançados

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 interface ExportParams {
   dateFrom: Date;
   dateTo: Date;
-  formato: "excel" | "pdf";
+  formato: "csv" | "pdf";
   dados: string[];
   status?: string;
   canal?: string;
@@ -152,8 +152,6 @@ const sanitizeSpreadsheetCell = (value: string | number | boolean | null) => {
 
 const fileDate = (date: Date) => date.toISOString().split("T")[0];
 
-const safeSheetName = (name: string) => name.replace(/[\\/?*[\]:]/g, "").slice(0, 31) || "Dados";
-
 const getColumns = (rows: ExportRow[]) => Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
 
 const aplicarFiltroCanal = <T extends { eq: (column: string, value: string) => T }>(query: T, canal = "todos") => {
@@ -205,28 +203,70 @@ const calcularPeriodoComparacao = (dateFrom: Date, dateTo: Date, tipo = "mes-ant
   }
 };
 
-const gerarExcel = async (dados: ExportData, params: ExportParams) => {
-  const XLSX = await import("xlsx");
-  const workbook = XLSX.utils.book_new();
-  const secoes = (Object.entries(dados) as Array<[keyof ExportData, ExportRow[] | undefined]>)
-    .filter(([, rows]) => rows?.length);
+const CSV_DELIMITER = ";";
 
-  secoes.forEach(([secao, rows]) => {
-    const sanitizedRows = rows!.map((row) =>
-      Object.fromEntries(
-        Object.entries(row).map(([key, value]) => [key, sanitizeSpreadsheetCell(value)])
-      )
-    );
-    const worksheet = XLSX.utils.json_to_sheet(sanitizedRows);
-    XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName(TITULOS_SECOES[secao]));
-  });
+const escapeCsvCell = (value: string | number | boolean | null) => {
+  const sanitized = sanitizeSpreadsheetCell(value);
+  const text = String(sanitized ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
-  if (!secoes.length) {
-    const worksheet = XLSX.utils.json_to_sheet([{ mensagem: "Sem dados para exportar." }]);
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sem dados");
+  if (text.includes(CSV_DELIMITER) || text.includes("\"") || text.includes("\n")) {
+    return `"${text.replace(/"/g, "\"\"")}"`;
   }
 
-  XLSX.writeFile(workbook, `relatorio_${fileDate(params.dateFrom)}_${fileDate(params.dateTo)}.xlsx`);
+  return text;
+};
+
+const appendCsvRow = (lines: string[], cells: Array<string | number | boolean | null>) => {
+  lines.push(cells.map(escapeCsvCell).join(CSV_DELIMITER));
+};
+
+const downloadTextFile = (content: string, filename: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
+const gerarCSV = (dados: ExportData, params: ExportParams) => {
+  const titulo = params.titulo || "Relatório Pubfy";
+  const periodo = `${params.dateFrom.toLocaleDateString("pt-BR")} a ${params.dateTo.toLocaleDateString("pt-BR")}`;
+  const lines: string[] = [];
+
+  appendCsvRow(lines, [titulo]);
+  appendCsvRow(lines, ["Restaurante", params.restaurantName || "Pubfy"]);
+  appendCsvRow(lines, ["Período", periodo]);
+  appendCsvRow(lines, ["Status", labelStatus(params.status)]);
+  appendCsvRow(lines, ["Origem", labelCanal(params.canal)]);
+  appendCsvRow(lines, ["Regra de faturamento", "Apenas pedidos finalizados entram em faturamento e ticket médio."]);
+  lines.push("");
+
+  let hasData = false;
+
+  (Object.entries(dados) as Array<[keyof ExportData, ExportRow[] | undefined]>).forEach(([secao, rows]) => {
+    if (!rows?.length) return;
+    hasData = true;
+
+    const columns = getColumns(rows);
+    appendCsvRow(lines, [TITULOS_SECOES[secao]]);
+    appendCsvRow(lines, columns);
+    rows.forEach((row) => appendCsvRow(lines, columns.map((column) => row[column] ?? "")));
+    lines.push("");
+  });
+
+  if (!hasData) {
+    appendCsvRow(lines, ["Sem dados para exportar."]);
+  }
+
+  downloadTextFile(
+    `\uFEFF${lines.join("\r\n")}`,
+    `relatorio_${fileDate(params.dateFrom)}_${fileDate(params.dateTo)}.csv`,
+    "text/csv;charset=utf-8",
+  );
 };
 
 const getLastTableY = (doc: JsPDFType) => {
@@ -644,13 +684,13 @@ export const useExportacaoDados = () => {
 
       const normalizedParams = { ...params, dateFrom, dateTo, status, canal };
       normalizedParams.restaurantName = restaurant?.name || undefined;
-      if (formato === "excel") {
-        await gerarExcel(dadosParaExportar, normalizedParams);
+      if (formato === "csv") {
+        gerarCSV(dadosParaExportar, normalizedParams);
       } else {
         await gerarPDF(dadosParaExportar, normalizedParams);
       }
 
-      toast.success(`Arquivo ${formato === "excel" ? "XLSX" : "PDF"} exportado com sucesso!`);
+      toast.success(`Arquivo ${formato === "csv" ? "CSV" : "PDF"} exportado com sucesso!`);
     } catch (error) {
       console.error("Erro ao exportar dados:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao exportar dados");

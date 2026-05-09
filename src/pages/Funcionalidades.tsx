@@ -40,7 +40,7 @@ const features = [
     benefits: [
       "Vendas por período e produto",
       "Ticket médio e análise de consumo",
-      "Exportação em Excel e PDF",
+      "Exportação em CSV e PDF",
       "Gráficos visuais interativos",
       "Insights para tomada de decisões"
     ]

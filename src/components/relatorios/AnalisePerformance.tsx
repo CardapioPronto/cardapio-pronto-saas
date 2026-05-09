@@ -31,7 +31,7 @@ export const AnalisePerformance = () => {
     refetch();
   };
 
-  const handleExportar = async (formato: "excel" | "pdf") => {
+  const handleExportar = async (formato: "csv" | "pdf") => {
     await exportar({
       dateFrom,
       dateTo,
@@ -201,9 +201,9 @@ export const AnalisePerformance = () => {
               <Target className="mr-2 h-4 w-4" />
               {loading ? "Analisando..." : "Analisar Performance"}
             </Button>
-            <Button variant="outline" onClick={() => handleExportar("excel")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => handleExportar("csv")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
-              XLSX
+              CSV
             </Button>
             <Button variant="outline" onClick={() => handleExportar("pdf")} disabled={exportando || periodoInvalido} className="w-full sm:w-auto">
               <FileText className="mr-2 h-4 w-4" />

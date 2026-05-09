@@ -14,7 +14,7 @@ import { useExportacaoDados } from "@/hooks/useExportacaoDados";
 export const ExportacaoDados = () => {
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
-  const [formato, setFormato] = useState<"excel" | "pdf">("excel");
+  const [formato, setFormato] = useState<"csv" | "pdf">("csv");
   const [dados, setDados] = useState<string[]>(["vendas", "produtos"]);
   const [statusFiltro, setStatusFiltro] = useState<string>("todos");
   const [canalFiltro, setCanalFiltro] = useState<string>("todos");
@@ -159,15 +159,15 @@ export const ExportacaoDados = () => {
           {/* Formato */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Formato de Exportação</label>
-            <Select value={formato} onValueChange={(value: "excel" | "pdf") => setFormato(value)}>
+            <Select value={formato} onValueChange={(value: "csv" | "pdf") => setFormato(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="excel">
+                <SelectItem value="csv">
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
-                    Excel (.xlsx)
+                    CSV (.csv)
                   </div>
                 </SelectItem>
                 <SelectItem value="pdf">
@@ -220,7 +220,7 @@ export const ExportacaoDados = () => {
             className="w-full"
           >
             <Download className="mr-2 h-4 w-4" />
-            {loading ? "Exportando..." : `Exportar ${formato === "excel" ? "XLSX" : "PDF"}`}
+            {loading ? "Exportando..." : `Exportar ${formato === "csv" ? "CSV" : "PDF"}`}
           </Button>
         </CardContent>
       </Card>

@@ -42,7 +42,7 @@ export const TestRelatorios = () => {
           await exportacaoHook.exportar({
             dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
             dateTo: new Date(),
-            formato: "excel",
+            formato: "csv",
             dados: ["vendas"]
           });
           break;

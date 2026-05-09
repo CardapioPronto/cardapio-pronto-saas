@@ -30,7 +30,7 @@ const Relatorios = () => {
               <Download className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Excel/PDF</div>
+              <div className="text-2xl font-bold">CSV/PDF</div>
               <p className="text-xs text-muted-foreground">
                 Exporte dados para análise externa
               </p>

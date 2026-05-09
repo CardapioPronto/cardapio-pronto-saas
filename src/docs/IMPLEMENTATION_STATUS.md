@@ -39,7 +39,7 @@
 
 ### Relatórios e Analytics
 - [x] Relatórios avançados com períodos customizados
-- [x] Exportação de dados (Excel/PDF)
+- [x] Exportação de dados (CSV/PDF)
 - [x] Análise de performance comparativa
 - [x] Gráficos interativos de vendas
 - [x] Métricas de produtos mais vendidos
@@ -59,7 +59,7 @@
 ### Dashboard e Relatórios
 - [✅] **MELHORADO**: Dados reais do banco (não mais mockado)
 - [✅] **IMPLEMENTADO**: Relatórios avançados (períodos customizados)
-- [✅] **IMPLEMENTADO**: Exportação de dados (Excel/PDF)
+- [✅] **IMPLEMENTADO**: Exportação de dados (CSV/PDF)
 - [✅] **IMPLEMENTADO**: Análise de performance por período
 
 ### PDV
@@ -108,7 +108,7 @@
 ### Relatórios Avançados
 - [✅] **IMPLEMENTADO**: Relatórios de vendas por período
 - [✅] **IMPLEMENTADO**: Análise de produtos por período
-- [✅] **IMPLEMENTADO**: Exportação para Excel/PDF (formato JSON por agora)
+- [✅] **IMPLEMENTADO**: Exportação para CSV/PDF
 - [✅] **IMPLEMENTADO**: Dashboard executivo por período
 
 ### Sistema de Avaliações
