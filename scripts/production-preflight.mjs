@@ -35,6 +35,10 @@ const main = read("src/main.tsx");
 const errorBoundary = read("src/components/ErrorBoundary.tsx");
 const frontendObservability = read("src/lib/observability.ts");
 const edgeObservability = read("supabase/functions/_shared/observability.ts");
+const demonstracao = read("src/pages/Demonstracao.tsx");
+const adminPagarme = read("src/pages/admin/AdminPagarme.tsx");
+const adminPagarmeWebhooks = read("src/pages/admin/AdminPagarmeWebhooks.tsx");
+const resendWebhook = read("supabase/functions/resend-webhook/index.ts");
 
 for (const functionName of [
   "create-storage-buckets",
@@ -124,6 +128,50 @@ check(
     && envExample.includes("SENTRY_ENVIRONMENT")
     && envExample.includes("SENTRY_RELEASE"),
   "front-end and Edge Function Sentry DSNs must be documented for production setup",
+);
+
+check(
+  "Critical Edge Function secrets are documented",
+  [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "PAGARME_SECRET_KEY",
+    "PAGARME_WEBHOOK_SECRET",
+    "PAGARME_PLATFORM_RECIPIENT_ID",
+    "RESEND_API_KEY",
+    "RESEND_WEBHOOK_SECRET",
+    "EVOLUTION_API_URL",
+    "EVOLUTION_API_KEY",
+    "N8N_WEBHOOK_URL",
+    "N8N_INTERNAL_API_KEY",
+    "GROQ_API_KEY",
+    "PUBLIC_SITE_URL",
+  ].every((envName) => envExample.includes(envName)),
+  "production secrets used by Edge Functions should be visible in .env.example without real values",
+);
+
+check(
+  "Resend webhook fails closed without a signing secret",
+  resendWebhook.includes("RESEND_WEBHOOK_SECRET")
+    && resendWebhook.includes("Webhook secret not configured")
+    && !resendWebhook.includes("payload = JSON.parse(rawBody);"),
+  "resend-webhook must not accept unsigned payloads when RESEND_WEBHOOK_SECRET is missing",
+);
+
+check(
+  "Demo request email uses configured Supabase function invocation",
+  demonstracao.includes('supabase.functions.invoke("send-contact-email"')
+    && !demonstracao.includes("send-email")
+    && !demonstracao.includes("jyrfjvyeikhqpuwcvdff.supabase.co"),
+  "Demonstracao should not call a hardcoded/nonexistent Edge Function URL",
+);
+
+check(
+  "Admin Pagar.me webhook URLs derive from the configured Supabase URL",
+  [adminPagarme, adminPagarmeWebhooks].every((source) =>
+    source.includes("import.meta.env.VITE_SUPABASE_URL")
+      && !source.includes("jyrfjvyeikhqpuwcvdff.supabase.co")
+  ),
+  "admin webhook copy fields must work across Supabase projects/environments",
 );
 
 check(

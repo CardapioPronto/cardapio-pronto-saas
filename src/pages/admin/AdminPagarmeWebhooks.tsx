@@ -36,8 +36,7 @@ interface WebhookEvent {
   processed_at: string | null;
 }
 
-const WEBHOOK_URL =
-  "https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/pagarme-webhook";
+const WEBHOOK_URL = `${String(import.meta.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
 const AdminPagarmeWebhooks = () => {
   const [events, setEvents] = useState<WebhookEvent[]>([]);

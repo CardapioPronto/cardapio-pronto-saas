@@ -53,24 +53,23 @@ const Demonstracao = () => {
       return;
     }
 
-    // 2. Chama a Edge Function para enviar o e-mail
-    const response = await fetch(
-      "https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/send-email",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          stablishment,
-          date: date ? date.toISOString() : null,
-          message,
-        }),
-      }
-    );
+    const demoMessage = [
+      `Estabelecimento: ${stablishment}`,
+      `Data preferencial: ${date ? date.toLocaleDateString("pt-BR") : "Nao informada"}`,
+      message ? `Mensagem: ${message}` : "Mensagem: Sem observacoes adicionais.",
+    ].join("\n");
 
-    if (!response.ok) {
+    const { error: emailError } = await supabase.functions.invoke("send-contact-email", {
+      body: {
+        name,
+        email,
+        phone,
+        subject: "Solicitacao de demonstracao gratuita",
+        message: demoMessage,
+      },
+    });
+
+    if (emailError) {
       toast({
         title: "Solicitação salva, mas houve erro ao enviar o e-mail",
         description: "Tente novamente mais tarde.",

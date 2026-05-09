@@ -21,8 +21,7 @@ import {
 } from "@/services/restaurantPaymentService";
 import { CheckCircle, Copy, CreditCard, Loader2, Search, ShieldCheck } from "lucide-react";
 
-const WEBHOOK_URL =
-  "https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/pagarme-webhook";
+const WEBHOOK_URL = `${String(import.meta.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
 type RestaurantRow = {
   id: string;

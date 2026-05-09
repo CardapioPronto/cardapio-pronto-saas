@@ -18,6 +18,22 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+type JsonRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null;
+
+const asRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : {});
+
+const readString = (value: unknown, ...path: string[]) => {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return null;
+    current = current[key];
+  }
+  return typeof current === "string" && current.trim() ? current : null;
+};
+
 const mapEventToStatus = (eventType: string) => {
   const normalized = eventType.replace("email.", "");
   switch (normalized) {
@@ -40,11 +56,11 @@ const mapEventToStatus = (eventType: string) => {
   }
 };
 
-const extractMessageId = (payload: any) =>
-  payload?.data?.email_id ||
-  payload?.data?.email?.id ||
-  payload?.data?.id ||
-  payload?.email_id ||
+const extractMessageId = (payload: unknown) =>
+  readString(payload, "data", "email_id") ||
+  readString(payload, "data", "email", "id") ||
+  readString(payload, "data", "id") ||
+  readString(payload, "email_id") ||
   null;
 
 Deno.serve(async (req) => {
@@ -53,30 +69,31 @@ Deno.serve(async (req) => {
 
   const svixId = req.headers.get("svix-id");
   const rawBody = await req.text();
-  let payload: any;
+  let payload: JsonRecord;
 
   try {
     const secret = Deno.env.get("RESEND_WEBHOOK_SECRET");
-    if (secret) {
-      const resend = new Resend(Deno.env.get("RESEND_API_KEY") || "re_placeholder");
-      payload = await resend.webhooks.verify({
-        payload: rawBody,
-        headers: {
-          id: svixId || "",
-          timestamp: req.headers.get("svix-timestamp") || "",
-          signature: req.headers.get("svix-signature") || "",
-        },
-        webhookSecret: secret,
-      });
-    } else {
-      payload = JSON.parse(rawBody);
+    if (!secret) {
+      console.error("RESEND_WEBHOOK_SECRET is not configured");
+      return json({ error: "Webhook secret not configured" }, 500);
     }
+
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY") || "re_placeholder");
+    payload = asRecord(await resend.webhooks.verify({
+      payload: rawBody,
+      headers: {
+        id: svixId || "",
+        timestamp: req.headers.get("svix-timestamp") || "",
+        signature: req.headers.get("svix-signature") || "",
+      },
+      webhookSecret: secret,
+    }));
   } catch (error) {
     console.error("Invalid Resend webhook:", error);
     return json({ error: "Invalid webhook" }, 400);
   }
 
-  const eventType = payload?.type || payload?.event || "unknown";
+  const eventType = readString(payload, "type") || readString(payload, "event") || "unknown";
   const providerMessageId = extractMessageId(payload);
 
   try {
@@ -119,11 +136,12 @@ Deno.serve(async (req) => {
     if (emailLogId) {
       const now = new Date().toISOString();
       const mapped = mapEventToStatus(eventType);
+      const providerTimestamp = readString(payload, "created_at") || now;
       const update: Record<string, unknown> = {
-        last_event_at: payload?.created_at || now,
+        last_event_at: providerTimestamp,
       };
       if (mapped.status) update.status = mapped.status;
-      if (mapped.column) update[mapped.column] = payload?.created_at || now;
+      if (mapped.column) update[mapped.column] = providerTimestamp;
 
       await admin.from("email_send_logs").update(update).eq("id", emailLogId);
     }
