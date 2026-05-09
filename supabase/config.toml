@@ -99,6 +99,9 @@ verify_jwt = true
 [functions.finalize-owner-signup]
 verify_jwt = true
 
+[functions.ifood-integration]
+verify_jwt = true
+
 [functions.cleanup-unverified-owner-signups]
 verify_jwt = false
 

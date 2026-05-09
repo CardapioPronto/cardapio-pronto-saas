@@ -1,7 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 import { IfoodConnectionTestResult, IfoodPollResult } from "./types";
 
-type IfoodFunctionAction = "test" | "poll";
+type IfoodFunctionAction = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll";
+
+export interface IfoodIntegrationConfigResponse {
+  success: boolean;
+  config: {
+    clientId: string;
+    merchantId: string;
+    restaurantIfoodId: string;
+    isEnabled: boolean;
+    pollingEnabled: boolean;
+    pollingInterval: number;
+    webhookUrl: string | null;
+    hasStoredCredentials: boolean;
+  };
+}
+
+export interface SaveIfoodIntegrationConfigParams {
+  restaurantId?: string;
+  clientId: string;
+  clientSecret?: string;
+  merchantId: string;
+  restaurantIfoodId?: string;
+  isEnabled: boolean;
+  pollingEnabled: boolean;
+  pollingInterval: number;
+}
 
 const invokeIfoodFunction = async <T>(
   action: IfoodFunctionAction,
@@ -20,6 +45,37 @@ const invokeIfoodFunction = async <T>(
   }
 
   return data as T;
+};
+
+export const getIfoodIntegrationConfig = async (
+  restaurantId?: string,
+): Promise<IfoodIntegrationConfigResponse> => {
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("get_config", { restaurantId });
+};
+
+export const saveIfoodIntegrationConfig = async (
+  params: SaveIfoodIntegrationConfigParams,
+): Promise<IfoodIntegrationConfigResponse> => {
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("save_config", params);
+};
+
+export const setIfoodIntegrationStatus = async (
+  restaurantId: string | undefined,
+  enabled: boolean,
+): Promise<IfoodIntegrationConfigResponse> => {
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("toggle", { restaurantId, enabled });
+};
+
+export const updateIfoodPollingSettings = async (
+  restaurantId: string | undefined,
+  pollingEnabled: boolean,
+  pollingInterval?: number,
+): Promise<IfoodIntegrationConfigResponse> => {
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("update_polling", {
+    restaurantId,
+    pollingEnabled,
+    pollingInterval,
+  });
 };
 
 export const testIfoodConnection = async (

@@ -17,6 +17,10 @@ export {
 
 // Exportar funções da API
 export {
+  getIfoodIntegrationConfig,
+  saveIfoodIntegrationConfig,
+  setIfoodIntegrationStatus,
+  updateIfoodPollingSettings,
   testIfoodConnection,
   pollIfoodEvents,
   getIfoodPendingOrders,

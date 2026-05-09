@@ -51,6 +51,7 @@ for (const functionName of [
   "create-employee",
   "create-trial-subscription",
   "finalize-owner-signup",
+  "ifood-integration",
   "pagarme-create-order-payment",
   "send-delivery-whatsapp",
 ]) {

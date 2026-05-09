@@ -151,14 +151,14 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [ ] Criar acoes na Edge Function `ifood-integration` para `get_config`, `save_config`, `toggle`, `update_polling`.
-- [ ] Remover leitura direta `select('*')` da tela.
-- [ ] Remover gravacao direta de `client_secret` pelo cliente.
-- [ ] Nao devolver `client_secret` para o frontend; retornar apenas `hasStoredCredentials`.
-- [ ] Avaliar criptografia/Vault para `client_secret`.
-- [ ] Ajustar RLS para impedir leitura direta de segredo por usuarios comuns.
-- [ ] Remover persistencia local desnecessaria em `localStorage` ou limitar a dados nao sensiveis.
-- [ ] Garantir que dono e funcionario com permissao de integracoes consigam configurar.
+- [x] Criar acoes na Edge Function `ifood-integration` para `get_config`, `save_config`, `toggle`, `update_polling`.
+- [x] Remover leitura direta `select('*')` da tela.
+- [x] Remover gravacao direta de `client_secret` pelo cliente.
+- [x] Nao devolver `client_secret` para o frontend; retornar apenas `hasStoredCredentials`.
+- [x] Avaliar criptografia/Vault para `client_secret`.
+- [x] Ajustar RLS para impedir leitura direta de segredo por usuarios comuns.
+- [x] Remover persistencia local desnecessaria em `localStorage` ou limitar a dados nao sensiveis.
+- [x] Garantir que dono e funcionario com permissao de integracoes consigam configurar.
 - [ ] Testar conexao iFood com usuario dono.
 - [ ] Testar usuario sem permissao tentando acessar/configurar.
 
@@ -171,7 +171,14 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- 2026-05-09: `IfoodIntegracao` deixou de ler/gravar `ifood_integration` diretamente e passou a usar `get_config`, `save_config`, `toggle` e `update_polling` via Edge Function.
+- 2026-05-09: `client_secret` permanece somente no backend; respostas ao navegador retornam apenas `hasStoredCredentials` e demais dados nao sensiveis.
+- 2026-05-09: Criada e aplicada a migration `20260509130000_harden_ifood_integration_access.sql`, mantendo acesso direto a `ifood_integration` apenas para super admin autenticado.
+- 2026-05-09: `ifood-integration` foi adicionada ao `supabase/config.toml` com `verify_jwt = true` e ao `preflight:prod`.
+- 2026-05-09: Edge Function `ifood-integration` redeployada no Supabase remoto.
+- 2026-05-09: Decisao de seguranca registrada: segredo continua em coluna `text`, mas sem exposicao direta a usuarios comuns; Vault/criptografia em repouso fica como endurecimento futuro se o plano Supabase/operacao permitir.
+- 2026-05-09: `npm run typecheck`, `npm run preflight:prod`, `npx eslint .` e `npm run build` passaram.
+- Pendente: teste manual com credenciais reais iFood para validar conexao/poll e teste manual com usuario sem permissao.
 
 ---
 
@@ -470,3 +477,4 @@ Evidencia:
 | 2026-05-09 | Auditoria inicial | Concluida | Base compila, mas ainda nao recomendada para producao comercial ampla. |
 | 2026-05-09 | Bloco 1 | Implementado tecnicamente | Dependencias de producao sem vulnerabilidades conhecidas; `xlsx` removido; pendente teste manual de exportacao com dados reais. |
 | 2026-05-09 | Bloco 2 | Implementado tecnicamente | PDV e status de pedidos migrados para RPCs transacionais; pendente teste manual completo em mesa/balcao/cozinha. |
+| 2026-05-09 | Bloco 3 | Implementado tecnicamente | Configuracao iFood movida para Edge Function protegida; segredo nao retorna ao front; RLS endurecida; pendente teste manual com credenciais/permissoes. |
