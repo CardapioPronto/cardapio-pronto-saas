@@ -609,21 +609,30 @@ export type Database = {
       coupon_usage: {
         Row: {
           coupon_id: string
+          created_at: string | null
           customer_identifier: string | null
+          customer_phone: string | null
+          discount_amount: number | null
           id: string
           order_id: string | null
           used_at: string
         }
         Insert: {
           coupon_id: string
+          created_at?: string | null
           customer_identifier?: string | null
+          customer_phone?: string | null
+          discount_amount?: number | null
           id?: string
           order_id?: string | null
           used_at?: string
         }
         Update: {
           coupon_id?: string
+          created_at?: string | null
           customer_identifier?: string | null
+          customer_phone?: string | null
+          discount_amount?: number | null
           id?: string
           order_id?: string | null
           used_at?: string
@@ -640,42 +649,66 @@ export type Database = {
       }
       coupons: {
         Row: {
+          applicable_categories: string[] | null
+          applicable_products: string[] | null
+          applicable_to: string | null
           code: string
           created_at: string
+          description: string | null
           discount_type: string
           discount_value: number
           id: string
           is_active: boolean
           max_usage: number | null
+          max_uses: number | null
+          minimum_order_value: number | null
           restaurant_id: string
+          title: string
           updated_at: string
           usage_count: number
+          valid_from: string
           valid_until: string | null
         }
         Insert: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          applicable_to?: string | null
           code: string
           created_at?: string
+          description?: string | null
           discount_type?: string
           discount_value?: number
           id?: string
           is_active?: boolean
           max_usage?: number | null
+          max_uses?: number | null
+          minimum_order_value?: number | null
           restaurant_id: string
+          title: string
           updated_at?: string
           usage_count?: number
+          valid_from: string
           valid_until?: string | null
         }
         Update: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          applicable_to?: string | null
           code?: string
           created_at?: string
+          description?: string | null
           discount_type?: string
           discount_value?: number
           id?: string
           is_active?: boolean
           max_usage?: number | null
+          max_uses?: number | null
+          minimum_order_value?: number | null
           restaurant_id?: string
+          title?: string
           updated_at?: string
           usage_count?: number
+          valid_from?: string
           valid_until?: string | null
         }
         Relationships: [
@@ -732,6 +765,7 @@ export type Database = {
           city: string
           complement: string | null
           created_at: string
+          customer_email: string | null
           customer_name: string
           customer_phone: string
           delivery_fee: number
@@ -741,7 +775,11 @@ export type Database = {
           notes: string | null
           number: string
           order_id: string | null
+          paid_at: string | null
           payment_method: string | null
+          payment_provider: string | null
+          payment_reference: string | null
+          payment_status: string
           reference_point: string | null
           restaurant_id: string
           state: string
@@ -762,6 +800,7 @@ export type Database = {
           city: string
           complement?: string | null
           created_at?: string
+          customer_email?: string | null
           customer_name: string
           customer_phone: string
           delivery_fee?: number
@@ -771,7 +810,11 @@ export type Database = {
           notes?: string | null
           number: string
           order_id?: string | null
+          paid_at?: string | null
           payment_method?: string | null
+          payment_provider?: string | null
+          payment_reference?: string | null
+          payment_status?: string
           reference_point?: string | null
           restaurant_id: string
           state: string
@@ -792,6 +835,7 @@ export type Database = {
           city?: string
           complement?: string | null
           created_at?: string
+          customer_email?: string | null
           customer_name?: string
           customer_phone?: string
           delivery_fee?: number
@@ -801,7 +845,11 @@ export type Database = {
           notes?: string | null
           number?: string
           order_id?: string | null
+          paid_at?: string | null
           payment_method?: string | null
+          payment_provider?: string | null
+          payment_reference?: string | null
+          payment_status?: string
           reference_point?: string | null
           restaurant_id?: string
           state?: string
@@ -866,6 +914,351 @@ export type Database = {
           stablishment?: string
         }
         Relationships: []
+      }
+      email_campaigns: {
+        Row: {
+          audience_filter: Json
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          html_content: string
+          id: string
+          last_error: string | null
+          name: string
+          recipient_count: number
+          restaurant_id: string
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_count: number
+          status: string
+          subject: string
+          template_id: string | null
+          text_content: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience_filter?: Json
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          html_content: string
+          id?: string
+          last_error?: string | null
+          name: string
+          recipient_count?: number
+          restaurant_id: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject: string
+          template_id?: string | null
+          text_content?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience_filter?: Json
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          html_content?: string
+          id?: string
+          last_error?: string | null
+          name?: string
+          recipient_count?: number
+          restaurant_id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string
+          template_id?: string | null
+          text_content?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_send_logs: {
+        Row: {
+          bounced_at: string | null
+          clicked_at: string | null
+          complained_at: string | null
+          context_id: string | null
+          context_type: string | null
+          created_at: string
+          delivered_at: string | null
+          diagnostic_message: string | null
+          diagnostic_status: string | null
+          email_type: string
+          error_message: string | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          last_event_at: string | null
+          metadata: Json
+          opened_at: string | null
+          provider: string
+          provider_message_id: string | null
+          recipient_email: string
+          recipient_name: string | null
+          restaurant_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          template_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          bounced_at?: string | null
+          clicked_at?: string | null
+          complained_at?: string | null
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          diagnostic_message?: string | null
+          diagnostic_status?: string | null
+          email_type?: string
+          error_message?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          last_event_at?: string | null
+          metadata?: Json
+          opened_at?: string | null
+          provider?: string
+          provider_message_id?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          restaurant_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template_id?: string | null
+          template_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bounced_at?: string | null
+          clicked_at?: string | null
+          complained_at?: string | null
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          diagnostic_message?: string | null
+          diagnostic_status?: string | null
+          email_type?: string
+          error_message?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          last_event_at?: string | null
+          metadata?: Json
+          opened_at?: string | null
+          provider?: string
+          provider_message_id?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          restaurant_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_id?: string | null
+          template_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_settings: {
+        Row: {
+          api_key: string
+          created_at: string
+          from_email: string
+          from_name: string
+          id: string
+          is_enabled: boolean
+          provider: string
+          reply_to: string | null
+          restaurant_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          from_email: string
+          from_name?: string
+          id?: string
+          is_enabled?: boolean
+          provider?: string
+          reply_to?: string | null
+          restaurant_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_enabled?: boolean
+          provider?: string
+          reply_to?: string | null
+          restaurant_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          html_content: string
+          id: string
+          is_enabled: boolean
+          is_system: boolean
+          name: string
+          restaurant_id: string | null
+          subject: string
+          template_key: string
+          text_content: string | null
+          updated_at: string
+          updated_by: string | null
+          variables: Json
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          html_content: string
+          id?: string
+          is_enabled?: boolean
+          is_system?: boolean
+          name: string
+          restaurant_id?: string | null
+          subject: string
+          template_key: string
+          text_content?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          html_content?: string
+          id?: string
+          is_enabled?: boolean
+          is_system?: boolean
+          name?: string
+          restaurant_id?: string | null
+          subject?: string
+          template_key?: string
+          text_content?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_webhook_events: {
+        Row: {
+          created_at: string
+          email_log_id: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          provider: string
+          provider_message_id: string | null
+          svix_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_log_id?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider?: string
+          provider_message_id?: string | null
+          svix_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_log_id?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider?: string
+          provider_message_id?: string | null
+          svix_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_webhook_events_email_log_id_fkey"
+            columns: ["email_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_send_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_permissions: {
         Row: {
@@ -939,6 +1332,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "employees_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ifood_events: {
+        Row: {
+          acknowledged_at: string | null
+          code: string | null
+          created_at: string
+          error: string | null
+          full_code: string | null
+          id: string
+          merchant_id: string
+          order_id: string | null
+          payload: Json
+          processed_at: string | null
+          restaurant_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          code?: string | null
+          created_at?: string
+          error?: string | null
+          full_code?: string | null
+          id: string
+          merchant_id: string
+          order_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+          restaurant_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          code?: string | null
+          created_at?: string
+          error?: string | null
+          full_code?: string | null
+          id?: string
+          merchant_id?: string
+          order_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ifood_events_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -1214,6 +1657,8 @@ export type Database = {
           price: number
           product_id: string
           product_name: string
+          promotion_discount: number | null
+          promotion_id: string | null
           quantity: number
         }
         Insert: {
@@ -1225,6 +1670,8 @@ export type Database = {
           price: number
           product_id: string
           product_name: string
+          promotion_discount?: number | null
+          promotion_id?: string | null
           quantity: number
         }
         Update: {
@@ -1236,6 +1683,8 @@ export type Database = {
           price?: number
           product_id?: string
           product_name?: string
+          promotion_discount?: number | null
+          promotion_id?: string | null
           quantity?: number
         }
         Relationships: [
@@ -1253,11 +1702,106 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_payments: {
+        Row: {
+          amount: number
+          boleto_barcode: string | null
+          boleto_line: string | null
+          boleto_url: string | null
+          checkout_url: string | null
+          created_at: string
+          currency: string
+          expires_at: string | null
+          id: string
+          order_id: string
+          paid_at: string | null
+          payment_method: string
+          provider: string
+          provider_charge_id: string | null
+          provider_order_id: string | null
+          qr_code: string | null
+          qr_code_url: string | null
+          raw_response: Json
+          restaurant_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          boleto_barcode?: string | null
+          boleto_line?: string | null
+          boleto_url?: string | null
+          checkout_url?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          order_id: string
+          paid_at?: string | null
+          payment_method: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_order_id?: string | null
+          qr_code?: string | null
+          qr_code_url?: string | null
+          raw_response?: Json
+          restaurant_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          boleto_barcode?: string | null
+          boleto_line?: string | null
+          boleto_url?: string | null
+          checkout_url?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          order_id?: string
+          paid_at?: string | null
+          payment_method?: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_order_id?: string | null
+          qr_code?: string | null
+          qr_code_url?: string | null
+          raw_response?: Json
+          restaurant_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_payments_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
         Row: {
           created_at: string
+          customer_email: string | null
           customer_name: string
           customer_phone: string | null
           employee_id: string | null
@@ -1265,7 +1809,11 @@ export type Database = {
           ifood_id: string | null
           order_number: string
           order_type: string
+          paid_at: string | null
           payment_method: string | null
+          payment_provider: string | null
+          payment_reference: string | null
+          payment_status: string
           restaurant_id: string
           source: string | null
           status: string
@@ -1275,6 +1823,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
           employee_id?: string | null
@@ -1282,7 +1831,11 @@ export type Database = {
           ifood_id?: string | null
           order_number?: string
           order_type: string
+          paid_at?: string | null
           payment_method?: string | null
+          payment_provider?: string | null
+          payment_reference?: string | null
+          payment_status?: string
           restaurant_id: string
           source?: string | null
           status: string
@@ -1292,6 +1845,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
           employee_id?: string | null
@@ -1299,7 +1853,11 @@ export type Database = {
           ifood_id?: string | null
           order_number?: string
           order_type?: string
+          paid_at?: string | null
           payment_method?: string | null
+          payment_provider?: string | null
+          payment_reference?: string | null
+          payment_status?: string
           restaurant_id?: string
           source?: string | null
           status?: string
@@ -1364,7 +1922,9 @@ export type Database = {
           event_id: string | null
           event_type: string
           id: string
+          order_id: string | null
           pagarme_customer_id: string | null
+          pagarme_order_id: string | null
           pagarme_subscription_id: string | null
           payload: Json
           processed: boolean
@@ -1377,7 +1937,9 @@ export type Database = {
           event_id?: string | null
           event_type: string
           id?: string
+          order_id?: string | null
           pagarme_customer_id?: string | null
+          pagarme_order_id?: string | null
           pagarme_subscription_id?: string | null
           payload: Json
           processed?: boolean
@@ -1390,7 +1952,9 @@ export type Database = {
           event_id?: string | null
           event_type?: string
           id?: string
+          order_id?: string | null
           pagarme_customer_id?: string | null
+          pagarme_order_id?: string | null
           pagarme_subscription_id?: string | null
           payload?: Json
           processed?: boolean
@@ -1433,6 +1997,10 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          email_campaign_contact_limit: number
+          email_campaign_monthly_limit: number
+          email_campaigns_enabled: boolean
+          email_custom_templates_enabled: boolean
           id: string
           is_active: boolean | null
           name: string
@@ -1450,6 +2018,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          email_campaign_contact_limit?: number
+          email_campaign_monthly_limit?: number
+          email_campaigns_enabled?: boolean
+          email_custom_templates_enabled?: boolean
           id?: string
           is_active?: boolean | null
           name: string
@@ -1467,6 +2039,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          email_campaign_contact_limit?: number
+          email_campaign_monthly_limit?: number
+          email_campaigns_enabled?: boolean
+          email_custom_templates_enabled?: boolean
           id?: string
           is_active?: boolean | null
           name?: string
@@ -1557,40 +2133,52 @@ export type Database = {
       }
       promotions: {
         Row: {
+          applicable_to: string
           created_at: string
+          created_by: string | null
           description: string | null
           discount_type: string
           discount_value: number
           id: string
           is_active: boolean
+          min_order_value: number | null
           name: string
           restaurant_id: string
+          target_id: string | null
           updated_at: string
           valid_from: string
           valid_until: string | null
         }
         Insert: {
+          applicable_to?: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
           discount_type?: string
           discount_value?: number
           id?: string
           is_active?: boolean
+          min_order_value?: number | null
           name: string
           restaurant_id: string
+          target_id?: string | null
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
         }
         Update: {
+          applicable_to?: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
           discount_type?: string
           discount_value?: number
           id?: string
           is_active?: boolean
+          min_order_value?: number | null
           name?: string
           restaurant_id?: string
+          target_id?: string | null
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
@@ -1598,6 +2186,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "promotions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_email_contacts: {
+        Row: {
+          accepts_marketing: boolean
+          created_at: string
+          email: string
+          id: string
+          last_order_at: string | null
+          last_order_id: string | null
+          metadata: Json
+          name: string | null
+          phone: string | null
+          restaurant_id: string
+          source: string
+          unsubscribe_token: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepts_marketing?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          last_order_at?: string | null
+          last_order_id?: string | null
+          metadata?: Json
+          name?: string | null
+          phone?: string | null
+          restaurant_id: string
+          source?: string
+          unsubscribe_token?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepts_marketing?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          last_order_at?: string | null
+          last_order_id?: string | null
+          metadata?: Json
+          name?: string | null
+          phone?: string | null
+          restaurant_id?: string
+          source?: string
+          unsubscribe_token?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_email_contacts_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -1646,23 +2293,100 @@ export type Database = {
           },
         ]
       }
+      restaurant_payment_settings: {
+        Row: {
+          allow_counter: boolean
+          allow_delivery: boolean
+          allow_pickup: boolean
+          allow_table: boolean
+          commission_type: string
+          commission_value: number
+          created_at: string
+          enabled_methods: string[]
+          id: string
+          is_enabled: boolean
+          marketplace_mode: string
+          metadata: Json
+          notes: string | null
+          onboarding_status: string
+          provider: string
+          recipient_id: string | null
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_counter?: boolean
+          allow_delivery?: boolean
+          allow_pickup?: boolean
+          allow_table?: boolean
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          enabled_methods?: string[]
+          id?: string
+          is_enabled?: boolean
+          marketplace_mode?: string
+          metadata?: Json
+          notes?: string | null
+          onboarding_status?: string
+          provider?: string
+          recipient_id?: string | null
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_counter?: boolean
+          allow_delivery?: boolean
+          allow_pickup?: boolean
+          allow_table?: boolean
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          enabled_methods?: string[]
+          id?: string
+          is_enabled?: boolean
+          marketplace_mode?: string
+          metadata?: Json
+          notes?: string | null
+          onboarding_status?: string
+          provider?: string
+          recipient_id?: string | null
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_payment_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_settings: {
         Row: {
+          closing_time: string | null
           created_at: string
+          opening_time: string | null
           restaurant_id: string
           setting_key: string
           setting_value: Json
           updated_at: string
         }
         Insert: {
+          closing_time?: string | null
           created_at?: string
+          opening_time?: string | null
           restaurant_id: string
           setting_key: string
           setting_value: Json
           updated_at?: string
         }
         Update: {
+          closing_time?: string | null
           created_at?: string
+          opening_time?: string | null
           restaurant_id?: string
           setting_key?: string
           setting_value?: Json
@@ -2341,6 +3065,19 @@ export type Database = {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
       }
+      create_public_menu_order: { Args: { payload: Json }; Returns: Json }
+      get_public_order_tracking: {
+        Args: { p_tracking_id: string }
+        Returns: Json
+      }
+      get_public_restaurant_payment_settings: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_restaurant_subscription_entitlement: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
       get_user_basic_info: {
         Args: { _user_id: string }
         Returns: {
@@ -2399,6 +3136,10 @@ export type Database = {
           target_restaurant_id: string
         }
         Returns: string
+      }
+      user_can_access_conversation_realtime_topic: {
+        Args: { p_topic: string }
+        Returns: boolean
       }
       user_has_restaurant_permission: {
         Args: {
