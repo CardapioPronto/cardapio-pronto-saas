@@ -1,7 +1,4 @@
 
-import { createClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
-
 // Import the integrated Supabase client
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
@@ -13,7 +10,7 @@ export const signIn = async (email: string, password: string) => {
   return await supabase.auth.signInWithPassword({ email, password });
 };
 
-export const signUp = async (email: string, password: string, userData: any) => {
+export const signUp = async (email: string, password: string, userData: Record<string, unknown>) => {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -69,11 +66,23 @@ export const getCurrentUserWithProfile = async () => {
   };
 };
 
-// Define a type for valid table names to ensure type safety
-type ValidTable = 'restaurants' | 'products' | 'orders' | 'order_items' | 'menus' | 
-                  'menu_categories' | 'menu_items' | 'subscriptions' | 
-                  'restaurant_settings' | 'ifood_integration' | 'system_admins' | 
-                  'system_settings' | 'admin_activity_logs';
+const validTables = [
+  'restaurants',
+  'products',
+  'orders',
+  'order_items',
+  'menus',
+  'menu_categories',
+  'menu_items',
+  'subscriptions',
+  'restaurant_settings',
+  'ifood_integration',
+  'system_admins',
+  'system_settings',
+  'admin_activity_logs',
+] as const;
+
+type ValidTable = typeof validTables[number];
 
 // Função para verificar se o usuário tem acesso a um recurso específico
 export const checkResourceAccess = async (table: string, resourceId: string) => {
@@ -83,22 +92,6 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
   // For type safety, we need to check if the table is valid
   // This is a workaround since we can't dynamically type the table name
   // but still want to allow flexible queries
-  const validTables: ValidTable[] = [
-    'restaurants', 
-    'products', 
-    'orders', 
-    'order_items', 
-    'menus', 
-    'menu_categories', 
-    'menu_items', 
-    'subscriptions', 
-    'restaurant_settings',
-    'ifood_integration',
-    'system_admins',
-    'system_settings',
-    'admin_activity_logs'
-  ];
-
   if (!validTables.includes(table as ValidTable)) {
     console.error(`Invalid table name: ${table}`);
     return false;
@@ -110,9 +103,7 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
     const restaurantId = await getCurrentRestaurantId();
     if (!restaurantId) return false;
     
-    // Use type assertions and any to bypass TypeScript's complex type inference
-    // This approach helps avoid deep type instantiation errors
-    const query = supabase.from(table as any);
+    const query = supabase.from(table as ValidTable);
     const data = await query
       .select('id')
       .eq('id', resourceId)

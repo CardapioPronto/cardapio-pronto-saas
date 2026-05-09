@@ -27,6 +27,7 @@ interface EvolutionRequest {
 type RequiredPermission = 'whatsapp_manage_instances' | 'whatsapp_reply_as_human';
 
 type SupabaseAdminClient = ReturnType<typeof createClient>;
+type JsonRecord = Record<string, unknown>;
 
 const WEBHOOK_EVENTS = [
   'MESSAGES_UPSERT',
@@ -44,15 +45,36 @@ function requiredPermissionForAction(action: EvolutionRequest['action']): Requir
   return action === 'send_text' ? 'whatsapp_reply_as_human' : 'whatsapp_manage_instances';
 }
 
-function normalizeConnectionState(result: Record<string, any> | null | undefined): string | null {
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null;
+}
+
+function asRecord(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
+function readPath(value: unknown, ...path: string[]) {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+function readString(value: unknown, ...path: string[]) {
+  const raw = readPath(value, ...path);
+  return raw === undefined || raw === null || raw === '' ? null : String(raw);
+}
+
+function normalizeConnectionState(result: unknown): string | null {
   const rawState =
-    result?.instance?.state ||
-    result?.instance?.connectionState ||
-    result?.state ||
-    result?.connectionState?.state ||
-    result?.connectionState ||
-    result?.status ||
-    null;
+    readString(result, 'instance', 'state') ||
+    readString(result, 'instance', 'connectionState') ||
+    readString(result, 'state') ||
+    readString(result, 'connectionState', 'state') ||
+    readString(result, 'connectionState') ||
+    readString(result, 'status');
 
   if (!rawState) return null;
   const state = String(rawState).toLowerCase();
@@ -61,17 +83,17 @@ function normalizeConnectionState(result: Record<string, any> | null | undefined
   return 'DISCONNECTED';
 }
 
-function extractPhoneNumber(result: Record<string, any> | null | undefined): string | null {
+function extractPhoneNumber(result: unknown): string | null {
   const raw =
-    result?.instance?.phoneNumber ||
-    result?.instance?.ownerJid ||
-    result?.instance?.owner ||
-    result?.fetchInstance?.instance?.phoneNumber ||
-    result?.fetchInstance?.instance?.ownerJid ||
-    result?.fetchInstance?.instance?.owner ||
-    result?.phoneNumber ||
-    result?.ownerJid ||
-    result?.owner ||
+    readString(result, 'instance', 'phoneNumber') ||
+    readString(result, 'instance', 'ownerJid') ||
+    readString(result, 'instance', 'owner') ||
+    readString(result, 'fetchInstance', 'instance', 'phoneNumber') ||
+    readString(result, 'fetchInstance', 'instance', 'ownerJid') ||
+    readString(result, 'fetchInstance', 'instance', 'owner') ||
+    readString(result, 'phoneNumber') ||
+    readString(result, 'ownerJid') ||
+    readString(result, 'owner') ||
     null;
 
   if (!raw) return null;
@@ -89,7 +111,7 @@ function buildWebhookPayload(webhookUrl: string) {
   };
 }
 
-async function readResponseBody(response: Response): Promise<Record<string, any>> {
+async function readResponseBody(response: Response): Promise<unknown> {
   const body = await response.text();
   try {
     return body ? JSON.parse(body) : {};
@@ -185,12 +207,12 @@ async function findEvolutionWebhook(baseUrl: string, instanceName: string, heade
   return result;
 }
 
-function extractWebhookUrl(result: Record<string, any> | null | undefined): string | null {
+function extractWebhookUrl(result: unknown): string | null {
   const raw =
-    result?.url ||
-    result?.webhook?.url ||
-    result?.webhook?.webhook?.url ||
-    result?.webhook?.webhookUrl ||
+    readString(result, 'url') ||
+    readString(result, 'webhook', 'url') ||
+    readString(result, 'webhook', 'webhook', 'url') ||
+    readString(result, 'webhook', 'webhookUrl') ||
     null;
 
   return raw ? String(raw) : null;
@@ -276,8 +298,8 @@ serve(async (req) => {
 
     const supabase = await authorizeRequest(req, restaurantId, action);
 
-    let response;
-    let result;
+    let response: Response;
+    let result: unknown = {};
 
     switch (action) {
       case 'create_instance': {
@@ -294,10 +316,10 @@ serve(async (req) => {
         });
         result = await readResponseBody(response);
         if (!response.ok) throw new Error(`Evolution create ${response.status}: ${JSON.stringify(result)}`);
-        logger.debug('Evolution instance create result', { hasInstance: !!result?.instance });
+        logger.debug('Evolution instance create result', { hasInstance: isRecord(readPath(result, 'instance')) });
 
         // Configure webhook automatically after creation
-        if (result.instance && N8N_WEBHOOK_URL) {
+        if (isRecord(readPath(result, 'instance')) && N8N_WEBHOOK_URL) {
           try {
             logger.debug('Setting Evolution webhook', { instanceName });
             await setEvolutionWebhook(baseUrl, instanceName, headers, N8N_WEBHOOK_URL);
@@ -318,7 +340,7 @@ serve(async (req) => {
         });
         result = await readResponseBody(response);
         if (!response.ok) throw new Error(`Evolution connect ${response.status}: ${JSON.stringify(result)}`);
-        logger.debug('Evolution connect result', { hasQrCode: !!result?.base64 });
+        logger.debug('Evolution connect result', { hasQrCode: !!readString(result, 'base64') });
         break;
       }
 
@@ -349,14 +371,14 @@ serve(async (req) => {
             const instanceResult = await readResponseBody(instanceResponse);
             if (instanceResponse.ok) {
               const fetchInstance = Array.isArray(instanceResult)
-                ? instanceResult.find((item: any) => item?.instance?.instanceName === instanceName) || instanceResult[0]
+                ? instanceResult.find((item: unknown) => readString(item, 'instance', 'instanceName') === instanceName) || instanceResult[0]
                 : instanceResult;
               result = {
-                ...result,
+                ...asRecord(result),
                 fetchInstance,
                 instance: {
-                  ...(result?.instance || {}),
-                  ...(fetchInstance?.instance || {}),
+                  ...asRecord(readPath(result, 'instance')),
+                  ...asRecord(readPath(fetchInstance, 'instance')),
                 },
               };
             }
@@ -368,7 +390,9 @@ serve(async (req) => {
           }
         }
 
-        logger.debug('Evolution status result', { state: result?.instance?.state || result?.state });
+        logger.debug('Evolution status result', {
+          state: readString(result, 'instance', 'state') || readString(result, 'state'),
+        });
         break;
       }
 
@@ -455,9 +479,9 @@ serve(async (req) => {
     }
 
     // Update whatsapp_instances table (not whatsapp_ai_config)
-    if (action === 'create_instance' && result?.instance) {
+    if (action === 'create_instance' && isRecord(readPath(result, 'instance'))) {
       await updateInstance(supabase, instanceName, restaurantId, {
-        evolution_instance_id: result.instance.instanceName || instanceName,
+        evolution_instance_id: readString(result, 'instance', 'instanceName') || instanceName,
         webhook_url: N8N_WEBHOOK_URL || null,
         status: 'CREATED',
       });
@@ -473,9 +497,9 @@ serve(async (req) => {
       });
     }
 
-    if (action === 'connect' && result?.base64) {
+    if (action === 'connect' && readString(result, 'base64')) {
       await updateInstance(supabase, instanceName, restaurantId, {
-        qrcode_base64: result.base64,
+        qrcode_base64: readString(result, 'base64'),
         status: 'CONNECTING',
       });
     }
@@ -496,7 +520,7 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      ...result,
+      ...asRecord(result),
       _pubfy: {
         status: normalizeConnectionState(result),
         phoneNumber: extractPhoneNumber(result),

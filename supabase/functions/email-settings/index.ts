@@ -20,6 +20,16 @@ interface EmailSettingsPayload {
   testEmail?: string;
 }
 
+interface EmailSettingsRow {
+  provider?: string | null;
+  from_name?: string | null;
+  from_email?: string | null;
+  reply_to?: string | null;
+  is_enabled?: boolean | null;
+  api_key?: string | null;
+  updated_at?: string | null;
+}
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -124,7 +134,7 @@ const resolveScope = async (scope: Scope, userId: string) => {
   throw new Error("Sem permissão para gerenciar integrações");
 };
 
-const serializeSettings = (settings: any) => ({
+const serializeSettings = (settings?: EmailSettingsRow | null) => ({
   provider: settings?.provider || "resend",
   fromName: settings?.from_name || "",
   fromEmail: settings?.from_email || "",

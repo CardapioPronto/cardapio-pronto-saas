@@ -40,6 +40,20 @@ const render = (template: string, variables: Record<string, unknown>, escape = t
     return escape ? escapeHtml(value) : String(value ?? "");
   });
 
+type JsonRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null;
+
+const readString = (value: unknown, ...path: string[]) => {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return null;
+    current = current[key];
+  }
+  return typeof current === "string" && current.trim() ? current : null;
+};
+
 const getEmailConfig = async (
   admin: SupabaseAdmin,
   restaurantId?: string | null,
@@ -156,7 +170,10 @@ export async function sendManagedEmail(input: ManagedEmailInput) {
       ],
     });
 
-    const providerMessageId = (response as any)?.data?.id || (response as any)?.id || null;
+    const providerMessageId =
+      readString(response, "data", "id") ||
+      readString(response, "id") ||
+      null;
 
     await input.admin
       .from("email_send_logs")

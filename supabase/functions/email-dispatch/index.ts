@@ -19,6 +19,43 @@ const admin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+type JsonRecord = Record<string, unknown>;
+
+type EmailType = "transactional" | "operational" | "marketing" | "test";
+
+type EmailDispatchBody = JsonRecord & {
+  action?: string;
+  restaurant_id?: string;
+  template_key?: string;
+  campaign_id?: string;
+  order_id?: string;
+  tracking_id?: string;
+  delivery_order_id?: string;
+  email?: string;
+  to?: string;
+  recipient_name?: string;
+  variables?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  subject?: string;
+  html?: string;
+  text?: string;
+  context_type?: string;
+  context_id?: string;
+  email_type?: string;
+  accepts_marketing?: boolean;
+  origin?: string;
+};
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null;
+
+const asRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : {});
+
+const asEmailType = (value: unknown): EmailType => {
+  if (value === "operational" || value === "marketing" || value === "test") return value;
+  return "transactional";
+};
+
 const getUser = async (req: Request) => {
   const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
   if (!token) return null;
@@ -133,7 +170,7 @@ const getCampaignUsage = async (restaurantId: string) => {
   return count || 0;
 };
 
-const copyAllowedTemplate = async (req: Request, body: any) => {
+const copyAllowedTemplate = async (req: Request, body: EmailDispatchBody) => {
   const user = await getUser(req);
   if (!user) throw new Error("Usuário não autenticado");
   if (!body.restaurant_id) throw new Error("Restaurante obrigatório");
@@ -189,7 +226,7 @@ const copyAllowedTemplate = async (req: Request, body: any) => {
   return { template: copied };
 };
 
-const sendCampaign = async (req: Request, body: any) => {
+const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
   const user = await getUser(req);
   if (!user) throw new Error("Usuário não autenticado");
   if (!body.restaurant_id || !body.campaign_id) throw new Error("Campanha inválida");
@@ -330,7 +367,7 @@ const sendCampaign = async (req: Request, body: any) => {
   };
 };
 
-const sendOrderConfirmation = async (body: any) => {
+const sendOrderConfirmation = async (body: EmailDispatchBody) => {
   const email = String(body.email || "").trim().toLowerCase();
   if (!isEmail(email)) throw new Error("E-mail do cliente inválido");
   if (!body.order_id || !body.restaurant_id) throw new Error("Pedido inválido");
@@ -417,20 +454,21 @@ const sendOrderConfirmation = async (body: any) => {
   });
 };
 
-const sendTemplate = async (req: Request, body: any) => {
+const sendTemplate = async (req: Request, body: EmailDispatchBody) => {
   const user = await getUser(req);
   if (!user) throw new Error("Usuário não autenticado");
   if (!body.restaurant_id) throw new Error("Restaurante obrigatório");
   if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
   if (!isEmail(String(body.to || ""))) throw new Error("Destinatário inválido");
+  const to = String(body.to || "").trim().toLowerCase();
 
   return await sendManagedEmail({
     admin,
     restaurantId: body.restaurant_id,
     preferRestaurantConfig: true,
     templateKey: body.template_key,
-    emailType: body.email_type || "transactional",
-    to: body.to,
+    emailType: asEmailType(body.email_type),
+    to,
     recipientName: body.recipient_name,
     variables: body.variables || {},
     subject: body.subject,
@@ -438,7 +476,7 @@ const sendTemplate = async (req: Request, body: any) => {
     text: body.text,
     contextType: body.context_type,
     contextId: body.context_id,
-    metadata: { source: "manual_dispatch", ...(body.metadata || {}) },
+    metadata: { source: "manual_dispatch", ...asRecord(body.metadata) },
   });
 };
 
@@ -447,7 +485,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const body = await req.json();
+    const body = (await req.json()) as EmailDispatchBody;
     const action = body.action || "send_template";
 
     if (action === "send_order_confirmation") {

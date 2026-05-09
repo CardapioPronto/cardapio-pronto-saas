@@ -14,6 +14,14 @@ type TableNames = keyof Database['public']['Tables'];
 
 // Generic type for table rows
 type TableRow<T extends TableNames> = Database['public']['Tables'][T]['Row'];
+type TableInsert<T extends TableNames> = Database['public']['Tables'][T]['Insert'];
+type TableUpdate<T extends TableNames> = Database['public']['Tables'][T]['Update'];
+type FilterValue = string | number | boolean | null;
+type SupabaseQuery = ReturnType<typeof supabase.from>;
+type CustomQueryResult = {
+  data: unknown;
+  error: PostgrestError | Error | null;
+};
 
 // Classe de serviço genérico para CRUD no Supabase
 export class SupabaseService<T extends TableNames> {
@@ -26,11 +34,11 @@ export class SupabaseService<T extends TableNames> {
   /**
    * Cria um novo registro na tabela
    */
-  async create<R extends TableRow<T>>(data: Omit<R, 'id' | 'created_at' | 'updated_at'>): Promise<ServiceResponse<R>> {
+  async create<R extends TableRow<T>>(data: TableInsert<T>): Promise<ServiceResponse<R>> {
     try {
       const { data: result, error } = await supabase
         .from(this.table)
-        .insert(data as any)
+        .insert(data)
         .select()
         .single();
 
@@ -44,7 +52,7 @@ export class SupabaseService<T extends TableNames> {
    * Busca todos os registros da tabela com filtros opcionais
    */
   async getAll<R extends TableRow<T>>(
-    filters?: { column: string; value: any }[],
+    filters?: { column: string; value: FilterValue }[],
     options?: { limit?: number; offset?: number; orderBy?: { column: string; ascending?: boolean } }
   ): Promise<ServiceResponse<R[]>> {
     try {
@@ -81,7 +89,7 @@ export class SupabaseService<T extends TableNames> {
       const { data, error } = await supabase
         .from(this.table)
         .select('*')
-        .eq('id', id as any)
+        .eq('id', id)
         .single();
 
       return { data: data as unknown as R, error };
@@ -93,12 +101,12 @@ export class SupabaseService<T extends TableNames> {
   /**
    * Atualiza um registro existente
    */
-  async update<R extends TableRow<T>>(id: string | number, data: Partial<Omit<R, 'id' | 'created_at'>>): Promise<ServiceResponse<R>> {
+  async update<R extends TableRow<T>>(id: string | number, data: TableUpdate<T>): Promise<ServiceResponse<R>> {
     try {
       const { data: result, error } = await supabase
         .from(this.table)
-        .update(data as any)
-        .eq('id', id as any)
+        .update(data)
+        .eq('id', id)
         .select()
         .single();
 
@@ -116,7 +124,7 @@ export class SupabaseService<T extends TableNames> {
       const { error } = await supabase
         .from(this.table)
         .delete()
-        .eq('id', id as any);
+        .eq('id', id);
 
       return { data: null, error };
     } catch (error) {
@@ -127,7 +135,9 @@ export class SupabaseService<T extends TableNames> {
   /**
    * Executa uma consulta personalizada
    */
-  async customQuery<R>(queryFn: (query: any) => any): Promise<ServiceResponse<R>> {
+  async customQuery<R>(
+    queryFn: (query: SupabaseQuery) => Promise<CustomQueryResult> | CustomQueryResult,
+  ): Promise<ServiceResponse<R>> {
     try {
       const query = supabase.from(this.table);
       const { data, error } = await queryFn(query);
