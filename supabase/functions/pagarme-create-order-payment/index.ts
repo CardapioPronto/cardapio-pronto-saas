@@ -1,6 +1,7 @@
 // Edge Function: pagarme-create-order-payment
 // Creates a Pagar.me payment for a public menu order.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -348,6 +349,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[pagarme-create-order-payment]", message);
+    await captureEdgeException(error, {
+      functionName: "pagarme-create-order-payment",
+      req,
+    });
     return json({ error: message }, 400);
   }
 });

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,10 +180,14 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-contact-email function:", error);
+    await captureEdgeException(error, {
+      functionName: "send-contact-email",
+      req,
+    });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

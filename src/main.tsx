@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { initSupabase } from './lib/supabase-init.ts'
+import { initObservability } from './lib/observability.ts'
+
+initObservability()
 
 const container = document.getElementById('root')
 

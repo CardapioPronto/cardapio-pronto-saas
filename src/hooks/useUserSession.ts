@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { User as AppUser } from '@/types/user';
 import { finalizeOwnerSignupIfNeeded } from '@/services/ownerSignupService';
+import { setObservabilityUser } from '@/lib/observability';
 
 interface UserSession {
   session: Session | null;
@@ -89,6 +90,9 @@ export const useUserSession = (): UserSession => {
         lastUserIdRef.current = nextUserId;
         setSession(nextSession);
         setAuthUser(nextSession?.user ?? null);
+        setObservabilityUser(nextSession?.user
+          ? { id: nextSession.user.id, email: nextSession.user.email }
+          : null);
         setError(null);
 
         if (nextSession?.user) {

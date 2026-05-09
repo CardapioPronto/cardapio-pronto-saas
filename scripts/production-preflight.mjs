@@ -20,6 +20,8 @@ function authEmailConfirmationsEnabled(config) {
 }
 
 const config = read("supabase/config.toml");
+const packageJson = read("package.json");
+const envExample = read(".env.example");
 const cadastro = read("src/pages/Cadastro.tsx");
 const createEmployee = read("supabase/functions/create-employee/index.ts");
 const finalizeOwnerSignup = read("supabase/functions/finalize-owner-signup/index.ts");
@@ -28,6 +30,11 @@ const checkoutMigration = read("supabase/migrations/20260507123000_harden_public
 const mainLayout = read("src/layouts/MainLayout.tsx");
 const supabaseClient = read("src/integrations/supabase/client.ts");
 const userSession = read("src/hooks/useUserSession.ts");
+const app = read("src/App.tsx");
+const main = read("src/main.tsx");
+const errorBoundary = read("src/components/ErrorBoundary.tsx");
+const frontendObservability = read("src/lib/observability.ts");
+const edgeObservability = read("supabase/functions/_shared/observability.ts");
 
 for (const functionName of [
   "create-storage-buckets",
@@ -79,6 +86,43 @@ check(
     && cleanupOwnerSignups.includes("signup_intent !== \"owner_signup\"")
     && cleanupOwnerSignups.includes("auth.admin.deleteUser"),
   "cleanup-unverified-owner-signups should require an internal secret and only delete expired pending owner signups",
+);
+
+check(
+  "Front-end observability is wired",
+  packageJson.includes("\"@sentry/react\"")
+    && main.includes("initObservability()")
+    && app.includes("<ErrorBoundary>")
+    && app.includes("QueryCache")
+    && errorBoundary.includes("captureException(error")
+    && frontendObservability.includes("VITE_SENTRY_DSN"),
+  "React errors and query/mutation failures should be captured by Sentry when VITE_SENTRY_DSN is configured",
+);
+
+check(
+  "Edge function observability is wired",
+  edgeObservability.includes("SENTRY_DSN")
+    && edgeObservability.includes("application/x-sentry-envelope")
+    && [
+      "create-employee",
+      "create-trial-subscription",
+      "finalize-owner-signup",
+      "cleanup-unverified-owner-signups",
+      "pagarme-create-order-payment",
+      "send-delivery-whatsapp",
+      "email-dispatch",
+      "send-contact-email",
+    ].every((functionName) => read(`supabase/functions/${functionName}/index.ts`).includes("captureEdgeException")),
+  "critical Edge Functions should capture unhandled failures with the shared observability helper",
+);
+
+check(
+  "Observability environment variables are documented",
+  envExample.includes("VITE_SENTRY_DSN")
+    && envExample.includes("SENTRY_DSN")
+    && envExample.includes("SENTRY_ENVIRONMENT")
+    && envExample.includes("SENTRY_RELEASE"),
+  "front-end and Edge Function Sentry DSNs must be documented for production setup",
 );
 
 check(

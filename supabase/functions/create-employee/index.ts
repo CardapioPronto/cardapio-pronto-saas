@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createLogger } from "../_shared/logger.ts";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const logger = createLogger("create-employee");
 
@@ -376,6 +377,11 @@ serve(async (req) => {
     }
 
     logger.error("Unhandled employee creation error", error as Error);
+    await captureEdgeException(error, {
+      functionName: "create-employee",
+      req,
+      extra: { createdAuthUserId },
+    });
     return json({ success: false, error: "Erro interno do servidor" }, 500);
   }
 });

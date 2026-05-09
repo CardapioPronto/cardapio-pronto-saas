@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { isEmail, sendManagedEmail, upsertRestaurantEmailContact } from "../_shared/email-delivery.ts";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -469,6 +470,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("email-dispatch error:", message);
+    await captureEdgeException(error, {
+      functionName: "email-dispatch",
+      req,
+    });
     return json({ success: false, error: message }, 400);
   }
 });

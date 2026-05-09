@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -163,6 +164,12 @@ serve(async (req) => {
         await cleanupOwnerSignup(supabase, user.id);
         deletedUserIds.push(user.id);
       } catch (error) {
+        await captureEdgeException(error, {
+          functionName: "cleanup-unverified-owner-signups",
+          req,
+          tags: { cleanup_stage: "delete_expired_owner" },
+          extra: { userId: user.id },
+        });
         failedUserIds.push({
           id: user.id,
           error: error instanceof Error ? error.message : String(error),
@@ -181,6 +188,11 @@ serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("cleanup-unverified-owner-signups error:", message);
+    await captureEdgeException(error, {
+      functionName: "cleanup-unverified-owner-signups",
+      req,
+      tags: { cleanup_stage: "job" },
+    });
     return json({ success: false, error: "Erro ao limpar cadastros expirados" }, 500);
   }
 });

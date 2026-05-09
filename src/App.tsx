@@ -2,15 +2,33 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
 import { initSupabase, setupAuthListeners } from './lib/supabase-init';
 import { Toaster } from '@/components/ui/toaster';
 import { Analytics } from '@vercel/analytics/react';
 import AppRoutes from './components/AppRoutes';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { captureException } from '@/lib/observability';
 
 // Create a client
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      captureException(error, {
+        source: 'react_query',
+        queryHash: query.queryHash,
+      });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      captureException(error, {
+        source: 'react_query_mutation',
+        mutationKey: mutation.options.mutationKey,
+      });
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -57,19 +75,21 @@ function App() {
                       !window.location.hostname.includes('lovableproject.com');
 
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <div className="min-h-screen bg-background">
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-            <Toaster />
-            {isProduction && <Analytics />}
-          </div>
-        </AuthProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <div className="min-h-screen bg-background">
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+              <Toaster />
+              {isProduction && <Analytics />}
+            </div>
+          </AuthProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { createLogger } from "../_shared/logger.ts";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const logger = createLogger("send-delivery-whatsapp");
 
@@ -405,6 +406,10 @@ serve(async (req) => {
     );
   } catch (error) {
     logger.error('send-delivery-whatsapp error', error as Error);
+    await captureEdgeException(error, {
+      functionName: "send-delivery-whatsapp",
+      req,
+    });
     return new Response(
       JSON.stringify({ success: false, error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

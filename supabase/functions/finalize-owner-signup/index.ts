@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -299,6 +300,10 @@ serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("finalize-owner-signup error:", message);
+    await captureEdgeException(error, {
+      functionName: "finalize-owner-signup",
+      req,
+    });
     return json({ success: false, error: "Erro ao finalizar cadastro do dono" }, 500);
   }
 });
