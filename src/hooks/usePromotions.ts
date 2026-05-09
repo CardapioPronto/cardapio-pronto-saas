@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Promotion, CreatePromotionInput } from '@/types/features';
 import { useCurrentUser } from './useCurrentUser';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 
 export const usePromotions = () => {
   const { user } = useCurrentUser();

@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { BlogPost, BlogPostFormData } from '@/types/blog';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+
+type BlogPostUpdate = Database['public']['Tables']['blog_posts']['Update'];
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export const useBlogPosts = (includeUnpublished = false) => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase
@@ -29,11 +35,11 @@ export const useBlogPosts = (includeUnpublished = false) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [includeUnpublished]);
 
   useEffect(() => {
-    fetchPosts();
-  }, [includeUnpublished]);
+    void fetchPosts();
+  }, [fetchPosts]);
 
   return { posts, loading, refetch: fetchPosts };
 };
@@ -98,16 +104,16 @@ export const createBlogPost = async (data: BlogPostFormData): Promise<BlogPost |
 
     toast.success('Post criado com sucesso!');
     return newPost;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao criar post:', error);
-    toast.error(error.message || 'Erro ao criar post');
+    toast.error(getErrorMessage(error, 'Erro ao criar post'));
     return null;
   }
 };
 
 export const updateBlogPost = async (id: string, data: Partial<BlogPostFormData>): Promise<boolean> => {
   try {
-    const updateData: any = { ...data };
+    const updateData: BlogPostUpdate = { ...data };
 
     if (data.title) {
       updateData.slug = data.title
@@ -139,9 +145,9 @@ export const updateBlogPost = async (id: string, data: Partial<BlogPostFormData>
 
     toast.success('Post atualizado com sucesso!');
     return true;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao atualizar post:', error);
-    toast.error(error.message || 'Erro ao atualizar post');
+    toast.error(getErrorMessage(error, 'Erro ao atualizar post'));
     return false;
   }
 };
@@ -157,9 +163,9 @@ export const deleteBlogPost = async (id: string): Promise<boolean> => {
 
     toast.success('Post excluído com sucesso!');
     return true;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao excluir post:', error);
-    toast.error(error.message || 'Erro ao excluir post');
+    toast.error(getErrorMessage(error, 'Erro ao excluir post'));
     return false;
   }
 };

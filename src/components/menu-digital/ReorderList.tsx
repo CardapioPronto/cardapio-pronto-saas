@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, GripVertical, ChevronUp, ChevronDown, Search } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 
 export interface DraggableItem {
   id: string;

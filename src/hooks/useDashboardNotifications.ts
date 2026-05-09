@@ -3,8 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { AlertTriangle, MessageCircle, Package, type LucideIcon } from "lucide-react";
 
-const db = supabase as any;
 const REFRESH_INTERVAL_MS = 60_000;
+
+type ThreadNotificationRow = {
+  status: string;
+  unread_count: number | null;
+};
+
+type InstanceNotificationRow = {
+  status: string;
+  webhook_url: string | null;
+};
 
 export interface DashboardNotification {
   id: string;
@@ -30,17 +39,17 @@ export function useDashboardNotifications() {
     setLoading(true);
     try {
       const [ordersResult, threadsResult, instancesResult] = await Promise.all([
-        db
+        supabase
           .from("orders")
           .select("id", { count: "exact", head: true })
           .eq("restaurant_id", user.restaurant_id)
           .in("status", ["pendente", "preparo", "em-andamento", "pronto", "pending", "preparing", "ready"]),
-        db
+        supabase
           .from("conversation_threads")
           .select("id, status, unread_count")
           .eq("restaurant_id", user.restaurant_id)
           .neq("status", "closed"),
-        db
+        supabase
           .from("whatsapp_instances")
           .select("id, status, webhook_url")
           .eq("restaurant_id", user.restaurant_id)
@@ -53,11 +62,11 @@ export function useDashboardNotifications() {
 
       const next: DashboardNotification[] = [];
       const openOrders = ordersResult.count || 0;
-      const threads = threadsResult.data || [];
-      const instances = instancesResult.data || [];
-      const waitingHuman = threads.filter((thread: any) => thread.status === "waiting_human").length;
-      const unreadMessages = threads.reduce((sum: number, thread: any) => sum + Number(thread.unread_count || 0), 0);
-      const instancesNeedingAttention = instances.filter((instance: any) =>
+      const threads = (threadsResult.data || []) as ThreadNotificationRow[];
+      const instances = (instancesResult.data || []) as InstanceNotificationRow[];
+      const waitingHuman = threads.filter((thread) => thread.status === "waiting_human").length;
+      const unreadMessages = threads.reduce((sum, thread) => sum + Number(thread.unread_count || 0), 0);
+      const instancesNeedingAttention = instances.filter((instance) =>
         instance.status !== "CONNECTED" || !instance.webhook_url
       ).length;
 

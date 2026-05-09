@@ -1,8 +1,6 @@
 
-import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { menuThemeService } from '@/services/menuThemeService';
-import { MenuTheme, RestaurantMenuConfig } from '@/types/menuTheme';
 import { toast } from '@/components/ui/use-toast';
 
 export const useMenuThemes = () => {
@@ -68,7 +66,7 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
     }: { 
       themeId: string; 
       customColors?: Record<string, string>; 
-      customSettings?: Record<string, any>; 
+      customSettings?: Record<string, unknown>;
     }) => {
       if (!restaurantId) {
         throw new Error('Restaurant ID é obrigatório');
@@ -81,19 +79,19 @@ export const useRestaurantMenuConfig = (restaurantId: string) => {
         customSettings || {}
       );
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['restaurant-menu-config', restaurantId] });
       toast({
         title: 'Sucesso',
         description: 'Configuração do tema atualizada com sucesso!'
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Erro ao atualizar tema:', error);
       toast({
         variant: 'destructive',
         title: 'Erro',
-        description: error?.message || 'Não foi possível atualizar a configuração do tema.'
+        description: error.message || 'Não foi possível atualizar a configuração do tema.'
       });
     }
   });

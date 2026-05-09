@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Area, CreateAreaData, UpdateAreaData } from '@/types/area';
 import { areasService } from '@/services/areasService';
 import { toast } from 'sonner';
@@ -8,7 +8,7 @@ export const useAreas = (restaurantId: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAreas = async () => {
+  const loadAreas = useCallback(async () => {
     if (!restaurantId) return;
     
     setLoading(true);
@@ -24,7 +24,7 @@ export const useAreas = (restaurantId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
 
   const createArea = async (areaData: Omit<CreateAreaData, 'restaurant_id'>) => {
     try {
@@ -65,8 +65,8 @@ export const useAreas = (restaurantId: string) => {
   };
 
   useEffect(() => {
-    loadAreas();
-  }, [restaurantId]);
+    void loadAreas();
+  }, [loadAreas]);
 
   return {
     areas,

@@ -22,7 +22,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { AlertCircle, CheckCircle, RefreshCw, ShieldCheck, Wifi } from "lucide-react";
 import { IfoodCredentials, configureIfoodCredentials, pollIfoodEvents, setIfoodIntegrationEnabled, configureIfoodPolling, testIfoodConnection } from "@/services/ifoodService";
 import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
@@ -189,7 +189,7 @@ async function toggleIntegrationHelper(
       .eq('restaurant_id', restaurantId);
     if (error) throw error;
     setIfoodIntegrationEnabled(enabled);
-    setConfig((prev: any) => ({ ...prev, isEnabled: enabled }));
+    setConfig((prev: IfoodIntegrationConfig) => ({ ...prev, isEnabled: enabled }));
     toast.success(`Integração ${enabled ? 'ativada' : 'desativada'} com sucesso`);
   } catch (error) {
     console.error("Erro ao alterar status da integração:", error);

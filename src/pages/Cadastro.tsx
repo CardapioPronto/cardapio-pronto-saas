@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuthContext";
 import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
 import { RestaurantInfoForm } from "@/components/cadastro/RestaurantInfoForm";
 import { FormFooter } from "@/components/cadastro/FormFooter";

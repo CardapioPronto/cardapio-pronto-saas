@@ -142,7 +142,7 @@ const AtendimentoAutomacao = () => {
         auto_handoff_enabled: autoHandoffEnabled,
         auto_handoff_confidence_threshold: confidenceThreshold,
         business_hours_only: businessHoursOnly,
-        business_hours: businessHours as any,
+        business_hours: businessHours,
         additional_instructions: extraData,
       });
       toast.success("Configurações salvas com sucesso!");

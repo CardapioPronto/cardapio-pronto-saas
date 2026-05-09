@@ -30,7 +30,7 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import {
   cancelPagarmeSubscription,
   changePagarmeSubscriptionCycle,

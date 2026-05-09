@@ -38,7 +38,7 @@ export const useDashboardData = (restaurantId: string | null, canViewFinancials 
     };
 
     fetchDashboardData();
-  }, [restaurantId, canViewFinancials]);
+  }, [restaurantId, canViewFinancials, loadRecentSales, loadPopularProducts, updateStats]);
 
   return { stats, loading, recentSales, popularProducts, overview };
 };

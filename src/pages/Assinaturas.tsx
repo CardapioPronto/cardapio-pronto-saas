@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

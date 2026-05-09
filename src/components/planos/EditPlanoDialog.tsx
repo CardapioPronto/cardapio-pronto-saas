@@ -17,7 +17,7 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PagarmePaymentMethod, Plano } from "@/types/plano";
 import { supabase } from "@/lib/supabase";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 
 const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string }> = [
   { value: "credit_card", label: "Cartão de crédito" },

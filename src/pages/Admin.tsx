@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthContext';
 import { Loader2 } from 'lucide-react';
 import AdminDashboard from './admin/AdminDashboard';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';

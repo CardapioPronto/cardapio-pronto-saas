@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   OnlinePaymentMethod,

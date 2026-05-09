@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Promotion, CreatePromotionInput } from '@/types/features';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export const PromotionsManager: React.FC = () => {

@@ -49,7 +49,7 @@ const faqs = [
   }
 ];
 
-const FAQ = () => {
+const FaqPage = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -124,4 +124,4 @@ const FAQ = () => {
   );
 };
 
-export default FAQ;
+export default FaqPage;

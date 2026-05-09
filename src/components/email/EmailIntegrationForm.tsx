@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle, ExternalLink, Loader2, Mail, Send, Settings } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";

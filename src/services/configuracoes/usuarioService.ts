@@ -2,7 +2,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
 
-const db = supabase as any;
 const USER_AVATAR_BUCKET = "user-avatars";
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 const PROFILE_UPDATED_EVENT = "profile-updated";
@@ -40,7 +39,7 @@ export async function obterDadosUsuario() {
       throw new Error("Usuário não autenticado");
     }
 
-    const { data: profile } = await db
+    const { data: profile } = await supabase
       .from("users")
       .select("name, email, avatar_url, avatar_storage_path")
       .eq("id", user.user.id)
@@ -75,7 +74,7 @@ export async function atualizarDadosUsuario(nome: string, email: string, senha?:
       throw new Error("Alteração de e-mail deve ser solicitada ao suporte");
     }
 
-    const { data: profile, error: profileError } = await db
+    const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("id, name, email, restaurant_id, avatar_url")
       .eq("id", user.user.id)
@@ -106,7 +105,7 @@ export async function atualizarDadosUsuario(nome: string, email: string, senha?:
     };
 
     if (profile.name !== nome) {
-      const { error: publicProfileError } = await db
+      const { error: publicProfileError } = await supabase
         .from("users")
         .update(publicProfileUpdates)
         .eq("id", user.user.id);
@@ -157,7 +156,7 @@ export async function atualizarAvatarUsuario(file: File) {
   const user = auth.user;
   if (!user) throw new Error("Usuário não autenticado");
 
-  const { data: profile, error: profileError } = await db
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("avatar_storage_path")
     .eq("id", user.id)
@@ -184,7 +183,7 @@ export async function atualizarAvatarUsuario(file: File) {
 
   const avatarUrl = publicData.publicUrl;
 
-  const { error: updateError } = await db
+  const { error: updateError } = await supabase
     .from("users")
     .update({
       avatar_url: avatarUrl,
@@ -221,7 +220,7 @@ export async function removerAvatarUsuario() {
   const user = auth.user;
   if (!user) throw new Error("Usuário não autenticado");
 
-  const { data: profile, error: profileError } = await db
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("avatar_storage_path")
     .eq("id", user.id)
@@ -229,7 +228,7 @@ export async function removerAvatarUsuario() {
 
   if (profileError) throw profileError;
 
-  const { error: updateError } = await db
+  const { error: updateError } = await supabase
     .from("users")
     .update({
       avatar_url: null,

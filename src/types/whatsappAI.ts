@@ -12,11 +12,11 @@ export type EvolutionAction =
 
 export interface EvolutionResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   qrcode?: string;
   status?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface WhatsAppAIConfig {

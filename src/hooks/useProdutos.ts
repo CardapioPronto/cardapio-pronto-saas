@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Product } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatProductFromSupabase } from "@/utils/formatProductFromSupabase";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 
 export type ProdutosTab = "todos" | "disponiveis" | "indisponiveis" | "sem-imagem" | "sem-categoria";
 export type ProdutosSortKey = "created_at" | "name" | "price" | "category" | "available";
@@ -123,6 +123,12 @@ const withProductAuditFields = <T extends Record<string, unknown>>(
   return legacyPayload;
 };
 
+type FilterValue = string | number | boolean | null;
+type ProductFilterQuery<T> = {
+  eq(column: string, value: FilterValue): T;
+  or(filters: string): T;
+};
+
 export const useProdutos = (restaurantId: string, options: UseProdutosOptions = {}) => {
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +150,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
     bulkUpdating: false
   });
 
-  const applyCommonFilters = useCallback((query: any) => {
+  const applyCommonFilters = useCallback(<T extends ProductFilterQuery<T>>(query: T) => {
     const busca = sanitizeSearch(options.busca || "");
     let nextQuery = query.eq("restaurant_id", restaurantId);
 

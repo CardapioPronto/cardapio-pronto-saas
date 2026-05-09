@@ -6,7 +6,7 @@ export type Product = {
     description: string;
     price: number;
     available: boolean;
-    image_url?: string;
+    image_url?: string | null;
     image_storage_path?: string | null;
     image_uploaded_by?: string | null;
     image_uploaded_at?: string | null;

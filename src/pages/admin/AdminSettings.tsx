@@ -13,12 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { Edit2, Loader2 } from 'lucide-react';
 import { listSystemSettings, updateSystemSetting } from '@/services/adminService';
+import type { Database, Json } from '@/integrations/supabase/types';
+
+type SystemSetting = Database['public']['Tables']['system_settings']['Row'];
 
 const AdminSettings = () => {
-  const [selectedSetting, setSelectedSetting] = useState<any>(null);
+  const [selectedSetting, setSelectedSetting] = useState<SystemSetting | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newValue, setNewValue] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +31,7 @@ const AdminSettings = () => {
     queryFn: () => listSystemSettings()
   });
 
-  const handleOpenEditDialog = (setting: any) => {
+  const handleOpenEditDialog = (setting: SystemSetting) => {
     setSelectedSetting(setting);
     try {
       // Tenta formatar o JSON para exibição
@@ -50,9 +53,9 @@ const AdminSettings = () => {
     
     try {
       // Tenta converter o valor para JSON
-      let parsedValue;
+      let parsedValue: Json;
       try {
-        parsedValue = JSON.parse(newValue);
+        parsedValue = JSON.parse(newValue) as Json;
       } catch (e) {
         parsedValue = newValue;
       }

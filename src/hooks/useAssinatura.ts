@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { cancelSubscription } from "@/services/paymentService";
 import { Assinatura } from "@/types/subscription";
 

@@ -14,6 +14,9 @@ export const useConversations = (filters?: {
   const [threads, setThreads] = useState<ConversationThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string>('');
+  const filterStatus = filters?.status;
+  const filterInstanceId = filters?.instanceId;
+  const filterSearch = filters?.search;
 
   useEffect(() => {
     const load = async () => {
@@ -27,14 +30,18 @@ export const useConversations = (filters?: {
     if (!restaurantId) return;
     setLoading(true);
     try {
-      const data = await ConversationsService.listThreads(restaurantId, filters);
+      const data = await ConversationsService.listThreads(restaurantId, {
+        status: filterStatus,
+        instanceId: filterInstanceId,
+        search: filterSearch,
+      });
       setThreads(data);
     } catch (error) {
       console.error('Erro ao carregar conversas:', error);
     } finally {
       setLoading(false);
     }
-  }, [restaurantId, filters?.status, filters?.instanceId, filters?.search]);
+  }, [restaurantId, filterStatus, filterInstanceId, filterSearch]);
 
   useEffect(() => {
     if (restaurantId) loadThreads();

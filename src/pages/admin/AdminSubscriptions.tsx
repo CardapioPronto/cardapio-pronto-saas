@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { Edit2, Loader2 } from 'lucide-react';
 import { listAllSubscriptions, updateSubscriptionStatus } from '@/services/adminService';
 

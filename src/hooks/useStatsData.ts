@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { DollarSign, PackageCheck, ShoppingCart, TrendingUp, LucideIcon } from "lucide-react";
 import { formatarMoeda } from "@/utils/dashboardUtils";
 import { DashboardStats } from "@/services/dashboardService";
@@ -44,7 +44,7 @@ export const useStatsData = () => {
     },
   ]);
 
-  const updateStats = (dashboardStats: DashboardStats, canViewFinancials: boolean) => {
+  const updateStats = useCallback((dashboardStats: DashboardStats, canViewFinancials: boolean) => {
     const { 
       totalPedidos, 
       faturamento, 
@@ -88,7 +88,7 @@ export const useStatsData = () => {
         color: "bg-beige/30 text-navy",
       },
     ]);
-  };
+  }, []);
 
   return { stats, updateStats };
 };

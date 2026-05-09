@@ -1,5 +1,5 @@
 import { pollIfoodEvents } from "./api";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 

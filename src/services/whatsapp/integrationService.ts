@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppIntegration } from "./types";
 import { toast } from "sonner";
 
+type WhatsAppProvider = WhatsAppIntegration["provider"];
+type WhatsAppAIProvider = NonNullable<WhatsAppIntegration["ai_provider"]>;
+
+const toProvider = (value: string | null): WhatsAppProvider =>
+  value === "twilio" || value === "ultramsg" ? value : "ultramsg";
+
+const toAIProvider = (value: string | null): WhatsAppAIProvider | undefined =>
+  value === "chatgpt" || value === "gemini" ? value : undefined;
+
 export class WhatsAppIntegrationService {
   static async getIntegration(restaurantId: string): Promise<WhatsAppIntegration | null> {
     try {
@@ -19,30 +28,28 @@ export class WhatsAppIntegrationService {
 
       if (!data) return null;
 
-      const record = data as any;
-
       return {
-        restaurant_id: record.restaurant_id,
-        phone_number: record.phone_number,
-        provider: (record.provider as 'twilio' | 'ultramsg') || 'ultramsg',
-        twilio_account_sid: record.twilio_account_sid || undefined,
-        twilio_auth_token: record.twilio_auth_token || undefined,
-        twilio_phone_number: record.twilio_phone_number || undefined,
-        ultramsg_instance_id: record.ultramsg_instance_id || undefined,
-        ultramsg_token: record.ultramsg_token || undefined,
-        n8n_webhook_url: record.n8n_webhook_url || undefined,
-        n8n_enabled: record.n8n_enabled || false,
-        ai_provider: (record.ai_provider as 'chatgpt' | 'gemini') || undefined,
-        ai_enabled: record.ai_enabled || false,
-        ai_system_prompt: record.ai_system_prompt || undefined,
-        api_token: record.api_token || undefined,
-        webhook_url: record.webhook_url || undefined,
-        is_enabled: record.is_enabled,
-        auto_send_orders: record.auto_send_orders,
-        welcome_message: record.welcome_message,
-        order_confirmation_message: record.order_confirmation_message,
-        created_at: record.created_at,
-        updated_at: record.updated_at
+        restaurant_id: data.restaurant_id,
+        phone_number: data.phone_number,
+        provider: toProvider(data.provider),
+        twilio_account_sid: data.twilio_account_sid || undefined,
+        twilio_auth_token: data.twilio_auth_token || undefined,
+        twilio_phone_number: data.twilio_phone_number || undefined,
+        ultramsg_instance_id: data.ultramsg_instance_id || undefined,
+        ultramsg_token: data.ultramsg_token || undefined,
+        n8n_webhook_url: data.n8n_webhook_url || undefined,
+        n8n_enabled: data.n8n_enabled || false,
+        ai_provider: toAIProvider(data.ai_provider),
+        ai_enabled: data.ai_enabled || false,
+        ai_system_prompt: data.ai_system_prompt || undefined,
+        api_token: data.api_token || undefined,
+        webhook_url: data.webhook_url || undefined,
+        is_enabled: data.is_enabled,
+        auto_send_orders: data.auto_send_orders,
+        welcome_message: data.welcome_message,
+        order_confirmation_message: data.order_confirmation_message,
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
     } catch (error) {
       console.error('Erro ao buscar integração WhatsApp:', error);

@@ -79,7 +79,7 @@ export default function AdminContactRecipients() {
       setName("");
       setEmail("");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao adicionar destinatário",
         description: error.message,

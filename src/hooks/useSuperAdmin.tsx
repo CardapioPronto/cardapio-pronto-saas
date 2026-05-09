@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuthContext';
 import { supabase } from '@/lib/supabase';
 
 const ADMIN_CHECK_TIMEOUT_MS = 10000;

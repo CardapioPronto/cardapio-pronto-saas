@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const CTA = () => {
+const LandingCTA = () => {
   return (
     <section className="bg-navy py-16">
       <div className="container mx-auto px-6">
@@ -61,4 +61,4 @@ const CTA = () => {
   );
 };
 
-export default CTA;
+export default LandingCTA;

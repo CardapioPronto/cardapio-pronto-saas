@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const Login = () => {

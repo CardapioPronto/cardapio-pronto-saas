@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useBlogPosts, deleteBlogPost } from '@/hooks/useBlogPosts';
+import type { BlogPost } from '@/types/blog';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +30,7 @@ import { BlogPostDialog } from '@/components/admin/BlogPostDialog';
 export default function AdminBlog() {
   const { posts, loading, refetch } = useBlogPosts(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingPost, setEditingPost] = useState<any>(null);
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleDelete = async () => {
@@ -42,7 +43,7 @@ export default function AdminBlog() {
     }
   };
 
-  const handleEdit = (post: any) => {
+  const handleEdit = (post: BlogPost) => {
     setEditingPost(post);
     setIsDialogOpen(true);
   };

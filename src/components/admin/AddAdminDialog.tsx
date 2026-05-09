@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { addSuperAdmin } from '@/services/adminService';
 import { Loader2 } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { supabase } from '@/lib/supabase';
 
 interface AddAdminDialogProps {

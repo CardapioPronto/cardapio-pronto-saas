@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
-import type { CartItem } from '@/components/public-menu/cart/CartContext';
+import type { CartItem } from '@/components/public-menu/cart/cartContextCore';
 
 export type FulfillmentType = 'delivery' | 'pickup' | 'table' | 'counter';
 

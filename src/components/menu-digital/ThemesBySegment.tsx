@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMenuThemes, useRestaurantMenuConfig } from '@/hooks/useMenuThemes';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { restaurantSegments, getThemesForSegment, themesBySegment, type RestaurantSegment } from '@/themes/menuThemes';
+import { restaurantSegments, themesBySegment, type RestaurantSegment } from '@/themes/menuThemes';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,7 +109,7 @@ export const ThemesBySegment: React.FC = () => {
               {themes.map((theme) => {
                 // Mostrar apenas temas deste segmento
                 const themesForSegment = themesBySegment[segmentKey];
-                if (!themesForSegment.includes(theme.name as any)) {
+                if (!themesForSegment.some(themeName => themeName === theme.name)) {
                   return null;
                 }
 

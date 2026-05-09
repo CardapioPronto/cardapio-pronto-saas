@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import {
   AlertTriangle,
   Bot,
@@ -20,8 +21,6 @@ import {
   Workflow,
 } from "lucide-react";
 import { toast } from "sonner";
-
-const db = supabase as any;
 
 const N8N_ENV_VARS = [
   "EVOLUTION_API_URL",
@@ -65,6 +64,14 @@ interface AutomationRow {
   ai_enabled: boolean;
 }
 
+type WhatsAppInstanceRow = Database["public"]["Tables"]["whatsapp_instances"]["Row"];
+type InstanceHealthQueryRow = Pick<
+  WhatsAppInstanceRow,
+  "id" | "instance_name" | "restaurant_id" | "phone_number" | "status" | "webhook_url" | "automation_enabled" | "updated_at"
+> & {
+  restaurants?: { name: string } | { name: string }[] | null;
+};
+
 const AdminWhatsApp = () => {
   const [instances, setInstances] = useState<InstanceHealth[]>([]);
   const [automation, setAutomation] = useState<AutomationRow[]>([]);
@@ -79,12 +86,12 @@ const AdminWhatsApp = () => {
     try {
       const [{ data: instanceRows, error: instancesError }, { data: automationRows, error: automationError }] =
         await Promise.all([
-          db
+          supabase
             .from("whatsapp_instances")
             .select("id, instance_name, restaurant_id, phone_number, status, webhook_url, automation_enabled, updated_at, restaurants(name)")
             .order("updated_at", { ascending: false })
             .limit(50),
-          db
+          supabase
             .from("automation_settings")
             .select("instance_id, ai_enabled"),
         ]);
@@ -92,17 +99,22 @@ const AdminWhatsApp = () => {
       if (instancesError) throw instancesError;
       if (automationError) throw automationError;
 
-      setInstances((instanceRows || []).map((row: any) => ({
-        id: row.id,
-        instance_name: row.instance_name,
-        restaurant_id: row.restaurant_id,
-        restaurant_name: row.restaurants?.name || "Restaurante sem nome",
-        phone_number: row.phone_number,
-        status: row.status,
-        webhook_url: row.webhook_url,
-        automation_enabled: row.automation_enabled,
-        updated_at: row.updated_at,
-      })));
+      const rows = (instanceRows || []) as InstanceHealthQueryRow[];
+      setInstances(rows.map((row) => {
+        const restaurant = Array.isArray(row.restaurants) ? row.restaurants[0] : row.restaurants;
+
+        return {
+          id: row.id,
+          instance_name: row.instance_name,
+          restaurant_id: row.restaurant_id,
+          restaurant_name: restaurant?.name || "Restaurante sem nome",
+          phone_number: row.phone_number,
+          status: row.status,
+          webhook_url: row.webhook_url,
+          automation_enabled: row.automation_enabled,
+          updated_at: row.updated_at || "",
+        };
+      }));
       setAutomation((automationRows || []) as AutomationRow[]);
     } catch (error) {
       console.error("Erro ao carregar saúde do WhatsApp:", error);

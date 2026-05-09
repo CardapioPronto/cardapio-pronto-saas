@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { PagarmePaymentMethod } from "@/types/plano";
 
 const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string }> = [

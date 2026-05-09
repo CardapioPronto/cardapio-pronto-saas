@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { useCurrentUser } from './useCurrentUser';
 
 export interface OrderableItem {
@@ -8,6 +8,27 @@ export interface OrderableItem {
   name: string;
   order_position: number;
 }
+
+type OrderableTable = 'products' | 'categories';
+type OrderPositionItem = { id: string; order_position: number };
+
+const updateOrderPositionRow = (
+  table: OrderableTable,
+  item: OrderPositionItem,
+  restaurantId?: string
+) => {
+  const query = table === 'products'
+    ? supabase
+        .from('products')
+        .update({ order_position: item.order_position })
+        .eq('id', item.id)
+    : supabase
+        .from('categories')
+        .update({ order_position: item.order_position })
+        .eq('id', item.id);
+
+  return restaurantId ? query.eq('restaurant_id', restaurantId) : query;
+};
 
 /**
  * Hook to manage product/category ordering
@@ -21,10 +42,7 @@ export const useOrderPosition = (type: 'products' | 'categories', restaurantId?:
 
       // Use Promise.all to batch updates
       const updates = items.map((item) =>
-        supabase
-          .from(table)
-          .update({ order_position: item.order_position } as any)
-          .eq('id', item.id)
+        updateOrderPositionRow(table, item)
       );
 
       const results = await Promise.all(updates);
@@ -69,22 +87,11 @@ export const useOrderPosition = (type: 'products' | 'categories', restaurantId?:
  * Batch reorder items by their new positions
  */
 export const reorderItemsBatch = async (
-  table: 'products' | 'categories',
+  table: OrderableTable,
   items: Array<{ id: string; order_position: number }>,
   restaurantId?: string
 ) => {
-  const updates = items.map((item) => {
-    let query = supabase
-      .from(table)
-      .update({ order_position: item.order_position } as any)
-      .eq('id', item.id);
-
-    if (restaurantId) {
-      query = query.eq('restaurant_id', restaurantId);
-    }
-
-    return query;
-  });
+  const updates = items.map((item) => updateOrderPositionRow(table, item, restaurantId));
 
   const results = await Promise.all(updates);
   const firstError = results.find((r) => r.error)?.error;

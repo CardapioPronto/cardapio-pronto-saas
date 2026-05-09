@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthContext';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Loader2, ShieldAlert } from 'lucide-react';
 

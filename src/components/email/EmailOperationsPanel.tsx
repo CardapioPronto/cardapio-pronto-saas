@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BarChart3, Copy, Plus, RefreshCw, Save, Send } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "./useCurrentUser";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -9,16 +9,7 @@ export const useSystemInitialization = () => {
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user?.restaurant_id && !initialized) {
-      initializeSystemConfigurations();
-    } else if (user && !user.restaurant_id) {
-      // Se o usuário existe mas não tem restaurant_id, marcar como inicializado
-      setInitialized(true);
-    }
-  }, [user?.restaurant_id, initialized, user]);
-
-  const initializeSystemConfigurations = async () => {
+  const initializeSystemConfigurations = useCallback(async () => {
     if (!user?.restaurant_id) return;
 
     setLoading(true);
@@ -62,7 +53,16 @@ export const useSystemInitialization = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.restaurant_id]);
+
+  useEffect(() => {
+    if (user?.restaurant_id && !initialized) {
+      void initializeSystemConfigurations();
+    } else if (user && !user.restaurant_id) {
+      // Se o usuário existe mas não tem restaurant_id, marcar como inicializado
+      setInitialized(true);
+    }
+  }, [user?.restaurant_id, initialized, user, initializeSystemConfigurations]);
 
   return { initialized, loading, initializeSystemConfigurations };
 };

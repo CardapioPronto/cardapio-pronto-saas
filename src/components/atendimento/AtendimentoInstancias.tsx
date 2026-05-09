@@ -205,11 +205,13 @@ const AtendimentoInstancias = () => {
 
   // Fetch creator names for all instances
   useEffect(() => {
-    const uniqueCreatorIds = [...new Set(instances.map(i => i.created_by).filter(Boolean))];
+    const uniqueCreatorIds = [
+      ...new Set(instances.map(i => i.created_by).filter((id): id is string => Boolean(id))),
+    ];
     if (uniqueCreatorIds.length === 0) return;
 
     const fetchNames = async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('users')
         .select('id, name, email')
         .in('id', uniqueCreatorIds);

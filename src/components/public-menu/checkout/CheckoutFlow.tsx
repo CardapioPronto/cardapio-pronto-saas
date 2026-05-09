@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MenuData } from '@/types/menuTheme';
-import { useCart, formatBRL } from '../cart/CartContext';
+import { useCart, formatBRL } from '../cart/cartContextCore';
 import {
   deliveryOrderService,
   OnlineOrderPayment,

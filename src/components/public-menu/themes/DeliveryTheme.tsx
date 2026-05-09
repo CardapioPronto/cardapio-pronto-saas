@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { MenuData } from '@/types/menuTheme';
-import { CartProvider, useCart, formatBRL } from '../cart/CartContext';
+import { CartProvider } from '../cart/CartContext';
+import { useCart, formatBRL } from '../cart/cartContextCore';
 import { CheckoutFlow } from '../checkout/CheckoutFlow';
 import { AddItemModal, AddItemModalProduct } from './AddItemModal';
 import { Search, ShoppingBag, MapPin, Phone, Plus, Minus, Home, ClipboardList, ChevronRight, X } from 'lucide-react';
@@ -27,6 +29,9 @@ const DeliveryLayout = ({ data }: Props) => {
   const { count, addItem } = useCart();
 
   const primary = data.theme.colors.primary;
+  const searchInputStyle: CSSProperties & Record<'--tw-ring-color', string> = {
+    '--tw-ring-color': primary,
+  };
 
   const filteredCategories = useMemo(() => {
     if (!search.trim()) return data.categories;
@@ -136,7 +141,7 @@ const DeliveryLayout = ({ data }: Props) => {
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Busque por um produto"
                   className="w-full h-10 pl-10 pr-3 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2"
-                  style={{ ['--tw-ring-color' as any]: primary }}
+                  style={searchInputStyle}
                 />
               </div>
             </div>

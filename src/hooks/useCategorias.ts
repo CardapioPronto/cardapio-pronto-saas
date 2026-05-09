@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Category } from "@/types";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export function useCategorias() {

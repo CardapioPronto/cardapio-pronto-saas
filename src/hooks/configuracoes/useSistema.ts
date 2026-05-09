@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "../useCurrentUser";
 import { obterConfiguracoesSistema, salvarConfiguracoesSistema, ConfiguracoesSistema } from "@/services/configuracoes";
 import { toast } from "sonner";
@@ -15,13 +15,7 @@ export const useSistema = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user?.restaurant_id) {
-      carregarConfiguracoesDoSistema();
-    }
-  }, [user?.restaurant_id]);
-
-  const carregarConfiguracoesDoSistema = async () => {
+  const carregarConfiguracoesDoSistema = useCallback(async () => {
     if (!user?.restaurant_id) return;
 
     setLoading(true);
@@ -34,7 +28,13 @@ export const useSistema = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.restaurant_id]);
+
+  useEffect(() => {
+    if (user?.restaurant_id) {
+      void carregarConfiguracoesDoSistema();
+    }
+  }, [user?.restaurant_id, carregarConfiguracoesDoSistema]);
 
   const salvarConfiguracoesDoSistema = async () => {
     if (!user?.restaurant_id) return;

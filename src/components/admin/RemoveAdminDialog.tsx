@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { removeSuperAdmin } from '@/services/adminService';
 import { Loader2 } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 
 interface RemoveAdminDialogProps {
   open: boolean;

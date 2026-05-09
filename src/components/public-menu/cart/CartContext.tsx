@@ -1,27 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, ReactNode } from 'react';
+import { CartContext, type CartContextValue, type CartItem } from './cartContextCore';
 
-export interface CartItem {
-  id: string;            // unique line id
-  product_id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image_url?: string;
-  observations?: string;
-}
-
-interface CartContextValue {
-  items: CartItem[];
-  subtotal: number;
-  count: number;
-  addItem: (item: Omit<CartItem, 'id' | 'quantity'> & { quantity?: number }) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  updateObservations: (id: string, observations: string) => void;
-  removeItem: (id: string) => void;
-  clear: () => void;
-}
-
-const CartContext = createContext<CartContextValue | null>(null);
+export type { CartItem } from './cartContextCore';
 
 const STORAGE_KEY_PREFIX = 'pubfy_cart_';
 
@@ -107,12 +87,3 @@ export const CartProvider = ({ restaurantId, children }: CartProviderProps) => {
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
-
-export const useCart = () => {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart deve ser usado dentro de CartProvider');
-  return ctx;
-};
-
-export const formatBRL = (n: number) =>
-  n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

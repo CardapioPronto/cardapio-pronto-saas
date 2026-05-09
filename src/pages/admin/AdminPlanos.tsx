@@ -12,7 +12,7 @@ import { supabase as sb } from "@/integrations/supabase/client";
 import { EditPlanoDialog } from "@/components/planos/EditPlanoDialog";
 import { PlanoFeaturesDialog } from "@/components/planos/PlanoFeaturesDialog";
 import { Plano } from "@/types/plano";
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/sonner-toast';
 
 type FunctionErrorWithContext = Error & {
     context?: Response;

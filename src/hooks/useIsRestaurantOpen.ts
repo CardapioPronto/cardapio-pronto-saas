@@ -2,6 +2,24 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { IsRestaurantOpenResponse } from '@/types/features';
 
+type HoursSetting = {
+  openingTime: string | null;
+  closingTime: string | null;
+};
+
+const readHoursSetting = (value: unknown): HoursSetting => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return { openingTime: null, closingTime: null };
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    openingTime: typeof record.opening_time === 'string' ? record.opening_time : null,
+    closingTime: typeof record.closing_time === 'string' ? record.closing_time : null,
+  };
+};
+
 /**
  * Hook to check if a restaurant is currently open based on its configured hours
  * @param restaurantId - The restaurant ID to check
@@ -52,9 +70,7 @@ export const useIsRestaurantOpen = (restaurantId?: string | null) => {
           };
         }
 
-        const hours = settings.setting_value as any;
-        const openingTime = hours.opening_time;
-        const closingTime = hours.closing_time;
+        const { openingTime, closingTime } = readHoursSetting(settings.setting_value);
 
         if (!openingTime || !closingTime) {
           return {

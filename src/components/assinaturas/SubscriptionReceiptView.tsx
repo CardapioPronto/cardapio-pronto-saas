@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Copy, ExternalLink, FileText, QrCode, ArrowLeft } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/sonner-toast";
 import {
   getPagarmeReceipt,
   PagarmeReceipt,
