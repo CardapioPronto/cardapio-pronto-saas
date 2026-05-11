@@ -3060,6 +3060,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_restaurant_report_access: {
+        Args: { p_restaurant_id: string }
+        Returns: undefined
+      }
       audit_changed_fields: {
         Args: { ignored_fields?: string[]; new_data: Json; old_data: Json }
         Returns: Json
@@ -3072,20 +3076,7 @@ export type Database = {
         Args: { employee_id_param: string; granted_by_param: string }
         Returns: undefined
       }
-      create_pos_order: {
-        Args: { payload: Json }
-        Returns: {
-          id: string
-          order_id: string
-          order_number: string
-          order_type: string
-          restaurant_id: string
-          source: string
-          status: string
-          table_id: string | null
-          total: number
-        }
-      }
+      create_pos_order: { Args: { payload: Json }; Returns: Json }
       create_public_menu_order: { Args: { payload: Json }; Returns: Json }
       get_public_order_tracking: {
         Args: { p_tracking_id: string }
@@ -3093,6 +3084,30 @@ export type Database = {
       }
       get_public_restaurant_payment_settings: {
         Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_public_restaurant_promotions: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_restaurant_sales_period_metrics: {
+        Args: {
+          p_canal?: string
+          p_from: string
+          p_restaurant_id: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_restaurant_sales_report: {
+        Args: {
+          p_canal?: string
+          p_from: string
+          p_produtos_sort?: string
+          p_restaurant_id: string
+          p_status?: string
+          p_to: string
+        }
         Returns: Json
       }
       get_restaurant_subscription_entitlement: {
@@ -3158,6 +3173,11 @@ export type Database = {
         }
         Returns: string
       }
+      repair_missing_restaurant_subscriptions: { Args: never; Returns: number }
+      update_order_status: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: Json
+      }
       user_can_access_conversation_realtime_topic: {
         Args: { p_topic: string }
         Returns: boolean
@@ -3169,19 +3189,13 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_order_status: {
-        Args: { p_order_id: string; p_status: string }
-        Returns: {
-          id: string
-          restaurant_id: string
-          status: string
-          table_id: string | null
-          table_status: string | null
-        }
-      }
       user_has_role: {
         Args: { required_role: string; user_id: string }
         Returns: boolean
+      }
+      validate_public_coupon: {
+        Args: { p_code: string; p_order_value: number; p_restaurant_id: string }
+        Returns: Json
       }
     }
     Enums: {
