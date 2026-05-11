@@ -404,7 +404,8 @@ export const useExportacaoDados = () => {
       }
 
       if (dados.includes("clientes")) {
-        let query = supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let query: any = supabase
           .from("orders")
           .select("customer_name, customer_phone, total, created_at, status, source, order_type")
           .eq("restaurant_id", restaurantId)

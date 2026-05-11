@@ -110,7 +110,8 @@ export const ConversationsService = {
         sender_id: params.senderId,
         is_internal: params.isInternal || false,
         message_type: 'text',
-        metadata: sendResult ? ({ evolution_result: sendResult } as unknown as Record<string, unknown>) : {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        metadata: (sendResult ? { evolution_result: sendResult } : {}) as any,
       })
       .select()
       .single();
