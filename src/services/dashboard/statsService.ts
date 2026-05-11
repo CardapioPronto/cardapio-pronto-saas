@@ -64,8 +64,8 @@ export const getDashboardStats = async (
 
     if (previousError) throw previousError;
 
-    const recentOrderRows = (recentOrders || []) as DashboardOrderRow[];
-    const previousOrderRows = (previousOrders || []) as DashboardOrderRow[];
+    const recentOrderRows = (recentOrders || []) as unknown as DashboardOrderRow[];
+    const previousOrderRows = (previousOrders || []) as unknown as DashboardOrderRow[];
     const recentValidOrders = recentOrderRows.filter((order) => !isCanceled(order.status));
     const previousValidOrders = previousOrderRows.filter((order) => !isCanceled(order.status));
     const totalPedidos = recentOrders?.length || 0;

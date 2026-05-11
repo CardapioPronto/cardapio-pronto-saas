@@ -57,7 +57,7 @@ export const getPopularProducts = async (
     // Agrupar por produto e calcular totais
     const productMap = new Map<string, PopularProduct>();
     
-    const productSaleRows = (productSales || []) as ProductSaleRow[];
+    const productSaleRows = (productSales || []) as unknown as ProductSaleRow[];
 
     productSaleRows
       .filter((item) => !isCanceled(getJoinedOrderStatus(item)))

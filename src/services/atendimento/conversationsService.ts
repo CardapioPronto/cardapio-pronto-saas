@@ -110,7 +110,7 @@ export const ConversationsService = {
         sender_id: params.senderId,
         is_internal: params.isInternal || false,
         message_type: 'text',
-        metadata: sendResult ? { evolution_result: sendResult } : {},
+        metadata: sendResult ? ({ evolution_result: sendResult } as unknown as Json) : ({} as unknown as Json),
       })
       .select()
       .single();

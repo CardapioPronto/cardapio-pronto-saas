@@ -192,7 +192,7 @@ export default function AcompanharPedido() {
   }
 
   const loadOrder = async (trackingId: string, cancelled?: () => boolean) => {
-    const o = await deliveryOrderService.getById(trackingId) as TrackingOrder | null;
+    const o = await deliveryOrderService.getById(trackingId) as unknown as TrackingOrder | null;
     if (cancelled?.()) return;
     if (!o) {
       setError('Pedido não encontrado.');

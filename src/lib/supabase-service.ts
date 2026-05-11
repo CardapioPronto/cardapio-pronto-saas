@@ -36,9 +36,9 @@ export class SupabaseService<T extends TableNames> {
    */
   async create<R extends TableRow<T>>(data: TableInsert<T>): Promise<ServiceResponse<R>> {
     try {
-      const { data: result, error } = await supabase
-        .from(this.table)
-        .insert(data)
+      const { data: result, error } = await (supabase
+        .from(this.table) as any)
+        .insert(data as never)
         .select()
         .single();
 
@@ -56,7 +56,8 @@ export class SupabaseService<T extends TableNames> {
     options?: { limit?: number; offset?: number; orderBy?: { column: string; ascending?: boolean } }
   ): Promise<ServiceResponse<R[]>> {
     try {
-      let query = supabase.from(this.table).select('*');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query: any = supabase.from(this.table).select('*');
 
       // Aplicar filtros se fornecidos
       if (filters && filters.length > 0) {
@@ -86,8 +87,8 @@ export class SupabaseService<T extends TableNames> {
    */
   async getById<R extends TableRow<T>>(id: string | number): Promise<ServiceResponse<R>> {
     try {
-      const { data, error } = await supabase
-        .from(this.table)
+      const { data, error } = await (supabase
+        .from(this.table) as any)
         .select('*')
         .eq('id', id)
         .single();
@@ -103,9 +104,9 @@ export class SupabaseService<T extends TableNames> {
    */
   async update<R extends TableRow<T>>(id: string | number, data: TableUpdate<T>): Promise<ServiceResponse<R>> {
     try {
-      const { data: result, error } = await supabase
-        .from(this.table)
-        .update(data)
+      const { data: result, error } = await (supabase
+        .from(this.table) as any)
+        .update(data as never)
         .eq('id', id)
         .select()
         .single();
@@ -121,8 +122,8 @@ export class SupabaseService<T extends TableNames> {
    */
   async delete(id: string | number): Promise<ServiceResponse<null>> {
     try {
-      const { error } = await supabase
-        .from(this.table)
+      const { error } = await (supabase
+        .from(this.table) as any)
         .delete()
         .eq('id', id);
 

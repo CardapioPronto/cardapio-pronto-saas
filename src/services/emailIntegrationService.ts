@@ -41,7 +41,7 @@ export async function getEmailIntegrationSettings(scope: EmailIntegrationScope) 
 }
 
 export async function saveEmailIntegrationSettings(payload: EmailIntegrationSavePayload) {
-  const data = await invokeEmailSettings<{ settings: EmailIntegrationSettings }>("save", payload);
+  const data = await invokeEmailSettings<{ settings: EmailIntegrationSettings }>("save", payload as unknown as Record<string, unknown>);
   return data?.settings;
 }
 

@@ -76,7 +76,8 @@ async function saveCredentialsHelper(
   hasStoredCredentials: boolean,
   setHasStoredCredentials: (value: boolean) => void,
   setIsConfiguring: (b: boolean) => void,
-  toast: { success: (msg: string) => void; error: (msg: string) => void }
+  toast: { success: (msg: string) => void; error: (msg: string) => void },
+  setCredentials: React.Dispatch<React.SetStateAction<IfoodCredentials>>
 ) {
   setIsConfiguring(true);
   try {
@@ -267,7 +268,7 @@ const IfoodIntegracao = () => {
       toast.error("ID do restaurante não encontrado");
       return;
     }
-    await saveCredentialsHelper(restaurantId, credentials, config, hasStoredCredentials, setHasStoredCredentials, setIsConfiguring, toast);
+    await saveCredentialsHelper(restaurantId, credentials, config, hasStoredCredentials, setHasStoredCredentials, setIsConfiguring, toast, setCredentials);
   };
 
   const handleTestConnection = async () => {

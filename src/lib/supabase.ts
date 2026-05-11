@@ -103,7 +103,8 @@ export const checkResourceAccess = async (table: string, resourceId: string) => 
     const restaurantId = await getCurrentRestaurantId();
     if (!restaurantId) return false;
     
-    const query = supabase.from(table as ValidTable);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: any = supabase.from(table as ValidTable);
     const data = await query
       .select('id')
       .eq('id', resourceId)

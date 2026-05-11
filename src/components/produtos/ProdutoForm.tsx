@@ -66,7 +66,7 @@ export const ProdutoForm = ({
         </div>
 
         <ImageUpload
-          currentImageUrl={produto.image_url}
+          currentImageUrl={produto.image_url ?? undefined}
           onImageChange={({ imageUrl, storagePath }) =>
             onChangeProduto({
               ...produto,

@@ -56,7 +56,7 @@ export const getIfoodIntegrationConfig = async (
 export const saveIfoodIntegrationConfig = async (
   params: SaveIfoodIntegrationConfigParams,
 ): Promise<IfoodIntegrationConfigResponse> => {
-  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("save_config", params);
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("save_config", params as unknown as Record<string, unknown>);
 };
 
 export const setIfoodIntegrationStatus = async (

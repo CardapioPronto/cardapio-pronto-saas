@@ -34,7 +34,7 @@ export const getRecentSales = async (
 
     if (error) throw error;
 
-    const orderRows = (orders || []) as RecentOrderRow[];
+    const orderRows = (orders || []) as unknown as RecentOrderRow[];
 
     return orderRows.map(order => ({
       id: order.id,

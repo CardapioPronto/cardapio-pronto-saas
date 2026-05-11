@@ -318,7 +318,8 @@ export const useExportacaoDados = () => {
           query = query.eq("status", status);
         }
 
-        query = aplicarFiltroCanal(query as never, canal) as typeof query;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        query = aplicarFiltroCanal(query as any, canal) as any;
 
         const { data, error } = await query
           .order("created_at", { ascending: false })
