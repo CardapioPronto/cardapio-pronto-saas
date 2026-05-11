@@ -237,17 +237,17 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [ ] Adicionar framework de testes unitarios/integracao, preferencialmente Vitest + Testing Library.
-- [ ] Adicionar script `npm test`.
-- [ ] Adicionar testes para helpers de relatorio, cupons e calculos.
-- [ ] Adicionar testes para permissao/entitlement quando possivel.
-- [ ] Adicionar Playwright ou suite E2E minima para fluxos criticos.
-- [ ] Cobrir cadastro novo dono -> confirmacao -> trial -> acesso.
-- [ ] Cobrir checkout publico com cupom e pedido.
-- [ ] Cobrir PDV: criar pedido, alterar status, finalizar.
-- [ ] Cobrir bloqueio de assinatura expirada.
-- [ ] Remover `continue-on-error: true` do lint no CI.
-- [ ] Adicionar etapa de `npm audit --omit=dev` no CI com politica definida.
+- [x] Adicionar framework de testes (Vitest + jsdom; Testing Library pode ser adicionado para componentes).
+- [x] Adicionar script `npm test`.
+- [x] Adicionar testes para helpers de relatorio, cupons e calculos.
+- [x] Adicionar testes para permissao/entitlement quando possivel (`computeSubscriptionAccess`).
+- [x] Adicionar Playwright ou suite E2E minima para fluxos criticos (smoke: shell carrega).
+- [ ] Cobrir cadastro novo dono -> confirmacao -> trial -> acesso (E2E além do smoke).
+- [ ] Cobrir checkout publico com cupom e pedido (E2E).
+- [ ] Cobrir PDV: criar pedido, alterar status, finalizar (E2E).
+- [x] Cobrir bloqueio de assinatura expirada (parcial: regras puras em teste unitario).
+- [x] Remover `continue-on-error: true` do lint no CI.
+- [x] Adicionar etapa de `npm audit --omit=dev` no CI com politica definida (`--audit-level=high`).
 
 Criterio de aceite:
 
@@ -257,7 +257,7 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- 2026-05-11: Vitest (`vitest.config.ts`), testes em `src/lib/reportExportUtils.test.ts`, `src/types/coupons.test.ts`, `src/lib/subscriptionAccess.test.ts`; Playwright smoke `e2e/app-shell.spec.ts`; CI com lint bloqueante, `npm test`, `npm audit --omit=dev --audit-level=high`, build e E2E. Helpers de exportacao em `src/lib/reportExportUtils.ts`; gate de assinatura em `src/lib/subscriptionAccess.ts`.
 
 ---
 
@@ -479,3 +479,4 @@ Evidencia:
 | 2026-05-09 | Bloco 2 | Implementado tecnicamente | PDV e status de pedidos migrados para RPCs transacionais; pendente teste manual completo em mesa/balcao/cozinha. |
 | 2026-05-09 | Bloco 3 | Implementado tecnicamente | Configuracao iFood movida para Edge Function protegida; segredo nao retorna ao front; RLS endurecida; pendente teste manual com credenciais/permissoes. |
 | 2026-05-11 | Bloco 4 | Implementado tecnicamente | `plan_id` uuid + FK; RPC/trigger; backfill e `repair_missing_restaurant_subscriptions`; pendente testes manuais de trial/bloqueio/past_due. |
+| 2026-05-11 | Bloco 5 | Implementado (núcleo) | Vitest + smoke Playwright; CI lint/audit/test/E2E; E2E de fluxos completos ainda em aberto no plano. |

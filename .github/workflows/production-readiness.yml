@@ -34,9 +34,20 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint debt report
+      - name: Lint
         run: npm run lint
-        continue-on-error: true
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Dependency audit (production, high+)
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Build
         run: npm run build
+
+      - name: Install Playwright (Chromium only)
+        run: npx playwright install chromium --with-deps
+
+      - name: E2E smoke
+        run: npx playwright test

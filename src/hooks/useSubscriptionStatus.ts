@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { computeSubscriptionAccess } from '@/lib/subscriptionAccess';
 import { useCurrentUser } from './useCurrentUser';
 
 export interface SubscriptionStatus {
@@ -51,20 +52,15 @@ export const useSubscriptionStatus = () => {
   useEffect(() => {
     const applySubscriptionStatus = async (subscription: SubscriptionStatusRow) => {
       const now = new Date();
-      const isInTrial =
-        subscription.status === 'trialing' ||
-        subscription.is_trial ||
-        false;
-      const trialEndsAt = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
-      const daysLeftInTrial = trialEndsAt
-        ? Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-        : 0;
-      const currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
-      const trialIsActive = isInTrial && (!trialEndsAt || trialEndsAt.getTime() >= now.getTime());
-      const paidIsActive = subscription.status === 'active';
-      const pastDueIsInGrace = subscription.status === 'past_due'
-        && !!currentPeriodEnd
-        && currentPeriodEnd.getTime() >= now.getTime();
+      const access = computeSubscriptionAccess(
+        {
+          status: subscription.status,
+          is_trial: subscription.is_trial,
+          trial_ends_at: subscription.trial_ends_at,
+          current_period_end: subscription.current_period_end ?? null,
+        },
+        now,
+      );
 
       let planName: string | null = subscription.plan_name ?? null;
 
@@ -79,10 +75,10 @@ export const useSubscriptionStatus = () => {
       }
 
       setStatus({
-        hasActiveSubscription: paidIsActive || trialIsActive || pastDueIsInGrace,
-        isInTrial,
-        trialEndsAt,
-        daysLeftInTrial: Math.max(0, daysLeftInTrial),
+        hasActiveSubscription: access.hasActiveSubscription,
+        isInTrial: access.isInTrial,
+        trialEndsAt: access.trialEndsAt,
+        daysLeftInTrial: access.daysLeftInTrial,
         planName,
         subscriptionStatus: subscription.status,
         isLoading: false,

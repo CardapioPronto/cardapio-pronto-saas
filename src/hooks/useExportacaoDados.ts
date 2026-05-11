@@ -1,7 +1,15 @@
 import { useState } from "react";
-import { addDays, differenceInCalendarDays, endOfDay, startOfDay, subDays, subMonths, subYears } from "date-fns";
+import { addDays, differenceInCalendarDays, endOfDay, startOfDay, subDays } from "date-fns";
 import type { jsPDF as JsPDFType } from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  appendCsvRow,
+  calcularPeriodoComparacao,
+  calcularVariacao,
+  getColumns,
+  labelCanal,
+  labelStatus,
+} from "@/lib/reportExportUtils";
 import { getCurrentRestaurantId } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -140,84 +148,13 @@ const formatarData = (valor: unknown) => {
   return new Date(String(valor)).toLocaleString("pt-BR");
 };
 
-const calcularVariacao = (atual: number, anterior: number) => {
-  if (anterior === 0) return atual > 0 ? 100 : 0;
-  return ((atual - anterior) / anterior) * 100;
-};
-
-const sanitizeSpreadsheetCell = (value: string | number | boolean | null) => {
-  const text = String(value ?? "");
-  return /^[=+\-@]/.test(text.trim()) ? `'${text}` : value;
-};
-
 const fileDate = (date: Date) => date.toISOString().split("T")[0];
-
-const getColumns = (rows: ExportRow[]) => Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
 
 const aplicarFiltroCanal = <T extends { eq: (column: string, value: string) => T }>(query: T, canal = "todos") => {
   if (!canal || canal === "todos") return query;
   const [tipoFiltro, valor] = canal.split(":");
   if (!valor) return query;
   return query.eq(tipoFiltro === "tipo" ? "order_type" : "source", valor);
-};
-
-const labelCanal = (canal = "todos") => {
-  const labels: Record<string, string> = {
-    todos: "Todas",
-    "source:app": "PDV",
-    "source:cardapio": "Cardápio digital",
-    "source:ifood": "iFood",
-    "tipo:mesa": "Mesa",
-    "tipo:balcao": "Balcão",
-    "tipo:delivery": "Delivery"
-  };
-  return labels[canal] || canal;
-};
-
-const labelStatus = (status = "todos") => {
-  const labels: Record<string, string> = {
-    todos: "Todos",
-    finalizado: "Finalizados",
-    pendente: "Pendentes",
-    preparo: "Em preparo",
-    "em-andamento": "Em andamento",
-    cancelado: "Cancelados"
-  };
-  return labels[status] || status;
-};
-
-const calcularPeriodoComparacao = (dateFrom: Date, dateTo: Date, tipo = "mes-anterior") => {
-  switch (tipo) {
-    case "ano-anterior":
-      return {
-        from: subYears(dateFrom, 1),
-        to: subYears(dateTo, 1),
-        label: "Mesmo período do ano anterior"
-      };
-    default:
-      return {
-        from: subMonths(dateFrom, 1),
-        to: subMonths(dateTo, 1),
-        label: "Mês anterior"
-      };
-  }
-};
-
-const CSV_DELIMITER = ";";
-
-const escapeCsvCell = (value: string | number | boolean | null) => {
-  const sanitized = sanitizeSpreadsheetCell(value);
-  const text = String(sanitized ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-
-  if (text.includes(CSV_DELIMITER) || text.includes("\"") || text.includes("\n")) {
-    return `"${text.replace(/"/g, "\"\"")}"`;
-  }
-
-  return text;
-};
-
-const appendCsvRow = (lines: string[], cells: Array<string | number | boolean | null>) => {
-  lines.push(cells.map(escapeCsvCell).join(CSV_DELIMITER));
 };
 
 const downloadTextFile = (content: string, filename: string, mimeType: string) => {
