@@ -277,15 +277,15 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [ ] Criar RPCs agregadas para resumo de vendas por periodo.
-- [ ] Criar RPC para top produtos por periodo/status/canal.
-- [ ] Criar RPC para evolucao diaria.
-- [ ] Padronizar regra de faturamento: apenas `finalizado`, salvo decisao contraria.
-- [ ] Adicionar limites claros para exportacao no navegador.
+- [x] Criar RPCs agregadas para resumo de vendas por periodo (`get_restaurant_sales_report`, `get_restaurant_sales_period_metrics`).
+- [x] Criar RPC para top produtos por periodo/status/canal (incluido em `get_restaurant_sales_report`).
+- [x] Criar RPC para evolucao diaria (incluido nas RPCs acima).
+- [x] Padronizar regra de faturamento: apenas `finalizado`, salvo decisao contraria (metricas de performance e exportacao de performance).
+- [x] Adicionar limites claros para exportacao no navegador (`src/lib/reportLimits.ts`, `useExportacaoDados`).
 - [ ] Migrar exportacao pesada para Edge Function ou job assinc.
-- [ ] Exibir mensagem de processamento quando periodo for grande.
-- [ ] Revisar indices para `orders(restaurant_id, created_at, status, source, order_type)`.
-- [ ] Remover componente tecnico `TestRelatorios` se nao for usado.
+- [x] Exibir mensagem de processamento quando periodo for grande (`RelatoriosAvancados`, `AnalisePerformance`, threshold em `reportLimits`).
+- [x] Revisar indices para `orders(restaurant_id, created_at, status, source, order_type)` (migration `20260512120000_restaurant_sales_report_rpcs.sql`).
+- [x] Remover componente tecnico `TestRelatorios` se nao for usado.
 
 Criterio de aceite:
 
@@ -295,7 +295,7 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- 2026-05-11: RPCs e indices em `supabase/migrations/20260512120000_restaurant_sales_report_rpcs.sql`; hooks `useRelatoriosAvancados`, `useAnalisePerformance`, `useExportacaoDados`; limites e testes em `src/lib/reportLimits.ts` / `reportLimits.test.ts`; alerta de periodo longo nas telas de relatorios.
 
 ---
 
@@ -316,16 +316,16 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [ ] Corrigir estatisticas de cupons para somar `coupon_usage.discount_amount`.
-- [ ] Validar maximo de usos e concorrencia de cupons no servidor.
-- [ ] Decidir se `promotions` sera funcional ou escondido temporariamente.
+- [x] Corrigir estatisticas de cupons para somar `coupon_usage.discount_amount`.
+- [x] Validar maximo de usos e concorrencia de cupons no servidor.
+- [x] Decidir se `promotions` sera funcional ou escondido temporariamente (pausado ate aplicacao server-side no checkout).
 - [ ] Se funcional, aplicar promocao no cardapio/checkout de forma server-side.
-- [ ] Evitar conflito confuso entre promocao automatica e cupom.
+- [x] Evitar conflito confuso entre promocao automatica e cupom (promocoes pausadas; cupons seguem como mecanismo ativo).
 - [ ] Criar visibilidade no menu publico para produto com promocao.
-- [ ] Transformar envio de campanhas em fila/batches.
-- [ ] Registrar campanha parcialmente enviada com detalhes.
-- [ ] Validar opt-in, unsubscribe e limite mensal por plano.
-- [ ] Melhorar metricas de campanha: enviados, entregues, falhas, descadastro.
+- [x] Transformar envio de campanhas em fila/batches.
+- [x] Registrar campanha parcialmente enviada com detalhes.
+- [x] Validar opt-in, unsubscribe e limite mensal por plano.
+- [x] Melhorar metricas de campanha: enviados, entregues, falhas, descadastro.
 
 Criterio de aceite:
 
@@ -335,7 +335,7 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- 2026-05-11: Estatisticas de cupons em `src/hooks/useCoupons.ts`; pre-validacao server-side reforcada em `supabase/migrations/20260512183000_marketing_coupons_campaigns_hardening.sql`; promocoes pausadas em `src/components/menu-digital/PersonalizacaoTab.tsx`; campanhas atualizam progresso parcial em `supabase/functions/email-dispatch/index.ts` e metricas usam `email_send_logs`.
 
 ---
 

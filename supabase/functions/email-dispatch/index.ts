@@ -100,6 +100,7 @@ const canManageRestaurant = async (userId: string, restaurantId: string) => {
 
 const ALLOWED_RESTAURANT_TEMPLATE_KEYS = new Set(["order_confirmation", "campaign_basic"]);
 const MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST = 250;
+const CAMPAIGN_PROGRESS_BATCH_SIZE = 25;
 
 const escapeHtml = (value: unknown) =>
   String(value ?? "")
@@ -305,7 +306,19 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
   const errors: string[] = [];
   const functionBaseUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/email-unsubscribe`;
 
-  for (const contact of contacts) {
+  const persistCampaignProgress = async () => {
+    await admin
+      .from("email_campaigns")
+      .update({
+        status: "sending",
+        sent_count: sent,
+        failed_count: failed,
+        last_error: errors[0] || null,
+      })
+      .eq("id", campaign.id);
+  };
+
+  for (const [index, contact] of contacts.entries()) {
     const unsubscribeUrl = `${functionBaseUrl}?token=${encodeURIComponent(contact.unsubscribe_token || "")}`;
     const variables = {
       restaurant_name: restaurant?.name || "Restaurante",
@@ -343,6 +356,10 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
       failed += 1;
       errors.push(error instanceof Error ? error.message : String(error));
     }
+
+    if ((index + 1) % CAMPAIGN_PROGRESS_BATCH_SIZE === 0) {
+      await persistCampaignProgress();
+    }
   }
 
   await admin
@@ -352,7 +369,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
       sent_at: sent > 0 ? new Date().toISOString() : null,
       sent_count: sent,
       failed_count: failed,
-      last_error: errors[0] || null,
+      last_error: errors.slice(0, 3).join(" | ") || null,
     })
     .eq("id", campaign.id);
 

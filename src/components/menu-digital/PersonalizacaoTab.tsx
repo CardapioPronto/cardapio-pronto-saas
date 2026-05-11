@@ -18,7 +18,6 @@ import { toast } from '@/components/ui/use-toast';
 import { Image as ImageIcon, Upload, Loader2, Save, AlertCircle, X } from 'lucide-react';
 import { SlugEditor } from './SlugEditor';
 import { HoursManager } from './HoursManager';
-import { PromotionsManager } from './PromotionsManager';
 import { ReorderList, type DraggableItem } from './ReorderList';
 
 const PAYMENT_OPTIONS: Array<{ value: DeliveryConfig['payment_methods'][number]; label: string }> = [
@@ -502,10 +501,17 @@ export const PersonalizacaoTab = () => {
       <Card>
         <CardHeader>
           <CardTitle>Promoções e Descontos</CardTitle>
-          <CardDescription>Crie promoções para produtos, categorias ou pedidos</CardDescription>
+          <CardDescription>Recurso em revisão antes de liberar no cardápio público</CardDescription>
         </CardHeader>
         <CardContent>
-          <PromotionsManager />
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Promoções automáticas estão temporariamente pausadas. Cupons continuam disponíveis e
+              são validados no checkout; as promoções serão liberadas quando o desconto for aplicado
+              e auditado no servidor.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
 

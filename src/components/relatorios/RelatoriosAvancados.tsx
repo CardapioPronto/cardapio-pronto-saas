@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -20,7 +21,7 @@ export const RelatoriosAvancados = () => {
   const [statusFiltro, setStatusFiltro] = useState<string>("todos");
   const [canalFiltro, setCanalFiltro] = useState<string>("todos");
   
-  const { data: relatorioData, loading, error, refetch } = useRelatoriosAvancados({
+  const { data: relatorioData, loading, error, refetch, isLargePeriod } = useRelatoriosAvancados({
     dateFrom,
     dateTo,
     tipo: tipoRelatorio,
@@ -87,6 +88,14 @@ export const RelatoriosAvancados = () => {
 
   return (
     <div className="space-y-6">
+      {isLargePeriod && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Período longo: a agregação pode levar alguns segundos. Considere intervalos menores para resposta mais rápida.
+          </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

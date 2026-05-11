@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addDays, differenceInCalendarDays, endOfDay, startOfDay, subDays } from "date-fns";
+import { differenceInCalendarDays, endOfDay, startOfDay, subDays } from "date-fns";
 import type { jsPDF as JsPDFType } from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,6 +10,7 @@ import {
   labelCanal,
   labelStatus,
 } from "@/lib/reportExportUtils";
+import { assertMaxExportRange, EXPORT_MAX_ORDER_ROWS } from "@/lib/reportLimits";
 import { getCurrentRestaurantId } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -109,19 +110,12 @@ type FuncionarioExportQuery = {
   employee_permissions?: Array<{ permission: string }> | null;
 };
 
-type PedidoPerformanceRow = {
-  id: string;
-  total: number;
-  created_at: string;
-  order_items?: Array<{ quantity: number; price: number }> | null;
-};
-
 type DadosPerformancePeriodo = {
   faturamento: number;
   pedidos: number;
   ticketMedio: number;
   produtosVendidos: number;
-  orders: PedidoPerformanceRow[];
+  evolucao: Array<{ data: string; faturamento: number; pedidos: number }>;
 };
 
 const FATURAMENTO_STATUS = "finalizado";
@@ -290,6 +284,8 @@ export const useExportacaoDados = () => {
         throw new Error("A data inicial não pode ser maior que a data final.");
       }
 
+      assertMaxExportRange(dateFrom, dateTo);
+
       const dadosParaExportar: ExportData = {};
       let pedidos: PedidoExportQuery[] | null = null;
 
@@ -324,9 +320,17 @@ export const useExportacaoDados = () => {
 
         query = aplicarFiltroCanal(query, canal);
 
-        const { data, error } = await query.order("created_at", { ascending: false });
+        const { data, error } = await query
+          .order("created_at", { ascending: false })
+          .limit(EXPORT_MAX_ORDER_ROWS);
         if (error) throw error;
-        return (data || []) as PedidoExportQuery[];
+        const out = (data || []) as PedidoExportQuery[];
+        if (out.length === EXPORT_MAX_ORDER_ROWS) {
+          toast.warning(
+            `Exportação limitada aos últimos ${EXPORT_MAX_ORDER_ROWS} pedidos do período. Reduza o intervalo para incluir todos.`,
+          );
+        }
+        return out;
       };
 
       const ensurePedidos = async () => {
@@ -498,41 +502,42 @@ export const useExportacaoDados = () => {
       }
 
       if (dados.includes("performance")) {
+        type PeriodRpc = {
+          faturamento: number;
+          pedidos: number;
+          ticketMedio: number;
+          produtosVendidos: number;
+          evolucao: Array<{ data: string; faturamento: number; pedidos: number }> | null;
+        };
+
         const buscarPeriodoPerformance = async (from: Date, to: Date): Promise<DadosPerformancePeriodo> => {
-          let query = supabase
-            .from("orders")
-            .select(`
-              id,
-              total,
-              created_at,
-              order_items (
-                id,
-                quantity,
-                price
-              )
-            `)
-            .eq("restaurant_id", restaurantId)
-            .eq("status", FATURAMENTO_STATUS)
-            .gte("created_at", startOfDay(from).toISOString())
-            .lte("created_at", endOfDay(to).toISOString());
+          const rpc = supabase.rpc as unknown as (
+            fn: "get_restaurant_sales_period_metrics",
+            args: { p_restaurant_id: string; p_from: string; p_to: string; p_canal: string },
+          ) => Promise<{ data: PeriodRpc | null; error: { message: string } | null }>;
 
-          query = aplicarFiltroCanal(query, canal);
-
-          const { data, error } = await query.order("created_at", { ascending: true });
-          if (error) throw error;
-
-          const rows = (data || []) as PedidoPerformanceRow[];
-          const faturamento = rows.reduce((sum, order) => sum + Number(order.total), 0);
-          const pedidosCount = rows.length;
-          const produtosVendidos = rows.reduce((sum, order) =>
-            sum + (order.order_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0);
-
+          const { data: raw, error } = await rpc("get_restaurant_sales_period_metrics", {
+            p_restaurant_id: restaurantId,
+            p_from: startOfDay(from).toISOString(),
+            p_to: endOfDay(to).toISOString(),
+            p_canal: canal,
+          });
+          if (error) throw new Error(error.message);
+          if (!raw) throw new Error("Performance inválida");
+          const row = raw as PeriodRpc;
+          const evolucao = Array.isArray(row.evolucao)
+            ? row.evolucao.map((d) => ({
+                data: String(d.data),
+                faturamento: Number(d.faturamento ?? 0),
+                pedidos: Number(d.pedidos ?? 0),
+              }))
+            : [];
           return {
-            faturamento,
-            pedidos: pedidosCount,
-            ticketMedio: pedidosCount > 0 ? faturamento / pedidosCount : 0,
-            produtosVendidos,
-            orders: rows
+            faturamento: Number(row.faturamento ?? 0),
+            pedidos: Number(row.pedidos ?? 0),
+            ticketMedio: Number(row.ticketMedio ?? 0),
+            produtosVendidos: Number(row.produtosVendidos ?? 0),
+            evolucao,
           };
         };
 
@@ -546,7 +551,7 @@ export const useExportacaoDados = () => {
           const periodos: DadosPerformancePeriodo[] = [];
 
           for (let index = 0; index < quantidadeMedia; index += 1) {
-            const periodoFim = subDays(dateFrom, (index * diasPeriodo) + 1);
+            const periodoFim = subDays(dateFrom, index * diasPeriodo + 1);
             const periodoComeco = subDays(periodoFim, diasPeriodo - 1);
             periodos.push(await buscarPeriodoPerformance(periodoComeco, periodoFim));
           }
@@ -556,7 +561,7 @@ export const useExportacaoDados = () => {
             pedidos: periodos.reduce((sum, item) => sum + item.pedidos, 0) / quantidadeMedia,
             ticketMedio: 0,
             produtosVendidos: periodos.reduce((sum, item) => sum + item.produtosVendidos, 0) / quantidadeMedia,
-            orders: periodos.flatMap((item) => item.orders)
+            evolucao: [],
           };
           previous.ticketMedio = previous.pedidos > 0 ? previous.faturamento / previous.pedidos : 0;
           comparacaoLabel = `Média dos ${quantidadeMedia} períodos anteriores`;
@@ -571,52 +576,39 @@ export const useExportacaoDados = () => {
             metrica: "Faturamento",
             atual: formatarMoeda(current.faturamento),
             comparacao: formatarMoeda(previous.faturamento),
-            variacao: `${calcularVariacao(current.faturamento, previous.faturamento).toFixed(1)}%`
+            variacao: `${calcularVariacao(current.faturamento, previous.faturamento).toFixed(1)}%`,
           },
           {
             metrica: "Pedidos finalizados",
             atual: current.pedidos,
             comparacao: Number(previous.pedidos.toFixed(1)),
-            variacao: `${calcularVariacao(current.pedidos, previous.pedidos).toFixed(1)}%`
+            variacao: `${calcularVariacao(current.pedidos, previous.pedidos).toFixed(1)}%`,
           },
           {
             metrica: "Ticket médio",
             atual: formatarMoeda(current.ticketMedio),
             comparacao: formatarMoeda(previous.ticketMedio),
-            variacao: `${calcularVariacao(current.ticketMedio, previous.ticketMedio).toFixed(1)}%`
+            variacao: `${calcularVariacao(current.ticketMedio, previous.ticketMedio).toFixed(1)}%`,
           },
           {
             metrica: "Produtos vendidos",
             atual: current.produtosVendidos,
             comparacao: Number(previous.produtosVendidos.toFixed(1)),
-            variacao: `${calcularVariacao(current.produtosVendidos, previous.produtosVendidos).toFixed(1)}%`
+            variacao: `${calcularVariacao(current.produtosVendidos, previous.produtosVendidos).toFixed(1)}%`,
           },
           {
             metrica: "Comparação",
             atual: comparacaoLabel,
             comparacao: "",
-            variacao: ""
-          }
+            variacao: "",
+          },
         ];
 
-        const evolucaoPorDia = current.orders.reduce<Record<string, { data: string; faturamento: number; pedidos: number }>>((acc, order) => {
-          const dia = new Date(order.created_at).toISOString().split("T")[0];
-          if (!acc[dia]) acc[dia] = { data: dia, faturamento: 0, pedidos: 0 };
-          acc[dia].faturamento += Number(order.total);
-          acc[dia].pedidos += 1;
-          return acc;
-        }, {});
-
-        dadosParaExportar.evolucao = [];
-        for (let dia = startOfDay(dateFrom); dia <= dateTo; dia = addDays(dia, 1)) {
-          const chave = dia.toISOString().split("T")[0];
-          const row = evolucaoPorDia[chave] || { data: chave, faturamento: 0, pedidos: 0 };
-          dadosParaExportar.evolucao.push({
-            data: new Date(`${row.data}T00:00:00`).toLocaleDateString("pt-BR"),
-            faturamento: formatarMoeda(row.faturamento),
-            pedidos: row.pedidos
-          });
-        }
+        dadosParaExportar.evolucao = current.evolucao.map((row) => ({
+          data: new Date(`${row.data}T00:00:00`).toLocaleDateString("pt-BR"),
+          faturamento: formatarMoeda(row.faturamento),
+          pedidos: row.pedidos,
+        }));
       }
 
       const normalizedParams = { ...params, dateFrom, dateTo, status, canal };

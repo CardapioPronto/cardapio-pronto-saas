@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,7 +20,7 @@ export const AnalisePerformance = () => {
   const [periodoComparacao, setPeriodoComparacao] = useState<string>("mes-anterior");
   const [canalFiltro, setCanalFiltro] = useState<string>("todos");
   
-  const { data: performanceData, loading, error, refetch } = useAnalisePerformance({
+  const { data: performanceData, loading, error, refetch, isLargePeriod } = useAnalisePerformance({
     dateFrom,
     dateTo,
     periodoComparacao,
@@ -89,6 +90,14 @@ export const AnalisePerformance = () => {
 
   return (
     <div className="space-y-6">
+      {isLargePeriod && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Período longo: a agregação pode levar alguns segundos. Considere intervalos menores para resposta mais rápida.
+          </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

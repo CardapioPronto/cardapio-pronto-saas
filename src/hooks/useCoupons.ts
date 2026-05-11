@@ -76,22 +76,27 @@ export function useCoupons(restaurantId: string) {
 
       const couponIds = typedCoupons.map((c) => c.id).filter(Boolean);
 
-      let typedUsage: { coupon_id: string; id: string }[] = [];
+      let typedUsage: { coupon_id: string; id: string; discount_amount: number | null }[] = [];
       if (couponIds.length > 0) {
         const { data: usageData, error: usageError } = await supabase
           .from('coupon_usage')
-          .select('coupon_id, id')
+          .select('coupon_id, id, discount_amount')
           .in('coupon_id', couponIds);
 
         if (usageError) throw usageError;
-        typedUsage = (usageData || []) as unknown as { coupon_id: string; id: string }[];
+        typedUsage = (usageData || []) as unknown as { coupon_id: string; id: string; discount_amount: number | null }[];
       }
+
+      const totalDiscountedAmount = typedUsage.reduce(
+        (total, usage) => total + Number(usage.discount_amount || 0),
+        0,
+      );
 
       const stats: CouponStatistics = {
         totalCoupons: typedCoupons.length,
         activeCoupons: typedCoupons.filter((c) => c.is_active).length,
         totalUsed: typedUsage.length,
-        totalDiscountedAmount: 0,
+        totalDiscountedAmount,
         averageDiscountPerCoupon: 0,
       };
 
@@ -100,16 +105,20 @@ export function useCoupons(restaurantId: string) {
       }
 
       // Find most used coupon
-      const usageByCode = typedUsage.reduce(
+      const usageByCoupon = typedUsage.reduce(
         (acc, u) => {
-          acc[u.coupon_id] = (acc[u.coupon_id] || 0) + 1;
+          acc[u.coupon_id] = acc[u.coupon_id] || { count: 0, discountAmount: 0 };
+          acc[u.coupon_id].count += 1;
+          acc[u.coupon_id].discountAmount += Number(u.discount_amount || 0);
           return acc;
         },
-        {} as Record<string, number>
+        {} as Record<string, { count: number; discountAmount: number }>
       );
 
-      const mostUsedCouponId = Object.entries(usageByCode).reduce<[string, number] | null>(
-        (max, [id, count]) => (count > (max?.[1] || 0) ? [id, count] : max),
+      const mostUsedCouponId = Object.entries(usageByCoupon).reduce<
+        [string, { count: number; discountAmount: number }] | null
+      >(
+        (max, [id, usage]) => (usage.count > (max?.[1].count || 0) ? [id, usage] : max),
         null
       );
 
@@ -118,8 +127,8 @@ export function useCoupons(restaurantId: string) {
         if (mostUsedCoupon) {
           stats.mostUsedCoupon = {
             code: mostUsedCoupon.code || mostUsedCoupon.id,
-            usageCount: mostUsedCouponId[1],
-            discountAmount: 0,
+            usageCount: mostUsedCouponId[1].count,
+            discountAmount: mostUsedCouponId[1].discountAmount,
           };
         }
       }
