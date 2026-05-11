@@ -88,7 +88,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
       excerpt: data.excerpt || undefined,
       cover_image_url: data.cover_image_url || undefined,
       category: data.category || undefined,
-    } as BlogPostFormData;
+    } as unknown as BlogPostFormData;
 
     let success = false;
     if (post) {
