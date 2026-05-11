@@ -220,8 +220,10 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       const from = (pagina - 1) * itensPorPagina;
       const to = from + itensPorPagina - 1;
 
-      const buildQuery = (selectClause: string) => {
-        let nextQuery = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const buildQuery = (selectClause: string): any => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let nextQuery: any = supabase
           .from("products")
           .select(selectClause, { count: "exact" });
 
@@ -264,7 +266,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         setProdutos([]);
         setTotal(0);
       } else if (data) {
-        setProdutos(formatProductFromSupabase(data));
+        setProdutos(formatProductFromSupabase(data as never));
         setTotal(count || 0);
       } else {
         setProdutos([]);
