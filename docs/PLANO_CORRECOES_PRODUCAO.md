@@ -444,18 +444,18 @@ Problema: alem do codigo, producao comercial precisa de checklist operacional, d
 
 Checklist:
 
-- [ ] Criar ambiente de staging separado.
-- [ ] Criar restaurante demo padronizado.
-- [ ] Criar massa de dados realista: produtos, mesas, pedidos, cupons, campanhas.
-- [ ] Criar roteiro de QA manual para dono.
-- [ ] Criar roteiro de QA manual para funcionario/caixa.
-- [ ] Criar roteiro de QA manual para cozinha.
-- [ ] Criar roteiro de QA manual para cliente final no cardapio publico.
-- [ ] Criar checklist de implantacao de novo restaurante.
-- [ ] Criar documento de suporte: problemas comuns e solucoes.
-- [ ] Definir rotina de monitoramento pos-go-live.
-- [ ] Fazer piloto com 1 restaurante controlado.
-- [ ] Registrar bugs do piloto e corrigir antes de vender para mais clientes.
+- [ ] Criar ambiente de staging separado. (Operacional — requer projeto Supabase + ambiente Lovable adicionais.)
+- [x] Criar restaurante demo padronizado. (`public.seed_demo_restaurant(email, slug, reset)` em `supabase/migrations/20260514120000_seed_demo_restaurant_rpc.sql`.)
+- [x] Criar massa de dados realista: produtos, mesas, pedidos, cupons, campanhas. (Seed RPC cria 1 área, 6 mesas, 4 categorias, 14 produtos, 1 promoção de categoria, 2 cupons (`BEMVINDO10`/`FRETE5`), 4 contatos e 1 campanha rascunho.)
+- [x] Criar roteiro de QA manual para dono. (Seção 1 de `docs/QA_ROTEIROS_MANUAIS.md`.)
+- [x] Criar roteiro de QA manual para funcionario/caixa. (Seção 2 do mesmo arquivo.)
+- [x] Criar roteiro de QA manual para cozinha. (Seção 3.)
+- [x] Criar roteiro de QA manual para cliente final no cardapio publico. (Seção 4.)
+- [x] Criar checklist de implantacao de novo restaurante. (`docs/ONBOARDING_RESTAURANTE.md`.)
+- [x] Criar documento de suporte: problemas comuns e solucoes. (`docs/SUPORTE_PROBLEMAS_COMUNS.md`, 10 categorias.)
+- [x] Definir rotina de monitoramento pos-go-live. (`docs/MONITORAMENTO_POS_GO_LIVE.md` em 6 cadências.)
+- [ ] Fazer piloto com 1 restaurante controlado. (Operacional — agendar com o time comercial.)
+- [ ] Registrar bugs do piloto e corrigir antes de vender para mais clientes. (Operacional — depende do piloto.)
 
 Criterio de aceite:
 
@@ -465,7 +465,14 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- RPC `public.seed_demo_restaurant(p_owner_email text, p_slug text default 'pubfy-demo', p_reset boolean default false)` cria restaurante demo padronizado idempotente. Restrita a super admins (`is_super_admin(auth.uid())`), security definer, `REVOKE FROM PUBLIC` + `GRANT EXECUTE TO authenticated`. Defesa contra reset cruzado: só apaga restaurante existente se o owner bater ou o slug começar com `pubfy-demo`.
+- Massa de dados realista entregue de uma vez: 1 área `Salão Principal`, 6 mesas (capacidades 4/4/4/4/6/6), 4 categorias (Entradas, Pratos Principais, Bebidas, Sobremesas), 14 produtos com descrições e preços plausíveis, 1 promoção de categoria (10% off em Sobremesas por 60 dias), 2 cupons (`BEMVINDO10` 10% pedido mínimo R$30 com 100 usos, `FRETE5` fixo de R$5 ilimitado), 4 contatos com mix de origem `manual`/`public_order` e opt-in, 1 campanha rascunho.
+- `docs/QA_ROTEIROS_MANUAIS.md` consolida quatro roteiros (dono, funcionário/caixa, cozinha, cliente público) com checklist marcável, tabela de bugs encontrados e critério de aceite para liberar produção comercial.
+- `docs/ONBOARDING_RESTAURANTE.md` cobre 10 etapas (pré-vendas → pós go-live) com responsável e tempo estimado por fase, integrando-se ao runbook do Bloco 9.
+- `docs/SUPORTE_PROBLEMAS_COMUNS.md` lista 10 categorias (Login, Assinatura, Cardápio, PDV, Cozinha, E-mail, WhatsApp, iFood, Performance, Banco) com diagnóstico + correção (SQL/comandos) por sintoma, mais um padrão de como adicionar novos casos.
+- `docs/MONITORAMENTO_POS_GO_LIVE.md` define cadência por fase (48h crítico → semanas 1-2 → semanas 3-4 → permanente), métricas a observar, alertas a configurar quando Sentry voltar e protocolo de resposta a incidente P0/P1.
+- Itens `[ ]` remanescentes (ambiente de staging + piloto + correção pós-piloto) são operacionais e não cabem em código. Estão documentados no plano para a operação executar.
+- Verificação: `npm run typecheck`, `npm run lint:src`, `npm run lint:functions`, `npm run preflight:prod` (31/31), `npm test -- --run` (27 testes, 4 arquivos).
 
 ---
 
@@ -496,3 +503,4 @@ Evidencia:
 | 2026-05-11 | Bloco 7 | Implementado tecnicamente | Stats de cupons corrigidos, validacao server-side endurecida, promocoes server-side com regra item+pedido vs cupom, visibilidade publica e batching de campanhas. |
 | 2026-05-11 | Bloco 8 | Implementado (núcleo) | Logger gateado, loader da marca, EmptyState reusável + Pedidos mobile-friendly, Assinaturas com alertas dedicados. Validacao em hardware real e padronizacao ampla de empty states/contraste seguem para o Bloco 10. |
 | 2026-05-11 | Bloco 9 | Implementado (núcleo) | Runbook de produção, `.env.example` agrupado por destino, fallback do Lovable removido em `email-dispatch`, preflight 31/31 PASS. Itens de Sentry frontend/alertas pulados por decisão do time. |
+| 2026-05-11 | Bloco 10 | Implementado (núcleo) | RPC `seed_demo_restaurant` com massa realista, quatro roteiros de QA, onboarding, suporte e monitoramento documentados. Staging dedicado e piloto controlado seguem como tarefa operacional. |
