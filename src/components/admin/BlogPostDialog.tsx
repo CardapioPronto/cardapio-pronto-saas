@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createBlogPost, updateBlogPost } from '@/hooks/useBlogPosts';
+import type { BlogPostFormData as BlogPostApiFormData } from '@/types/blog';
 import {
   Dialog,
   DialogContent,
@@ -94,7 +95,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
     if (post) {
       success = await updateBlogPost(post.id, formData);
     } else {
-      const result = await createBlogPost(formData);
+      const result = await createBlogPost(formData as BlogPostApiFormData);
       success = !!result;
     }
 
