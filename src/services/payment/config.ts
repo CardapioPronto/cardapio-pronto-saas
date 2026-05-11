@@ -1,12 +1,16 @@
 
 import { PagarmeConfig } from './types';
+import { createLogger } from '@/lib/log';
 
-// Configuração de ambiente
+const log = createLogger('pagarme');
+
+// Configuração de ambiente. `debug` segue o modo do build: em produção fica
+// desligado por padrão para evitar logs sensíveis de pagamento no console.
 export const config: PagarmeConfig = {
-  apiKey: 'test_api_key', // Default value
-  isLive: false,          // Default to sandbox environment
+  apiKey: 'test_api_key',
+  isLive: false,
   apiUrl: 'https://api.pagar.me/core/v5',
-  debug: true // Habilita logs detalhados para depuração
+  debug: import.meta.env.DEV,
 };
 
 // Funções auxiliares para obter informações de plano
@@ -34,7 +38,7 @@ export const getPlanPrice = (planId: string, billingType: 'monthly' | 'yearly'):
 export const configurePaymentService = (apiKey: string, isLive = false) => {
   config.apiKey = apiKey;
   config.isLive = isLive;
-  console.log(`Pagar.me configurado: ${isLive ? 'Produção' : 'Homologação'}`);
+  log.debug('configurado', { ambiente: isLive ? 'producao' : 'homologacao' });
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,38 +51,36 @@ export const pagarmeRequest = async <T = unknown>(endpoint: string, method: stri
     const url = `${config.apiUrl}/${endpoint}`;
     
     if (config.debug) {
-      console.log(`[Pagar.me] Requisição ${method} para ${endpoint}`);
-      console.log(`[Pagar.me] Dados:`, data ? JSON.stringify(data).substring(0, 100) + '...' : 'Nenhum');
+      log.debug('request', { method, endpoint, hasData: !!data });
     }
-    
+
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Basic ${btoa(config.apiKey + ':')}`
+      'Authorization': `Basic ${btoa(config.apiKey + ':')}`,
     };
-    
+
     const response = await fetch(url, {
       method,
       headers,
-      body: data ? JSON.stringify(data) : undefined
+      body: data ? JSON.stringify(data) : undefined,
     });
-    
+
     const responseData: unknown = await response.json();
-    
+
     if (config.debug) {
-      console.log(`[Pagar.me] Status da resposta: ${response.status}`);
-      console.log(`[Pagar.me] Resposta:`, responseData);
+      log.debug('response', { status: response.status });
     }
-    
+
     if (!response.ok) {
       const message = isRecord(responseData) && typeof responseData.message === 'string'
         ? responseData.message
         : response.statusText;
       throw new Error(`Erro na API Pagar.me: ${message}`);
     }
-    
+
     return responseData as T;
   } catch (error) {
-    console.error('[Pagar.me] Erro na requisição:', error);
+    log.capture(error, { endpoint, method });
     throw error;
   }
 };

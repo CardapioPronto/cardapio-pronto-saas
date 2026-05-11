@@ -71,15 +71,41 @@ export interface MenuData {
       available: boolean;
       category_id?: string;
       order_position?: number | null;
+      promotion?: PublicMenuPromotionApplied | null;
     }>;
   }>;
   theme: ThemeConfig;
   deliveryConfig?: DeliveryConfig;
   paymentSettings?: PublicPaymentSettings;
+  promotions?: PublicMenuPromotion[];
+  orderPromotions?: PublicMenuPromotion[];
   context?: {
     fulfillmentType?: 'delivery' | 'pickup' | 'table' | 'counter';
     tableId?: string;
   };
+}
+
+export interface PublicMenuPromotion {
+  id: string;
+  name: string;
+  description?: string | null;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  applicable_to: 'product' | 'category' | 'order';
+  target_id?: string | null;
+  min_order_value?: number | null;
+  valid_from: string;
+  valid_until?: string | null;
+}
+
+export interface PublicMenuPromotionApplied {
+  id: string;
+  name: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  applicable_to: 'product' | 'category';
+  unit_discount: number;
+  final_price: number;
 }
 
 export interface DeliveryConfig {

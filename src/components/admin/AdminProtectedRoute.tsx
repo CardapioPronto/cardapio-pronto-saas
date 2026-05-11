@@ -4,6 +4,9 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthContext';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Loader2, ShieldAlert } from 'lucide-react';
+import { createLogger } from '@/lib/log';
+
+const log = createLogger('admin-route');
 
 interface AdminProtectedRouteProps {
   children: ReactNode;
@@ -13,22 +16,18 @@ export const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   const { user, loading: authLoading } = useAuth();
   const { isSuperAdmin, loading: adminLoading } = useSuperAdmin();
   const navigate = useNavigate();
-  
+
   const loading = authLoading || adminLoading;
 
   useEffect(() => {
     if (!loading) {
-      console.log("AdminProtectedRoute - Auth state:", { 
-        user: user?.id,
+      log.debug('auth state', {
+        userId: user?.id,
         isAuthenticated: !!user,
         isSuperAdmin,
         authLoading,
-        adminLoading
+        adminLoading,
       });
-      
-      if (user && !isSuperAdmin) {
-        console.log("User authenticated but not a super admin:", user.id);
-      }
     }
   }, [loading, user, isSuperAdmin, authLoading, adminLoading]);
 
@@ -42,12 +41,12 @@ export const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   }
 
   if (!user) {
-    console.log("No authenticated user, redirecting to login");
+    log.debug('no authenticated user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (!isSuperAdmin) {
-    console.log("User not a super admin, showing access denied");
+    log.debug('user is not super admin, showing access denied');
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center">
         <ShieldAlert className="h-16 w-16 text-red-500 mb-4" />

@@ -1,6 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { MenuTheme, RestaurantMenuConfig, DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
+import {
+  MenuTheme,
+  RestaurantMenuConfig,
+  DeliveryConfig,
+  DEFAULT_DELIVERY_CONFIG,
+  PublicMenuPromotion,
+  PublicMenuPromotionApplied,
+} from '@/types/menuTheme';
 import { restaurantPaymentService } from '@/services/restaurantPaymentService';
 import type { Json } from '@/integrations/supabase/types';
 import type { PostgrestError } from '@supabase/supabase-js';
@@ -35,6 +42,84 @@ const toStringRecord = (value: Json | null | undefined): Record<string, string> 
   );
 
 const toJson = (value: Record<string, unknown>): Json => value as unknown as Json;
+
+const parsePromotionRow = (row: unknown): PublicMenuPromotion | null => {
+  if (!isRecord(row)) return null;
+  const id = typeof row.id === 'string' ? row.id : null;
+  const name = typeof row.name === 'string' ? row.name : null;
+  const discountType = row.discount_type === 'fixed' || row.discount_type === 'percentage' ? row.discount_type : null;
+  const discountValue = typeof row.discount_value === 'number'
+    ? row.discount_value
+    : Number(row.discount_value);
+  const applicableTo = row.applicable_to === 'product' || row.applicable_to === 'category' || row.applicable_to === 'order'
+    ? row.applicable_to
+    : null;
+  const validFrom = typeof row.valid_from === 'string' ? row.valid_from : null;
+
+  if (!id || !name || !discountType || !applicableTo || !validFrom || !Number.isFinite(discountValue)) {
+    return null;
+  }
+
+  const minOrderRaw = row.min_order_value;
+  const minOrder = typeof minOrderRaw === 'number'
+    ? minOrderRaw
+    : minOrderRaw == null
+      ? null
+      : Number(minOrderRaw);
+
+  return {
+    id,
+    name,
+    description: typeof row.description === 'string' ? row.description : null,
+    discount_type: discountType,
+    discount_value: discountValue,
+    applicable_to: applicableTo,
+    target_id: typeof row.target_id === 'string' ? row.target_id : null,
+    min_order_value: Number.isFinite(minOrder) ? minOrder as number : null,
+    valid_from: validFrom,
+    valid_until: typeof row.valid_until === 'string' ? row.valid_until : null,
+  };
+};
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+const computeUnitDiscount = (price: number, promotion: PublicMenuPromotion): number => {
+  if (!Number.isFinite(price) || price <= 0) return 0;
+  const raw = promotion.discount_type === 'percentage'
+    ? (price * promotion.discount_value) / 100
+    : promotion.discount_value;
+  return Math.min(price, Math.max(0, round2(raw)));
+};
+
+const pickApplicablePromotion = (
+  product: { id: string; price: number; category_id?: string | null },
+  promotions: PublicMenuPromotion[],
+): PublicMenuPromotionApplied | null => {
+  let best: PublicMenuPromotionApplied | null = null;
+
+  for (const promo of promotions) {
+    if (promo.applicable_to === 'product' && promo.target_id !== product.id) continue;
+    if (promo.applicable_to === 'category' && promo.target_id !== product.category_id) continue;
+    if (promo.applicable_to !== 'product' && promo.applicable_to !== 'category') continue;
+
+    const unitDiscount = computeUnitDiscount(product.price, promo);
+    if (unitDiscount <= 0) continue;
+
+    if (!best || unitDiscount > best.unit_discount) {
+      best = {
+        id: promo.id,
+        name: promo.name,
+        discount_type: promo.discount_type,
+        discount_value: promo.discount_value,
+        applicable_to: promo.applicable_to,
+        unit_discount: unitDiscount,
+        final_price: Math.max(0, round2(product.price - unitDiscount)),
+      };
+    }
+  }
+
+  return best;
+};
 
 const toDeliveryConfig = (value: Json | null | undefined): DeliveryConfig => {
   const record = toRecord(value);
@@ -196,6 +281,7 @@ export const menuThemeService = {
       // Buscar configuração de delivery (restaurant_settings)
       const deliveryConfig = await this.getDeliveryConfig(restaurant.id);
       const paymentSettings = await this.getPublicPaymentSettings(restaurant.id);
+      const promotions = await this.getPublicPromotions(restaurant.id);
       
       // Transformar os dados para o formato esperado
       const transformedRestaurant = {
@@ -226,16 +312,22 @@ export const menuThemeService = {
             ...product,
             description: product.description || undefined,
             image_url: product.image_url || undefined,
+            promotion: pickApplicablePromotion(
+              { id: product.id, price: Number(product.price) || 0, category_id: product.category_id },
+              promotions,
+            ),
           })),
         }))
         .filter(cat => cat.products && cat.products.length > 0);
-      
+
       return {
         restaurant: transformedRestaurant,
         categories: transformedCategories,
         config,
         deliveryConfig,
         paymentSettings,
+        promotions,
+        orderPromotions: promotions.filter(p => p.applicable_to === 'order'),
       };
     } catch (error) {
       console.error('Erro na função getPublicMenuData:', error);
@@ -279,6 +371,20 @@ export const menuThemeService = {
       );
     if (error) throw error;
     return config;
+  },
+
+  async getPublicPromotions(restaurantId: string): Promise<PublicMenuPromotion[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_public_restaurant_promotions', {
+        p_restaurant_id: restaurantId,
+      });
+      if (error) throw error;
+      if (!Array.isArray(data)) return [];
+      return data.map(parsePromotionRow).filter((p): p is PublicMenuPromotion => p !== null);
+    } catch (error) {
+      console.warn('Falha ao buscar promoções públicas', error);
+      return [];
+    }
   },
 
   async getPublicPaymentSettings(restaurantId: string) {

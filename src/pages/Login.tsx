@@ -15,6 +15,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("login");
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -24,28 +27,19 @@ const Login = () => {
   const { isSuperAdmin, loading: adminLoading } = useSuperAdmin();
   const navigate = useNavigate();
 
-  // Effect to handle redirection after login is successful
   useEffect(() => {
     if (user && !adminLoading) {
-      console.log("User logged in:", user.id);
-      console.log("Is super admin:", isSuperAdmin);
-      
-      if (isSuperAdmin) {
-        console.log("Redirecting to admin panel...");
-        navigate("/admin");
-      } else {
-        console.log("Redirecting to dashboard...");
-        navigate("/dashboard");
-      }
+      log.debug("user logged in", { userId: user.id, isSuperAdmin });
+      navigate(isSuperAdmin ? "/admin" : "/dashboard");
     }
   }, [user, isSuperAdmin, adminLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      console.log("Attempting login for:", email);
+      log.debug("attempting login", { email });
       const { error } = await signIn(email, password);
       
       if (error) {

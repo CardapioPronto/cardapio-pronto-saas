@@ -1,10 +1,12 @@
-
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { initSupabase } from './lib/supabase-init.ts'
 import { initObservability } from './lib/observability.ts'
+import { createLogger } from './lib/log.ts'
+
+const log = createLogger('boot')
 
 initObservability()
 
@@ -14,18 +16,17 @@ if (!container) {
   throw new Error('Container element not found!')
 }
 
-// Inicializa o Supabase antes de renderizar o aplicativo
-initSupabase().then(connected => {
+initSupabase().then((connected) => {
   if (connected) {
-    console.log('Supabase inicializado com sucesso!')
+    log.debug('supabase ready')
   } else {
-    console.warn('Supabase inicializado com avisos. Verifique o console para mais detalhes.')
+    log.warn('supabase inicializado com avisos')
   }
-  
+
   const root = createRoot(container)
   root.render(
     <React.StrictMode>
       <App />
-    </React.StrictMode>
+    </React.StrictMode>,
   )
 })

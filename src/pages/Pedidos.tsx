@@ -8,10 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw, CalendarDays, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
+import { Eye, CheckCircle, Clock, Package, XCircle, RefreshCw, CalendarDays, ChevronLeft, ChevronRight, Receipt, Inbox } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { IfoodOrderBadge } from "@/components/ifood/IfoodOrderBadge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("pedidos");
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { listarPedidos, alterarStatusPedido } from "@/features/pdv/services/pedidoService";
@@ -81,7 +85,7 @@ const Pedidos = () => {
         toast.error("Erro ao carregar pedidos");
       }
     } catch (error) {
-      console.error("Erro ao carregar pedidos:", error);
+      log.capture(error, { restaurantId, filtros });
       toast.error("Ocorreu um erro ao carregar os pedidos");
     } finally {
       setCarregando(false);
@@ -209,7 +213,7 @@ const Pedidos = () => {
         )
         .subscribe((status) => {
           if (status === 'CHANNEL_ERROR') {
-            console.error('❌ Erro na subscrição real-time');
+            log.warn('subscricao real-time falhou');
             toast.error('Erro na conexão em tempo real. Recarregue a página.');
           }
         });
@@ -265,7 +269,7 @@ const Pedidos = () => {
         toast.success(`Status atualizado para ${novoStatus}`);
       }
     } catch (error) {
-      console.error("Erro ao alterar status:", error);
+      log.capture(error, { id, novoStatus });
       toast.error("Erro ao atualizar status");
     }
   };
@@ -457,36 +461,45 @@ const Pedidos = () => {
           </div>
         </CardHeader>
         <CardContent>
+          {pedidos.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title={carregando ? "Carregando pedidos..." : "Nenhum pedido encontrado"}
+              description={
+                carregando
+                  ? "Aguarde enquanto buscamos os pedidos do período selecionado."
+                  : "Tente ajustar o período, status ou aguardar novos pedidos."
+              }
+              className="my-2"
+            />
+          ) : (
+          <div className="-mx-4 overflow-x-auto sm:mx-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Mesa/Balcão</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Valor</TableHead>
+                <TableHead className="hidden md:table-cell">Mesa/Balcão</TableHead>
+                <TableHead className="hidden md:table-cell">Cliente</TableHead>
+                <TableHead className="whitespace-nowrap">Data</TableHead>
+                <TableHead className="whitespace-nowrap">Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pedidos.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    {carregando ? "Carregando pedidos..." : "Nenhum pedido encontrado"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                pedidos.map((pedido) => (
+              {pedidos.map((pedido) => (
                   <TableRow key={pedido.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium whitespace-nowrap">
                       {typeof pedido.id === 'string' ? pedido.id.substring(0, 8) : pedido.id}
                       {renderSourceBadge(pedido.source)}
+                      <div className="mt-1 text-xs text-muted-foreground md:hidden">
+                        {pedido.mesa} · {pedido.cliente || pedido.clientName || "Cliente local"}
+                      </div>
                     </TableCell>
-                    <TableCell>{pedido.mesa}</TableCell>
-                    <TableCell>{pedido.cliente || pedido.clientName || "Cliente local"}</TableCell>
-                    <TableCell>{new Date(pedido.timestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
-                    <TableCell>R$ {pedido.total.toFixed(2)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{pedido.mesa}</TableCell>
+                    <TableCell className="hidden md:table-cell">{pedido.cliente || pedido.clientName || "Cliente local"}</TableCell>
+                    <TableCell className="whitespace-nowrap">{new Date(pedido.timestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                    <TableCell className="whitespace-nowrap">R$ {pedido.total.toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`flex items-center w-fit ${getStatusColor(pedido.status)}`}>
                         {getStatusIcon(pedido.status)}
@@ -648,10 +661,11 @@ const Pedidos = () => {
                       </Dialog>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ))}
             </TableBody>
           </Table>
+          </div>
+          )}
 
           <div className="mt-4 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">

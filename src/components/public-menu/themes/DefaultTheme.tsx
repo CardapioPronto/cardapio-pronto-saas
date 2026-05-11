@@ -66,18 +66,40 @@ export const DefaultTheme = ({ data }: DefaultThemeProps) => {
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h3 className="font-bold theme-heading">{product.name}</h3>
+                            <h3 className="font-bold theme-heading flex items-center gap-2">
+                              {product.name}
+                              {product.promotion && (
+                                <span
+                                  className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full"
+                                  style={{ backgroundColor: theme.colors.primary }}
+                                >
+                                  {product.promotion.discount_type === 'percentage'
+                                    ? `${product.promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
+                                    : 'PROMO'}
+                                </span>
+                              )}
+                            </h3>
                             {product.description && (
                               <p className="text-sm opacity-70 mt-1">
                                 {product.description}
                               </p>
                             )}
                           </div>
-                          <div 
-                            className="font-bold whitespace-nowrap ml-4"
-                            style={{ color: theme.colors.secondary }}
-                          >
-                            R$ {product.price.toFixed(2)}
+                          <div className="text-right ml-4 whitespace-nowrap">
+                            {product.promotion ? (
+                              <>
+                                <div className="text-xs opacity-60 line-through">
+                                  R$ {product.price.toFixed(2)}
+                                </div>
+                                <div className="font-bold" style={{ color: theme.colors.secondary }}>
+                                  R$ {product.promotion.final_price.toFixed(2)}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="font-bold" style={{ color: theme.colors.secondary }}>
+                                R$ {product.price.toFixed(2)}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -83,6 +83,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   } | null>(null);
   const discountAmount = appliedCoupon?.discount || 0;
   const total = Math.max(subtotal - discountAmount, 0) + deliveryFee;
+  const hasOrderPromotion = !!data.orderPromotions && data.orderPromotions.length > 0;
 
   const firstDataStep = needsAddress ? 'address' : 'customer';
   const [step, setStep] = useState<'fulfillment' | 'customer' | 'address' | 'payment' | 'review' | 'success'>(
@@ -499,6 +500,11 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                 {appliedCoupon && (
                   <p className="text-xs text-green-600">
                     {appliedCoupon.title || appliedCoupon.code}: -{formatBRL(appliedCoupon.discount)}
+                  </p>
+                )}
+                {hasOrderPromotion && (
+                  <p className="text-xs text-muted-foreground">
+                    Há promoção ativa no pedido. Cupom e promoção do pedido não somam: aplicamos o que der maior desconto.
                   </p>
                 )}
               </Section>

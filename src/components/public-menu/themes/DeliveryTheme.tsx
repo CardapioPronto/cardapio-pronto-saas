@@ -146,6 +146,29 @@ const DeliveryLayout = ({ data }: Props) => {
               </div>
             </div>
 
+            {/* Promoções de pedido em destaque */}
+            {data.orderPromotions && data.orderPromotions.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {data.orderPromotions.map((promo) => (
+                  <div
+                    key={promo.id}
+                    className="rounded-xl px-4 py-3 text-sm text-white shadow-sm"
+                    style={{ backgroundColor: primary }}
+                  >
+                    <div className="font-semibold">{promo.name}</div>
+                    <div className="text-xs opacity-90">
+                      {promo.discount_type === 'percentage'
+                        ? `${promo.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% no pedido`
+                        : `${formatBRL(promo.discount_value)} no pedido`}
+                      {promo.min_order_value
+                        ? ` · a partir de ${formatBRL(promo.min_order_value)}`
+                        : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Categorias e produtos */}
             <div id="menu-categorias" className="mt-6 space-y-8">
               {filteredCategories.length === 0 && (
@@ -172,6 +195,16 @@ const DeliveryLayout = ({ data }: Props) => {
                           price: p.price,
                           description: p.description,
                           image_url: p.image_url,
+                          promotion: p.promotion
+                            ? {
+                                id: p.promotion.id,
+                                name: p.promotion.name,
+                                discount_type: p.promotion.discount_type,
+                                discount_value: p.promotion.discount_value,
+                                unit_discount: p.promotion.unit_discount,
+                                final_price: p.promotion.final_price,
+                              }
+                            : null,
                         })}
                       />
                     ))}
@@ -251,7 +284,7 @@ const DeliveryLayout = ({ data }: Props) => {
           addItem({
             product_id: selectedProduct.id,
             name: selectedProduct.name,
-            price: selectedProduct.price,
+            price: selectedProduct.promotion?.final_price ?? selectedProduct.price,
             image_url: selectedProduct.image_url,
             quantity,
             observations,
@@ -286,17 +319,46 @@ const ProductCard = ({
   primary: string;
   onAdd: () => void;
 }) => {
+  const promotion = product.promotion;
+  const finalPrice = promotion?.final_price ?? product.price;
+  const promoLabel = promotion
+    ? promotion.discount_type === 'percentage'
+      ? `${promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
+      : `${formatBRL(promotion.discount_value)} OFF`
+    : null;
+
   return (
-    <div className="bg-card rounded-xl p-3 flex gap-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-xl p-3 flex gap-3 shadow-sm hover:shadow-md transition-shadow relative">
+      {promoLabel && (
+        <span
+          className="absolute -top-2 left-3 text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full shadow"
+          style={{ backgroundColor: primary }}
+        >
+          {promoLabel}
+        </span>
+      )}
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-sm sm:text-base truncate">{product.name}</h3>
         {product.description && (
           <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">{product.description}</p>
         )}
         <div className="mt-2 flex items-center justify-between">
-          <span className="font-bold text-sm sm:text-base" style={{ color: primary }}>
-            {formatBRL(product.price)}
-          </span>
+          <div className="flex items-baseline gap-2 min-w-0">
+            {promotion ? (
+              <>
+                <span className="text-xs text-muted-foreground line-through truncate">
+                  {formatBRL(product.price)}
+                </span>
+                <span className="font-bold text-sm sm:text-base" style={{ color: primary }}>
+                  {formatBRL(finalPrice)}
+                </span>
+              </>
+            ) : (
+              <span className="font-bold text-sm sm:text-base" style={{ color: primary }}>
+                {formatBRL(product.price)}
+              </span>
+            )}
+          </div>
           <button
             onClick={onAdd}
             className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:opacity-90 transition"

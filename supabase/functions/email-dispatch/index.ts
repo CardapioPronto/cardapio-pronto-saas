@@ -432,7 +432,13 @@ const sendOrderConfirmation = async (body: EmailDispatchBody) => {
     .maybeSingle();
 
   const trackingId = body.tracking_id || body.delivery_order_id || order.id;
-  const origin = String(body.origin || Deno.env.get("PUBLIC_SITE_URL") || "https://preview--cardapio-pubfy.lovable.app");
+  const origin = String(body.origin || Deno.env.get("PUBLIC_SITE_URL") || "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (!origin) {
+    console.warn("[email-dispatch] origin/PUBLIC_SITE_URL ausente; e-mail de pedido sairá sem link de acompanhamento");
+  }
+  const trackingUrl = origin ? `${origin}/pedido/${trackingId}` : "";
 
   await admin
     .from("delivery_orders")
@@ -465,7 +471,7 @@ const sendOrderConfirmation = async (body: EmailDispatchBody) => {
       order_number: order.order_number || String(order.id).slice(0, 8),
       restaurant_name: restaurant?.name || "Restaurante",
       total: Number(order.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-      tracking_url: `${origin}/pedido/${trackingId}`,
+      tracking_url: trackingUrl,
     },
     metadata: { source: "public_order", tracking_id: trackingId },
   });

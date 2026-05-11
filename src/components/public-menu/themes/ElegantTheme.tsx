@@ -119,12 +119,34 @@ export const ElegantTheme = ({ data }: ElegantThemeProps) => {
                               className="w-8 h-0.5"
                               style={{ backgroundColor: theme.colors.secondary }}
                             />
-                            <span 
-                              className="mx-4 text-2xl font-bold theme-heading"
-                              style={{ color: theme.colors.secondary }}
-                            >
-                              R$ {product.price.toFixed(2)}
-                            </span>
+                            {product.promotion ? (
+                              <span className="mx-4 flex flex-col items-center theme-heading">
+                                <span className="text-xs opacity-60 line-through">
+                                  R$ {product.price.toFixed(2)}
+                                </span>
+                                <span
+                                  className="text-2xl font-bold"
+                                  style={{ color: theme.colors.secondary }}
+                                >
+                                  R$ {product.promotion.final_price.toFixed(2)}
+                                </span>
+                                <span
+                                  className="text-[10px] mt-0.5 font-bold uppercase tracking-wider"
+                                  style={{ color: theme.colors.primary }}
+                                >
+                                  {product.promotion.discount_type === 'percentage'
+                                    ? `${product.promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
+                                    : 'Promoção'}
+                                </span>
+                              </span>
+                            ) : (
+                              <span
+                                className="mx-4 text-2xl font-bold theme-heading"
+                                style={{ color: theme.colors.secondary }}
+                              >
+                                R$ {product.price.toFixed(2)}
+                              </span>
+                            )}
                             <div 
                               className="w-8 h-0.5"
                               style={{ backgroundColor: theme.colors.secondary }}

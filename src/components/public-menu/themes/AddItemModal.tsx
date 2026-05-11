@@ -12,6 +12,14 @@ export interface AddItemModalProduct {
   price: number;
   description?: string;
   image_url?: string;
+  promotion?: {
+    id: string;
+    name: string;
+    discount_type: 'percentage' | 'fixed';
+    discount_value: number;
+    unit_discount: number;
+    final_price: number;
+  } | null;
 }
 
 interface Props {
@@ -46,7 +54,14 @@ export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Prop
 
   if (!product) return null;
 
-  const total = product.price * quantity;
+  const finalUnitPrice = product.promotion?.final_price ?? product.price;
+  const total = finalUnitPrice * quantity;
+  const hasPromotion = !!product.promotion && product.promotion.unit_discount > 0;
+  const promotionLabel = product.promotion
+    ? product.promotion.discount_type === 'percentage'
+      ? `${product.promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
+      : `${formatBRL(product.promotion.discount_value)} OFF`
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -63,6 +78,18 @@ export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Prop
 
         {product.description && (
           <p className="text-sm text-muted-foreground">{product.description}</p>
+        )}
+
+        {hasPromotion && (
+          <div
+            className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+            style={{ borderColor: `${primaryColor}33`, backgroundColor: `${primaryColor}10`, color: primaryColor }}
+          >
+            <span className="font-semibold">{promotionLabel}</span>
+            <span className="text-xs opacity-80">
+              de <span className="line-through">{formatBRL(product.price)}</span> por {formatBRL(finalUnitPrice)}
+            </span>
+          </div>
         )}
 
         <div className="space-y-2">
