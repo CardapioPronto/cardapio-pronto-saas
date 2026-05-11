@@ -198,14 +198,14 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [ ] Criar migration para converter `subscriptions.plan_id` para `uuid`.
-- [ ] Criar FK `subscriptions.plan_id -> plans.id`.
-- [ ] Atualizar RPC `get_restaurant_subscription_entitlement` sem casts desnecessarios.
-- [ ] Regenerar tipos Supabase.
-- [ ] Revisar todos os pontos que tratam `plan_id` como string generica.
-- [ ] Criar indice parcial para impedir multiplas assinaturas vivas por restaurante, se regra de negocio permitir.
-- [ ] Reparar ou classificar os 2 restaurantes ativos sem assinatura viva.
-- [ ] Criar check/rotina para restaurantes orfaos sem trial/assinatura.
+- [x] Criar migration para converter `subscriptions.plan_id` para `uuid`.
+- [x] Criar FK `subscriptions.plan_id -> plans.id`.
+- [x] Atualizar RPC `get_restaurant_subscription_entitlement` sem casts desnecessarios.
+- [x] Regenerar tipos Supabase (tipos `subscriptions` em `src/integrations/supabase/types.ts` + schema de referencia).
+- [x] Revisar todos os pontos que tratam `plan_id` como string generica (uuid continua como `string` no TS; inserts usam id de plano valido).
+- [x] Criar indice parcial para impedir multiplas assinaturas vivas por restaurante, se regra de negocio permitir (ja existia `uniq_subscriptions_active_per_restaurant`).
+- [x] Reparar ou classificar os 2 restaurantes ativos sem assinatura viva (backfill na migration + funcao `repair_missing_restaurant_subscriptions` para operacao).
+- [x] Criar check/rotina para restaurantes orfaos sem trial/assinatura.
 - [ ] Testar cadastro novo dono com trial de 14 dias.
 - [ ] Testar usuario trial expirado sendo bloqueado.
 - [ ] Testar usuario ativo e `past_due` dentro/fora de graca.
@@ -219,7 +219,7 @@ Criterio de aceite:
 
 Evidencia:
 
--
+- 2026-05-11: Migration `20260511103000_subscriptions_plan_id_uuid_fk.sql` — reparo de `plan_id` invalido, `ALTER TYPE uuid`, FK `subscriptions_plan_id_fkey`, RPC e trigger de trial alinhados, backfill de restaurantes sem subscription, funcao `repair_missing_restaurant_subscriptions()` (service_role). Preflight atualizado para exigir join `p.id = s.plan_id` nesta migration.
 
 ---
 
@@ -478,3 +478,4 @@ Evidencia:
 | 2026-05-09 | Bloco 1 | Implementado tecnicamente | Dependencias de producao sem vulnerabilidades conhecidas; `xlsx` removido; pendente teste manual de exportacao com dados reais. |
 | 2026-05-09 | Bloco 2 | Implementado tecnicamente | PDV e status de pedidos migrados para RPCs transacionais; pendente teste manual completo em mesa/balcao/cozinha. |
 | 2026-05-09 | Bloco 3 | Implementado tecnicamente | Configuracao iFood movida para Edge Function protegida; segredo nao retorna ao front; RLS endurecida; pendente teste manual com credenciais/permissoes. |
+| 2026-05-11 | Bloco 4 | Implementado tecnicamente | `plan_id` uuid + FK; RPC/trigger; backfill e `repair_missing_restaurant_subscriptions`; pendente testes manuais de trial/bloqueio/past_due. |

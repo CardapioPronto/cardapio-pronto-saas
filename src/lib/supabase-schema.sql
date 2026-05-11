@@ -94,7 +94,7 @@ create table public.menu_items (
 create table public.subscriptions (
     id uuid default uuid_generate_v4() primary key,
     restaurant_id uuid references public.restaurants(id) not null,
-    plan_id text not null,
+    plan_id uuid not null references public.plans(id),
     status text not null,
     start_date timestamp with time zone not null,
     end_date timestamp with time zone,

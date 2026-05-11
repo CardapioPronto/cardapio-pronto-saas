@@ -2525,6 +2525,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "subscriptions_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false

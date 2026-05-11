@@ -28,6 +28,7 @@ const finalizeOwnerSignup = read("supabase/functions/finalize-owner-signup/index
 const cleanupOwnerSignups = read("supabase/functions/cleanup-unverified-owner-signups/index.ts");
 const checkoutMigration = read("supabase/migrations/20260507123000_harden_public_menu_order_integrity.sql");
 const trialSubscriptionMigration = read("supabase/migrations/20260509103000_ensure_trial_subscription_on_restaurant_create.sql");
+const subscriptionsPlanIdUuidMigration = read("supabase/migrations/20260511103000_subscriptions_plan_id_uuid_fk.sql");
 const mainLayout = read("src/layouts/MainLayout.tsx");
 const subscriptionStatusHook = read("src/hooks/useSubscriptionStatus.ts");
 const supabaseClient = read("src/integrations/supabase/client.ts");
@@ -220,12 +221,10 @@ check(
 
 check(
   "Subscription gate uses a minimal entitlement RPC",
-  [checkoutMigration, trialSubscriptionMigration].some((source) =>
-    source.includes("get_restaurant_subscription_entitlement")
-      && source.includes("p.id::text = s.plan_id")
-  )
+  subscriptionsPlanIdUuidMigration.includes("get_restaurant_subscription_entitlement")
+    && subscriptionsPlanIdUuidMigration.includes("LEFT JOIN public.plans p ON p.id = s.plan_id")
     && subscriptionStatusHook.includes("get_restaurant_subscription_entitlement"),
-  "employees need a safe subscription entitlement lookup that does not expose the subscriptions table",
+  "employees need a safe subscription entitlement lookup that does not expose the subscriptions table; plan_id must join plans as uuid",
 );
 
 check(

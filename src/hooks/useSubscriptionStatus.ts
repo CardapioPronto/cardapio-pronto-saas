@@ -101,9 +101,8 @@ export const useSubscriptionStatus = () => {
       }
 
       try {
-        // Buscar assinatura ativa do restaurante sem join embutido. Em alguns
-        // ambientes o FK subscriptions.plan_id -> plans.id não está exposto ao
-        // PostgREST, e o join gera 400 em toda navegação protegida.
+        // Entitlement via RPC (SECURITY DEFINER): join planos no servidor sem
+        // depender de FK exposta ao PostgREST para employees/dono.
         const getEntitlement = supabase.rpc.bind(supabase) as unknown as (
           fn: 'get_restaurant_subscription_entitlement',
           args: { p_restaurant_id: string },
