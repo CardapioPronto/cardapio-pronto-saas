@@ -83,7 +83,7 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
   }, [post, form]);
 
   const onSubmit = async (data: BlogPostFormData) => {
-    const formData = {
+    const formData: BlogPostFormData = {
       ...data,
       excerpt: data.excerpt || undefined,
       cover_image_url: data.cover_image_url || undefined,
