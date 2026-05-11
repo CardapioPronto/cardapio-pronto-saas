@@ -318,7 +318,7 @@ export const useExportacaoDados = () => {
           query = query.eq("status", status);
         }
 
-        query = aplicarFiltroCanal(query, canal);
+        query = aplicarFiltroCanal(query as never, canal) as typeof query;
 
         const { data, error } = await query
           .order("created_at", { ascending: false })

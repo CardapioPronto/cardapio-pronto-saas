@@ -83,12 +83,12 @@ export function BlogPostDialog({ open, onOpenChange, post }: BlogPostDialogProps
   }, [post, form]);
 
   const onSubmit = async (data: BlogPostFormData) => {
-    const formData: BlogPostFormData = {
+    const formData = {
       ...data,
       excerpt: data.excerpt || undefined,
       cover_image_url: data.cover_image_url || undefined,
       category: data.category || undefined,
-    };
+    } as BlogPostFormData;
 
     let success = false;
     if (post) {

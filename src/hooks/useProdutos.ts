@@ -172,8 +172,8 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
     }
 
     const makeCountQuery = () => applyCommonFilters(
-      supabase.from("products").select("id", { count: "exact", head: true })
-    );
+      supabase.from("products").select("id", { count: "exact", head: true }) as never
+    ) as ReturnType<typeof supabase.from<"products">>['select'] extends never ? never : ReturnType<ReturnType<typeof supabase.from<"products">>["select"]>;
 
     const [
       totalResult,

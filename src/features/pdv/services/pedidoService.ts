@@ -123,12 +123,12 @@ export async function salvarPedido(
       notifyMesasChanged(restaurantId);
     }
 
-    if (telefoneCliente && order.order_id) {
+    if (telefoneCliente && (order as { order_id?: string | number }).order_id) {
       try {
         await WhatsAppService.sendOrderConfirmation(
           restaurantId,
           telefoneCliente,
-          String(order.order_id)
+          String((order as { order_id?: string | number }).order_id)
         );
       } catch (whatsappError) {
         console.error('Erro ao enviar notificação WhatsApp:', whatsappError);
@@ -275,8 +275,9 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoSt
       return { success: false, error };
     }
 
-    if (data?.restaurant_id && data?.table_id) {
-      notifyMesasChanged(String(data.restaurant_id));
+    const updatedRow = data as { restaurant_id?: string; table_id?: string } | null;
+    if (updatedRow?.restaurant_id && updatedRow?.table_id) {
+      notifyMesasChanged(String(updatedRow.restaurant_id));
     }
 
     toast.success(`Status do pedido atualizado para ${novoStatus}`);
