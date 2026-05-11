@@ -57,9 +57,9 @@ export const SuperAdminsTable = ({ data, isLoading, onRemove }: SuperAdminsTable
 
   return (
     <AdminTable
-      data={data}
+      data={data as unknown as Record<string, unknown>[] | null}
       isLoading={isLoading}
-      columns={columns}
+      columns={columns as unknown as { header: string; accessorKey: string | ((row: Record<string, unknown>) => React.ReactNode); cell?: (row: Record<string, unknown>) => React.ReactNode }[]}
       emptyMessage="Nenhum administrador encontrado."
     />
   );
