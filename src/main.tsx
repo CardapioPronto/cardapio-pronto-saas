@@ -4,11 +4,13 @@ import App from './App.tsx'
 import './index.css'
 import { initSupabase } from './lib/supabase-init.ts'
 import { initObservability } from './lib/observability.ts'
+import { initSentry } from './lib/sentry.ts'
 import { createLogger } from './lib/log.ts'
 import { supabaseConfigError } from './integrations/supabase/client.ts'
 
 const log = createLogger('boot')
 
+initSentry()
 initObservability()
 
 const container = document.getElementById('root')
