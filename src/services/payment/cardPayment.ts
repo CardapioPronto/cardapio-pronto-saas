@@ -29,7 +29,7 @@ export const processCardPayment = async (subscriptionData: SubscriptionRequest):
   try {
     // Implementação real para integração com Pagar.me
     // 1. Criar cliente se não existir
-    const customerResponse = await pagarmeRequest('customers', 'POST', {
+    const customerResponse = await pagarmeRequest<any>('customers', 'POST', {
       name: subscriptionData.customer.name,
       email: subscriptionData.customer.email,
       document: subscriptionData.customer.document,
@@ -45,7 +45,7 @@ export const processCardPayment = async (subscriptionData: SubscriptionRequest):
     
     // 2. Criar cartão de crédito
     const cardDetails = subscriptionData.paymentMethod.cardDetails;
-    const cardResponse = await pagarmeRequest('customers/' + customerResponse.id + '/cards', 'POST', {
+    const cardResponse = await pagarmeRequest<any>('customers/' + customerResponse.id + '/cards', 'POST', {
       number: cardDetails.number,
       holder_name: cardDetails.name,
       exp_month: cardDetails.expiry.split('/')[0],
@@ -54,7 +54,7 @@ export const processCardPayment = async (subscriptionData: SubscriptionRequest):
     });
     
     // 3. Criar assinatura
-    const subscriptionResponse = await pagarmeRequest('subscriptions', 'POST', {
+    const subscriptionResponse = await pagarmeRequest<any>('subscriptions', 'POST', {
       plan_id: subscriptionData.planId,
       customer_id: customerResponse.id,
       card_id: cardResponse.id,

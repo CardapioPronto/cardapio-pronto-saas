@@ -42,7 +42,7 @@ export const cancelSubscription = async (subscriptionId: string): Promise<boolea
   }
   
   try {
-    await pagarmeRequest(`subscriptions/${subscriptionId}`, 'DELETE');
+    await pagarmeRequest<any>(`subscriptions/${subscriptionId}`, 'DELETE');
     return true;
   } catch (error) {
     console.error('[Pagar.me] Erro ao cancelar assinatura:', error);
@@ -73,7 +73,7 @@ export const getSubscriptionDetails = async (subscriptionId: string): Promise<Su
   }
   
   try {
-    const response = await pagarmeRequest(`subscriptions/${subscriptionId}`, 'GET');
+    const response = await pagarmeRequest<any>(`subscriptions/${subscriptionId}`, 'GET');
     
     if (!response) {
       return null;
@@ -111,7 +111,7 @@ export const checkPaymentIntegrationStatus = async (): Promise<{ status: 'ok' | 
     // Tenta fazer uma requisição simples para verificar a conexão
     try {
       // Endpoint específico para verificar o status da chave de API
-      await pagarmeRequest('customers?page=1&size=1', 'GET');
+      await pagarmeRequest<any>('customers?page=1&size=1', 'GET');
       
       return { 
         status: 'ok', 

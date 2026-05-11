@@ -24,7 +24,7 @@ export const processBoletoPayment = async (subscriptionData: SubscriptionRequest
   
   try {
     // Implementação similar ao cartão, mas com método de pagamento boleto
-    const customerResponse = await pagarmeRequest('customers', 'POST', {
+    const customerResponse = await pagarmeRequest<any>('customers', 'POST', {
       name: subscriptionData.customer.name,
       email: subscriptionData.customer.email,
       document: subscriptionData.customer.document,
@@ -38,7 +38,7 @@ export const processBoletoPayment = async (subscriptionData: SubscriptionRequest
       }
     });
     
-    const subscriptionResponse = await pagarmeRequest('subscriptions', 'POST', {
+    const subscriptionResponse = await pagarmeRequest<any>('subscriptions', 'POST', {
       plan_id: subscriptionData.planId,
       customer_id: customerResponse.id,
       payment_method: "boleto",
