@@ -2,25 +2,24 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Valores padrão do projeto Pubfy no Lovable. A anon key do Supabase é
+// publica por design (acesso ao schema é controlado por RLS), então
+// pode ficar embutida no bundle. Quando `VITE_SUPABASE_URL`/
+// `VITE_SUPABASE_ANON_KEY` estão definidas (ex.: ambiente self-hosted),
+// elas têm prioridade.
+export const PUBFY_SUPABASE_URL = "https://jyrfjvyeikhqpuwcvdff.supabase.co";
+const PUBFY_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5cmZqdnllaWtocXB1d2N2ZGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMjE1ODYsImV4cCI6MjA2MTU5NzU4Nn0.85_oZ68y8jTpUx_f0flqI5EA7p4ECqVTFa6_8HR837g";
 
-// Falha de configuração é detectada de forma não fatal: o bundle continua
-// carregando para que `main.tsx` consiga mostrar uma tela clara de erro em
-// vez de travar o loader inicial. Qualquer chamada real ao Supabase com o
-// stub abaixo retorna erro de auth/rede, mas o app exibe a tela de
-// configuração antes disso.
-export const supabaseConfigError: Error | null =
-  !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY
-    ? new Error(
-        "Supabase environment variables are not configured. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel do Lovable em Project Settings > Environment.",
-      )
-    : null;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || PUBFY_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || PUBFY_SUPABASE_ANON_KEY;
+
+// URL pública do Supabase deste projeto, útil para Edge Functions
+// invocadas pelo frontend (ex.: telas administrativas do Pagar.me).
+export const supabaseUrl = SUPABASE_URL;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(
-  SUPABASE_URL || "https://missing-env.supabase.invalid",
-  SUPABASE_PUBLISHABLE_KEY || "missing-anon-key",
-);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);

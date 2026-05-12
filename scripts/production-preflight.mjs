@@ -181,12 +181,12 @@ check(
 );
 
 check(
-  "Admin Pagar.me webhook URLs derive from the configured Supabase URL",
+  "Admin Pagar.me webhook URLs derive from the shared Supabase URL helper",
   [adminPagarme, adminPagarmeWebhooks].every((source) =>
-    source.includes("import.meta.env.VITE_SUPABASE_URL")
+    source.includes("supabaseUrl")
       && !source.includes("jyrfjvyeikhqpuwcvdff.supabase.co")
   ),
-  "admin webhook copy fields must work across Supabase projects/environments",
+  "admin webhook copy fields must use the shared `supabaseUrl` export so they work across Supabase projects/environments",
 );
 
 check(
@@ -234,11 +234,12 @@ check(
 );
 
 check(
-  "Supabase client uses environment variables",
+  "Supabase client allows environment overrides",
   supabaseClient.includes("import.meta.env.VITE_SUPABASE_URL")
     && supabaseClient.includes("import.meta.env.VITE_SUPABASE_ANON_KEY")
-    && !supabaseClient.includes("jyrfjvyeikhqpuwcvdff.supabase.co"),
-  "client configuration should not be hardcoded to one Supabase project",
+    && supabaseClient.includes("PUBFY_SUPABASE_URL")
+    && supabaseClient.includes("export const supabaseUrl"),
+  "the Supabase client must keep the public Lovable defaults as fallback and expose them via `supabaseUrl`, while still honoring `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` for self-hosted setups",
 );
 
 const failed = checks.filter((item) => !item.passed);

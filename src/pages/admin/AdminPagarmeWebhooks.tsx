@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ interface WebhookEvent {
   processed_at: string | null;
 }
 
-const WEBHOOK_URL = `${String(import.meta.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
+const WEBHOOK_URL = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
 const AdminPagarmeWebhooks = () => {
   const [events, setEvents] = useState<WebhookEvent[]>([]);

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import {
   OnlinePaymentMethod,
   RestaurantPaymentSettings,
@@ -21,7 +21,7 @@ import {
 } from "@/services/restaurantPaymentService";
 import { CheckCircle, Copy, CreditCard, Loader2, Search, ShieldCheck } from "lucide-react";
 
-const WEBHOOK_URL = `${String(import.meta.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
+const WEBHOOK_URL = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
 type RestaurantRow = {
   id: string;

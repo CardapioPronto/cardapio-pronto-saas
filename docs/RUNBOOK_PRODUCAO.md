@@ -14,7 +14,7 @@ em ambiente comercial. Cada seção tem **objetivo**, **passos** e **como valida
 
 | Categoria | Variáveis | Onde configurar |
 | --- | --- | --- |
-| Frontend (Vite) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_APP_VERSION` | **Lovable** → Project Settings → Environment |
+| Frontend (Vite) | `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_APP_VERSION` (opcionais; `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` só se for self-hosted fora do Lovable — caso contrário os defaults embutidos do projeto Pubfy já funcionam) | **Lovable** → Project Settings → Environment |
 | Supabase Edge Functions | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_SITE_URL`, `SITE_URL`, `OWNER_SIGNUP_CLEANUP_SECRET`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, `ENVIRONMENT` | **Supabase Dashboard** → Project Settings → Edge Functions → Secrets (ou `supabase secrets set NOME=valor`) |
 | Pagar.me | `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET`, `PAGARME_PLATFORM_RECIPIENT_ID` | Supabase secrets |
 | Resend | `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `RESEND_FROM_NAME`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO` | Supabase secrets |
