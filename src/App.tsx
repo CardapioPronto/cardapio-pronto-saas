@@ -80,7 +80,12 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <div className="min-h-screen bg-background">
-              <BrowserRouter>
+              <BrowserRouter
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true,
+                }}
+              >
                 <AppRoutes />
               </BrowserRouter>
               <Toaster />
