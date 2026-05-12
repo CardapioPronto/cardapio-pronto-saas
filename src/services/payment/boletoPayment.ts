@@ -2,6 +2,13 @@
 import { config, pagarmeRequest, getPlanName, getPlanPrice } from './config';
 import { SubscriptionRequest, SubscriptionResponse } from './types';
 
+type PagarmeResponse = {
+  id?: string;
+  status?: string;
+  next_billing_at?: string;
+  [key: string]: unknown;
+};
+
 // Função para processar pagamentos com boleto
 export const processBoletoPayment = async (subscriptionData: SubscriptionRequest): Promise<SubscriptionResponse> => {
   console.log(`[Pagar.me] Gerando boleto`);
@@ -24,7 +31,7 @@ export const processBoletoPayment = async (subscriptionData: SubscriptionRequest
   
   try {
     // Implementação similar ao cartão, mas com método de pagamento boleto
-    const customerResponse = await pagarmeRequest<any>('customers', 'POST', {
+    const customerResponse = await pagarmeRequest<PagarmeResponse>('customers', 'POST', {
       name: subscriptionData.customer.name,
       email: subscriptionData.customer.email,
       document: subscriptionData.customer.document,
@@ -38,7 +45,7 @@ export const processBoletoPayment = async (subscriptionData: SubscriptionRequest
       }
     });
     
-    const subscriptionResponse = await pagarmeRequest<any>('subscriptions', 'POST', {
+    const subscriptionResponse = await pagarmeRequest<PagarmeResponse>('subscriptions', 'POST', {
       plan_id: subscriptionData.planId,
       customer_id: customerResponse.id,
       payment_method: "boleto",

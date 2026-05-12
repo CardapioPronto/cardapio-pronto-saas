@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -484,11 +485,16 @@ const pollEvents = async (restaurantId: string, config: IfoodConfig) => {
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  let detectedAction: Action | undefined;
+  let detectedRestaurantId: string | undefined;
+
   try {
     const user = await getAuthenticatedUser(req);
     const payload = await req.json().catch(() => ({}));
     const action = (payload.action || "test") as Action;
+    detectedAction = action;
     const restaurantId = await resolveRestaurantId(user.id, payload.restaurantId);
+    detectedRestaurantId = restaurantId;
 
     if (action === "get_config") {
       return jsonResponse(await getPublicConfig(restaurantId));
@@ -524,6 +530,12 @@ serve(async (req: Request) => {
     return jsonResponse({ error: "Ação inválida" }, 400);
   } catch (error) {
     console.error("ifood-integration error:", error);
+    await captureEdgeException(error, {
+      functionName: "ifood-integration",
+      req,
+      tags: { action: detectedAction ?? "unknown" },
+      extra: { restaurant_id: detectedRestaurantId },
+    });
     return jsonResponse(
       { error: error instanceof Error ? error.message : "Erro desconhecido" },
       400,

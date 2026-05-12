@@ -4,13 +4,23 @@ import { processBoletoPayment } from './boletoPayment';
 import { processPixPayment } from './pixPayment';
 import { pagarmeRequest, config } from './config';
 import { SubscriptionRequest, SubscriptionResponse } from './types';
+import { createLogger } from '@/lib/log';
 
-// Criar assinatura
+const log = createLogger('payment.subscription');
+
+type PagarmeSubscriptionResponse = {
+  id?: string;
+  status?: string;
+  next_billing_at?: string;
+  plan?: { name?: string; price?: number };
+  [key: string]: unknown;
+};
+
 export const createSubscription = async (
   request: SubscriptionRequest
 ): Promise<SubscriptionResponse> => {
   try {
-    console.log(`Criando assinatura para plano: ${request.planId}`);
+    log.debug(`Criando assinatura para plano: ${request.planId}`);
     
     // Processar o pagamento baseado no método selecionado
     switch (request.paymentMethod.type) {
@@ -24,40 +34,36 @@ export const createSubscription = async (
         throw new Error("Método de pagamento não suportado");
     }
   } catch (error) {
-    console.error("Erro ao processar pagamento:", error);
+    log.error("Erro ao processar pagamento:", error);
     throw error;
   }
 };
 
-// Cancelar assinatura
 export const cancelSubscription = async (subscriptionId: string): Promise<boolean> => {
-  console.log(`[Pagar.me] Cancelando assinatura: ${subscriptionId}`);
-  
+  log.debug(`[Pagar.me] Cancelando assinatura: ${subscriptionId}`);
+
   if (config.apiKey === 'test_api_key') {
-    console.warn('[Pagar.me] Usando chave de API de teste padrão. Configure uma chave válida para integração real.');
-    
-    // Simulação para desenvolvimento
+    log.warn('[Pagar.me] Usando chave de API de teste padrão. Configure uma chave válida para integração real.');
+
     await new Promise(resolve => setTimeout(resolve, 1000));
     return true;
   }
-  
+
   try {
-    await pagarmeRequest<any>(`subscriptions/${subscriptionId}`, 'DELETE');
+    await pagarmeRequest<PagarmeSubscriptionResponse>(`subscriptions/${subscriptionId}`, 'DELETE');
     return true;
   } catch (error) {
-    console.error('[Pagar.me] Erro ao cancelar assinatura:', error);
+    log.error('[Pagar.me] Erro ao cancelar assinatura:', error);
     throw new Error(`Falha ao cancelar assinatura: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 };
 
-// Obter dados da assinatura
 export const getSubscriptionDetails = async (subscriptionId: string): Promise<SubscriptionResponse | null> => {
-  console.log(`[Pagar.me] Buscando detalhes da assinatura: ${subscriptionId}`);
-  
+  log.debug(`[Pagar.me] Buscando detalhes da assinatura: ${subscriptionId}`);
+
   if (config.apiKey === 'test_api_key') {
-    console.warn('[Pagar.me] Usando chave de API de teste padrão. Configure uma chave válida para integração real.');
-    
-    // Simulação para desenvolvimento
+    log.warn('[Pagar.me] Usando chave de API de teste padrão. Configure uma chave válida para integração real.');
+
     await new Promise(resolve => setTimeout(resolve, 800));
     const status = Math.random() > 0.2 ? 'active' as const : 'canceled' as const;
     
@@ -73,34 +79,33 @@ export const getSubscriptionDetails = async (subscriptionId: string): Promise<Su
   }
   
   try {
-    const response = await pagarmeRequest<any>(`subscriptions/${subscriptionId}`, 'GET');
-    
-    if (!response) {
+    const response = await pagarmeRequest<PagarmeSubscriptionResponse>(`subscriptions/${subscriptionId}`, 'GET');
+
+    if (!response || !response.id) {
       return null;
     }
-    
+
     return {
       id: response.id,
-      status: response.status === 'active' ? 'active' as const : 
+      status: response.status === 'active' ? 'active' as const :
               response.status === 'pending' ? 'pending' as const : 'canceled' as const,
-      nextBilling: new Date(response.next_billing_at),
+      nextBilling: new Date(response.next_billing_at ?? Date.now()),
       planInfo: {
         name: response.plan?.name || 'Desconhecido',
         price: response.plan?.price || 0
       }
     };
   } catch (error) {
-    console.error('[Pagar.me] Erro ao obter detalhes da assinatura:', error);
+    log.error('[Pagar.me] Erro ao obter detalhes da assinatura:', error);
     throw new Error(`Falha ao obter detalhes: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 };
 
-// Verificar status da integração com Pagar.me
 export const checkPaymentIntegrationStatus = async (): Promise<{ status: 'ok' | 'error', message: string }> => {
   try {
-    console.log(`[Pagar.me] Verificando status da integração`);
-    console.log(`[Pagar.me] API Key: ${config.apiKey.substring(0, 5)}...`);
-    
+    log.debug(`[Pagar.me] Verificando status da integração`);
+    log.debug(`[Pagar.me] API Key configurada (comprimento=${config.apiKey?.length ?? 0})`);
+
     if (config.apiKey === 'test_api_key') {
       return { 
         status: 'error', 
@@ -111,7 +116,7 @@ export const checkPaymentIntegrationStatus = async (): Promise<{ status: 'ok' | 
     // Tenta fazer uma requisição simples para verificar a conexão
     try {
       // Endpoint específico para verificar o status da chave de API
-      await pagarmeRequest<any>('customers?page=1&size=1', 'GET');
+      await pagarmeRequest<PagarmeSubscriptionResponse>('customers?page=1&size=1', 'GET');
       
       return { 
         status: 'ok', 

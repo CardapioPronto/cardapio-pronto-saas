@@ -45,12 +45,6 @@ interface ListarPedidosOptions {
   itensPorPagina?: number;
 }
 
-type PedidoResumoRow = {
-  id: string;
-  status: string;
-  total: number;
-};
-
 const formatMesaDisplay = (pedido: PedidoQueryRow) => {
   if (pedido.order_type === 'delivery') return 'Delivery';
   if (pedido.order_type === 'balcao') return 'Balcão';
@@ -62,21 +56,34 @@ const formatMesaDisplay = (pedido: PedidoQueryRow) => {
   return 'Mesa';
 };
 
-const OPEN_TABLE_STATUSES: PedidoStatus[] = ['pendente', 'preparo', 'em-andamento', 'pronto'];
-const FATURAMENTO_STATUS: PedidoStatus = 'finalizado';
-
 const notifyMesasChanged = (restaurantId: string) => {
   window.dispatchEvent(new CustomEvent('mesas:changed', { detail: { restaurantId } }));
 };
 
-const montarResumoPedidos = (pedidos: PedidoResumoRow[] = []): HistoricoPedidosResumo => ({
-  totalPedidos: pedidos.length,
-  totalVendido: pedidos
-    .filter((pedido) => pedido.status === FATURAMENTO_STATUS)
-    .reduce((total, pedido) => total + Number(pedido.total || 0), 0),
-  pedidosAbertos: pedidos.filter((pedido) => OPEN_TABLE_STATUSES.includes(pedido.status as PedidoStatus)).length,
-  cancelados: pedidos.filter((pedido) => pedido.status === 'cancelado').length,
-});
+const RESUMO_VAZIO: HistoricoPedidosResumo = {
+  totalPedidos: 0,
+  totalVendido: 0,
+  pedidosAbertos: 0,
+  cancelados: 0,
+};
+
+type ResumoRpcResult = {
+  totalPedidos?: number | null;
+  totalVendido?: number | null;
+  pedidosAbertos?: number | null;
+  cancelados?: number | null;
+};
+
+const parseResumoRpc = (raw: unknown): HistoricoPedidosResumo => {
+  if (!raw || typeof raw !== 'object') return { ...RESUMO_VAZIO };
+  const value = raw as ResumoRpcResult;
+  return {
+    totalPedidos: Number(value.totalPedidos ?? 0),
+    totalVendido: Number(value.totalVendido ?? 0),
+    pedidosAbertos: Number(value.pedidosAbertos ?? 0),
+    cancelados: Number(value.cancelados ?? 0),
+  };
+};
 
 export async function salvarPedido(
   restaurantId: string,
@@ -197,25 +204,15 @@ export async function listarPedidos(
       return { success: false, error };
     }
 
-    let resumoQuery = supabase
-      .from('orders')
-      .select('id, status, total');
-
-    resumoQuery = resumoQuery.eq('restaurant_id', restaurantId);
-
-    if (options.dataInicio) {
-      resumoQuery = resumoQuery.gte('created_at', options.dataInicio);
-    }
-
-    if (options.dataFim) {
-      resumoQuery = resumoQuery.lte('created_at', options.dataFim);
-    }
-
-    if (options.status && options.status !== 'todos') {
-      resumoQuery = resumoQuery.eq('status', options.status);
-    }
-
-    const { data: resumoData, error: resumoError } = await resumoQuery;
+    const { data: resumoData, error: resumoError } = await supabase.rpc(
+      'get_orders_summary',
+      {
+        p_restaurant_id: restaurantId,
+        p_data_inicio: options.dataInicio || null,
+        p_data_fim: options.dataFim || null,
+        p_status: options.status && options.status !== 'todos' ? options.status : null,
+      },
+    );
 
     if (resumoError) {
       console.error('Erro ao buscar resumo de pedidos:', resumoError);
@@ -254,7 +251,7 @@ export async function listarPedidos(
       success: true,
       pedidos: pedidosFormatados,
       total: count || 0,
-      resumo: montarResumoPedidos((resumoData || []) as PedidoResumoRow[]),
+      resumo: parseResumoRpc(resumoData),
     };
   } catch (error) {
     console.error('Erro ao listar pedidos:', error);

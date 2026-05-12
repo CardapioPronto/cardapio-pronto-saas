@@ -2,6 +2,7 @@
 // URL: https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/pagarme-webhook
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -397,6 +398,34 @@ Deno.serve(async (req) => {
 
   const signatureValid = await verifySignature(rawBody, signatureHeader);
 
+  // B3 — Validamos a assinatura ANTES de persistir o payload. Em
+  // assinatura inválida apenas registramos um snapshot mínimo (sem
+  // payload bruto) para auditoria e respondemos 401. Isso evita gravar
+  // dados de chamadas não confiáveis na tabela `pagarme_webhook_events`.
+  if (!signatureValid) {
+    try {
+      await supabase.from("pagarme_webhook_events").insert({
+        event_id: null,
+        event_type: "rejected.invalid_signature",
+        payload: { reason: "invalid_signature", received_at: new Date().toISOString() },
+        signature_valid: false,
+        processing_error: "Invalid signature - payload not persisted",
+      });
+    } catch (logError) {
+      console.error("[pagarme-webhook] failed to log invalid signature attempt:", logError);
+    }
+    await captureEdgeException(new Error("Invalid Pagar.me webhook signature"), {
+      functionName: "pagarme-webhook",
+      req,
+      level: "warning",
+      tags: { stage: "verify_signature" },
+    });
+    return new Response(JSON.stringify({ error: "Invalid signature" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   let event: PagarmeEvent;
   try {
     event = JSON.parse(rawBody) as PagarmeEvent;
@@ -430,7 +459,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Log event
+  // Log event (somente após assinatura válida)
   const { data: logRow } = await supabase
     .from("pagarme_webhook_events")
     .insert({
@@ -441,18 +470,10 @@ Deno.serve(async (req) => {
       order_id: metadataOrderId,
       pagarme_customer_id: pagarmeCustomerId,
       payload: event,
-      signature_valid: signatureValid,
+      signature_valid: true,
     })
     .select("id")
     .maybeSingle();
-
-  // Reject when signature invalid (after logging for audit)
-  if (!signatureValid) {
-    return new Response(JSON.stringify({ error: "Invalid signature" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
 
   try {
     await processEvent(event);
@@ -465,6 +486,17 @@ Deno.serve(async (req) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[pagarme-webhook] processing error:", msg);
+    await captureEdgeException(err, {
+      functionName: "pagarme-webhook",
+      req,
+      tags: { stage: "process_event", event_type: eventType },
+      extra: {
+        event_id: eventId,
+        pagarme_subscription_id: pagarmeSubId,
+        pagarme_order_id: pagarmeOrderId,
+        order_id: metadataOrderId,
+      },
+    });
     if (logRow?.id) {
       await supabase
         .from("pagarme_webhook_events")

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -90,6 +91,13 @@ Deno.serve(async (req) => {
     }));
   } catch (error) {
     console.error("Invalid Resend webhook:", error);
+    await captureEdgeException(error, {
+      functionName: "resend-webhook",
+      req,
+      level: "warning",
+      tags: { stage: "verify_signature" },
+      extra: { svix_id: svixId },
+    });
     return json({ error: "Invalid webhook" }, 400);
   }
 
@@ -150,6 +158,12 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("resend-webhook processing error:", message);
+    await captureEdgeException(error, {
+      functionName: "resend-webhook",
+      req,
+      tags: { stage: "process_event", event_type: eventType },
+      extra: { svix_id: svixId, provider_message_id: providerMessageId },
+    });
     if (svixId) {
       await admin
         .from("email_webhook_events")

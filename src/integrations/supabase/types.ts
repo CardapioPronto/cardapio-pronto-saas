@@ -3090,6 +3090,23 @@ export type Database = {
         Args: { p_restaurant_id: string }
         Returns: Json
       }
+      get_orders_summary: {
+        Args: {
+          p_data_fim?: string | null
+          p_data_inicio?: string | null
+          p_restaurant_id: string
+          p_status?: string | null
+        }
+        Returns: Json
+      }
+      get_restaurant_dashboard_metrics: {
+        Args: {
+          p_include_financials?: boolean
+          p_restaurant_id: string
+          p_window_days?: number
+        }
+        Returns: Json
+      }
       get_restaurant_sales_period_metrics: {
         Args: {
           p_canal?: string

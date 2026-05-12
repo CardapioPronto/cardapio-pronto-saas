@@ -174,6 +174,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
     const makeCountQuery = () => applyCommonFilters(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       supabase.from("products").select("id", { count: "exact", head: true }) as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any;
 
     const [

@@ -504,3 +504,26 @@ Evidencia:
 | 2026-05-11 | Bloco 8 | Implementado (núcleo) | Logger gateado, loader da marca, EmptyState reusável + Pedidos mobile-friendly, Assinaturas com alertas dedicados. Validacao em hardware real e padronizacao ampla de empty states/contraste seguem para o Bloco 10. |
 | 2026-05-11 | Bloco 9 | Implementado (núcleo) | Runbook de produção, `.env.example` agrupado por destino, fallback do Lovable removido em `email-dispatch`, preflight 31/31 PASS. Itens de Sentry frontend/alertas pulados por decisão do time. |
 | 2026-05-11 | Bloco 10 | Implementado (núcleo) | RPC `seed_demo_restaurant` com massa realista, quatro roteiros de QA, onboarding, suporte e monitoramento documentados. Staging dedicado e piloto controlado seguem como tarefa operacional. |
+| 2026-05-11 | Bloqueadores B1-B7 | Implementado tecnicamente | RLS audit + script (B1), logs Pagar.me sanitizados (B2), webhook valida assinatura antes de persistir (B3), observabilidade nos três webhooks core (B4), RPCs agregadas para dashboard (B5) e resumo de pedidos (B6), PDV com paginação adequada e busca por nome server-side (B7). Lint zerado, typecheck OK, 27 testes PASS, preflight 31/31. |
+
+---
+
+## Bloqueadores pré-piloto (B1–B7)
+
+Prioridade: `P0`
+
+Esta seção registra os 7 bloqueadores apontados na auditoria profunda do dia 2026-05-11 e que precisavam ser corrigidos antes de qualquer piloto controlado.
+
+- [x] **B1 — RLS auditável e forçada nas tabelas core.** Migration `supabase/migrations/20260515090000_ensure_rls_on_core_tables.sql` aplica `ENABLE` + `FORCE ROW LEVEL SECURITY` em 25 tabelas críticas (orders, products, subscriptions, users, system_admins, restaurants, coupons, promotions, webhooks etc.), publica view `public.rls_audit_report` (security invoker, GRANT só para `authenticated`) e cria política mínima de SELECT em `system_admins`. Script de auditoria contra o banco real em `scripts/audit-rls.mjs` consome a view e falha o build com lista de tabelas sem RLS/políticas.
+- [x] **B2 — Sem vazamento de chave Pagar.me em logs.** `src/services/payment/subscriptionService.ts` deixou de imprimir `apiKey.substring(0,5)` no console; agora todos os pontos usam o `createLogger('payment.subscription')` que silencia `debug`/`info` em produção, e o status de integração apenas reporta o comprimento da chave. Tipos `PagarmeSubscriptionResponse` no lugar de `any` quitaram os erros de lint pré-existentes.
+- [x] **B3 — Webhook Pagar.me valida assinatura antes de persistir.** `supabase/functions/pagarme-webhook/index.ts` agora rejeita imediatamente com 401 quando `signatureValid === false`, gravando apenas um log mínimo (`event_type=rejected.invalid_signature`, sem o payload bruto). A persistência completa em `pagarme_webhook_events` e o `processEvent` só ocorrem quando a assinatura é válida.
+- [x] **B4 — Observabilidade nos webhooks externos.** `pagarme-webhook`, `resend-webhook` e `ifood-integration` passaram a importar `captureEdgeException` (`supabase/functions/_shared/observability.ts`) e enviam para o Sentry exceções em três pontos: assinatura inválida, erro de processamento e erro de rota (com tags `stage`, `event_type`, `action` e extras com IDs relevantes). Sample rate continua governado por `SENTRY_SAMPLE_RATE` em Supabase Secrets.
+- [x] **B5 — Dashboard agregado server-side.** Migration `supabase/migrations/20260515091500_dashboard_metrics_rpc.sql` cria `public.get_restaurant_dashboard_metrics(p_restaurant_id, p_window_days, p_include_financials)` que retorna em um único JSON `stats` (totalPedidos, faturamento por `finalizado`, itensVendidos, pedidosAbertos, ticketMedio, crescimentos) e `popular_products` top 5. `src/services/dashboard/metricsService.ts` chama a RPC com cache curto in-memory (5s), e `statsService`/`productsService` ficaram thin wrappers — o frontend deixa de baixar todos os pedidos+itens dos últimos 60 dias.
+- [x] **B6 — Resumo de pedidos sem trazer todos os ids.** Migration `supabase/migrations/20260515091700_orders_summary_rpc.sql` cria `public.get_orders_summary(p_restaurant_id, p_data_inicio, p_data_fim, p_status)` `STABLE` + `SECURITY INVOKER` (respeita RLS do chamador). `src/features/pdv/services/pedidoService.ts` substituiu a query `select id, status, total` sem paginação por essa RPC; o `montarResumoPedidos` foi removido e o frontend recebe apenas os 4 totais agregados.
+- [x] **B7 — PDV exibe o catálogo completo com busca server-side.** `src/features/pdv/components/NovoPedido.tsx` agora chama `useProdutos` com `tab: 'disponiveis'`, `itensPorPagina: 500`, `sortKey: 'name'`, `sortDirection: 'asc'` e propaga a `busca` para o servidor (ilike por `name`/`description`). O filtro local segue por categoria + texto sobre o conjunto carregado. Aviso visual aparece se o restaurante exceder 500 produtos disponíveis instruindo a usar a busca por nome.
+
+Critério de aceite atendido:
+
+- Lint `npm run lint` zerou os 15 erros pré-existentes (`@typescript-eslint/no-explicit-any` em `useProdutos`, `supabase-service` e serviços Pagar.me) sem suprimir a regra global.
+- `npx tsc --noEmit -p tsconfig.app.json` continua verde após registrar as RPCs novas em `src/integrations/supabase/types.ts`.
+- `npx vitest run` mantém 27/27 testes verdes; `node scripts/production-preflight.mjs` reporta 31/31 checks PASS, incluindo os checks de observability já existentes.

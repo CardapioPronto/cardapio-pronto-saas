@@ -37,6 +37,7 @@ export class SupabaseService<T extends TableNames> {
   async create<R extends TableRow<T>>(data: TableInsert<T>): Promise<ServiceResponse<R>> {
     try {
       const { data: result, error } = await (supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from(this.table) as any)
         .insert(data as never)
         .select()
@@ -88,6 +89,7 @@ export class SupabaseService<T extends TableNames> {
   async getById<R extends TableRow<T>>(id: string | number): Promise<ServiceResponse<R>> {
     try {
       const { data, error } = await (supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from(this.table) as any)
         .select('*')
         .eq('id', id)
@@ -105,6 +107,7 @@ export class SupabaseService<T extends TableNames> {
   async update<R extends TableRow<T>>(id: string | number, data: TableUpdate<T>): Promise<ServiceResponse<R>> {
     try {
       const { data: result, error } = await (supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from(this.table) as any)
         .update(data as never)
         .eq('id', id)
@@ -123,6 +126,7 @@ export class SupabaseService<T extends TableNames> {
   async delete(id: string | number): Promise<ServiceResponse<null>> {
     try {
       const { error } = await (supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from(this.table) as any)
         .delete()
         .eq('id', id);

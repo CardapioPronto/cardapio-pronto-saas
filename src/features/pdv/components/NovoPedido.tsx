@@ -14,6 +14,12 @@ import { Product } from "@/types";
 import { DadosClientePedido, ItemPedido } from "../types";
 import { PackageSearch, UserRound } from "lucide-react";
 
+// B7 — Limite alto para evitar paginação no PDV. A consulta usa
+// ordenação por nome e a filtragem (busca/categoria) é client-side
+// sobre este conjunto. Restaurantes com mais de PDV_PRODUCTS_LIMIT
+// produtos disponíveis recebem aviso para usar a busca por nome.
+const PDV_PRODUCTS_LIMIT = 500;
+
 export interface NovoPedidoProps {
   restaurantId: string;
   restaurantName: string;
@@ -57,10 +63,19 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
 }) => {
   const {
     produtos,
+    total: totalProdutos,
     loading: produtosLoading,
     isFetching: produtosFetching,
-  } = useProdutos(restaurantId);
+  } = useProdutos(restaurantId, {
+    busca,
+    tab: "disponiveis",
+    itensPorPagina: PDV_PRODUCTS_LIMIT,
+    sortKey: "name",
+    sortDirection: "asc",
+  });
   const { mesas, loading: mesasLoading, loadMesas } = useMesas(restaurantId);
+
+  const produtosListaTruncada = totalProdutos > PDV_PRODUCTS_LIMIT;
 
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [telefoneError, setTelefoneError] = useState("");
@@ -72,16 +87,18 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
     }
   }, [tipoPedido, mesaSelecionada]);
 
-  // Filter products based on search and category
+  // Filtro local (categoria + busca pela descrição). A busca por nome
+  // já é aplicada no servidor via useProdutos, garantindo cobertura
+  // mesmo quando o total de itens excede PDV_PRODUCTS_LIMIT.
   const produtosFiltrados = produtos.filter((produto) => {
     const termoBusca = busca.toLowerCase().trim();
-    const matchesSearch = busca === "" || 
-      produto.name.toLowerCase().includes(termoBusca) ||
-      (produto.description ?? "").toLowerCase().includes(termoBusca);
-    
-    const matchesCategory = categoriaAtiva === "" || categoriaAtiva === "all" || 
+    const matchesSearch = !termoBusca
+      || produto.name.toLowerCase().includes(termoBusca)
+      || (produto.description ?? "").toLowerCase().includes(termoBusca);
+
+    const matchesCategory = categoriaAtiva === "" || categoriaAtiva === "all" ||
       produto.category?.id === categoriaAtiva;
-    
+
     return matchesSearch && matchesCategory && produto.available;
   });
 
@@ -168,6 +185,11 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
               mesasLoading={mesasLoading}
               onRefreshMesas={loadMesas}
             />
+            {produtosListaTruncada && !busca.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Exibindo os {PDV_PRODUCTS_LIMIT} primeiros produtos. Use a busca para localizar itens fora desta lista.
+              </p>
+            )}
             <div className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
               <ListaProdutos
                 produtosFiltrados={produtosFiltrados}
