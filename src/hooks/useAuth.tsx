@@ -1,22 +1,25 @@
 
-import { ReactNode } from 'react';
+import { ReactNode, useCallback, useMemo } from 'react';
 import { useUserSession } from './useUserSession';
 import { supabase } from '@/lib/supabase';
 import { AuthContext } from './authContext';
+import { createLogger } from '@/lib/log';
+
+const log = createLogger('auth.provider');
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Fonte única da verdade: useUserSession já gerencia getSession + onAuthStateChange.
   const { session, authUser, loading } = useUserSession();
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      console.error('Login error:', error);
+      log.capture(error, { action: 'signIn', email });
     }
     return { error };
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, userData: Record<string, unknown>) => {
+  const signUp = useCallback(async (email: string, password: string, userData: Record<string, unknown>) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     const { error } = await supabase.auth.signUp({
       email,
@@ -26,15 +29,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: redirectUrl,
       },
     });
+    if (error) {
+      log.capture(error, { action: 'signUp', email, userType: userData.user_type });
+    }
     return { error };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    session,
+    user: authUser,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+  }), [session, authUser, loading, signIn, signUp, signOut]);
 
   return (
-    <AuthContext.Provider value={{ session, user: authUser, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

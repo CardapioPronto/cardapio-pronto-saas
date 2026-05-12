@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,19 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAnalisePerformance } from "@/hooks/useAnalisePerformance";
 import { useExportacaoDados } from "@/hooks/useExportacaoDados";
-import { GraficoPerformance } from "./GraficoPerformance";
 import { MetricasPerformance } from "./MetricasPerformance";
+
+const GraficoPerformance = lazy(() =>
+  import("./GraficoPerformance").then((module) => ({
+    default: module.GraficoPerformance,
+  })),
+);
+
+const ChartFallback = () => (
+  <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+    Carregando gráfico...
+  </div>
+);
 
 export const AnalisePerformance = () => {
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
@@ -259,7 +270,9 @@ export const AnalisePerformance = () => {
                 <CardTitle>Evolução da Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <GraficoPerformance data={performanceData.evolucao} />
+                <Suspense fallback={<ChartFallback />}>
+                  <GraficoPerformance data={performanceData.evolucao} />
+                </Suspense>
               </CardContent>
             </Card>
 

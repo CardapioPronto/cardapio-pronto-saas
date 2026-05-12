@@ -1,6 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { CartItem } from '@/components/public-menu/cart/cartContextCore';
+import { createLogger } from '@/lib/log';
+
+const log = createLogger('deliveryOrderService');
 
 export type FulfillmentType = 'delivery' | 'pickup' | 'table' | 'counter';
 
@@ -200,7 +203,13 @@ export const deliveryOrderService = {
           },
         });
       } catch (e) {
-        console.warn('Falha ao enviar WhatsApp (pedido salvo mesmo assim):', e);
+        log.capture(e, {
+          action: 'send_delivery_whatsapp_optional',
+          restaurantId: input.restaurant_id,
+          orderId: result.order_id,
+          deliveryOrderId: result.delivery_order_id,
+          trackingId: result.tracking_id,
+        });
       }
     }
 
@@ -219,7 +228,13 @@ export const deliveryOrderService = {
           },
         });
       } catch (e) {
-        console.warn('Falha ao enviar confirmação por e-mail (pedido salvo mesmo assim):', e);
+        log.capture(e, {
+          action: 'send_order_confirmation_email_optional',
+          restaurantId: input.restaurant_id,
+          orderId: result.order_id,
+          deliveryOrderId: result.delivery_order_id,
+          trackingId: result.tracking_id,
+        });
       }
     }
 

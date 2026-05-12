@@ -5,6 +5,9 @@ import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { User as AppUser } from '@/types/user';
 import { finalizeOwnerSignupIfNeeded } from '@/services/ownerSignupService';
 import { setObservabilityUser } from '@/lib/observability';
+import { createLogger } from '@/lib/log';
+
+const log = createLogger('auth.session');
 
 interface UserSession {
   session: Session | null;
@@ -61,7 +64,7 @@ export const useUserSession = (): UserSession => {
         name: data.name || data.email || 'Usuário'
       } as AppUser;
     } catch (err) {
-      console.error('Erro ao buscar perfil do usuário:', err);
+      log.capture(err, { action: 'fetchUserProfile', userId });
       return null;
     }
   }, []);
@@ -115,7 +118,7 @@ export const useUserSession = (): UserSession => {
         }
       } catch (err) {
         if (!active || requestId !== requestIdRef.current) return;
-        console.error('Erro ao aplicar sessão:', err);
+        log.capture(err, { action: 'applySession', userId: nextUserId, isInitial });
         setSession(null);
         setAuthUser(null);
         setAppUser(null);
@@ -140,7 +143,7 @@ export const useUserSession = (): UserSession => {
         await applySession(session, isInitial);
       } catch (err) {
         if (!active || requestId !== requestIdRef.current) return;
-        console.error('Erro ao buscar sessão:', err);
+        log.capture(err, { action: 'refreshSession', isInitial });
         setSession(null);
         setAuthUser(null);
         setAppUser(null);

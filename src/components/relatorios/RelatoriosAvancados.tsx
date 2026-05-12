@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,19 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useRelatoriosAvancados } from "@/hooks/useRelatoriosAvancados";
 import { useExportacaoDados } from "@/hooks/useExportacaoDados";
-import { GraficoVendasPeriodo } from "./GraficoVendasPeriodo";
 import { TabelaProdutosPeriodo } from "./TabelaProdutosPeriodo";
+
+const GraficoVendasPeriodo = lazy(() =>
+  import("./GraficoVendasPeriodo").then((module) => ({
+    default: module.GraficoVendasPeriodo,
+  })),
+);
+
+const ChartFallback = () => (
+  <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+    Carregando gráfico...
+  </div>
+);
 
 export const RelatoriosAvancados = () => {
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
@@ -313,7 +324,9 @@ export const RelatoriosAvancados = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <GraficoVendasPeriodo data={relatorioData.graficos} />
+                <Suspense fallback={<ChartFallback />}>
+                  <GraficoVendasPeriodo data={relatorioData.graficos} />
+                </Suspense>
               </CardContent>
             </Card>
 
