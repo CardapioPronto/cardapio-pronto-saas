@@ -24,6 +24,11 @@ const AcompanharPedido = lazy(() => import('@/pages/AcompanharPedido'));
 const FAQ = lazy(() => import('@/pages/FAQ'));
 const Demonstracao = lazy(() => import('@/pages/Demonstracao'));
 const Funcionalidades = lazy(() => import('@/pages/Funcionalidades'));
+const Sobre = lazy(() => import('@/pages/Sobre'));
+const Carreiras = lazy(() => import('@/pages/Carreiras'));
+const Termos = lazy(() => import('@/pages/Termos'));
+const Privacidade = lazy(() => import('@/pages/Privacidade'));
+const Cookies = lazy(() => import('@/pages/Cookies'));
 const Contato = lazy(() => import('@/pages/Contato'));
 const CardapioDigital = lazy(() => import('@/pages/CardapioDigital'));
 const PDVOnline = lazy(() => import('@/pages/PDVOnline'));
@@ -98,7 +103,12 @@ const AppRoutes = () => {
       <Route path="/faq" element={<FAQ />} />
       <Route path="/demonstracao" element={<Demonstracao />} />
       <Route path="/funcionalidades" element={<Funcionalidades />} />
+      <Route path="/sobre" element={<Sobre />} />
+      <Route path="/carreiras" element={<Carreiras />} />
       <Route path="/contato" element={<Contato />} />
+      <Route path="/termos" element={<Termos />} />
+      <Route path="/privacidade" element={<Privacidade />} />
+      <Route path="/cookies" element={<Cookies />} />
       <Route path="/cardapio-digital" element={<CardapioDigital />} />
       <Route path="/pdv-online" element={<PDVOnline />} />
       <Route path="/gestao-completa" element={<GestaoCompleta />} />

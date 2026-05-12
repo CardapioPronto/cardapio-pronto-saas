@@ -75,17 +75,17 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/pdv" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/pdv-online" className="text-gray-300 hover:text-white transition-colors">
                   PDV Online
                 </Link>
               </li>
               <li>
-                <Link to="/gestao" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/gestao-completa" className="text-gray-300 hover:text-white transition-colors">
                   Gestão Completa
                 </Link>
               </li>
               <li>
-                <Link to="/integracoes" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/funcionalidades" className="text-gray-300 hover:text-white transition-colors">
                   Integrações
                 </Link>
               </li>
@@ -97,22 +97,22 @@ const Footer = () => {
             <h3 className="text-lg font-medium">Suporte</h3>
             <ul className="mt-4 space-y-2">
               <li>
-                <Link to="/ajuda" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/faq" className="text-gray-300 hover:text-white transition-colors">
                   Central de Ajuda
                 </Link>
               </li>
               <li>
-                <Link to="/documentacao" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/blog" className="text-gray-300 hover:text-white transition-colors">
                   Documentação
                 </Link>
               </li>
               <li>
-                <Link to="/tutoriais" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/blog" className="text-gray-300 hover:text-white transition-colors">
                   Tutoriais
                 </Link>
               </li>
               <li>
-                <Link to="/status" className="text-gray-300 hover:text-white transition-colors">
+                <Link to="/contato" className="text-gray-300 hover:text-white transition-colors">
                   Status do sistema
                 </Link>
               </li>

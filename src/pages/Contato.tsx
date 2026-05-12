@@ -6,10 +6,14 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
-import { Check, Mail, MessageCircle, Phone } from "lucide-react";
+import { ArrowRight, Check, Clock, Headphones, Mail, MessageCircle, Phone, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Badge } from "@/components/ui/badge";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("contato");
 
 const Contato = () => {
   const [nome, setNome] = useState("");
@@ -38,6 +42,7 @@ const Contato = () => {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
 
       setEnviado(true);
       toast({
@@ -52,7 +57,7 @@ const Contato = () => {
       setAssunto("suporte");
       setMensagem("");
     } catch (error) {
-      console.error("Error sending message:", error);
+      log.capture(error, { action: "send_contact_message", assunto, email });
       toast({
         title: "Erro ao enviar mensagem",
         description: "Ocorreu um erro ao enviar sua mensagem. Tente novamente.",
@@ -64,22 +69,63 @@ const Contato = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-offwhite">
       <Navbar />
-      <main className="flex-grow bg-offwhite py-12">
-        <div className="container px-6 mx-auto">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-                Entre em contato conosco
+      <main className="flex-grow pt-24">
+        <section className="relative overflow-hidden bg-gradient-to-br from-navy via-navy to-green/90 text-white">
+          <div className="absolute -right-24 top-12 h-72 w-72 rounded-full bg-orange/25 blur-3xl" />
+          <div className="container relative mx-auto grid gap-12 px-6 py-16 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <div>
+              <Badge className="mb-5 border-white/20 bg-white/10 text-white hover:bg-white/15">
+                Fale com especialistas
+              </Badge>
+              <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
+                Vamos entender sua operação e indicar o melhor caminho.
               </h1>
-              <p className="text-lg text-navy/70 max-w-2xl mx-auto">
-                Estamos prontos para ajudar com qualquer dúvida sobre nossos produtos e serviços
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75">
+                Tire dúvidas sobre planos, implantação, cardápio digital, PDV,
+                integrações ou suporte. Sua mensagem chega ao time certo.
               </p>
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {[
+                  { icon: Clock, title: "24h úteis", text: "tempo médio de retorno" },
+                  { icon: ShieldCheck, title: "Sem spam", text: "uso responsável dos dados" },
+                  { icon: Headphones, title: "Time direto", text: "vendas, suporte ou produto" },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                    <item.icon className="mb-2 h-5 w-5 text-orange" />
+                    <p className="font-semibold">{item.title}</p>
+                    <p className="text-xs text-white/65">{item.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            <Card className="border-white/15 bg-white text-navy shadow-2xl">
+              <CardContent className="p-6 md:p-8">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green/10 text-green">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-navy/60">Canal recomendado</p>
+                    <h2 className="text-2xl font-semibold">Envie uma mensagem</h2>
+                  </div>
+                </div>
+                <p className="text-navy/65">
+                  Quanto mais contexto você trouxer, melhor conseguimos orientar:
+                  tipo de estabelecimento, volume de pedidos, canais de venda e
+                  o que deseja melhorar primeiro.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="container px-6 mx-auto py-12">
+          <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <Card className="text-center">
+              <Card className="text-center border-beige bg-white shadow-sm">
                 <CardContent className="pt-6">
                   <div className="bg-green/10 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Mail className="h-6 w-6 text-green" />
@@ -90,7 +136,7 @@ const Contato = () => {
                 </CardContent>
               </Card>
               
-              <Card className="text-center">
+              <Card className="text-center border-beige bg-white shadow-sm">
                 <CardContent className="pt-6">
                   <div className="bg-green/10 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Phone className="h-6 w-6 text-green" />
@@ -101,7 +147,7 @@ const Contato = () => {
                 </CardContent>
               </Card>
               
-              <Card className="text-center">
+              <Card className="text-center border-beige bg-white shadow-sm">
                 <CardContent className="pt-6">
                   <div className="bg-green/10 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageCircle className="h-6 w-6 text-green" />
@@ -114,11 +160,11 @@ const Contato = () => {
             </div>
 
             {!enviado ? (
-              <Card>
+              <Card className="border-beige bg-white shadow-xl">
                 <CardHeader>
-                  <CardTitle>Envie uma mensagem</CardTitle>
+                  <CardTitle className="text-2xl text-navy">Conte um pouco sobre sua necessidade</CardTitle>
                   <CardDescription>
-                    Preencha o formulário abaixo e entraremos em contato o mais breve possível.
+                    O formulário direciona sua solicitação para o time correto.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -130,6 +176,7 @@ const Contato = () => {
                           id="nome"
                           value={nome}
                           onChange={(e) => setNome(e.target.value)}
+                          placeholder="Seu nome"
                           required
                         />
                       </div>
@@ -140,6 +187,7 @@ const Contato = () => {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
+                          placeholder="voce@empresa.com"
                           required
                         />
                       </div>
@@ -149,6 +197,7 @@ const Contato = () => {
                           id="telefone"
                           value={telefone}
                           onChange={(e) => setTelefone(e.target.value)}
+                          placeholder="(11) 99999-9999"
                           required
                         />
                       </div>
@@ -157,7 +206,7 @@ const Contato = () => {
                         <RadioGroup 
                           value={assunto} 
                           onValueChange={setAssunto}
-                          className="flex space-x-4"
+                          className="flex flex-wrap gap-4"
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="suporte" id="suporte" />
@@ -181,7 +230,7 @@ const Contato = () => {
                         id="mensagem"
                         value={mensagem}
                         onChange={(e) => setMensagem(e.target.value)}
-                        placeholder="Digite sua mensagem aqui..."
+                        placeholder="Ex.: Tenho um restaurante com delivery e salão. Quero entender como organizar cardápio, pedidos e pagamentos em um único lugar..."
                         rows={5}
                         required
                       />
@@ -197,12 +246,13 @@ const Contato = () => {
                       disabled={loading}
                     >
                       {loading ? "Enviando..." : "Enviar mensagem"}
+                      {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
             ) : (
-              <Card>
+              <Card className="border-beige bg-white shadow-xl">
                 <CardContent className="pt-6">
                   <div className="text-center space-y-4 py-12">
                     <div className="bg-green/10 h-20 w-20 rounded-full flex items-center justify-center mx-auto">
@@ -224,7 +274,7 @@ const Contato = () => {
               </Card>
             )}
           </div>
-        </div>
+        </section>
       </main>
       <Footer />
     </div>
