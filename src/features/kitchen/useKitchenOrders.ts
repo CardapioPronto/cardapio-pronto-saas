@@ -23,6 +23,13 @@ export function useKitchenOrders(restaurantId?: string | null) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reloadRef = useRef<() => void>(() => undefined);
+  const reloadTimerRef = useRef<number | null>(null);
+  const realtimeSubscribedRef = useRef(false);
+  const soundEnabledRef = useRef(soundEnabled);
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   const loadOrders = useCallback(async () => {
     if (!restaurantId) {
@@ -43,12 +50,24 @@ export function useKitchenOrders(restaurantId?: string | null) {
 
   useEffect(() => {
     reloadRef.current = () => {
-      void loadOrders();
+      if (reloadTimerRef.current) window.clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = window.setTimeout(() => {
+        reloadTimerRef.current = null;
+        void loadOrders();
+      }, 500);
     };
   }, [loadOrders]);
 
+  const forceReload = useCallback(() => {
+    if (reloadTimerRef.current) {
+      window.clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = null;
+    }
+      void loadOrders();
+  }, [loadOrders]);
+
   const playNotification = useCallback(() => {
-    if (!soundEnabled) return;
+    if (!soundEnabledRef.current) return;
 
     if (!audioRef.current) {
       audioRef.current = new Audio("/notification.mp3");
@@ -59,7 +78,7 @@ export function useKitchenOrders(restaurantId?: string | null) {
     audioRef.current.play().catch(() => {
       toast.info("Clique em Ativar som para liberar as notificações sonoras.");
     });
-  }, [soundEnabled]);
+  }, []);
 
   const setSoundEnabled = useCallback((enabled: boolean) => {
     setSoundEnabledState(enabled);
@@ -96,7 +115,7 @@ export function useKitchenOrders(restaurantId?: string | null) {
   useEffect(() => {
     if (!restaurantId) return;
 
-    void loadOrders();
+    void forceReload();
 
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -113,10 +132,9 @@ export function useKitchenOrders(restaurantId?: string | null) {
           filter: `restaurant_id=eq.${restaurantId}`,
         },
         (payload) => {
-          reloadRef.current();
-
           if (payload.eventType === "INSERT") {
             const nextOrder = payload.new as { total?: number; source?: string | null; order_type?: string | null };
+            reloadRef.current();
             if (shouldNotifyOrder(nextOrder)) playNotification();
             toast.success("Novo pedido na cozinha", {
               description: nextOrder.source === "ifood"
@@ -125,10 +143,33 @@ export function useKitchenOrders(restaurantId?: string | null) {
                   ? "Pedido recebido pelo WhatsApp"
                   : "Pedido recebido pelo sistema",
             });
+            return;
           }
+
+          if (payload.eventType === "UPDATE") {
+            const nextOrder = payload.new as {
+              id?: string;
+              status?: PedidoStatus;
+              updated_at?: string | null;
+            };
+
+            if (nextOrder.id && nextOrder.status) {
+              setOrders((current) => current
+                .map((order) => order.id === nextOrder.id
+                  ? { ...order, status: nextOrder.status!, updatedAt: nextOrder.updated_at || order.updatedAt }
+                  : order)
+                .filter((order) => KITCHEN_QUEUE_STATUSES.includes(order.status)));
+            }
+
+            reloadRef.current();
+            return;
+          }
+
+          reloadRef.current();
         }
       )
       .subscribe((status) => {
+        realtimeSubscribedRef.current = status === "SUBSCRIBED";
         if (status === "CHANNEL_ERROR") {
           toast.error("Conexão em tempo real da cozinha falhou. A tela seguirá atualizando automaticamente.");
         }
@@ -137,17 +178,22 @@ export function useKitchenOrders(restaurantId?: string | null) {
     channelRef.current = channel;
 
     const interval = window.setInterval(() => {
-      reloadRef.current();
+      if (!realtimeSubscribedRef.current) reloadRef.current();
     }, 20000);
 
     return () => {
       window.clearInterval(interval);
+      if (reloadTimerRef.current) {
+        window.clearTimeout(reloadTimerRef.current);
+        reloadTimerRef.current = null;
+      }
+      realtimeSubscribedRef.current = false;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [restaurantId, loadOrders, playNotification]);
+  }, [restaurantId, forceReload, playNotification]);
 
   const summary = useMemo(() => ({
     waiting: orders.filter((order) => order.status === "pendente").length,

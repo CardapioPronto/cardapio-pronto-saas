@@ -18,6 +18,7 @@ export interface MySubscription {
   last_payment_status: string | null;
   start_date: string;
   end_date: string | null;
+  has_pagarme_subscription: boolean;
   pagarme_subscription_id: string | null;
   pagarme_customer_id: string | null;
   created_at: string;
@@ -71,32 +72,21 @@ export const useMySubscriptions = () => {
 
     setLoading(true);
     try {
-      const { data: subsData, error: subsErr } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("restaurant_id", user.restaurant_id)
-        .in("status", VISIBLE_STATUSES)
-        .order("created_at", { ascending: false });
+      const { data: subsData, error: subsErr } = await supabase.rpc("get_my_subscription_summaries", {
+        p_restaurant_id: user.restaurant_id,
+      });
 
       if (subsErr) throw subsErr;
 
-      const planIds = Array.from(
-        new Set((subsData ?? []).map((s) => s.plan_id).filter(Boolean))
-      );
-
-      let plansMap: Record<string, PlanSummary> = {};
-      if (planIds.length > 0) {
-        const { data: plansData } = await supabase
-          .from("plans")
-          .select("id, name, description, price_monthly, price_yearly, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_status")
-          .in("id", planIds as string[]);
-        plansMap = Object.fromEntries(((plansData ?? []) as unknown as PlanSummary[]).map((p) => [p.id, p]));
-      }
-
       setSubscriptions(
         ((subsData ?? []) as unknown as SubscriptionRow[]).map((s) =>
-          normalizeSubscription(s, plansMap[s.plan_id] ?? null),
+          normalizeSubscription({
+            ...s,
+            pagarme_subscription_id: null,
+            pagarme_customer_id: null,
+          }),
         )
+        .filter((subscription) => VISIBLE_STATUSES.includes(subscription.status))
       );
       setError(null);
     } catch (err) {

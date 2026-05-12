@@ -149,8 +149,8 @@ const SubscriptionOverview = ({
               <Clock className="h-4 w-4" />
               Pagar.me
             </div>
-            <p className="truncate font-mono text-xs">
-              {subscription.pagarme_subscription_id ?? "Sem ID"}
+            <p className="text-sm font-medium">
+              {subscription.has_pagarme_subscription ? "Sincronizada" : "Sem vínculo de checkout"}
             </p>
             <p className="text-sm text-muted-foreground">
               {subscription.last_payment_status

@@ -105,7 +105,7 @@ const ManageSubscriptionDialog = ({
     subscription.billing_cycle === "yearly"
       ? subscription.plan?.price_yearly
       : subscription.plan?.price_monthly;
-  const hasPagarmeSubscription = Boolean(subscription.pagarme_subscription_id);
+  const hasPagarmeSubscription = Boolean(subscription.has_pagarme_subscription);
 
   const handleCancel = async () => {
     setActionLoading("cancel");
@@ -218,9 +218,9 @@ const ManageSubscriptionDialog = ({
                   helper={subscription.last_payment_status ? `Status: ${subscription.last_payment_status}` : undefined}
                 />
                 <div className="min-w-0 rounded-md border bg-muted/20 p-3 sm:col-span-2">
-                  <p className="text-xs font-medium text-muted-foreground">ID Pagar.me</p>
-                  <p className="mt-1 truncate font-mono text-xs text-foreground">
-                    {subscription.pagarme_subscription_id ?? "Sem ID vinculado"}
+                  <p className="text-xs font-medium text-muted-foreground">Integração Pagar.me</p>
+                  <p className="mt-1 text-xs text-foreground">
+                    {hasPagarmeSubscription ? "Assinatura sincronizada" : "Sem vínculo de checkout"}
                   </p>
                 </div>
               </div>
@@ -280,7 +280,7 @@ const ManageSubscriptionDialog = ({
                   <Button
                     variant="outline"
                     onClick={() => setView("receipt")}
-                    disabled={!subscription.pagarme_subscription_id}
+                    disabled={!hasPagarmeSubscription}
                   >
                     <Receipt className="h-4 w-4 mr-2" />
                     Ver último comprovante

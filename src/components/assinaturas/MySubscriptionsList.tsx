@@ -207,11 +207,6 @@ const MySubscriptionsList = ({
                       Status: <strong>{sub.last_payment_status}</strong>
                     </span>
                   )}
-                  {sub.pagarme_subscription_id && (
-                    <span>
-                      ID Pagar.me: <code className="text-xs">{sub.pagarme_subscription_id}</code>
-                    </span>
-                  )}
                 </div>
               )}
             </CardContent>

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicPlanSummaryById } from "./publicPlansService";
 import { EmailIntegrationScope } from "./emailIntegrationService";
 
 export interface EmailTemplate {
@@ -324,11 +325,7 @@ export async function getEmailCampaignEntitlement(): Promise<EmailCampaignEntitl
     };
   }
 
-  const { data: plan } = await supabase
-    .from("plans")
-    .select("name, email_campaigns_enabled, email_campaign_monthly_limit, email_campaign_contact_limit, email_custom_templates_enabled")
-    .eq("id", subscription.plan_id)
-    .maybeSingle();
+  const plan = await fetchPublicPlanSummaryById(subscription.plan_id);
 
   const monthStart = new Date();
   monthStart.setUTCDate(1);

@@ -505,6 +505,7 @@ Evidencia:
 | 2026-05-11 | Bloco 9 | Implementado (núcleo) | Runbook de produção, `.env.example` agrupado por destino, fallback do Lovable removido em `email-dispatch`, preflight 31/31 PASS. Itens de Sentry frontend/alertas pulados por decisão do time. |
 | 2026-05-11 | Bloco 10 | Implementado (núcleo) | RPC `seed_demo_restaurant` com massa realista, quatro roteiros de QA, onboarding, suporte e monitoramento documentados. Staging dedicado e piloto controlado seguem como tarefa operacional. |
 | 2026-05-11 | Bloqueadores B1-B7 | Implementado tecnicamente | RLS audit + script (B1), logs Pagar.me sanitizados (B2), webhook valida assinatura antes de persistir (B3), observabilidade nos três webhooks core (B4), RPCs agregadas para dashboard (B5) e resumo de pedidos (B6), PDV com paginação adequada e busca por nome server-side (B7). Lint zerado, typecheck OK, 27 testes PASS, preflight 31/31. |
+| 2026-05-12 | Importantes Lote 1 (I1/I2/I3/I4/I10) | Implementado tecnicamente | Realtime/polling de pedidos/cozinha com debounce + patch local e polling só como fallback; `email-dispatch` com concorrência controlada em chunks; tracking público mascara QR/checkout após pagamento; planos públicos via RPC sanitizada; `useMySubscriptions` sem `select('*')` e sem IDs Pagar.me no cliente. Typecheck, lint, 27 testes e preflight PASS. |
 
 ---
 

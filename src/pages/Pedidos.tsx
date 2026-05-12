@@ -59,6 +59,8 @@ const Pedidos = () => {
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
   const pedidoDetalhesRef = useRef<Pedido | null>(null);
   const recarregarRef = useRef<() => void>(() => undefined);
+  const recarregarTimerRef = useRef<number | null>(null);
+  const realtimeSubscribedRef = useRef(false);
 
   useEffect(() => {
     pedidoDetalhesRef.current = pedidoDetalhes;
@@ -94,8 +96,22 @@ const Pedidos = () => {
 
   useEffect(() => {
     recarregarRef.current = () => {
-      void carregarPedidos();
+      if (recarregarTimerRef.current) {
+        window.clearTimeout(recarregarTimerRef.current);
+      }
+      recarregarTimerRef.current = window.setTimeout(() => {
+        recarregarTimerRef.current = null;
+        void carregarPedidos();
+      }, 600);
     };
+  }, [carregarPedidos]);
+
+  const recarregarAgora = useCallback(() => {
+    if (recarregarTimerRef.current) {
+      window.clearTimeout(recarregarTimerRef.current);
+      recarregarTimerRef.current = null;
+    }
+    void carregarPedidos();
   }, [carregarPedidos]);
 
   const setPeriodo = useCallback((periodo: HistoricoPeriodoFiltro) => {
@@ -154,7 +170,7 @@ const Pedidos = () => {
     if (!restaurantId) return;
     
     // Carregar pedidos iniciais
-    carregarPedidos();
+    recarregarAgora();
     
     // Configurar subscription para mudanças em tempo real
     const setupRealtimeSubscription = () => {
@@ -190,20 +206,34 @@ const Pedidos = () => {
             } else if (payload.eventType === 'UPDATE') {
               // ✅ Pedido atualizado
               const pedidoAtualizado = payload.new as Pedido;
-              
+
+              setPedidos((pedidosAtuais) => pedidosAtuais.map((pedido) =>
+                pedido.id === pedidoAtualizado.id
+                  ? {
+                      ...pedido,
+                      status: pedidoAtualizado.status ?? pedido.status,
+                      total: pedidoAtualizado.total ?? pedido.total,
+                      payment_status: pedidoAtualizado.payment_status ?? pedido.payment_status,
+                      payment_method: pedidoAtualizado.payment_method ?? pedido.payment_method,
+                      source: pedidoAtualizado.source ?? pedido.source,
+                    }
+                  : pedido
+              ));
+
               recarregarRef.current();
-              
+
               // Atualizar detalhes se estiver aberto
               if (pedidoDetalhesRef.current && pedidoDetalhesRef.current.id === pedidoAtualizado.id) {
                 setPedidoDetalhes(prev => prev ? { ...prev, ...pedidoAtualizado } : null);
               }
-              
+
             } else if (payload.eventType === 'DELETE') {
               // ✅ Pedido deletado
               const pedidoDeletado = payload.old as Pedido;
-              
+
+              setPedidos((pedidosAtuais) => pedidosAtuais.filter((pedido) => pedido.id !== pedidoDeletado.id));
               recarregarRef.current();
-              
+
               // Fechar detalhes se estava aberto
               if (pedidoDetalhesRef.current && pedidoDetalhesRef.current.id === pedidoDeletado.id) {
                 setPedidoDetalhes(null);
@@ -212,6 +242,7 @@ const Pedidos = () => {
           }
         )
         .subscribe((status) => {
+          realtimeSubscribedRef.current = status === 'SUBSCRIBED';
           if (status === 'CHANNEL_ERROR') {
             log.warn('subscricao real-time falhou');
             toast.error('Erro na conexão em tempo real. Recarregue a página.');
@@ -225,23 +256,30 @@ const Pedidos = () => {
     
     // Cleanup
     return () => {
+      if (recarregarTimerRef.current) {
+        window.clearTimeout(recarregarTimerRef.current);
+        recarregarTimerRef.current = null;
+      }
+      realtimeSubscribedRef.current = false;
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;
       }
     };
-  }, [restaurantId, carregarPedidos, canViewFinancials]);
+  }, [restaurantId, recarregarAgora, canViewFinancials]);
   
   // ✅ Auto-refresh a cada 30 segundos (fallback)
   useEffect(() => {
     if (!restaurantId) return;
     
     const intervalId = setInterval(() => {
-      carregarPedidos();
+      if (!realtimeSubscribedRef.current) {
+        recarregarRef.current();
+      }
     }, 30000); // 30 segundos
     
     return () => clearInterval(intervalId);
-  }, [restaurantId, carregarPedidos]);
+  }, [restaurantId]);
   
   // Função para alterar status do pedido
   const handleAlterarStatus = async (

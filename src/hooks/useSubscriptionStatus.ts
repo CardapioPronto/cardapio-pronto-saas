@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { computeSubscriptionAccess } from '@/lib/subscriptionAccess';
 import { useCurrentUser } from './useCurrentUser';
+import { fetchPublicPlanSummaryById } from '@/services/publicPlansService';
 
 export interface SubscriptionStatus {
   hasActiveSubscription: boolean;
@@ -65,12 +66,7 @@ export const useSubscriptionStatus = () => {
       let planName: string | null = subscription.plan_name ?? null;
 
       if (!planName && subscription.plan_id) {
-        const { data: plan } = await supabase
-          .from('plans')
-          .select('name')
-          .eq('id', subscription.plan_id)
-          .maybeSingle();
-
+        const plan = await fetchPublicPlanSummaryById(subscription.plan_id);
         planName = plan?.name ?? null;
       }
 

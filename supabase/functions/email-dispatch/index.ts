@@ -101,6 +101,7 @@ const canManageRestaurant = async (userId: string, restaurantId: string) => {
 const ALLOWED_RESTAURANT_TEMPLATE_KEYS = new Set(["order_confirmation", "campaign_basic"]);
 const MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST = 250;
 const CAMPAIGN_PROGRESS_BATCH_SIZE = 25;
+const CAMPAIGN_SEND_CONCURRENCY = 5;
 
 const escapeHtml = (value: unknown) =>
   String(value ?? "")
@@ -118,6 +119,14 @@ const renderCampaignContent = (template: string, variables: Record<string, unkno
     }, variables);
     return escapeHtml(value);
   });
+
+const chunkArray = <T>(items: T[], size: number) => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
 
 const getRestaurantEntitlement = async (restaurantId: string) => {
   const { data: subscription } = await admin
@@ -318,46 +327,57 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
       .eq("id", campaign.id);
   };
 
-  for (const [index, contact] of contacts.entries()) {
-    const unsubscribeUrl = `${functionBaseUrl}?token=${encodeURIComponent(contact.unsubscribe_token || "")}`;
-    const variables = {
-      restaurant_name: restaurant?.name || "Restaurante",
-      contact_name: contact.name || "Cliente",
-      email: contact.email,
-      unsubscribe_url: unsubscribeUrl,
-    };
-    const html = `${renderCampaignContent(campaign.html_content, variables)}
-      <hr>
-      <p style="font-size:12px;color:#64748b;line-height:1.5">
-        Você recebeu este e-mail porque autorizou comunicações deste restaurante.
-        <a href="${unsubscribeUrl}">Descadastrar</a>
-      </p>`;
-    const text = campaign.text_content
-      ? `${renderCampaignContent(campaign.text_content, variables)}\n\nDescadastrar: ${unsubscribeUrl}`
-      : undefined;
+  let processed = 0;
+  const progressChunks = chunkArray(contacts, CAMPAIGN_PROGRESS_BATCH_SIZE);
 
-    try {
-      await sendManagedEmail({
-        admin,
-        restaurantId: body.restaurant_id,
-        preferRestaurantConfig: true,
-        emailType: "marketing",
-        to: contact.email,
-        recipientName: contact.name,
-        subject: campaign.subject,
-        html,
-        text,
-        contextType: "campaign",
-        contextId: campaign.id,
-        metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id },
-      });
-      sent += 1;
-    } catch (error) {
-      failed += 1;
-      errors.push(error instanceof Error ? error.message : String(error));
+  for (const progressChunk of progressChunks) {
+    const sendChunks = chunkArray(progressChunk, CAMPAIGN_SEND_CONCURRENCY);
+
+    for (const sendChunk of sendChunks) {
+      await Promise.all(sendChunk.map(async (contact) => {
+        const unsubscribeUrl = `${functionBaseUrl}?token=${encodeURIComponent(contact.unsubscribe_token || "")}`;
+        const variables = {
+          restaurant_name: restaurant?.name || "Restaurante",
+          contact_name: contact.name || "Cliente",
+          email: contact.email,
+          unsubscribe_url: unsubscribeUrl,
+        };
+        const html = `${renderCampaignContent(campaign.html_content, variables)}
+          <hr>
+          <p style="font-size:12px;color:#64748b;line-height:1.5">
+            Você recebeu este e-mail porque autorizou comunicações deste restaurante.
+            <a href="${unsubscribeUrl}">Descadastrar</a>
+          </p>`;
+        const text = campaign.text_content
+          ? `${renderCampaignContent(campaign.text_content, variables)}\n\nDescadastrar: ${unsubscribeUrl}`
+          : undefined;
+
+        try {
+          await sendManagedEmail({
+            admin,
+            restaurantId: body.restaurant_id,
+            preferRestaurantConfig: true,
+            emailType: "marketing",
+            to: contact.email,
+            recipientName: contact.name,
+            subject: campaign.subject,
+            html,
+            text,
+            contextType: "campaign",
+            contextId: campaign.id,
+            metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id },
+          });
+          sent += 1;
+        } catch (error) {
+          failed += 1;
+          errors.push(error instanceof Error ? error.message : String(error));
+        } finally {
+          processed += 1;
+        }
+      }));
     }
 
-    if ((index + 1) % CAMPAIGN_PROGRESS_BATCH_SIZE === 0) {
+    if (processed > 0) {
       await persistCampaignProgress();
     }
   }

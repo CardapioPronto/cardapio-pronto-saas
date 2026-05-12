@@ -1,6 +1,6 @@
 
-import { supabase } from "@/lib/supabase";
 import { Plano } from "@/types/plano";
+import { fetchPublicPlanSummaries, type PublicPlanSummary } from "./publicPlansService";
 
 const PUBFY_SINGLE_PLAN_ID = "4953d3fc-4945-4d80-bc84-58e4f6f26698";
 
@@ -30,48 +30,7 @@ const LANDING_PLAN_CONFIG: Record<LandingPlanName, LandingPlanConfig> = {
   },
 };
 
-type PlanFeatureRow = {
-  feature: string;
-  is_enabled: boolean | null;
-};
-
-type PlanRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  price_monthly: number;
-  price_yearly: number;
-  is_active: boolean | null;
-  trial_days: number | null;
-  pagarme_plan_id_monthly: string | null;
-  pagarme_plan_id_yearly: string | null;
-  pagarme_synced_at: string | null;
-  pagarme_sync_status: string | null;
-  pagarme_sync_error: string | null;
-  pagarme_payment_methods: string[] | null;
-  created_at: string | null;
-  updated_at: string | null;
-  plan_features?: PlanFeatureRow[] | null;
-};
-
-const PLAN_FIELDS = `
-  id,
-  name,
-  description,
-  price_monthly,
-  price_yearly,
-  is_active,
-  trial_days,
-  pagarme_plan_id_monthly,
-  pagarme_plan_id_yearly,
-  pagarme_synced_at,
-  pagarme_sync_status,
-  pagarme_sync_error,
-  created_at,
-  updated_at
-`;
-
-const mapPlano = (item: PlanRow): Plano => ({
+const mapPlano = (item: PublicPlanSummary): Plano => ({
   id: item.id,
   name: item.name,
   description: item.description,
@@ -79,80 +38,28 @@ const mapPlano = (item: PlanRow): Plano => ({
   price_yearly: item.price_yearly,
   is_active: item.is_active || false,
   trial_days: item.trial_days ?? 14,
-  pagarme_plan_id_monthly: item.pagarme_plan_id_monthly,
-  pagarme_plan_id_yearly: item.pagarme_plan_id_yearly,
-  pagarme_synced_at: item.pagarme_synced_at,
-  pagarme_sync_status: item.pagarme_sync_status as Plano["pagarme_sync_status"],
-  pagarme_sync_error: item.pagarme_sync_error,
-  pagarme_payment_methods: (item.pagarme_payment_methods ?? ["credit_card", "boleto"]) as Plano["pagarme_payment_methods"],
-  created_at: item.created_at || undefined,
-  updated_at: item.updated_at || undefined,
-  features:
-    item.plan_features?.map((feature) => ({
-      feature: feature.feature,
-      is_enabled: feature.is_enabled || false,
-    })) || [],
+  pagarme_plan_id_monthly: null,
+  pagarme_plan_id_yearly: null,
+  pagarme_synced_at: null,
+  pagarme_sync_status: undefined,
+  pagarme_sync_error: null,
+  pagarme_payment_methods: ["credit_card", "boleto"],
+  features: item.features,
+  email_campaigns_enabled: item.email_campaigns_enabled,
+  email_campaign_monthly_limit: item.email_campaign_monthly_limit,
+  email_campaign_contact_limit: item.email_campaign_contact_limit,
+  email_custom_templates_enabled: item.email_custom_templates_enabled,
 });
 
-const fetchActivePlansWithoutFeatures = async () => {
-  const { data, error } = await supabase
-    .from("plans")
-    .select(PLAN_FIELDS)
-    .eq("is_active", true)
-    .order("price_monthly", { ascending: true });
-
-  if (error) throw error;
-  return ((data ?? []) as PlanRow[]).map(mapPlano);
-};
-
-const fetchSinglePubfyPlan = async () => {
-  const { data, error } = await supabase
-    .from("plans")
-    .select(PLAN_FIELDS)
-    .eq("id", PUBFY_SINGLE_PLAN_ID)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Erro ao buscar Plano Pubfy pelo ID:", error);
-    return null;
-  }
-
-  return data ? mapPlano(data as PlanRow) : null;
-};
-
 export const fetchPlanos = async (): Promise<Plano[]> => {
-  const { data, error } = await supabase
-    .from("plans")
-    .select(`
-      ${PLAN_FIELDS},
-      plan_features (
-        feature,
-        is_enabled
-      )
-    `)
-    .eq("is_active", true)
-    .order("price_monthly", { ascending: true });
-
-  if (error) {
+  try {
+    const planos = (await fetchPublicPlanSummaries()).map(mapPlano);
+    const pubfyPlan = planos.find((plano) => plano.id === PUBFY_SINGLE_PLAN_ID);
+    return pubfyPlan ? [pubfyPlan] : planos;
+  } catch (error) {
     console.error("Erro ao buscar planos:", error);
-    try {
-      const fallbackPlans = await fetchActivePlansWithoutFeatures();
-      const pubfyPlan = fallbackPlans.find((plano) => plano.id === PUBFY_SINGLE_PLAN_ID);
-      return pubfyPlan ? [pubfyPlan] : fallbackPlans;
-    } catch (fallbackError) {
-      console.error("Erro ao buscar planos sem features:", fallbackError);
-      const pubfyPlan = await fetchSinglePubfyPlan();
-      return pubfyPlan ? [pubfyPlan] : [];
-    }
+    return [];
   }
-
-  const planos = ((data ?? []) as PlanRow[]).map(mapPlano);
-  const pubfyPlan = planos.find((plano) => plano.id === PUBFY_SINGLE_PLAN_ID);
-  if (pubfyPlan) return [pubfyPlan];
-
-  const directPubfyPlan = await fetchSinglePubfyPlan();
-  return directPubfyPlan ? [directPubfyPlan] : planos;
 };
 
 export const fetchPlanosForLanding = async () => {

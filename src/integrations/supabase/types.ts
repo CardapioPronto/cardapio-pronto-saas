@@ -3082,6 +3082,10 @@ export type Database = {
         Args: { p_tracking_id: string }
         Returns: Json
       }
+      get_public_plan_summaries: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_public_restaurant_payment_settings: {
         Args: { p_restaurant_id: string }
         Returns: Json
@@ -3097,6 +3101,10 @@ export type Database = {
           p_restaurant_id: string
           p_status?: string | null
         }
+        Returns: Json
+      }
+      get_my_subscription_summaries: {
+        Args: { p_restaurant_id: string }
         Returns: Json
       }
       get_restaurant_dashboard_metrics: {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicPlanSummaries } from "@/services/publicPlansService";
 
 export interface ActivePlan {
   id: string;
@@ -17,13 +17,7 @@ export function useActivePlan() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data } = await supabase
-        .from("plans")
-        .select("id, name, description, price_monthly, price_yearly, trial_days")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      const [data] = await fetchPublicPlanSummaries();
       if (!mounted) return;
       if (data) {
         setPlan({

@@ -19,6 +19,13 @@ const SUPABASE_PUBLISHABLE_KEY =
 // invocadas pelo frontend (ex.: telas administrativas do Pagar.me).
 export const supabaseUrl = SUPABASE_URL;
 
+/**
+ * Retrocompatibilidade com builds que ainda importam `{ supabaseConfigError }`
+ * em `main.tsx`. O cliente sempre tem URL e anon key válidas (defaults Pubfy
+ * ou `VITE_*`), portanto este valor permanece `null`.
+ */
+export const supabaseConfigError: string | null = null;
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
