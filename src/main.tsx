@@ -31,7 +31,7 @@ function renderConfigErrorScreen(error: Error) {
         </p>
         <ol style="margin:0 0 16px 20px;padding:0;font-size:14px;line-height:1.6;">
           <li>Lovable &rarr; Project Settings &rarr; Environment.</li>
-          <li>Adicione <code style="background:#F2CC8F33;padding:2px 6px;border-radius:4px;">VITE_SUPABASE_URL</code> e <code style="background:#F2CC8F33;padding:2px 6px;border-radius:4px;">VITE_SUPABASE_ANON_KEY</code>.</li>
+          <li>Adicione <code style="background:#F2CC8F33;padding:2px 6px;border-radius:4px;">VITE_SUPABASE_URL</code> e <code style="background:#F2CC8F33;padding:2px 6px;border-radius:4px;">VITE_SUPABASE_PUBLISHABLE_KEY</code>.</li>
           <li>Refaça o deploy.</li>
         </ol>
         <p style="margin:0;font-size:13px;opacity:0.7;">
