@@ -43,7 +43,11 @@ const Contato = () => {
     try {
       const { supabase } = await import("@/integrations/supabase/client");
 
-      const { data, error } = await supabase.functions.invoke("send-contact-email", {
+      const { data, error } = await supabase.functions.invoke<{
+        success?: boolean;
+        error?: string;
+        captcha_error_codes?: string[];
+      }>("send-contact-email", {
         body: {
           name: nome,
           email,
@@ -53,6 +57,36 @@ const Contato = () => {
           captcha_token: captchaToken,
         },
       });
+
+      let captchaErrorCodes: string[] | undefined = data?.captcha_error_codes;
+
+      if (!captchaErrorCodes?.length && error) {
+        const errCtx = (error as { context?: Response }).context;
+        if (errCtx && typeof errCtx.clone === "function") {
+          try {
+            const parsed = (await errCtx.clone().json()) as {
+              captcha_error_codes?: string[];
+            };
+            captchaErrorCodes = parsed?.captcha_error_codes;
+          } catch {
+            // body não-JSON, ignore
+          }
+        }
+      }
+
+      if (captchaErrorCodes?.length) {
+        log.capture(new Error("turnstile rejected"), {
+          action: "send_contact_message_captcha",
+          captchaErrorCodes: captchaErrorCodes.join(","),
+        });
+        toast({
+          title: "Captcha rejeitado",
+          description: `Recarregue a página e tente novamente. (${captchaErrorCodes.join(", ")})`,
+          variant: "destructive",
+        });
+        setCaptchaToken(null);
+        return;
+      }
 
       if (error) throw error;
       if (data?.error) throw new Error(String(data.error));

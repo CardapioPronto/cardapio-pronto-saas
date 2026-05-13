@@ -47,17 +47,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const captcha = await verifyTurnstileToken(captchaToken, {
-      req,
-      expectedAction: "contact_form",
-    });
+    const captcha = await verifyTurnstileToken(captchaToken, { req });
 
     if (!captcha.success) {
       console.warn("[send-contact-email] captcha rejected", {
         errorCodes: captcha.errorCodes,
+        hostname: captcha.hostname,
+        action: captcha.action,
       });
       return new Response(
-        JSON.stringify({ error: "Verificação de segurança falhou. Recarregue a página e tente novamente." }),
+        JSON.stringify({
+          error: "Verificação de segurança falhou. Recarregue a página e tente novamente.",
+          captcha_error_codes: captcha.errorCodes ?? [],
+        }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },

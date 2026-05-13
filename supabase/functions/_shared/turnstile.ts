@@ -7,8 +7,8 @@
 // Docs: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
 
 export type TurnstileVerifyResult =
-  | { success: true; skipped?: false; action?: string; cdata?: string }
-  | { success: false; skipped?: false; errorCodes?: string[] }
+  | { success: true; skipped?: false; action?: string; hostname?: string; cdata?: string }
+  | { success: false; skipped?: false; errorCodes?: string[]; hostname?: string; action?: string }
   | { success: true; skipped: true };
 
 interface CloudflareSiteverifyResponse {
@@ -35,14 +35,16 @@ function pickRemoteIp(req?: Request): string | undefined {
 
 export async function verifyTurnstileToken(
   token: string | undefined | null,
-  options: { req?: Request; expectedAction?: string } = {},
+  options: { req?: Request } = {},
 ): Promise<TurnstileVerifyResult> {
   const secret = Deno.env.get("TURNSTILE_SECRET_KEY")?.trim();
   if (!secret) {
+    console.warn("[turnstile] TURNSTILE_SECRET_KEY not configured; skipping verification");
     return { success: true, skipped: true };
   }
 
   if (!token || typeof token !== "string") {
+    console.warn("[turnstile] missing or invalid token in request body");
     return { success: false, errorCodes: ["missing-input-response"] };
   }
 
@@ -58,19 +60,38 @@ export async function verifyTurnstileToken(
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body,
     });
+
+    if (!response.ok) {
+      console.error("[turnstile] siteverify returned non-2xx", {
+        status: response.status,
+      });
+      return { success: false, errorCodes: [`siteverify-http-${response.status}`] };
+    }
+
     const data = (await response.json()) as CloudflareSiteverifyResponse;
 
     if (!data.success) {
-      return { success: false, errorCodes: data["error-codes"] };
+      console.warn("[turnstile] verification rejected by Cloudflare", {
+        errorCodes: data["error-codes"],
+        hostname: data.hostname,
+        action: data.action,
+      });
+      return {
+        success: false,
+        errorCodes: data["error-codes"],
+        hostname: data.hostname,
+        action: data.action,
+      };
     }
 
-    if (options.expectedAction && data.action && data.action !== options.expectedAction) {
-      return { success: false, errorCodes: ["action-mismatch"] };
-    }
-
-    return { success: true, action: data.action, cdata: data.cdata };
+    return {
+      success: true,
+      action: data.action,
+      hostname: data.hostname,
+      cdata: data.cdata,
+    };
   } catch (error) {
-    console.error("[turnstile] verification failure", error);
+    console.error("[turnstile] verification network failure", error);
     return { success: false, errorCodes: ["network-error"] };
   }
 }
