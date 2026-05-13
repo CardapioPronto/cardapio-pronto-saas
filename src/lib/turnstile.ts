@@ -38,7 +38,6 @@ type TurnstileApi = {
   reset: (widgetId?: string) => void;
   remove: (widgetId: string) => void;
   getResponse: (widgetId?: string) => string | undefined;
-  ready: (cb: () => void) => void;
 };
 
 declare global {
@@ -49,46 +48,99 @@ declare global {
 
 let scriptPromise: Promise<TurnstileApi> | null = null;
 
+function resolveTurnstileApi(resolve: (api: TurnstileApi) => void, reject: (e: Error) => void) {
+  let settled = false;
+  const ok = (api: TurnstileApi) => {
+    if (settled) return;
+    settled = true;
+    resolve(api);
+  };
+  const fail = (message: string) => {
+    if (settled) return;
+    settled = true;
+    reject(new Error(message));
+  };
+
+  const tryAttach = (): boolean => {
+    const api = window.turnstile;
+    if (api?.render) {
+      ok(api as TurnstileApi);
+      return true;
+    }
+    return false;
+  };
+
+  queueMicrotask(() => {
+    if (tryAttach()) return;
+    requestAnimationFrame(() => {
+      if (tryAttach()) return;
+      window.setTimeout(() => {
+        if (tryAttach()) return;
+        fail("Turnstile não inicializou após carregar o script.");
+      }, 50);
+    });
+  });
+}
+
+/**
+ * Cloudflare documenta que não se deve usar `turnstile.ready()` se o script
+ * `api.js` for carregado com `async` ou `defer`. Carregamos sem esses atributos
+ * e, após o evento `load`, resolvemos assim que `window.turnstile.render` existir.
+ *
+ * Referência: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
+ */
 export function loadTurnstile(): Promise<TurnstileApi> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("Turnstile só pode ser carregado no browser."));
   }
-  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (window.turnstile?.render) return Promise.resolve(window.turnstile as TurnstileApi);
+
+  const staleLoader = document.querySelector<HTMLScriptElement>(
+    'script[data-turnstile-loader="true"]',
+  );
+  if (staleLoader && (staleLoader.async || staleLoader.defer)) {
+    staleLoader.remove();
+    scriptPromise = null;
+  }
+
   if (scriptPromise) return scriptPromise;
 
   scriptPromise = new Promise<TurnstileApi>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(
       'script[data-turnstile-loader="true"]',
     );
-    const handleReady = () => {
-      if (!window.turnstile) {
-        reject(new Error("Turnstile não inicializou após carregar o script."));
-        return;
-      }
-      window.turnstile.ready(() => resolve(window.turnstile as TurnstileApi));
+
+    const afterScriptLoaded = () => {
+      resolveTurnstileApi(resolve, reject);
     };
 
     if (existing) {
-      existing.addEventListener("load", handleReady, { once: true });
-      existing.addEventListener("error", () => reject(new Error("Falha ao carregar Turnstile.")), {
-        once: true,
-      });
+      if (window.turnstile?.render) {
+        resolve(window.turnstile as TurnstileApi);
+        return;
+      }
+      existing.addEventListener("load", afterScriptLoaded, { once: true });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error("Falha ao carregar Turnstile.")),
+        { once: true },
+      );
+      queueMicrotask(afterScriptLoaded);
       return;
     }
 
     const script = document.createElement("script");
     script.src = TURNSTILE_SCRIPT_SRC;
-    script.async = true;
-    script.defer = true;
     script.dataset.turnstileLoader = "true";
-    script.addEventListener("load", handleReady, { once: true });
-    script.addEventListener(
-      "error",
-      () => reject(new Error("Falha ao carregar Turnstile.")),
-      { once: true },
-    );
+    script.addEventListener("load", afterScriptLoaded, { once: true });
+    script.addEventListener("error", () => reject(new Error("Falha ao carregar Turnstile.")), {
+      once: true,
+    });
     document.head.appendChild(script);
   });
 
-  return scriptPromise;
+  return scriptPromise.catch((err) => {
+    scriptPromise = null;
+    throw err;
+  });
 }

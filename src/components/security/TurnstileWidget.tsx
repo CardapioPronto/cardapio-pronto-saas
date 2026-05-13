@@ -9,6 +9,8 @@ type TurnstileWidgetProps = {
   action?: string;
   theme?: "light" | "dark" | "auto";
   size?: "normal" | "compact" | "flexible";
+  /** `always` mostra o widget (checkbox) de forma estável na página */
+  appearance?: "always" | "execute" | "interaction-only";
   className?: string;
 };
 
@@ -21,7 +23,8 @@ export function TurnstileWidget({
   onToken,
   action,
   theme = "auto",
-  size = "flexible",
+  size = "normal",
+  appearance = "always",
   className,
 }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +51,7 @@ export function TurnstileWidget({
           action,
           theme,
           size,
+          appearance,
           callback: (token) => emitToken(token),
           "error-callback": () => emitToken(null),
           "expired-callback": () => emitToken(null),
@@ -70,7 +74,7 @@ export function TurnstileWidget({
       }
       widgetIdRef.current = null;
     };
-  }, [action, theme, size, emitToken]);
+  }, [action, theme, size, appearance, emitToken]);
 
   return <div ref={containerRef} className={className} />;
 }
