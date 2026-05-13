@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { PublicSeo } from '@/components/seo/PublicSeo';
+import type { BlogPost as BlogPostRecord } from '@/types/blog';
+
+function postSeoDescription(post: Pick<BlogPostRecord, 'excerpt' | 'content'>): string {
+  const ex = post.excerpt?.trim();
+  if (ex) return ex.length > 300 ? `${ex.slice(0, 297)}…` : ex;
+  const plain = post.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length > 160) return `${plain.slice(0, 157)}…`;
+  return plain || 'Artigo no blog Pubfy.';
+}
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
@@ -12,6 +22,12 @@ export default function BlogPost() {
 
   if (loading) {
     return (
+      <>
+      <PublicSeo
+        title="Blog | Pubfy"
+        description="Carregando artigo..."
+        path={`/blog/${slug || ''}`}
+      />
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-grow">
@@ -29,11 +45,19 @@ export default function BlogPost() {
         </div>
         <Footer />
       </div>
+      </>
     );
   }
 
   if (!post) {
     return (
+      <>
+      <PublicSeo
+        title="Post não encontrado | Pubfy"
+        description="O artigo pode ter sido removido ou o link está incorreto."
+        path={`/blog/${slug || ''}`}
+        noIndex
+      />
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
@@ -52,10 +76,20 @@ export default function BlogPost() {
         </div>
         <Footer />
       </div>
+      </>
     );
   }
 
+  const path = `/blog/${post.slug}`;
+
   return (
+    <>
+      <PublicSeo
+        title={`${post.title} | Pubfy`}
+        description={postSeoDescription(post)}
+        path={path}
+        ogImagePath={post.cover_image_url || '/favicon-pubfy.png'}
+      />
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="flex-grow">
@@ -119,5 +153,6 @@ export default function BlogPost() {
       </div>
       <Footer />
     </div>
+    </>
   );
 }

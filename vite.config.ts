@@ -30,6 +30,16 @@ export default defineConfig(({ mode }) => {
       cssCodeSplit: true,
       sourcemap: false,
       chunkSizeWarningLimit: 1200,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules/jspdf-autotable")) return "jspdf-autotable";
+            if (id.includes("node_modules/jspdf")) return "jspdf-core";
+            if (id.includes("node_modules/recharts")) return "recharts";
+            if (id.includes("node_modules/html2canvas")) return "html2canvas";
+          },
+        },
+      },
     },
     esbuild: {
       // Remove console/debugger em produção para reduzir bundle e ruído

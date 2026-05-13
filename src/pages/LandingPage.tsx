@@ -6,17 +6,21 @@ import Features from "@/components/landing/Features";
 import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import CTA from "@/components/landing/CTA";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { useEffect } from "react";
 
 const LandingPage = () => {
   useEffect(() => {
-    // Scroll to top when component mounts
     window.scrollTo(0, 0);
-    // Set page title
-    document.title = "Pubfy | Cardápio Digital";
   }, []);
 
   return (
+    <>
+    <PublicSeo
+      title="Pubfy | Cardápio digital, PDV e gestão para restaurantes"
+      description="Cardápio digital com QR Code, pedidos integrados à cozinha, PDV e ferramentas de gestão. Teste sem cartão e opere com mais clareza."
+      path="/"
+    />
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow">
@@ -28,6 +32,7 @@ const LandingPage = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

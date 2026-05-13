@@ -26,7 +26,7 @@ import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useUserSession } from "@/hooks/useUserSession";
 import { PermissionType } from "@/types/employee";
 import { cn } from "@/lib/utils";
-import pubfyLogo from "@/assets/pubfy-navbar-logo.png";
+import { PubfyWordmark } from "@/components/brand/PubfyWordmark";
 
 type NavItem = {
   to: string;
@@ -158,7 +158,7 @@ const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
       <div className="flex h-full min-h-0 flex-col">
         <div className="px-5 pb-4 pt-5">
           <Link to="/" className="inline-flex items-center" onClick={onNavigate}>
-            <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain" />
+            <PubfyWordmark className="min-h-10 shrink-0" />
           </Link>
         </div>
 

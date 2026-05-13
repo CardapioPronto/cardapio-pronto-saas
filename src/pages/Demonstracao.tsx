@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { supabase } from "@/lib/supabase";
 
 const Demonstracao = () => {
@@ -87,6 +88,12 @@ const Demonstracao = () => {
   };
 
   return (
+    <>
+    <PublicSeo
+      title="Demonstração | Pubfy"
+      description="Agende uma demonstração gratuita e veja como o Pubfy organiza cardápio digital, pedidos, PDV e gestão no seu restaurante."
+      path="/demonstracao"
+    />
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow bg-offwhite py-12">
@@ -236,6 +243,7 @@ const Demonstracao = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

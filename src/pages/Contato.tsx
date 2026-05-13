@@ -10,6 +10,7 @@ import { ArrowRight, Check, Clock, Headphones, Mail, MessageCircle, Phone, Shiel
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Badge } from "@/components/ui/badge";
 import { createLogger } from "@/lib/log";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
@@ -116,6 +117,12 @@ const Contato = () => {
   };
 
   return (
+    <>
+    <PublicSeo
+      title="Contato | Pubfy"
+      description="Fale com vendas, suporte ou produto. Tiramos dúvidas sobre planos, implantação e operações digitais."
+      path="/contato"
+    />
     <div className="flex flex-col min-h-screen bg-offwhite">
       <Navbar />
       <main className="flex-grow pt-24">
@@ -335,6 +342,7 @@ const Contato = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

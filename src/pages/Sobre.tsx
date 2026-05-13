@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, CheckCircle2, HeartHandshake, ShieldCheck, Sparkles, Utensils } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,12 @@ const milestones = [
 
 export default function Sobre() {
   return (
+    <>
+    <PublicSeo
+      title="Sobre | Pubfy"
+      description="Tecnologia pensada para a rotina de restaurantes: QR Code na mesa, fluxo de pedidos até a cozinha e decisões mais rápidas no dia a dia."
+      path="/sobre"
+    />
     <div className="flex min-h-screen flex-col bg-offwhite">
       <Navbar />
       <main className="flex-1 pt-24">
@@ -147,5 +154,6 @@ export default function Sobre() {
       </main>
       <Footer />
     </div>
+    </>
   );
 }

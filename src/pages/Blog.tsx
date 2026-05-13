@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { PublicSeo } from '@/components/seo/PublicSeo';
 
 const formatDate = (value: string | null | undefined) =>
   new Date(value || Date.now()).toLocaleDateString('pt-BR', {
@@ -27,6 +28,12 @@ export default function Blog() {
 
   if (loading) {
     return (
+      <>
+      <PublicSeo
+        title="Blog | Pubfy"
+        description="Artigos sobre cardápio digital, gestão de restaurantes, PDV e operação."
+        path="/blog"
+      />
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-grow">
@@ -50,10 +57,17 @@ export default function Blog() {
         </div>
         <Footer />
       </div>
+      </>
     );
   }
 
   return (
+    <>
+    <PublicSeo
+      title="Blog | Pubfy"
+      description="Conteúdos práticos para vender melhor e operar com mais controle: cardápio digital, PDV, gestão e tecnologia para restaurantes."
+      path="/blog"
+    />
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="flex-grow pt-20">
@@ -269,5 +283,6 @@ export default function Blog() {
       </div>
       <Footer />
     </div>
+    </>
   );
 }

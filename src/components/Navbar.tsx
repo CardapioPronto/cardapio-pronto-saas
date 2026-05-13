@@ -2,7 +2,28 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown, BarChart3, QrCode, ShoppingCart } from "lucide-react";
-import pubfyLogo from "@/assets/pubfy-navbar-logo.png";
+import { PubfyWordmark } from "@/components/brand/PubfyWordmark";
+
+const solutionLinks = [
+  {
+    to: "/cardapio-digital",
+    title: "Cardapio e QR Code",
+    description: "Menu publico, temas, fotos e pedidos pelo celular.",
+    icon: QrCode,
+  },
+  {
+    to: "/pdv-online",
+    title: "PDV e Pedidos",
+    description: "Mesa, comanda, delivery e fila de preparo no navegador.",
+    icon: ShoppingCart,
+  },
+  {
+    to: "/gestao-completa",
+    title: "Gestao e Relatorios",
+    description: "Indicadores, equipe, permissoes e integracoes.",
+    icon: BarChart3,
+  },
+];
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,8 +44,8 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center" aria-label="Pubfy">
-          <img src={pubfyLogo} alt="Pubfy" className="h-12 w-auto object-contain md:h-14" />
+        <Link to="/" className="flex items-center" aria-label="Pubfy página inicial">
+          <PubfyWordmark className="min-h-[2.75rem]" />
         </Link>
 
         {/* Desktop menu */}
@@ -123,23 +144,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-  const solutionLinks = [
-    {
-      to: "/cardapio-digital",
-      title: "Cardapio e QR Code",
-      description: "Menu publico, temas, fotos e pedidos pelo celular.",
-      icon: QrCode,
-    },
-    {
-      to: "/pdv-online",
-      title: "PDV e Pedidos",
-      description: "Mesa, comanda, delivery e fila de preparo no navegador.",
-      icon: ShoppingCart,
-    },
-    {
-      to: "/gestao-completa",
-      title: "Gestao e Relatorios",
-      description: "Indicadores, equipe, permissoes e integracoes.",
-      icon: BarChart3,
-    },
-  ];

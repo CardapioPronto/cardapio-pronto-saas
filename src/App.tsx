@@ -10,6 +10,8 @@ import { Analytics } from '@vercel/analytics/react';
 import AppRoutes from './components/AppRoutes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { captureException } from '@/lib/observability';
+import { CookieConsentBar } from '@/components/legal/CookieConsentBar';
+import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -59,13 +61,7 @@ function App() {
   }, []);
 
   if (isLoading || !supabaseReady) {
-    return (
-      <div className="grid h-screen place-items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary text-4xl text-primary animate-spin">
-          🍕
-        </div>
-      </div>
-    );
+    return <AppBootstrapLoader />;
   }
 
   // Verifica se está em produção e não é localhost para carregar o Analytics
@@ -87,6 +83,7 @@ function App() {
                 }}
               >
                 <AppRoutes />
+                <CookieConsentBar />
               </BrowserRouter>
               <Toaster />
               {isProduction && <Analytics />}

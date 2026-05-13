@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,10 +16,12 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { createLogger } from "@/lib/log";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 
 const log = createLogger("login");
 
 const Login = () => {
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,13 @@ const Login = () => {
   };
 
   return (
+    <>
+      <PublicSeo
+        title="Login | Pubfy"
+        description="Acesso à sua conta Pubfy — cardápio digital, pedidos e gestão."
+        path={location.pathname}
+        noIndex
+      />
     <div className="min-h-screen w-full flex items-center justify-center bg-beige/20 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
@@ -125,6 +134,7 @@ const Login = () => {
         </form>
       </Card>
     </div>
+    </>
   );
 };
 

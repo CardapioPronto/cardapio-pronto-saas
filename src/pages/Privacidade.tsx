@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Shield } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -79,6 +80,12 @@ const sections: { title: string; body: string[] }[] = [
 
 export default function Privacidade() {
   return (
+    <>
+    <PublicSeo
+      title="Privacidade | Pubfy"
+      description="Política de Privacidade: bases legais, tratamento de dados na Plataforma Pubfy e canais para exercício dos seus direitos."
+      path="/privacidade"
+    />
     <div className="flex min-h-screen flex-col bg-offwhite">
       <Navbar />
       <main className="flex-1 pt-24">
@@ -138,5 +145,6 @@ export default function Privacidade() {
       </main>
       <Footer />
     </div>
+    </>
   );
 }

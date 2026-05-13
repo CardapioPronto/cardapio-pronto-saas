@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Mail } from "lucide-react";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 
 const EsqueciSenha = () => {
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -43,6 +45,13 @@ const EsqueciSenha = () => {
   };
 
   return (
+    <>
+      <PublicSeo
+        title="Esqueci minha senha | Pubfy"
+        description="Solicite um link seguro para redefinir sua senha na conta Pubfy."
+        path={location.pathname}
+        noIndex
+      />
     <div className="min-h-screen w-full flex items-center justify-center bg-beige/20 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
@@ -122,6 +131,7 @@ const EsqueciSenha = () => {
         )}
       </Card>
     </div>
+    </>
   );
 };
 

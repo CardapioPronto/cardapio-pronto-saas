@@ -2,6 +2,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Pricing from "@/components/landing/Pricing";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useActivePlan } from "@/hooks/useActivePlan";
@@ -15,6 +16,12 @@ const Precos = () => {
   const discountPct = monthly > 0 ? Math.round((1 - yearlyPerMonth / monthly) * 100) : 0;
 
   return (
+    <>
+      <PublicSeo
+        title="Preços | Pubfy"
+        description="Um plano transparente para cardápio digital, WhatsApp e gestão. Teste grátis sem cartão."
+        path="/precos"
+      />
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow pt-24">
@@ -65,6 +72,7 @@ const Precos = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

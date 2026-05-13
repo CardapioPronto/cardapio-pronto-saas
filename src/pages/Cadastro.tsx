@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { MailCheck } from "lucide-react";
 import {
   Card,
@@ -15,10 +15,12 @@ import { useAuth } from "@/hooks/useAuthContext";
 import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
 import { RestaurantInfoForm } from "@/components/cadastro/RestaurantInfoForm";
 import { FormFooter } from "@/components/cadastro/FormFooter";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 
 const OWNER_EMAIL_VERIFICATION_TTL_HOURS = 24;
 
 export default function Cadastro() {
+  const location = useLocation();
   const { signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -86,6 +88,13 @@ export default function Cadastro() {
 
   if (verificationSent) {
     return (
+      <>
+      <PublicSeo
+        title="Verifique seu e-mail | Pubfy"
+        description="Confirme o endereço de e-mail para ativar sua conta na Pubfy."
+        path={location.pathname}
+        noIndex
+      />
       <div className="min-h-screen flex items-center justify-center bg-beige/20 px-4">
         <Card className="w-full max-w-lg shadow-lg">
           <CardHeader className="space-y-4 text-center">
@@ -126,10 +135,18 @@ export default function Cadastro() {
           </CardFooter>
         </Card>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+    <PublicSeo
+      title="Cadastro | Pubfy"
+      description="Crie sua conta e teste o Pubfy gratuitamente: cardápio digital e gestão para restaurantes."
+      path={location.pathname}
+      noIndex
+    />
     <div className="min-h-screen flex items-center justify-center bg-beige/20 px-4">
       <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="space-y-1">
@@ -176,5 +193,6 @@ export default function Cadastro() {
         </form>
       </Card>
     </div>
+    </>
   );
 }

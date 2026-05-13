@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BriefcaseBusiness, Coffee, Compass, Heart, Rocket, UsersRound } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +27,12 @@ const culture = [
 
 export default function Carreiras() {
   return (
+    <>
+    <PublicSeo
+      title="Carreiras | Pubfy"
+      description="Conheça a cultura da Pubfy e fique por dentro de futuras vagas em produto, tecnologia e operações para restaurantes."
+      path="/carreiras"
+    />
     <div className="flex min-h-screen flex-col bg-offwhite">
       <Navbar />
       <main className="flex-1 pt-24">
@@ -110,5 +117,6 @@ export default function Carreiras() {
       </main>
       <Footer />
     </div>
+    </>
   );
 }

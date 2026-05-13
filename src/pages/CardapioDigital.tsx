@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -47,6 +48,12 @@ const checklist = [
 
 const CardapioDigital = () => {
   return (
+    <>
+    <PublicSeo
+      title="Cardápio digital e QR Code | Pubfy"
+      description="Publique cardápio público com tema da sua marca, QR Code na mesa ou delivery, fotos, categorias, horário e integração com pedidos no Pubfy."
+      path="/cardapio-digital"
+    />
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow pt-24">
@@ -181,6 +188,7 @@ const CardapioDigital = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

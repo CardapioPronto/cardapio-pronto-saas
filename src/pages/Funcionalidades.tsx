@@ -7,6 +7,7 @@ import {
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 
 const features = [
   {
@@ -133,6 +134,12 @@ const features = [
 
 const Funcionalidades = () => {
   return (
+    <>
+    <PublicSeo
+      title="Funcionalidades | Pubfy"
+      description="Cardápio digital com QR Code, PDV no navegador, relatórios, equipe com permissões e integrações — tudo numa plataforma para restaurantes e bares."
+      path="/funcionalidades"
+    />
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow">
@@ -231,6 +238,7 @@ const Funcionalidades = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -51,6 +52,12 @@ const modules = [
 
 const GestaoCompleta = () => {
   return (
+    <>
+    <PublicSeo
+      title="Gestão completa para restaurantes | Pubfy"
+      description="Dashboard e relatórios, equipe com permissões, produtos e integrações no mesmo ecossistema para decidir com dados e operar com segurança."
+      path="/gestao-completa"
+    />
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow pt-24">
@@ -200,6 +207,7 @@ const GestaoCompleta = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

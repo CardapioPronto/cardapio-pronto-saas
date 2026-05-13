@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Cookie } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -55,6 +56,12 @@ const sections: { title: string; body: string[] }[] = [
 
 export default function CookiesPage() {
   return (
+    <>
+    <PublicSeo
+      title="Política de Cookies | Pubfy"
+      description="Transparência sobre cookies e tecnologias similares utilizadas no site institucional e na Plataforma Pubfy."
+      path="/cookies"
+    />
     <div className="flex min-h-screen flex-col bg-offwhite">
       <Navbar />
       <main className="flex-1 pt-24">
@@ -117,5 +124,6 @@ export default function CookiesPage() {
       </main>
       <Footer />
     </div>
+    </>
   );
 }

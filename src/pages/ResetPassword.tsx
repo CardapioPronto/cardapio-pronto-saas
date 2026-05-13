@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -18,6 +19,7 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [validSession, setValidSession] = useState<boolean | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Supabase places the recovery token in the URL hash and auto-creates a session
@@ -101,6 +103,13 @@ const ResetPassword = () => {
 
   if (validSession === false) {
     return (
+      <>
+      <PublicSeo
+        title="Link inválido | Pubfy"
+        description="Solicite um novo link para redefinir sua senha na Pubfy."
+        path={location.pathname}
+        noIndex
+      />
       <div className="min-h-screen w-full flex items-center justify-center bg-beige/20 p-4">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader>
@@ -125,10 +134,18 @@ const ResetPassword = () => {
           </CardFooter>
         </Card>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+    <PublicSeo
+      title="Redefinir senha | Pubfy"
+      description="Defina uma nova senha segura para sua conta Pubfy."
+      path={location.pathname}
+      noIndex
+    />
     <div className="min-h-screen w-full flex items-center justify-center bg-beige/20 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
@@ -210,6 +227,7 @@ const ResetPassword = () => {
         )}
       </Card>
     </div>
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -48,6 +49,12 @@ const included = [
 
 const PDVOnline = () => {
   return (
+    <>
+    <PublicSeo
+      title="PDV online para restaurantes | Pubfy"
+      description="Ponto de venda no navegador: mesas e comandas, fila de pedidos, impressão para cozinha e fluxo de pagamento integrado ao cardápio digital."
+      path="/pdv-online"
+    />
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow pt-24">
@@ -186,6 +193,7 @@ const PDVOnline = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

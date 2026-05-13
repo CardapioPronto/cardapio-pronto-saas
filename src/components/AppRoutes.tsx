@@ -5,6 +5,7 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
@@ -60,11 +61,7 @@ const AdminPagarmeWebhooks = lazy(() => import('@/pages/admin/AdminPagarmeWebhoo
 const AdminWhatsApp = lazy(() => import('@/pages/admin/AdminWhatsApp'));
 const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
 
-const RouteFallback = () => (
-  <div className="min-h-screen w-full flex items-center justify-center bg-background">
-    <span className="text-sm text-muted-foreground">Carregando...</span>
-  </div>
-);
+const RouteFallback = () => <AppBootstrapLoader />;
 
 const AppRoutes = () => {
   return (
