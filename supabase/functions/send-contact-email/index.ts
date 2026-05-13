@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import { captureEdgeException } from "../_shared/observability.ts";
+import { verifyTurnstileToken } from "../_shared/turnstile.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,7 @@ interface ContactEmailRequest {
   phone?: string;
   subject: string;
   message: string;
+  captcha_token?: string;
 }
 
 const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -33,6 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
     const phone = normalizeText(body.phone, 40);
     const subject = normalizeText(body.subject, 160);
     const message = String(body.message ?? "").trim().slice(0, 5000);
+    const captchaToken = typeof body.captcha_token === "string" ? body.captcha_token : "";
 
     if (!name || !isEmail(email) || !subject || message.length < 10) {
       return new Response(
@@ -44,7 +47,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Processing contact form submission:", { name, email, subject });
+    const captcha = await verifyTurnstileToken(captchaToken, {
+      req,
+      expectedAction: "contact_form",
+    });
+
+    if (!captcha.success) {
+      console.warn("[send-contact-email] captcha rejected", {
+        errorCodes: captcha.errorCodes,
+      });
+      return new Response(
+        JSON.stringify({ error: "Verificação de segurança falhou. Recarregue a página e tente novamente." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
+
+    console.log("Processing contact form submission:", {
+      name,
+      email,
+      subject,
+      captchaSkipped: "skipped" in captcha ? captcha.skipped : false,
+    });
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

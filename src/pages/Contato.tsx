@@ -12,6 +12,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { createLogger } from "@/lib/log";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 
 const log = createLogger("contato");
 
@@ -23,14 +24,25 @@ const Contato = () => {
   const [mensagem, setMensagem] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!captchaToken) {
+      toast({
+        title: "Verificação pendente",
+        description: "Aguarde o captcha carregar antes de enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
-    
+
     try {
       const { supabase } = await import("@/integrations/supabase/client");
-      
+
       const { data, error } = await supabase.functions.invoke("send-contact-email", {
         body: {
           name: nome,
@@ -38,6 +50,7 @@ const Contato = () => {
           phone: telefone,
           subject: assunto,
           message: mensagem,
+          captcha_token: captchaToken,
         },
       });
 
@@ -49,13 +62,13 @@ const Contato = () => {
         title: "Mensagem enviada",
         description: "Recebemos sua mensagem e responderemos em breve!",
       });
-      
-      // Limpar formulário
+
       setNome("");
       setEmail("");
       setTelefone("");
       setAssunto("suporte");
       setMensagem("");
+      setCaptchaToken(null);
     } catch (error) {
       log.capture(error, { action: "send_contact_message", assunto, email });
       toast({
@@ -237,13 +250,23 @@ const Contato = () => {
                     </div>
 
                     <div className="text-sm text-navy/60">
-                      Ao enviar este formulário, você concorda com nossa política de privacidade.
+                      Ao enviar este formulário, você concorda com nossa{" "}
+                      <a href="/privacidade" className="text-green underline-offset-4 hover:underline">
+                        política de privacidade
+                      </a>
+                      .
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <TurnstileWidget
+                      action="contact_form"
+                      onToken={setCaptchaToken}
+                      className="min-h-[65px]"
+                    />
+
+                    <Button
+                      type="submit"
                       className="bg-green hover:bg-green-dark text-white"
-                      disabled={loading}
+                      disabled={loading || !captchaToken}
                     >
                       {loading ? "Enviando..." : "Enviar mensagem"}
                       {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
