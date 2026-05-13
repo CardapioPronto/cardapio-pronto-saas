@@ -13,12 +13,10 @@
  *   SUPABASE_URL                Project URL (https://xxx.supabase.co)
  *   SUPABASE_SERVICE_ROLE_KEY   Service role key (NUNCA commitar)
  *
- * O service role bypassa RLS e consegue ler `pg_policies` via PostgREST?
- * Não — então este script chama a view `public.rls_audit_report` criada
- * pela migration, que é segura para inspecionar via PostgREST.
+ * Consulta apenas `public.rls_audit_report` via PostgREST (HTTP). Não usa
+ * @supabase/supabase-js nem Realtime/WebSocket — evita erro em Node 20 onde
+ * o cliente JS exige pacote opcional `ws`.
  */
-
-import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,6 +29,11 @@ if (!supabaseUrl || !supabaseKey) {
   process.exit(1);
 }
 
+/**
+ * Lista de relações públicas obrigatórias para SaaS produtivo (multi-tenant).
+ * Nota: `restaurant_delivery_config` não existe no schema atual — dados de delivery
+ * ficam em `restaurant_settings` com `setting_key = 'delivery_config'`.
+ */
 const REQUIRED_TABLES = [
   "orders",
   "order_items",
@@ -46,8 +49,8 @@ const REQUIRED_TABLES = [
   "restaurants",
   "restaurant_settings",
   "restaurant_payment_settings",
-  "restaurant_delivery_config",
   "restaurant_email_contacts",
+  "email_settings",
   "coupons",
   "coupon_usage",
   "promotions",
@@ -57,18 +60,51 @@ const REQUIRED_TABLES = [
   "email_campaigns",
 ];
 
-const client = createClient(supabaseUrl, supabaseKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+/** Tabelas internas só acessadas via SECURITY DEFINER/service_role sem políticas. */
+const TABLES_ALLOW_FORCE_RLS_WITHOUT_POLICIES = new Set(["public_rate_limit_buckets"]);
+
+function auditPass(row) {
+  if (!(row.rls_enabled && row.rls_forced)) return false;
+  if (TABLES_ALLOW_FORCE_RLS_WITHOUT_POLICIES.has(row.table_name)) return true;
+  return Number(row.policy_count) > 0;
+}
+
+async function fetchRlsReport() {
+  const base = supabaseUrl.replace(/\/$/, "");
+  const url = `${base}/rest/v1/rls_audit_report?select=*&order=table_name.asc`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+    },
+  });
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  return { ok: res.ok, status: res.status, data };
+}
 
 async function main() {
-  const { data, error } = await client
-    .from("rls_audit_report")
-    .select("*")
-    .order("table_name");
+  const { ok, status, data } = await fetchRlsReport();
 
-  if (error) {
-    console.error("Falha ao consultar rls_audit_report:", error.message);
+  if (!ok) {
+    const msg =
+      typeof data === "object" && data !== null && "message" in data
+        ? data.message
+        : String(data);
+    console.error(
+      `Falha ao consultar rls_audit_report (HTTP ${status}): ${msg}`,
+    );
+    process.exit(2);
+  }
+
+  if (!Array.isArray(data)) {
+    console.error("Resposta inesperada (esperado array JSON):", data);
     process.exit(2);
   }
 
@@ -80,10 +116,8 @@ async function main() {
   console.log("-".repeat(70));
 
   for (const row of data) {
-    const flag = row.rls_enabled && row.rls_forced && row.policy_count > 0
-      ? "PASS"
-      : "WARN";
-    if (flag === "WARN" && REQUIRED_TABLES.includes(row.table_name)) {
+    const flag = auditPass(row) ? "PASS" : "WARN";
+    if (!auditPass(row) && REQUIRED_TABLES.includes(row.table_name)) {
       failures.push(row);
     }
     console.log(
@@ -106,7 +140,7 @@ async function main() {
   }
 
   if (missing.length === 0 && failures.length === 0) {
-    console.log("\nRLS audit OK. Todas as tabelas críticas habilitadas e com políticas.");
+    console.log("\nRLS audit OK. Tabelas críticas ok (ENABLE + FORCE; políticas onde necessário).");
   } else {
     process.exit(3);
   }

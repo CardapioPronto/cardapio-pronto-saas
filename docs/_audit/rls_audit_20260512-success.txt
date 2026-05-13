@@ -1,0 +1,88 @@
+================================================================================
+RLS audit — projeto Supabase (PostgREST: rls_audit_report)
+================================================================================
+Data da captura: 2026-05-12
+Ambiente: produção (remoto)
+Comando: node scripts/audit-rls.mjs
+Exit code esperado após relatório final: 0
+
+Contexto de migrações relevantes (ordem típica):
+  - 20260515090000_ensure_rls_on_core_tables.sql
+  - 20260519103000_force_rls_remaining_and_email_settings_policies.sql
+  - (demais migrações de produto conforme repo)
+
+Critérios do script atual (scripts/audit-rls.mjs):
+  - Tabela crítica: RLS ENABLED + FORCE; policy_count >= 1 (excções documentadas).
+  - public_rate_limit_buckets: permite 0 políticas (tabela apenas via SECURITY DEFINER).
+
+-------------------------------------------------------------------------------
+Saída do terminal:
+-------------------------------------------------------------------------------
+
+table_name | rls_enabled | rls_forced | policy_count
+----------------------------------------------------------------------
+PASS admin_activity_logs                  true        true       2
+PASS ai_handoff_rules                     true        true       5
+PASS areas                                true        true       5
+PASS automation_settings                  true        true       4
+PASS blog_posts                           true        true       2
+PASS categories                           true        true       4
+PASS configuration_audit_logs             true        true       1
+PASS contact_messages                     true        true       4
+PASS contact_recipients                   true        true       1
+PASS conversation_assignments             true        true       3
+PASS conversation_messages                true        true       3
+PASS conversation_notes                   true        true       5
+PASS conversation_threads                 true        true       4
+PASS coupon_usage                         true        true       3
+PASS coupons                              true        true       6
+PASS delivery_order_status_history        true        true       3
+PASS delivery_orders                      true        true       3
+PASS demos                                true        true       2
+PASS email_campaigns                      true        true       1
+PASS email_send_logs                      true        true       2
+PASS email_settings                       true        true       2
+PASS email_templates                      true        true       3
+PASS email_webhook_events                 true        true       1
+PASS employee_permissions                 true        true       2
+PASS employees                            true        true       2
+PASS ifood_events                         true        true       2
+PASS ifood_integration                    true        true       1
+PASS menu_categories                      true        true       1
+PASS menu_items                           true        true       1
+PASS menu_themes                          true        true       1
+PASS menus                                true        true       1
+PASS mesas                                true        true       5
+PASS order_items                          true        true       4
+PASS order_payments                       true        true       2
+PASS orders                               true        true       4
+PASS pagarme_config                       true        true       1
+PASS pagarme_webhook_events               true        true       2
+PASS plan_features                        true        true       1
+PASS plans                                true        true       1
+PASS products                             true        true       4
+PASS promotions                           true        true       6
+PASS public_rate_limit_buckets            true        true       0
+PASS restaurant_email_contacts            true        true       1
+PASS restaurant_menu_config               true        true       3
+PASS restaurant_payment_settings          true        true       3
+PASS restaurant_settings                  true        true       5
+PASS restaurants                          true        true       6
+PASS subscriptions                        true        true       4
+PASS system_admins                        true        true       6
+PASS system_configurations                true        true       7
+PASS system_settings                      true        true       2
+PASS users                                true        true       4
+PASS whatsapp_ai_config                   true        true       5
+PASS whatsapp_chat_history                true        true       3
+PASS whatsapp_instance_events             true        true       3
+PASS whatsapp_instances                   true        true       5
+PASS whatsapp_integration                 true        true       6
+PASS whatsapp_message_templates           true        true       5
+PASS whatsapp_messages                    true        true       4
+
+RLS audit OK. Tabelas críticas ok (ENABLE + FORCE; políticas onde necessário).
+
+================================================================================
+Fim do relatório
+================================================================================

@@ -119,7 +119,8 @@ produção. Rotacionar para `live_…` no Supabase secrets.
 
 ### 3.4 Frete cobrado errado
 
-- Verificar `restaurant_delivery_config` para o restaurante.
+- Verificar **`restaurant_settings`** com `setting_key = 'delivery_config'`
+  (JSON com `delivery_fee`, `delivery_enabled`, `min_order_value` etc.).
 - Lembrar que o **frete é calculado server-side** (Bloco 2); cliente
   não consegue manipular. Se está errado, é configuração no painel.
 

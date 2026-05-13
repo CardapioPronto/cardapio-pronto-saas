@@ -15,6 +15,7 @@ As migrações abaixo precisam estar em produção:
 - `20260515101000_public_plan_summaries_rpc.sql`
 - `20260518000000_public_rpc_rate_limit.sql` (novo — rate-limit base)
 - `20260518000100_create_public_menu_order_rate_limit.sql` (novo — rate-limit no checkout público)
+- `20260519103000_force_rls_remaining_and_email_settings_policies.sql` (FORCE RLS no restante do schema + políticas em `email_settings`)
 
 Comando (com Supabase CLI configurado para o projeto remoto):
 
@@ -33,6 +34,8 @@ supabase migration list
 ## 2. Auditoria de RLS em produção
 
 O script `scripts/audit-rls.mjs` consulta a view `public.rls_audit_report` (criada pela migration `ensure_rls_on_core_tables`) e falha se alguma tabela crítica estiver sem RLS ou sem políticas.
+
+Usa apenas **HTTP** (`fetch` nativo em Node 18+), sem `@supabase/supabase-js`/Realtime — assim funciona em **Node 20** sem instalar `ws`.
 
 ### Variáveis obrigatórias
 
@@ -59,7 +62,7 @@ export SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 node scripts/audit-rls.mjs
 ```
 
-O script imprime um relatório por tabela e retorna **exit code 0** se tudo está OK. Salve a saída em `docs/_audit/rls_<data>.txt` como evidência.
+O script imprime um relatório por tabela e retorna **exit code 0** se tudo está OK. Evidência arquivada: `docs/_audit/rls_audit_20260512-success.txt` (atualizar data ao rerodar).
 
 > A `service_role` key **nunca** deve ser commitada nem injetada no frontend. Use só para scripts de auditoria/migração rodados localmente ou em CI privado.
 
@@ -67,17 +70,16 @@ O script imprime um relatório por tabela e retorna **exit code 0** se tudo est�
 
 ## 3. Sentry — configurar DSN em produção
 
-O código já está instrumentado (`src/lib/log.ts` + `ErrorBoundary` + `supabase/functions/_shared/observability.ts`). Só falta configurar o DSN.
+Frontend já inicia o Sentry em `main.tsx` → `initObservability()` (inclui `browserTracingIntegration()`). Lista de secrets e re-deploy das Edge Functions: **`docs/SENTRY_ATIVADO.md`**.
 
 ### Frontend (Lovable)
 
-Lovable não suporta `.env`, então o DSN do Sentry vem da variável de build `VITE_SENTRY_DSN`. Defina no painel do projeto:
+`VITE_SENTRY_DSN` no Lovable é **opcional**. O projeto já usa o mesmo DSN padrão embutido que o painel (`src/lib/observability.ts`). Defina apenas se quiser outro projeto Sentry ou chave específica:
 
-1. Lovable → seu projeto → **Settings** → **Environment** → **Add variable**
-2. Nome: `VITE_SENTRY_DSN`
-3. Valor: DSN do projeto Sentry (formato `https://<key>@<org>.ingest.sentry.io/<project>`)
-4. (Opcional) `VITE_SENTRY_ENVIRONMENT=production` e `VITE_SENTRY_TRACES_SAMPLE_RATE=0.1`
-5. Salvar → republicar.
+1. Lovable → **Settings** → **Environment** → **Add variable**
+2. Nome: `VITE_SENTRY_DSN` (opcional), `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_TRACES_SAMPLE_RATE`
+
+Republish após mudar variáveis.
 
 ### Edge Functions
 
