@@ -27,8 +27,8 @@ Legenda de prioridade:
 - [x] `npx eslint .` passando apos as correcoes.
 - [x] `npm run build` passando apos as correcoes.
 - [x] `npm audit --omit=dev` revisado apos atualizacoes de dependencias.
-- [ ] Banco remoto revisado apos migrations criticas.
-- [ ] Fluxos principais testados com usuario dono, funcionario e super admin.
+- [x] Banco remoto revisado apos migrations criticas.
+- [x] Fluxos principais testados com usuario dono, funcionario e super admin.
 
 Evidencia:
 
@@ -62,7 +62,7 @@ Checklist:
 - [x] Garantir sanitizacao contra formula injection em qualquer exportacao planilhavel.
 - [x] Remover imports/codigo morto de exportacao antiga.
 - [x] Rodar `npm audit --omit=dev` e registrar resultado.
-- [ ] Validar exportacao de relatorio com dados reais.
+- [x] Validar exportacao de relatorio com dados reais.
 
 Criterio de aceite:
 

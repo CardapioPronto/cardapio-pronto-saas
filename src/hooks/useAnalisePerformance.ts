@@ -85,7 +85,7 @@ async function buscarDadosPeriodoAgregado(from: Date, to: Date, canal = "todos")
   const toDay = endOfDay(to);
   assertMaxReportRange(fromDay, toDay);
 
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     fn: "get_restaurant_sales_period_metrics",
     args: { p_restaurant_id: string; p_from: string; p_to: string; p_canal: string },
   ) => Promise<{ data: PeriodMetricsRpc | null; error: { message: string } | null }>;

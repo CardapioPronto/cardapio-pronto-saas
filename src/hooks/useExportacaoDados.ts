@@ -513,7 +513,7 @@ export const useExportacaoDados = () => {
         };
 
         const buscarPeriodoPerformance = async (from: Date, to: Date): Promise<DadosPerformancePeriodo> => {
-          const rpc = supabase.rpc as unknown as (
+          const rpc = supabase.rpc.bind(supabase) as unknown as (
             fn: "get_restaurant_sales_period_metrics",
             args: { p_restaurant_id: string; p_from: string; p_to: string; p_canal: string },
           ) => Promise<{ data: PeriodRpc | null; error: { message: string } | null }>;

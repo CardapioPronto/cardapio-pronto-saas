@@ -188,9 +188,9 @@ Configure ao menos 4 monitores (BetterStack, UptimeRobot, Pingdom — qualquer u
 
 | Nome | URL | Critério de sucesso |
 |---|---|---|
-| Home | `https://app.pubfy.com.br/` | HTTP 200 |
-| Login | `https://app.pubfy.com.br/login` | HTTP 200 |
-| Menu público (restaurante seed) | `https://app.pubfy.com.br/menu/<id-seed>` | HTTP 200, contém texto do restaurante |
+| Home | `https://pubfy.com.br/` | HTTP 200 |
+| Login | `https://pubfy.com.br/login` | HTTP 200 |
+| Menu público (restaurante seed) | `https://pubfy.com.br/menu/<id-seed>` | HTTP 200, contém texto do restaurante |
 | Webhook Pagar.me (HEAD) | `https://<projeto>.supabase.co/functions/v1/pagarme-webhook` | HTTP 401 (rejeita sem assinatura — significa que está rodando) |
 
 Crie também uma página de status simples (BetterStack Status Page ou Statuspage gratuito) — útil para clientes durante incidentes.
@@ -210,15 +210,15 @@ Antes do go-live, gire/regere chaves potencialmente expostas em logs antigos:
 
 ## 9. Checklist final do Sprint 1
 
-- [ ] Migrações aplicadas em produção
-- [ ] `node scripts/audit-rls.mjs` rodou com exit 0 e saída arquivada
-- [ ] `VITE_SENTRY_DSN` configurado no Lovable
-- [ ] `SENTRY_DSN` configurado no Supabase Edge Functions
-- [ ] Re-deploy de todas as Edge Functions críticas
-- [ ] Pelo menos uma exceção forçada visível no Sentry (front + edge)
-- [ ] `TURNSTILE_SECRET_KEY` definido nos secrets do Supabase e `send-contact-email` re-deployada
-- [ ] Captcha visível em `/contato` e bloqueando submit sem token
+- [x] Migrações aplicadas em produção
+- [x] `node scripts/audit-rls.mjs` rodou com exit 0 e saída arquivada
+- [x] `VITE_SENTRY_DSN` configurado no Lovable (Configurado via código)
+- [x] `SENTRY_DSN` configurado no Supabase Edge Functions
+- [x] Re-deploy de todas as Edge Functions críticas
+- [x] Pelo menos uma exceção forçada visível no Sentry (front + edge)
+- [x] `TURNSTILE_SECRET_KEY` definido nos secrets do Supabase e `send-contact-email` re-deployada
+- [x] Captcha visível em `/contato` e bloqueando submit sem token
 - [ ] Rate limit testado (script que dispara 11 pedidos públicos seguidos retorna o 11º com erro 54000)
-- [ ] SPF/DKIM/DMARC verdes no Resend, mail-tester ≥ 9/10
+- [x] SPF/DKIM/DMARC verdes no Resend, mail-tester ≥ 9/10
 - [ ] Monitores de uptime ativos com alerta entregue ao menos uma vez
 - [ ] Secrets rotacionados

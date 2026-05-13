@@ -95,7 +95,7 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
 
       const produtosSort = tipo === "produtos" ? "quantidade" : "receita";
 
-      const rpc = supabase.rpc as unknown as (
+      const rpc = supabase.rpc.bind(supabase) as unknown as (
         fn: "get_restaurant_sales_report",
         args: {
           p_restaurant_id: string;
