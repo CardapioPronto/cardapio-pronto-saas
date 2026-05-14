@@ -49,6 +49,7 @@ for (const functionName of [
   "seed-blog-posts",
   "send-contact-email",
   "email-dispatch",
+  "reports-export",
   "create-employee",
   "create-trial-subscription",
   "finalize-owner-signup",
@@ -132,6 +133,7 @@ check(
       "send-delivery-whatsapp",
       "email-dispatch",
       "send-contact-email",
+      "reports-export",
     ].every((functionName) => read(`supabase/functions/${functionName}/index.ts`).includes("captureEdgeException")),
   "critical Edge Functions should capture unhandled failures with the shared observability helper",
 );

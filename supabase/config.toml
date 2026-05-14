@@ -84,6 +84,9 @@ verify_jwt = true
 [functions.email-dispatch]
 verify_jwt = true
 
+[functions.reports-export]
+verify_jwt = true
+
 [functions.email-unsubscribe]
 verify_jwt = false
 

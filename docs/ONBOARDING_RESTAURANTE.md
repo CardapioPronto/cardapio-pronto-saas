@@ -25,7 +25,7 @@ desta página por cliente. Cada etapa tem **responsável**, **canal** e
 
 Tempo: ≈ 30 min.
 
-- [ ] Dono se cadastra em `https://app.pubfy.com.br/cadastro` e
+- [ ] Dono se cadastra em `https://pubfy.com.br/cadastro` e
       confirma o e-mail.
 - [ ] Verificar que `restaurants` e `subscriptions` (trial) foram
       criados (Admin → Restaurantes).

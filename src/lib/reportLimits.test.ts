@@ -1,8 +1,10 @@
 import { addDays } from "date-fns";
 import { describe, expect, it } from "vitest";
 import {
+  EXPORT_BROWSER_PDF_MAX_RANGE_DAYS,
   REPORT_LARGE_PERIOD_THRESHOLD_DAYS,
   REPORT_RPC_MAX_RANGE_DAYS,
+  assertMaxBrowserPdfExportRange,
   assertMaxExportRange,
   assertMaxReportRange,
   calendarDaysInclusive,
@@ -40,6 +42,20 @@ describe("assertMaxExportRange", () => {
     const from = new Date("2026-01-01T12:00:00Z");
     const to = addDays(from, 121);
     expect(() => assertMaxExportRange(from, to)).toThrow(/120/);
+  });
+});
+
+describe("assertMaxBrowserPdfExportRange", () => {
+  it("aceita PDF no limite curto do navegador", () => {
+    const from = new Date("2026-01-01T12:00:00Z");
+    const to = addDays(from, EXPORT_BROWSER_PDF_MAX_RANGE_DAYS - 1);
+    expect(() => assertMaxBrowserPdfExportRange(from, to)).not.toThrow();
+  });
+
+  it("orienta CSV para períodos maiores em PDF", () => {
+    const from = new Date("2026-01-01T12:00:00Z");
+    const to = addDays(from, EXPORT_BROWSER_PDF_MAX_RANGE_DAYS);
+    expect(() => assertMaxBrowserPdfExportRange(from, to)).toThrow(/Use CSV/);
   });
 });
 

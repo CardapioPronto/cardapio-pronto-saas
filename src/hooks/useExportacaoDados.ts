@@ -3,14 +3,17 @@ import { differenceInCalendarDays, endOfDay, startOfDay, subDays } from "date-fn
 import type { jsPDF as JsPDFType } from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  appendCsvRow,
   calcularPeriodoComparacao,
   calcularVariacao,
   getColumns,
   labelCanal,
   labelStatus,
 } from "@/lib/reportExportUtils";
-import { assertMaxExportRange, EXPORT_MAX_ORDER_ROWS } from "@/lib/reportLimits";
+import {
+  assertMaxBrowserPdfExportRange,
+  assertMaxExportRange,
+  EXPORT_MAX_ORDER_ROWS,
+} from "@/lib/reportLimits";
 import { getCurrentRestaurantId } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -163,43 +166,6 @@ const downloadTextFile = (content: string, filename: string, mimeType: string) =
   setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-const gerarCSV = (dados: ExportData, params: ExportParams) => {
-  const titulo = params.titulo || "Relatório Pubfy";
-  const periodo = `${params.dateFrom.toLocaleDateString("pt-BR")} a ${params.dateTo.toLocaleDateString("pt-BR")}`;
-  const lines: string[] = [];
-
-  appendCsvRow(lines, [titulo]);
-  appendCsvRow(lines, ["Restaurante", params.restaurantName || "Pubfy"]);
-  appendCsvRow(lines, ["Período", periodo]);
-  appendCsvRow(lines, ["Status", labelStatus(params.status)]);
-  appendCsvRow(lines, ["Origem", labelCanal(params.canal)]);
-  appendCsvRow(lines, ["Regra de faturamento", "Apenas pedidos finalizados entram em faturamento e ticket médio."]);
-  lines.push("");
-
-  let hasData = false;
-
-  (Object.entries(dados) as Array<[keyof ExportData, ExportRow[] | undefined]>).forEach(([secao, rows]) => {
-    if (!rows?.length) return;
-    hasData = true;
-
-    const columns = getColumns(rows);
-    appendCsvRow(lines, [TITULOS_SECOES[secao]]);
-    appendCsvRow(lines, columns);
-    rows.forEach((row) => appendCsvRow(lines, columns.map((column) => row[column] ?? "")));
-    lines.push("");
-  });
-
-  if (!hasData) {
-    appendCsvRow(lines, ["Sem dados para exportar."]);
-  }
-
-  downloadTextFile(
-    `\uFEFF${lines.join("\r\n")}`,
-    `relatorio_${fileDate(params.dateFrom)}_${fileDate(params.dateTo)}.csv`,
-    "text/csv;charset=utf-8",
-  );
-};
-
 const getLastTableY = (doc: JsPDFType) => {
   const tableDoc = doc as unknown as { lastAutoTable?: { finalY: number } };
   return tableDoc.lastAutoTable?.finalY || 58;
@@ -258,6 +224,59 @@ const gerarPDF = async (dados: ExportData, params: ExportParams) => {
   doc.save(`relatorio_${fileDate(params.dateFrom)}_${fileDate(params.dateTo)}.pdf`);
 };
 
+const filenameFromContentDisposition = (header: string | null) => {
+  if (!header) return null;
+  const match = header.match(/filename="?([^"]+)"?/i);
+  return match?.[1] || null;
+};
+
+const getFunctionErrorMessage = async (error: unknown) => {
+  const maybeHttpError = error as { context?: Response; message?: string };
+
+  if (maybeHttpError.context) {
+    const body = await maybeHttpError.context.clone().json().catch(() => null) as { error?: string } | null;
+    if (body?.error) return body.error;
+  }
+
+  return maybeHttpError.message || "Erro ao exportar dados";
+};
+
+const exportarCsvServerSide = async (params: ExportParams) => {
+  const { data, error, response } = await supabase.functions.invoke<string>("reports-export", {
+    body: {
+      dateFrom: params.dateFrom.toISOString(),
+      dateTo: params.dateTo.toISOString(),
+      dados: params.dados,
+      status: params.status || "todos",
+      canal: params.canal || "todos",
+      titulo: params.titulo,
+      periodoComparacao: params.periodoComparacao,
+    },
+    headers: { Accept: "text/csv" },
+    timeout: 120000,
+  });
+
+  if (error) {
+    throw new Error(await getFunctionErrorMessage(error));
+  }
+
+  if (typeof data !== "string") {
+    throw new Error("Resposta de exportação inválida");
+  }
+
+  const filename =
+    filenameFromContentDisposition(response?.headers.get("content-disposition") || null) ||
+    `relatorio_${fileDate(params.dateFrom)}_${fileDate(params.dateTo)}.csv`;
+
+  downloadTextFile(data, filename, "text/csv;charset=utf-8");
+
+  if (response?.headers.get("x-export-limited") === "true") {
+    toast.warning(
+      `Exportação limitada aos últimos ${EXPORT_MAX_ORDER_ROWS} pedidos do período. Reduza o intervalo para incluir todos.`,
+    );
+  }
+};
+
 export const useExportacaoDados = () => {
   const [loading, setLoading] = useState(false);
 
@@ -267,12 +286,6 @@ export const useExportacaoDados = () => {
     try {
       const restaurantId = await getCurrentRestaurantId();
       if (!restaurantId) throw new Error("Restaurant ID not found");
-
-      const { data: restaurant } = await supabase
-        .from("restaurants")
-        .select("name")
-        .eq("id", restaurantId)
-        .maybeSingle();
 
       const dateFrom = startOfDay(params.dateFrom);
       const dateTo = endOfDay(params.dateTo);
@@ -285,6 +298,20 @@ export const useExportacaoDados = () => {
       }
 
       assertMaxExportRange(dateFrom, dateTo);
+
+      if (formato === "csv") {
+        await exportarCsvServerSide({ ...params, dateFrom, dateTo, status, canal });
+        toast.success("Arquivo CSV exportado com sucesso!");
+        return;
+      }
+
+      assertMaxBrowserPdfExportRange(dateFrom, dateTo);
+
+      const { data: restaurant } = await supabase
+        .from("restaurants")
+        .select("name")
+        .eq("id", restaurantId)
+        .maybeSingle();
 
       const dadosParaExportar: ExportData = {};
       let pedidos: PedidoExportQuery[] | null = null;
@@ -615,13 +642,9 @@ export const useExportacaoDados = () => {
 
       const normalizedParams = { ...params, dateFrom, dateTo, status, canal };
       normalizedParams.restaurantName = restaurant?.name || undefined;
-      if (formato === "csv") {
-        gerarCSV(dadosParaExportar, normalizedParams);
-      } else {
-        await gerarPDF(dadosParaExportar, normalizedParams);
-      }
+      await gerarPDF(dadosParaExportar, normalizedParams);
 
-      toast.success(`Arquivo ${formato === "csv" ? "CSV" : "PDF"} exportado com sucesso!`);
+      toast.success("Arquivo PDF exportado com sucesso!");
     } catch (error) {
       console.error("Erro ao exportar dados:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao exportar dados");

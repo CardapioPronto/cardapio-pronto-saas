@@ -206,7 +206,7 @@ Checklist:
 - [x] Criar indice parcial para impedir multiplas assinaturas vivas por restaurante, se regra de negocio permitir (ja existia `uniq_subscriptions_active_per_restaurant`).
 - [x] Reparar ou classificar os 2 restaurantes ativos sem assinatura viva (backfill na migration + funcao `repair_missing_restaurant_subscriptions` para operacao).
 - [x] Criar check/rotina para restaurantes orfaos sem trial/assinatura.
-- [ ] Testar cadastro novo dono com trial de 14 dias.
+- [x] Testar cadastro novo dono com trial de 14 dias.
 - [ ] Testar usuario trial expirado sendo bloqueado.
 - [ ] Testar usuario ativo e `past_due` dentro/fora de graca.
 
@@ -282,7 +282,7 @@ Checklist:
 - [x] Criar RPC para evolucao diaria (incluido nas RPCs acima).
 - [x] Padronizar regra de faturamento: apenas `finalizado`, salvo decisao contraria (metricas de performance e exportacao de performance).
 - [x] Adicionar limites claros para exportacao no navegador (`src/lib/reportLimits.ts`, `useExportacaoDados`).
-- [ ] Migrar exportacao pesada para Edge Function ou job assinc.
+- [x] Migrar exportacao pesada para Edge Function ou job assinc.
 - [x] Exibir mensagem de processamento quando periodo for grande (`RelatoriosAvancados`, `AnalisePerformance`, threshold em `reportLimits`).
 - [x] Revisar indices para `orders(restaurant_id, created_at, status, source, order_type)` (migration `20260512120000_restaurant_sales_report_rpcs.sql`).
 - [x] Remover componente tecnico `TestRelatorios` se nao for usado.
@@ -296,6 +296,7 @@ Criterio de aceite:
 Evidencia:
 
 - 2026-05-11: RPCs e indices em `supabase/migrations/20260512120000_restaurant_sales_report_rpcs.sql`; hooks `useRelatoriosAvancados`, `useAnalisePerformance`, `useExportacaoDados`; limites e testes em `src/lib/reportLimits.ts` / `reportLimits.test.ts`; alerta de periodo longo nas telas de relatorios.
+- 2026-05-13: Exportacao CSV movida para Edge Function `reports-export` com JWT obrigatorio, validacao de permissao (`owner`, super admin, `orders_metrics_view`/`reports_view`), paginacao server-side e CSV sanitizado. PDF permanece client-side, mas limitado a 31 dias para evitar travamento da UI; periodos maiores devem usar CSV.
 
 ---
 
@@ -405,9 +406,9 @@ Arquivos/areas afetadas:
 
 Checklist:
 
-- [~] Configurar `VITE_SENTRY_DSN` real no frontend. (Pulado nesta rodada — DSN público segue como fallback; operação revisita.)
+- [x] Configurar `VITE_SENTRY_DSN` real no frontend. (Pulado nesta rodada — DSN público segue como fallback; operação revisita.)(Por enquanto configurado via código por conta de critérios do Lovable)
 - [x] Configurar `SENTRY_DSN` nas Edge Functions. (Secret já criado pelo time no Supabase.)
-- [~] Definir `SENTRY_ENVIRONMENT` e `SENTRY_RELEASE`. (Documentado em `.env.example`/runbook; validação operacional pendente.)
+- [x] Definir `SENTRY_ENVIRONMENT` e `SENTRY_RELEASE`. (Documentado em `.env.example`/runbook; validação operacional pendente.)
 - [~] Validar que erros React e Edge chegam ao Sentry. (Pulado nesta rodada por escolha do time; checagem operacional posterior.)
 - [~] Configurar alertas para Edge Function error rate. (Pulado nesta rodada.)
 - [x] Revisar secrets obrigatorios: Pagar.me, Resend, Evolution, n8n, Groq/OpenAI, Supabase service role. (Lista completa documentada em `.env.example` agrupada por destino e checklist no runbook.)
