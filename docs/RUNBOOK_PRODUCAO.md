@@ -40,9 +40,9 @@ para o domínio público, não para `localhost`.
 Passos:
 
 1. Supabase Dashboard → Authentication → URL Configuration.
-2. **Site URL**: `https://app.pubfy.com.br` (ou domínio definitivo).
+2. **Site URL**: `https://pubfy.com.br` (ou domínio definitivo).
 3. **Redirect URLs**: adicionar pelo menos:
-   - `https://app.pubfy.com.br/**`
+   - `https://pubfy.com.br/**`
    - URL do staging Lovable, se aplicável (ex.: `https://*.lovable.app/**`).
 4. Salvar.
 5. Spas configurados no Lovable devem usar o mesmo Site URL como `PUBLIC_SITE_URL`
@@ -51,7 +51,7 @@ Passos:
 Validação:
 
 - Criar usuário de teste em produção; conferir que o link do e-mail aponta
-  para `app.pubfy.com.br/cadastro/confirmar?token=...` e não para localhost.
+  para `pubfy.com.br/cadastro/confirmar?token=...` e não para localhost.
 
 ---
 
@@ -75,11 +75,11 @@ Validação:
 
 ### 3.3 WhatsApp / IA
 
-- [ ] `EVOLUTION_API_URL` apontando para instância de produção.
+- [x] `EVOLUTION_API_URL` apontando para instância de produção.
 - [ ] `EVOLUTION_API_KEY` rotacionada (não pode ser a mesma da homolog).
-- [ ] `N8N_WEBHOOK_URL` apontando para workflow de produção.
+- [x] `N8N_WEBHOOK_URL` apontando para workflow de produção.
 - [ ] `N8N_INTERNAL_API_KEY` aleatória ≥ 32 caracteres (mesma no n8n e no Supabase).
-- [ ] `GROQ_API_KEY` / `OPENAI_API_KEY` com cota suficiente.
+- [x] `GROQ_API_KEY` / `OPENAI_API_KEY` com cota suficiente.
 
 ### 3.4 Internos Pubfy
 
