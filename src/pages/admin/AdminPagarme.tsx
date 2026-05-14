@@ -11,15 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner-toast";
+import { PagarmeWebhooksPanel } from "@/pages/admin/AdminPagarmeWebhooks";
 import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import {
   OnlinePaymentMethod,
   RestaurantPaymentSettings,
   restaurantPaymentService,
 } from "@/services/restaurantPaymentService";
-import { CheckCircle, Copy, CreditCard, Loader2, Search, ShieldCheck } from "lucide-react";
+import { CheckCircle, Copy, CreditCard, Loader2, Search, ShieldCheck, Webhook } from "lucide-react";
 
 const WEBHOOK_URL = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
@@ -141,8 +143,20 @@ const AdminPagarme = () => {
   };
 
   return (
-    <AdminLayout title="Configuração Pagar.me">
-      <div className="space-y-6">
+    <AdminLayout title="Pagar.me">
+      <Tabs defaultValue="settings" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="settings" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Configuração
+          </TabsTrigger>
+          <TabsTrigger value="webhooks" className="gap-2">
+            <Webhook className="h-4 w-4" />
+            Eventos e webhooks
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="settings" className="space-y-6">
         <Alert className="border-green/40 bg-green/5">
           <ShieldCheck className="h-4 w-4 text-green" />
           <AlertTitle>Conta Pagar.me da plataforma</AlertTitle>
@@ -385,7 +399,12 @@ const AdminPagarme = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="webhooks">
+          <PagarmeWebhooksPanel />
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 };

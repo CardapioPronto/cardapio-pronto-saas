@@ -1,6 +1,6 @@
 
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
@@ -57,7 +57,6 @@ const AdminBlog = lazy(() => import('@/pages/admin/AdminBlog'));
 const AdminContact = lazy(() => import('@/pages/admin/AdminContact'));
 const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactRecipients'));
 const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
-const AdminPagarmeWebhooks = lazy(() => import('@/pages/admin/AdminPagarmeWebhooks'));
 const AdminWhatsApp = lazy(() => import('@/pages/admin/AdminWhatsApp'));
 const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
 
@@ -313,7 +312,7 @@ const AppRoutes = () => {
       } />
       <Route path="/admin/pagarme-webhooks" element={
         <AdminProtectedRoute>
-          <AdminPagarmeWebhooks />
+          <Navigate to="/admin/pagarme" replace />
         </AdminProtectedRoute>
       } />
       <Route path="/admin/whatsapp" element={

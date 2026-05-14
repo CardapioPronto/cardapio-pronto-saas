@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +37,7 @@ interface WebhookEvent {
 
 const WEBHOOK_URL = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
-const AdminPagarmeWebhooks = () => {
+export const PagarmeWebhooksPanel = () => {
   const [events, setEvents] = useState<WebhookEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -89,8 +88,8 @@ const AdminPagarmeWebhooks = () => {
   };
 
   return (
-    <AdminLayout title="Webhooks do Pagar.me">
-      <div className="space-y-6">
+    <>
+      <div className="space-y-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">URL do Webhook</CardTitle>
@@ -195,8 +194,8 @@ const AdminPagarmeWebhooks = () => {
           )}
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   );
 };
 
-export default AdminPagarmeWebhooks;
+export default PagarmeWebhooksPanel;
