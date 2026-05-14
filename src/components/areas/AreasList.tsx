@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Edit, Trash2, MapPin, TableIcon } from "lucide-react";
 import { Area, UpdateAreaData } from "@/types/area";
 import { Mesa } from "@/types/mesa";
@@ -43,17 +44,11 @@ export function AreasList({ areas, mesas = [], onUpdate, onDelete, loading }: Ar
 
   if (areas.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-8">
-          <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-            Nenhuma área cadastrada
-          </h3>
-          <p className="text-sm text-muted-foreground text-center">
-            Crie áreas para organizar melhor as mesas do seu restaurante.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={MapPin}
+        title="Nenhuma área cadastrada"
+        description="Crie áreas para organizar melhor as mesas do seu restaurante."
+      />
     );
   }
 
@@ -72,7 +67,14 @@ export function AreasList({ areas, mesas = [], onUpdate, onDelete, loading }: Ar
                     {area.description || "Sem descrição"}
                   </CardDescription>
                 </div>
-                <Badge variant={area.is_active ? "default" : "secondary"} className="ml-3 shrink-0">
+                <Badge
+                  variant="outline"
+                  className={`ml-3 shrink-0 ${
+                    area.is_active
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
                   {area.is_active ? "Ativa" : "Inativa"}
                 </Badge>
               </div>

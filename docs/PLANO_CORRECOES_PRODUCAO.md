@@ -362,11 +362,11 @@ Checklist:
 
 - [x] Trocar loader inicial informal por loader da marca.
 - [x] Remover/gatear `console.log` de login/admin/Pagar.me em producao.
-- [~] Revisar textos com acentos e padrao de tom profissional. (2026-05-14: copy operacional de templates/campanhas de e-mail revisada; ainda resta auditoria ampla em landing pages e modulos secundarios.)
+- [~] Revisar textos com acentos e padrao de tom profissional. (2026-05-14: copy operacional de templates/campanhas de e-mail, funcionarios, landing principal, PDV online e gestao completa revisada; ainda resta auditoria ampla em modulos secundarios.)
 - [x] Melhorar tabela de Pedidos em mobile com `overflow-x-auto` ou layout responsivo.
-- [~] Revisar empty states de Produtos, Pedidos, Relatorios, Campanhas e iFood (Pedidos, Produtos, Relatorios e Campanhas/Email migrados; iFood segue com aviso operacional, pendente revisao visual final).
-- [~] Padronizar cards/alerts/badges para uma aparencia mais SaaS operacional. (2026-05-14: badges de status em Produtos e Campanhas/Email ajustados para estados operacionais com contraste explicito; auditoria global ainda pendente.)
-- [~] Verificar contraste e acessibilidade de botoes/badges. (2026-05-14: badges tocados nesta rodada usam `outline` com cores textuais explicitas; revisao completa de botoes/badges do app ainda pendente.)
+- [x] Revisar empty states de Produtos, Pedidos, Relatorios, Campanhas e iFood (Pedidos, Produtos, Relatorios, Campanhas/Email, Promocoes e iFood migrados para estados vazios consistentes.)
+- [~] Padronizar cards/alerts/badges para uma aparencia mais SaaS operacional. (2026-05-14: badges de status em Produtos, Campanhas/Email, Promocoes, Mesas, Areas, Funcionarios e iFood ajustados para estados operacionais com contraste explicito; auditoria global ainda pendente.)
+- [~] Verificar contraste e acessibilidade de botoes/badges. (2026-05-14: badges tocados nesta rodada usam `outline` com cores textuais explicitas e tabelas de Funcionarios ganharam overflow horizontal; revisao completa de botoes/badges do app ainda pendente.)
 - [ ] Validar PDV em tablet/notebook com tela cheia.
 - [ ] Validar Cozinha em TV/monitor e notebook.
 - [x] Revisar pagina de Assinaturas para clareza de trial, plano ativo e atraso (alertas dedicados ja cobrem trialing, active e past_due em `src/pages/Assinaturas.tsx`).
@@ -386,8 +386,10 @@ Evidencia:
 - Novo componente `src/components/ui/empty-state.tsx` (icon + titulo + descricao + acao) preparado para uniformizar telas restantes (Produtos, Relatorios, Campanhas, iFood) em sprints proximos.
 - 2026-05-14: `EmptyState` aplicado em `src/components/produtos/ProdutosList.tsx`, `src/components/relatorios/TabelaProdutosPeriodo.tsx` e `src/components/email/EmailOperationsPanel.tsx` para Produtos, Top Produtos em Relatorios, Templates, Logs, Campanhas e Contatos. Copy de e-mail/campanhas revisada com acentos e tom mais operacional.
 - 2026-05-14: Badges de Produtos e Campanhas/Email passaram a usar `outline` com estados `emerald`, `amber` e `slate`, evitando depender apenas do `default` do tema.
+- 2026-05-14: Segunda rodada de UI/UX: `EmptyState` aplicado em iFood (`IfoodOrdersList`), graficos/metricas de Relatorios (`GraficoVendasPeriodo`, `GraficoPerformance`, `MetricasPerformance`), Promocoes (`PromotionsManager`), Areas, Mesas e Funcionarios. Copy com acentos revisada em `Navbar`, landing principal, `GestaoCompleta`, `PDVOnline`, testimonials, pricing e permissoes de funcionarios.
+- 2026-05-14: Badges/alerts de iFood, Mesas, Areas, Funcionarios e Promocoes ajustados para `outline` com `emerald`/`amber`/`rose`/`slate`/`sky`; tabela de Funcionarios embrulhada em `overflow-x-auto`.
 - Itens nao marcados acima dependem de validacao manual em hardware real (tablet, TV/monitor) ou de revisao de copy/contraste em massa, que ficam para o ciclo de hardening antes do go-live (Bloco 10).
-- Verificacao: `npm run typecheck`, `npm run lint:src`, `npm test -- --run` (27 testes, 4 arquivos). 2026-05-14: `npm run typecheck`; `npm run build` (primeira execucao falhou no sandbox com `spawn EPERM`, execucao aprovada fora do sandbox passou).
+- Verificacao: `npm run typecheck`, `npm run lint:src`, `npm test -- --run` (27 testes, 4 arquivos). 2026-05-14: `npm run typecheck`; `npm run build` (primeira execucao falhou no sandbox com `spawn EPERM`, execucao aprovada fora do sandbox passou). Segunda rodada: `npm run typecheck`; `npm run build` (mesmo `spawn EPERM` no sandbox, execucao aprovada fora do sandbox passou).
 
 ---
 

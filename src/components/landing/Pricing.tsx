@@ -7,10 +7,10 @@ import { useActivePlan } from "@/hooks/useActivePlan";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const benefits = [
-  { icon: ShoppingBag, text: "Cardapio digital, produtos, cupons e promocoes" },
-  { icon: MessageCircle, text: "Atendimento e automacoes pelo WhatsApp" },
+  { icon: ShoppingBag, text: "Cardápio digital, produtos, cupons e promoções" },
+  { icon: MessageCircle, text: "Atendimento e automações pelo WhatsApp" },
   { icon: LayoutGrid, text: "PDV, mesas, pedidos e equipe no mesmo painel" },
-  { icon: Zap, text: "Relatorios e configuracoes para operar com controle" },
+  { icon: Zap, text: "Relatórios e configurações para operar com controle" },
 ];
 
 const Pricing = () => {

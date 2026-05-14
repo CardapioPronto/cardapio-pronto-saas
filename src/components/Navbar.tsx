@@ -7,8 +7,8 @@ import { PubfyWordmark } from "@/components/brand/PubfyWordmark";
 const solutionLinks = [
   {
     to: "/cardapio-digital",
-    title: "Cardapio e QR Code",
-    description: "Menu publico, temas, fotos e pedidos pelo celular.",
+    title: "Cardápio e QR Code",
+    description: "Menu público, temas, fotos e pedidos pelo celular.",
     icon: QrCode,
   },
   {
@@ -19,8 +19,8 @@ const solutionLinks = [
   },
   {
     to: "/gestao-completa",
-    title: "Gestao e Relatorios",
-    description: "Indicadores, equipe, permissoes e integracoes.",
+    title: "Gestão e Relatórios",
+    description: "Indicadores, equipe, permissões e integrações.",
     icon: BarChart3,
   },
 ];

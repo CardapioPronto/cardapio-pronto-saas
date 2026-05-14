@@ -21,68 +21,68 @@ import { Link } from "react-router-dom";
 const coreFeatures = [
   {
     icon: QrCode,
-    title: "Cardapio digital por QR Code",
-    description: "Menu publico responsivo, fotos, categorias, temas por segmento, horario de funcionamento e pedidos pelo celular.",
+    title: "Cardápio digital por QR Code",
+    description: "Menu público responsivo, fotos, categorias, temas por segmento, horário de funcionamento e pedidos pelo celular.",
   },
   {
     icon: ShoppingCart,
     title: "PDV online e pedidos",
-    description: "Lancamento rapido de pedidos, historico, comandas, status e operacao pelo navegador para salao e delivery.",
+    description: "Lançamento rápido de pedidos, histórico, comandas, status e operação pelo navegador para salão e delivery.",
   },
   {
     icon: Utensils,
-    title: "Mesas, areas e comandas",
-    description: "Organize salao por ambientes, acompanhe mesas abertas e reduza atrito entre atendimento, cozinha e caixa.",
+    title: "Mesas, áreas e comandas",
+    description: "Organize salão por ambientes, acompanhe mesas abertas e reduza atrito entre atendimento, cozinha e caixa.",
   },
   {
     icon: Tags,
-    title: "Produtos, cupons e promocoes",
+    title: "Produtos, cupons e promoções",
     description: "Controle itens, imagens, categorias, cupons promocionais e campanhas direto no painel administrativo.",
   },
   {
     icon: MessageCircle,
     title: "Atendimento WhatsApp",
-    description: "Instancias, conversas, templates e automacoes para responder clientes e acompanhar pedidos em um so lugar.",
+    description: "Instâncias, conversas, templates e automações para responder clientes e acompanhar pedidos em um só lugar.",
   },
   {
     icon: BarChart3,
-    title: "Relatorios e desempenho",
-    description: "Indicadores de vendas, produtos populares, ticket medio, exportacao de dados e analise para decidir com clareza.",
+    title: "Relatórios e desempenho",
+    description: "Indicadores de vendas, produtos populares, ticket médio, exportação de dados e análise para decidir com clareza.",
   },
   {
     icon: Users,
-    title: "Equipe e permissoes",
-    description: "Cadastre funcionarios, defina acessos por funcao e proteja telas sensiveis sem travar a rotina da loja.",
+    title: "Equipe e permissões",
+    description: "Cadastre funcionários, defina acessos por função e proteja telas sensíveis sem travar a rotina da loja.",
   },
   {
     icon: CreditCard,
     title: "Assinaturas e pagamentos",
-    description: "Planos, periodo de teste, pagamentos Pix, boleto e cartao com gestao integrada para administradores.",
+    description: "Planos, período de teste, pagamentos Pix, boleto e cartão com gestão integrada para administradores.",
   },
   {
     icon: Mail,
     title: "Email e campanhas",
-    description: "Configuracoes de email, templates globais, campanhas e operacoes de disparo para relacionamento com clientes.",
+    description: "Configurações de e-mail, templates globais, campanhas e operações de disparo para relacionamento com clientes.",
   },
   {
     icon: Bot,
-    title: "Automacoes inteligentes",
-    description: "Fluxos para atendimento, mensagens, transcricao e respostas com IA quando a operacao precisa ganhar escala.",
+    title: "Automações inteligentes",
+    description: "Fluxos para atendimento, mensagens, transcrição e respostas com IA quando a operação precisa ganhar escala.",
   },
   {
     icon: Store,
-    title: "Integracao iFood",
-    description: "Base para eventos e sincronizacao de pedidos do iFood, aproximando canais externos da gestao central.",
+    title: "Integração iFood",
+    description: "Base para eventos e sincronização de pedidos do iFood, aproximando canais externos da gestão central.",
   },
   {
     icon: Settings,
-    title: "Configuracoes e auditoria",
-    description: "Dados do estabelecimento, integracoes, configuracoes do sistema e registros de alteracoes importantes.",
+    title: "Configurações e auditoria",
+    description: "Dados do estabelecimento, integrações, configurações do sistema e registros de alterações importantes.",
   },
 ];
 
 const outcomes = [
-  "Cliente acessa o cardapio pelo QR Code",
+  "Cliente acessa o cardápio pelo QR Code",
   "Pedido chega no painel e segue para preparo",
   "Equipe acompanha mesa, delivery e WhatsApp",
   "Gestor enxerga vendas, produtos e gargalos",
@@ -103,7 +103,7 @@ const Features = () => {
             </h2>
           </div>
           <p className="text-lg leading-relaxed text-navy/70">
-            Reuna pedidos, cardapio, PDV, mesas, relatorios, equipe, WhatsApp, campanhas, integracoes e configuracoes em uma experiencia simples para operar todos os dias.
+            Reúna pedidos, cardápio, PDV, mesas, relatórios, equipe, WhatsApp, campanhas, integrações e configurações em uma experiência simples para operar todos os dias.
           </p>
         </div>
 
@@ -131,10 +131,10 @@ const Features = () => {
           <div className="p-7 md:p-10">
             <span className="inline-flex items-center gap-2 rounded-full bg-orange/10 px-4 py-2 text-sm font-semibold text-orange">
               <Megaphone size={16} />
-              Jornada de conversao
+              Jornada de conversão
             </span>
             <h3 className="mt-5 text-2xl font-bold text-navy md:text-3xl">
-              Da primeira leitura do QR Code ate a decisao do gestor.
+              Da primeira leitura do QR Code até a decisão do gestor.
             </h3>
             <div className="mt-6 space-y-4">
               {outcomes.map((item, index) => (
@@ -145,10 +145,10 @@ const Features = () => {
                   <div className="border-b border-gray-100 pb-4">
                     <p className="font-medium text-navy">{item}</p>
                     <p className="mt-1 text-sm text-navy/60">
-                      {index === 0 && "Menos cardapio impresso e mais autonomia para escolher."}
-                      {index === 1 && "Mais velocidade no atendimento e menos erro de anotacao."}
+                      {index === 0 && "Menos cardápio impresso e mais autonomia para escolher."}
+                      {index === 1 && "Mais velocidade no atendimento e menos erro de anotação."}
                       {index === 2 && "Canais diferentes entram em uma rotina mais organizada."}
-                      {index === 3 && "Relatorios transformam movimento em decisoes praticas."}
+                      {index === 3 && "Relatórios transformam movimento em decisões práticas."}
                     </p>
                   </div>
                 </div>
@@ -170,7 +170,7 @@ const Features = () => {
         </div>
 
         <div className="mt-10 grid gap-3 text-sm text-navy/75 md:grid-cols-4">
-          {["Sem instalacao local", "Atualizacao em tempo real", "Controle por permissoes", "Pronto para crescer"].map((item) => (
+          {["Sem instalação local", "Atualização em tempo real", "Controle por permissões", "Pronto para crescer"].map((item) => (
             <div key={item} className="flex items-center gap-2">
               <CheckCircle2 size={18} className="shrink-0 text-green" />
               <span>{item}</span>

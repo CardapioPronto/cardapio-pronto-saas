@@ -1,8 +1,8 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Link } from "react-router-dom";
-import { AlertCircle, Settings } from "lucide-react";
+import { ShoppingBag, Settings } from "lucide-react";
 import { IfoodOrderBadge } from "./IfoodOrderBadge";
 
 interface IfoodOrdersListProps {
@@ -19,23 +19,22 @@ export function IfoodOrdersList({ canManageOrders }: IfoodOrdersListProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Alert className="border-orange/30 bg-orange/5">
-          <AlertCircle className="h-4 w-4 text-orange" />
-          <AlertTitle>Recepção centralizada no histórico</AlertTitle>
-          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              Pedidos importados do iFood aparecem no histórico com a etiqueta iFood. A consulta manual e a configuração ficam na tela de integração.
-            </span>
-            {canManageOrders && (
-              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+        <EmptyState
+          icon={ShoppingBag}
+          title="Recepção centralizada no histórico"
+          description="Pedidos importados do iFood aparecem no histórico com a etiqueta iFood. A consulta manual e a configuração ficam na tela de integração."
+          compact
+          action={
+            canManageOrders ? (
+              <Button asChild variant="outline" size="sm">
                 <Link to="/ifood-integracao">
                   <Settings className="mr-2 h-4 w-4" />
-                  Configurar
+                  Configurar integração
                 </Link>
               </Button>
-            )}
-          </AlertDescription>
-        </Alert>
+            ) : null
+          }
+        />
       </CardContent>
     </Card>
   );

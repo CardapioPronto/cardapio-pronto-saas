@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface MetricasPerformanceProps {
@@ -25,6 +26,17 @@ export const MetricasPerformance = ({ data }: MetricasPerformanceProps) => {
         return valor.toString();
     }
   };
+
+  if (data.length === 0) {
+    return (
+      <EmptyState
+        icon={TrendingUp}
+        title="Nenhuma métrica disponível"
+        description="As métricas aparecerão depois que houver dados suficientes para o período selecionado."
+        compact
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -53,12 +65,6 @@ export const MetricasPerformance = ({ data }: MetricasPerformanceProps) => {
           </CardContent>
         </Card>
       ))}
-      
-      {data.length === 0 && (
-        <p className="text-center text-muted-foreground">
-          Nenhuma métrica disponível
-        </p>
-      )}
     </div>
   );
 };

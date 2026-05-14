@@ -19,32 +19,32 @@ const advantages = [
   {
     icon: Utensils,
     title: "Mesas e comandas",
-    description: "Acompanhe pedidos por mesa, area, delivery ou retirada sem perder o contexto da operacao.",
+    description: "Acompanhe pedidos por mesa, área, delivery ou retirada sem perder o contexto da operação.",
   },
   {
     icon: Clock,
     title: "Fila em tempo real",
-    description: "Entenda o que e novo, o que esta preparando e o que ja esta pronto para entregar.",
+    description: "Entenda o que é novo, o que está preparando e o que já está pronto para entregar.",
   },
   {
     icon: Printer,
-    title: "Impressao de pedidos",
-    description: "Use modelos de impressao para levar pedidos ate cozinha, copa ou caixa com mais clareza.",
+    title: "Impressão de pedidos",
+    description: "Use modelos de impressão para levar pedidos até cozinha, copa ou caixa com mais clareza.",
   },
   {
     icon: CreditCard,
     title: "Fluxo de pagamento",
-    description: "Organize o fechamento e reduza a troca de informacao solta entre atendimento e caixa.",
+    description: "Organize o fechamento e reduza a troca de informação solta entre atendimento e caixa.",
   },
 ];
 
 const included = [
-  "Lancamento rapido de produtos no pedido",
-  "Historico de pedidos e acompanhamento de status",
-  "Organizacao por mesas, areas, delivery e retirada",
-  "Comanda visual com itens, quantidades e observacoes",
-  "Base integrada com produtos e categorias do cardapio",
-  "Relatorios para acompanhar vendas e produtos populares",
+  "Lançamento rápido de produtos no pedido",
+  "Histórico de pedidos e acompanhamento de status",
+  "Organização por mesas, áreas, delivery e retirada",
+  "Comanda visual com itens, quantidades e observações",
+  "Base integrada com produtos e categorias do cardápio",
+  "Relatórios para acompanhar vendas e produtos populares",
 ];
 
 const PDVOnline = () => {
@@ -67,7 +67,7 @@ const PDVOnline = () => {
                   PDV pelo navegador
                 </span>
                 <h1 className="mt-5 text-4xl font-bold leading-tight md:text-6xl">
-                  PDV online para o salao e delivery rodarem juntos.
+                  PDV online para o salão e delivery rodarem juntos.
                 </h1>
                 <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75">
                   Registre pedidos, acompanhe mesas, organize a fila de preparo e mantenha a equipe alinhada em tempo real, sem instalar sistema local.
@@ -81,7 +81,7 @@ const PDVOnline = () => {
                   </Link>
                   <Link to="/demonstracao">
                     <Button size="lg" variant="outline" className="h-12 w-full border-white/60 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
-                      Ver demonstracao
+                      Ver demonstração
                     </Button>
                   </Link>
                 </div>
@@ -91,7 +91,7 @@ const PDVOnline = () => {
                 <div className="flex items-center justify-between border-b border-gray-100 bg-offwhite px-5 py-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">PDV Pubfy</p>
-                    <p className="font-semibold">Operacao de hoje</p>
+                    <p className="font-semibold">Operação de hoje</p>
                   </div>
                   <span className="rounded-md bg-green px-3 py-1 text-xs font-semibold text-white">Online</span>
                 </div>
@@ -111,7 +111,7 @@ const PDVOnline = () => {
                       <div className="mt-3 space-y-2 text-sm text-white/75">
                         <div className="flex justify-between"><span>Pedidos</span><strong className="text-white">48</strong></div>
                         <div className="flex justify-between"><span>Em preparo</span><strong className="text-white">9</strong></div>
-                        <div className="flex justify-between"><span>Ticket medio</span><strong className="text-white">R$ 38,40</strong></div>
+                        <div className="flex justify-between"><span>Ticket médio</span><strong className="text-white">R$ 38,40</strong></div>
                       </div>
                     </div>
                   </div>
@@ -124,8 +124,8 @@ const PDVOnline = () => {
                       {[
                         ["#1048", "Mesa 08", "Combo burger, batata e refri", "Preparando", "bg-orange/10 text-orange"],
                         ["#1049", "Delivery", "Pizza portuguesa grande", "Novo", "bg-green/10 text-green"],
-                        ["#1050", "Retirada", "2 acais medios", "Pronto", "bg-navy/10 text-navy"],
-                        ["#1051", "Mesa 12", "Porcao, suco e sobremesa", "Confirmar", "bg-beige/40 text-navy"],
+                        ["#1050", "Retirada", "2 açaís médios", "Pronto", "bg-navy/10 text-navy"],
+                        ["#1051", "Mesa 12", "Porção, suco e sobremesa", "Confirmar", "bg-beige/40 text-navy"],
                       ].map(([code, source, items, status, color]) => (
                         <div key={code} className="flex items-center justify-between gap-4 rounded-md border border-gray-100 p-3">
                           <div>
@@ -146,7 +146,7 @@ const PDVOnline = () => {
         <section className="bg-white py-16 md:py-24">
           <div className="container mx-auto px-6">
             <div className="mx-auto max-w-3xl text-center">
-              <h2 className="text-3xl font-bold text-navy md:text-4xl">Menos anotacao solta, mais operacao acompanhavel</h2>
+              <h2 className="text-3xl font-bold text-navy md:text-4xl">Menos anotação solta, mais operação acompanhável</h2>
               <p className="mt-4 text-lg text-navy/70">
                 O PDV concentra o que a equipe precisa ver para atender com velocidade e reduzir erro.
               </p>
@@ -171,12 +171,12 @@ const PDVOnline = () => {
                   <ShoppingCart size={16} />
                   Fluxo de pedido completo
                 </span>
-                <h2 className="mt-5 text-2xl font-bold text-navy md:text-3xl">Funcionalidades que fazem diferenca no horario de pico</h2>
+                <h2 className="mt-5 text-2xl font-bold text-navy md:text-3xl">Funcionalidades que fazem diferença no horário de pico</h2>
                 <p className="mt-4 text-navy/70">
-                  O objetivo e deixar o pedido claro desde o atendimento ate a entrega.
+                  O objetivo é deixar o pedido claro desde o atendimento até a entrega.
                 </p>
                 <Link to="/teste-gratis" className="mt-6 inline-flex">
-                  <Button className="bg-green text-white hover:bg-green-dark">Comecar teste gratis</Button>
+                  <Button className="bg-green text-white hover:bg-green-dark">Começar teste grátis</Button>
                 </Link>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

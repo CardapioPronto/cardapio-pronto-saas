@@ -1,4 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart3 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface GraficoVendasPeriodoProps {
   data: Array<{
@@ -11,9 +13,12 @@ interface GraficoVendasPeriodoProps {
 export const GraficoVendasPeriodo = ({ data }: GraficoVendasPeriodoProps) => {
   if (!data.length) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-        Nenhum dado encontrado no período
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="Nenhuma venda no período"
+        description="Ajuste o intervalo ou os filtros para visualizar o gráfico de vendas."
+        className="h-[300px]"
+      />
     );
   }
 

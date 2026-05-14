@@ -17,33 +17,33 @@ const Hero = () => {
         <div className="max-w-3xl py-16 md:py-24">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur">
             <QrCode size={16} className="text-beige" />
-            Cardapio digital, PDV, pedidos e atendimento em uma unica plataforma
+            Cardápio digital, PDV, pedidos e atendimento em uma única plataforma
           </div>
 
           <h1 className="max-w-4xl text-4xl font-bold leading-tight md:text-6xl lg:text-7xl">
-            Venda mais no salao, delivery e WhatsApp com uma operacao mais simples.
+            Venda mais no salão, delivery e WhatsApp com uma operação mais simples.
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/80 md:text-xl">
-            O Pubfy centraliza cardapio por QR Code, PDV online, mesas, pedidos, cupons, relatorios, equipe e automacoes para o restaurante trabalhar com menos erro e mais velocidade.
+            O Pubfy centraliza cardápio por QR Code, PDV online, mesas, pedidos, cupons, relatórios, equipe e automações para o restaurante trabalhar com menos erro e mais velocidade.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link to="/teste-gratis">
               <Button size="lg" className="h-14 w-full bg-orange px-7 text-base font-semibold text-white hover:bg-orange/90 sm:w-auto">
-                Comecar teste gratis
+                Começar teste grátis
                 <ArrowRight size={18} className="ml-2" />
               </Button>
             </Link>
             <Link to="/demonstracao">
               <Button size="lg" variant="outline" className="h-14 w-full border-white/70 bg-white/10 px-7 text-base font-semibold text-white hover:bg-white/20 sm:w-auto">
-                Ver demonstracao
+                Ver demonstração
               </Button>
             </Link>
           </div>
 
           <div className="mt-8 grid gap-3 text-sm text-white/90 sm:grid-cols-3">
-            {["Sem cartao no teste", "Implantacao guiada", "Acesso pelo navegador"].map((item) => (
+            {["Sem cartão no teste", "Implantação guiada", "Acesso pelo navegador"].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle2 size={17} className="shrink-0 text-green-light" />
                 <span>{item}</span>
@@ -67,8 +67,8 @@ const Hero = () => {
                   {[
                     ["Vendas", "R$ 2.840"],
                     ["Pedidos", "86"],
-                    ["Ticket medio", "R$ 33,02"],
-                    ["Tempo medio", "11 min"],
+                    ["Ticket médio", "R$ 33,02"],
+                    ["Tempo médio", "11 min"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-gray-100 bg-white p-4">
                       <p className="text-xs text-navy/55">{label}</p>
@@ -119,11 +119,11 @@ const Hero = () => {
           <div className="grid grid-cols-2 gap-4 lg:pb-10">
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
               <p className="text-3xl font-bold">14 dias</p>
-              <p className="mt-1 text-sm text-white/72">para testar sem cartao</p>
+              <p className="mt-1 text-sm text-white/72">para testar sem cartão</p>
             </div>
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
               <p className="text-3xl font-bold">QR Code</p>
-              <p className="mt-1 text-sm text-white/72">cardapio pronto para divulgar</p>
+              <p className="mt-1 text-sm text-white/72">cardápio pronto para divulgar</p>
             </div>
           </div>
         </div>

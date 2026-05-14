@@ -10,18 +10,18 @@ const LandingCTA = () => {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-green-light">
               <MessageCircle size={16} />
-              Comece com orientacao e sem compromisso
+              Comece com orientação e sem compromisso
             </span>
             <h2 className="mt-5 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">
               Veja o Pubfy funcionando na rotina do seu restaurante.
             </h2>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/75">
-              Crie sua conta, cadastre seu estabelecimento e teste o fluxo completo com cardapio, produtos, mesas, pedidos e atendimento em um so lugar.
+              Crie sua conta, cadastre seu estabelecimento e teste o fluxo completo com cardápio, produtos, mesas, pedidos e atendimento em um só lugar.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link to="/teste-gratis">
                 <Button size="lg" className="h-12 w-full bg-orange px-7 font-semibold text-white hover:bg-orange/90 sm:w-auto">
-                  Comecar teste gratis
+                  Começar teste grátis
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -38,9 +38,9 @@ const LandingCTA = () => {
             <ul className="mt-5 space-y-4">
               {[
                 "Cadastrar produtos, categorias e imagens principais",
-                "Publicar o cardapio por QR Code com tema do segmento",
+                "Publicar o cardápio por QR Code com tema do segmento",
                 "Abrir pedidos no PDV e testar mesas ou delivery",
-                "Conectar WhatsApp, campanhas e relatorios conforme a rotina",
+                "Conectar WhatsApp, campanhas e relatórios conforme a rotina",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green" />
@@ -51,7 +51,7 @@ const LandingCTA = () => {
             <div className="mt-6 rounded-md bg-offwhite p-4">
               <p className="text-sm font-semibold text-navy">Sem compromisso</p>
               <p className="mt-1 text-sm text-navy/60">
-                Teste gratuito, sem cartao, com caminho claro para ativar a operacao.
+                Teste gratuito, sem cartão, com caminho claro para ativar a operação.
               </p>
             </div>
           </div>

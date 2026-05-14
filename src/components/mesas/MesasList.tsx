@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit, Trash2, Users, MapPin, Search, TableIcon } from "lucide-react";
@@ -63,17 +64,11 @@ export function MesasList({ mesas, areas, onUpdate, onDelete, loading }: MesasLi
 
   if (mesas.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-8">
-          <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-            Nenhuma mesa cadastrada
-          </h3>
-          <p className="text-sm text-muted-foreground text-center">
-            Crie mesas para organizar o atendimento do seu restaurante.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={MapPin}
+        title="Nenhuma mesa cadastrada"
+        description="Crie mesas para organizar o atendimento do seu restaurante."
+      />
     );
   }
 
@@ -120,17 +115,12 @@ export function MesasList({ mesas, areas, onUpdate, onDelete, loading }: MesasLi
       </div>
 
       {filteredMesas.length === 0 ? (
-        <Card className="mt-4">
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <TableIcon className="mb-4 h-12 w-12 text-muted-foreground" />
-            <h3 className="mb-2 text-lg font-semibold text-muted-foreground">
-              Nenhuma mesa encontrada
-            </h3>
-            <p className="text-center text-sm text-muted-foreground">
-              Ajuste os filtros para visualizar outras mesas cadastradas.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={TableIcon}
+          title="Nenhuma mesa encontrada"
+          description="Ajuste os filtros para visualizar outras mesas cadastradas."
+          className="mt-4"
+        />
       ) : (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredMesas.map((mesa) => (

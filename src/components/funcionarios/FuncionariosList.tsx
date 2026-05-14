@@ -3,6 +3,7 @@ import { Eye, KeyRound, Plus, Search, UserRound } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -53,12 +54,12 @@ export const FuncionariosList = () => {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Funcionarios</h2>
+          <h2 className="text-2xl font-bold">Funcionários</h2>
           <p className="text-muted-foreground">Controle acessos, cargos e status da equipe.</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Adicionar funcionario
+          Adicionar funcionário
         </Button>
       </div>
 
@@ -90,29 +91,28 @@ export const FuncionariosList = () => {
       </div>
 
       {employees.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <UserRound className="mb-4 h-12 w-12 text-muted-foreground" />
-            <h3 className="mb-2 text-lg font-medium">Nenhum funcionario cadastrado</h3>
-            <p className="mb-4 max-w-md text-muted-foreground">
-              Adicione sua equipe para vender no PDV, atender pedidos e acessar somente as areas necessarias.
-            </p>
+        <EmptyState
+          icon={UserRound}
+          title="Nenhum funcionário cadastrado"
+          description="Adicione sua equipe para vender no PDV, atender pedidos e acessar somente as áreas necessárias."
+          action={
             <Button onClick={() => setShowAddDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Adicionar primeiro funcionario
+              Adicionar primeiro funcionário
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : (
         <div className="rounded-md border bg-background">
+          <div className="w-full overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[260px]">Funcionario</TableHead>
+                <TableHead className="min-w-[260px]">Funcionário</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Permissoes</TableHead>
-                <TableHead className="w-[140px] text-right">Acoes</TableHead>
+                <TableHead>Permissões</TableHead>
+                <TableHead className="w-[140px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,7 +132,9 @@ export const FuncionariosList = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{USER_TYPE_LABELS[employee.user_type]}</Badge>
+                    <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                      {USER_TYPE_LABELS[employee.user_type]}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -141,23 +143,29 @@ export const FuncionariosList = () => {
                         onCheckedChange={(checked) => toggleEmployeeActive(employee.id, checked)}
                         aria-label={`Alterar status de ${employee.employee_name}`}
                       />
-                      <span className="text-sm text-muted-foreground">{employee.is_active ? "Ativo" : "Inativo"}</span>
+                      <span
+                        className={`text-sm font-medium ${
+                          employee.is_active ? "text-emerald-700" : "text-slate-600"
+                        }`}
+                      >
+                        {employee.is_active ? "Ativo" : "Inativo"}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex max-w-[360px] flex-wrap gap-1.5">
                       {employee.permissions.slice(0, 3).map((permission) => (
-                        <Badge key={permission} variant="secondary" className="font-normal">
+                        <Badge key={permission} variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 font-normal">
                           {PERMISSION_LABELS[permission]}
                         </Badge>
                       ))}
                       {employee.permissions.length > 3 && (
-                        <Badge variant="outline" className="font-normal">
+                        <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 font-normal">
                           +{employee.permissions.length - 3}
                         </Badge>
                       )}
                       {employee.permissions.length === 0 && (
-                        <span className="text-sm text-muted-foreground">Sem permissoes</span>
+                        <span className="text-sm text-muted-foreground">Sem permissões</span>
                       )}
                     </div>
                   </TableCell>
@@ -166,7 +174,7 @@ export const FuncionariosList = () => {
                       <Button variant="outline" size="icon" onClick={() => setDetailsEmployeeId(employee.id)} title="Ver detalhes">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" onClick={() => handleEditPermissions(employee)} title="Editar permissoes">
+                      <Button variant="outline" size="icon" onClick={() => handleEditPermissions(employee)} title="Editar permissões">
                         <KeyRound className="h-4 w-4" />
                       </Button>
                     </div>
@@ -175,10 +183,15 @@ export const FuncionariosList = () => {
               ))}
             </TableBody>
           </Table>
+          </div>
           {filteredEmployees.length === 0 && (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Nenhum funcionario encontrado para a busca atual.
-            </div>
+            <EmptyState
+              icon={Search}
+              title="Nenhum funcionário encontrado"
+              description="Ajuste a busca para localizar outro membro da equipe."
+              compact
+              className="m-4"
+            />
           )}
         </div>
       )}

@@ -144,7 +144,9 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
                       <div className="flex items-center gap-2">
                         <span>{preset.label}</span>
                         {preset.user_type === "manager" && (
-                          <Badge variant="secondary" className="text-xs">Gerente</Badge>
+                          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 text-xs">
+                            Gerente
+                          </Badge>
                         )}
                       </div>
                     </SelectItem>
@@ -157,7 +159,9 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Permissões {selectedRole === "custom" && <span className="text-xs text-muted-foreground">(personalizado)</span>}</Label>
-                <Badge variant="outline">{formData.permissions.length} selecionada(s)</Badge>
+                <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                  {formData.permissions.length} selecionada(s)
+                </Badge>
               </div>
               <div className="space-y-4 rounded-md border p-3 bg-muted/30">
                 {PERMISSION_GROUPS.map((group) => (

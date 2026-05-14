@@ -11,28 +11,28 @@ import { Star } from "lucide-react";
 const testimonials = [
   {
     id: 1,
-    quote: "O Pubfy tirou nosso cardapio do papel e reduziu muito a confusao entre atendimento e cozinha.",
+    quote: "O Pubfy tirou nosso cardápio do papel e reduziu muito a confusão entre atendimento e cozinha.",
     author: "Maria Silva",
     role: "Proprietária, Restaurante Sabor Caseiro",
     image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&h=150&q=80"
   },
   {
     id: 2,
-    quote: "O PDV online ficou simples para a equipe usar no horario de pico. Os pedidos aparecem com muito mais clareza.",
+    quote: "O PDV online ficou simples para a equipe usar no horário de pico. Os pedidos aparecem com muito mais clareza.",
     author: "João Pereira",
     role: "Gerente, Bar do João",
     image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=150&h=150&q=80"
   },
   {
     id: 3,
-    quote: "Conseguimos acompanhar mesas, delivery e WhatsApp sem depender de varias planilhas abertas.",
+    quote: "Conseguimos acompanhar mesas, delivery e WhatsApp sem depender de várias planilhas abertas.",
     author: "Ana Costa",
     role: "Proprietária, Café Aroma",
     image: "https://images.unsplash.com/photo-1629747490241-624f07d70e1e?auto=format&fit=crop&w=150&h=150&q=80"
   },
   {
     id: 4,
-    quote: "Os relatorios mostram o que mais vende e ajudam a ajustar promocao, estoque e escala da equipe.",
+    quote: "Os relatórios mostram o que mais vende e ajudam a ajustar promoção, estoque e escala da equipe.",
     author: "Carlos Mendes",
     role: "Sócio, Pizzaria Napoli",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80"

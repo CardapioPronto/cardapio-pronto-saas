@@ -5,13 +5,14 @@ import { useCategorias } from '@/hooks/useCategorias';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Loader2, Megaphone, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Promotion, CreatePromotionInput } from '@/types/features';
 import { toast } from '@/components/ui/sonner-toast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -110,15 +111,15 @@ export const PromotionsManager: React.FC = () => {
         </div>
         <Button onClick={handleCreateClick} disabled={isCreating}>
           <Plus className="h-4 w-4 mr-2" />
-          Nova Promoção
+          Nova promoção
         </Button>
       </div>
 
       {/* Create/Edit Form */}
       {isCreating && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle>{editingId ? 'Editar Promoção' : 'Nova Promoção'}</CardTitle>
+            <CardTitle>{editingId ? 'Editar promoção' : 'Nova promoção'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -282,11 +283,17 @@ export const PromotionsManager: React.FC = () => {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : promotions.length === 0 ? (
-        <Alert>
-          <AlertDescription>
-            Nenhuma promoção criada ainda. Clique em "Nova Promoção" para começar.
-          </AlertDescription>
-        </Alert>
+        <EmptyState
+          icon={Megaphone}
+          title="Nenhuma promoção criada"
+          description="Crie uma promoção quando houver uma regra comercial pronta para aparecer no cardápio."
+          action={
+            <Button onClick={handleCreateClick} disabled={isCreating}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova promoção
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {promotions.map((promotion) => (
@@ -296,13 +303,17 @@ export const PromotionsManager: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{promotion.name}</h3>
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
                         {discountLabel(promotion)} desconto
-                      </span>
-                      <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                      </Badge>
+                      <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
                         {getPromotionLabel(promotion)}
-                      </span>
-                      {!promotion.is_active && <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Inativa</span>}
+                      </Badge>
+                      {!promotion.is_active && (
+                        <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
+                          Inativa
+                        </Badge>
+                      )}
                     </div>
                     {promotion.description && <p className="text-sm text-muted-foreground mt-1">{promotion.description}</p>}
                     <p className="text-xs text-muted-foreground mt-2">
@@ -346,7 +357,7 @@ export const PromotionsManager: React.FC = () => {
                       }}
                       disabled={deletePromotion.isPending}
                     >
-                      <Trash2 className="h-4 w-4 text-red-600" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>

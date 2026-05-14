@@ -21,33 +21,33 @@ import {
 const pillars = [
   {
     icon: BarChart3,
-    title: "Dashboard e relatorios",
-    description: "Acompanhe vendas, ticket medio, produtos populares e desempenho por periodo.",
+    title: "Dashboard e relatórios",
+    description: "Acompanhe vendas, ticket médio, produtos populares e desempenho por período.",
   },
   {
     icon: Users,
-    title: "Equipe e permissoes",
+    title: "Equipe e permissões",
     description: "Defina acessos por perfil e mantenha cada colaborador dentro do que precisa usar.",
   },
   {
     icon: Settings,
-    title: "Configuracoes do restaurante",
-    description: "Centralize dados do estabelecimento, operacao, integracoes e preferencias do sistema.",
+    title: "Configurações do restaurante",
+    description: "Centralize dados do estabelecimento, operação, integrações e preferências do sistema.",
   },
   {
     icon: ShieldCheck,
-    title: "Auditoria e seguranca",
-    description: "Registre alteracoes importantes e reduza risco em configuracoes sensiveis.",
+    title: "Auditoria e segurança",
+    description: "Registre alterações importantes e reduza risco em configurações sensíveis.",
   },
 ];
 
 const modules = [
-  { icon: Tags, label: "Produtos, categorias, cupons e promocoes" },
-  { icon: Store, label: "Integracoes para canais externos e operacao digital" },
-  { icon: Mail, label: "Campanhas e configuracoes de email" },
+  { icon: Tags, label: "Produtos, categorias, cupons e promoções" },
+  { icon: Store, label: "Integrações para canais externos e operação digital" },
+  { icon: Mail, label: "Campanhas e configurações de e-mail" },
   { icon: CreditCard, label: "Planos, assinaturas e pagamentos" },
-  { icon: ClipboardList, label: "Pedidos, mesas, areas e historico operacional" },
-  { icon: TrendingUp, label: "Analise para decidir quais itens impulsionar" },
+  { icon: ClipboardList, label: "Pedidos, mesas, áreas e histórico operacional" },
+  { icon: TrendingUp, label: "Análise para decidir quais itens impulsionar" },
 ];
 
 const GestaoCompleta = () => {
@@ -67,18 +67,18 @@ const GestaoCompleta = () => {
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-green/10 px-4 py-2 text-sm font-semibold text-green">
                   <BarChart3 size={16} />
-                  Gestao para crescer com controle
+                  Gestão para crescer com controle
                 </span>
                 <h1 className="mt-5 text-4xl font-bold leading-tight text-navy md:text-6xl">
                   Veja o restaurante inteiro sem depender de planilhas.
                 </h1>
                 <p className="mt-6 max-w-2xl text-lg leading-relaxed text-navy/70">
-                  O Pubfy conecta pedidos, produtos, equipe, relatorios, configuracoes, campanhas e integracoes para voce entender a operacao e agir com mais rapidez.
+                  O Pubfy conecta pedidos, produtos, equipe, relatórios, configurações, campanhas e integrações para você entender a operação e agir com mais rapidez.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Link to="/teste-gratis">
                     <Button size="lg" className="h-12 w-full bg-green px-7 text-white hover:bg-green-dark sm:w-auto">
-                      Experimentar gestao completa
+                      Experimentar gestão completa
                       <ArrowRight size={18} className="ml-2" />
                     </Button>
                   </Link>
@@ -94,7 +94,7 @@ const GestaoCompleta = () => {
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">Painel executivo</p>
-                    <p className="font-semibold text-navy">Visao da operacao</p>
+                    <p className="font-semibold text-navy">Visão da operação</p>
                   </div>
                   <span className="rounded-md bg-navy px-3 py-1 text-xs font-semibold text-white">Hoje</span>
                 </div>
@@ -102,7 +102,7 @@ const GestaoCompleta = () => {
                   {[
                     ["Vendas", "R$ 4.860", "+18%"],
                     ["Pedidos", "126", "+24"],
-                    ["Ticket medio", "R$ 38,57", "+7%"],
+                    ["Ticket médio", "R$ 38,57", "+7%"],
                   ].map(([label, value, delta]) => (
                     <div key={label} className="rounded-md border border-gray-100 bg-offwhite p-4">
                       <p className="text-xs text-navy/60">{label}</p>
@@ -136,12 +136,12 @@ const GestaoCompleta = () => {
                     </div>
                   </div>
                   <div className="rounded-md bg-navy p-4 text-white">
-                    <p className="font-semibold">Alertas de gestao</p>
+                    <p className="font-semibold">Alertas de gestão</p>
                     <div className="mt-4 space-y-3 text-sm">
                       {[
-                        "Cupom de almoco gerou 18 pedidos",
-                        "3 usuarios com permissoes atualizadas",
-                        "Campanha de email pronta para envio",
+                        "Cupom de almoço gerou 18 pedidos",
+                        "3 usuários com permissões atualizadas",
+                        "Campanha de e-mail pronta para envio",
                         "Novo pedido integrado ao fluxo",
                       ].map((item) => (
                         <div key={item} className="flex gap-2">
@@ -160,7 +160,7 @@ const GestaoCompleta = () => {
         <section className="bg-white py-16 md:py-24">
           <div className="container mx-auto px-6">
             <div className="mx-auto max-w-3xl text-center">
-              <h2 className="text-3xl font-bold text-navy md:text-4xl">Gestao pratica, nao burocratica</h2>
+              <h2 className="text-3xl font-bold text-navy md:text-4xl">Gestão prática, não burocrática</h2>
               <p className="mt-4 text-lg text-navy/70">
                 O Pubfy ajuda o gestor a enxergar prioridades sem sair do fluxo de pedidos e atendimento.
               </p>
@@ -183,14 +183,14 @@ const GestaoCompleta = () => {
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-green-light">
                   <Settings size={16} />
-                  Modulos conectados
+                  Módulos conectados
                 </span>
-                <h2 className="mt-5 text-3xl font-bold md:text-4xl">Cada area importante conversa com a outra.</h2>
+                <h2 className="mt-5 text-3xl font-bold md:text-4xl">Cada área importante conversa com a outra.</h2>
                 <p className="mt-4 text-white/70">
-                  Em vez de vender telas isoladas, a gestao completa mostra como a operacao se conecta: produto vendido, pedido atendido, equipe com acesso correto e indicador atualizado.
+                  Em vez de vender telas isoladas, a gestão completa mostra como a operação se conecta: produto vendido, pedido atendido, equipe com acesso correto e indicador atualizado.
                 </p>
                 <Link to="/teste-gratis" className="mt-7 inline-flex">
-                  <Button className="bg-orange text-white hover:bg-orange/90">Comecar teste gratis</Button>
+                  <Button className="bg-orange text-white hover:bg-orange/90">Começar teste grátis</Button>
                 </Link>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">

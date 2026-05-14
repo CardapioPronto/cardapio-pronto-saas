@@ -1,4 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Activity } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface GraficoPerformanceProps {
   data: Array<{
@@ -11,9 +13,12 @@ interface GraficoPerformanceProps {
 export const GraficoPerformance = ({ data }: GraficoPerformanceProps) => {
   if (!data.length) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-        Nenhum dado encontrado no período
-      </div>
+      <EmptyState
+        icon={Activity}
+        title="Nenhum dado de performance"
+        description="Gere a análise após um período com pedidos para comparar faturamento e volume."
+        className="h-[300px]"
+      />
     );
   }
 

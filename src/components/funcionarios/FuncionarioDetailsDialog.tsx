@@ -132,7 +132,7 @@ export const FuncionarioDetailsDialog = ({
             <div>
               <p className="text-sm font-medium">Acesso ao sistema</p>
               <p className="text-xs text-muted-foreground">
-                Funcionarios inativos nao conseguem acessar as areas protegidas.
+                Funcionários inativos não conseguem acessar as áreas protegidas.
               </p>
             </div>
             <Switch checked={employee.is_active} disabled={statusSaving} onCheckedChange={handleStatusChange} />
@@ -143,22 +143,22 @@ export const FuncionarioDetailsDialog = ({
           <div>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium">Permissoes atuais</p>
+                <p className="text-sm font-medium">Permissões atuais</p>
                 <p className="text-xs text-muted-foreground">Resumo dos acessos liberados para este colaborador.</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => onEditPermissions(employee)}>
-                Editar permissoes
+                Editar permissões
               </Button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {employee.permissions.length > 0 ? (
                 employee.permissions.map((permission) => (
-                  <Badge key={permission} variant="secondary">
+                  <Badge key={permission} variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
                     {PERMISSION_LABELS[permission]}
                   </Badge>
                 ))
               ) : (
-                <span className="text-sm text-muted-foreground">Nenhuma permissao liberada.</span>
+                <span className="text-sm text-muted-foreground">Nenhuma permissão liberada.</span>
               )}
             </div>
           </div>

@@ -320,8 +320,8 @@ const IfoodIntegracao = () => {
   return (
     <DashboardLayout title="Integração com iFood">
       <div className="space-y-6">
-        <Alert className="border-orange/30 bg-orange/5">
-          <ShieldCheck className="h-4 w-4 text-orange" />
+        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+          <ShieldCheck className="h-4 w-4 text-amber-700" />
           <AlertTitle>Integração preparada para homologação</AlertTitle>
           <AlertDescription>
             As chamadas sensíveis agora passam por Edge Function. O polling usa os endpoints atuais do iFood e registra eventos antes do ACK.
@@ -335,8 +335,13 @@ const IfoodIntegracao = () => {
               <div>
                 <CardTitle className="text-xl flex items-center">
                   Status da Integração
-                  <Badge 
-                    className={`ml-2 ${config.isEnabled ? 'bg-green/80' : 'bg-gray-400'}`}
+                  <Badge
+                    variant="outline"
+                    className={`ml-2 ${
+                      config.isEnabled
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
                   >
                     {config.isEnabled ? 'Ativada' : 'Desativada'}
                   </Badge>
@@ -418,9 +423,9 @@ const IfoodIntegracao = () => {
                     <div className="space-y-2">
                       <div className="flex items-center">
                         {credentialsConfigured ? (
-                          <CheckCircle className="h-5 w-5 text-green mr-2" />
+                          <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
                         ) : (
-                          <AlertCircle className="h-5 w-5 text-orange mr-2" />
+                          <AlertCircle className="h-5 w-5 text-amber-700 mr-2" />
                         )}
                         <span>
                           Credenciais: {credentialsConfigured ? "Configuradas" : "Não configuradas"}
@@ -429,9 +434,9 @@ const IfoodIntegracao = () => {
                       
                       <div className="flex items-center">
                         {config.isEnabled ? (
-                          <CheckCircle className="h-5 w-5 text-green mr-2" />
+                          <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
                         ) : (
-                          <AlertCircle className="h-5 w-5 text-orange mr-2" />
+                          <AlertCircle className="h-5 w-5 text-amber-700 mr-2" />
                         )}
                         <span>
                           Status da integração: {config.isEnabled ? "Ativada" : "Desativada"}
@@ -440,9 +445,9 @@ const IfoodIntegracao = () => {
                       
                       <div className="flex items-center">
                         {config.pollingEnabled ? (
-                          <CheckCircle className="h-5 w-5 text-green mr-2" />
+                          <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
                         ) : (
-                          <AlertCircle className="h-5 w-5 text-orange mr-2" />
+                          <AlertCircle className="h-5 w-5 text-amber-700 mr-2" />
                         )}
                         <span>
                           Sincronização automática: {config.pollingEnabled ? "Ativada" : "Desativada"}
@@ -532,21 +537,21 @@ const IfoodIntegracao = () => {
                         onClick={handleTestConnection}
                         disabled={!credentialsConfigured || isLoading}
                       >
-                        {isLoading ? "Testando..." : "Testar Conexão"}
+                        {isLoading ? "Testando..." : "Testar conexão"}
                       </Button>
                     </div>
                     
                     {testResult && (
                       <div className={`p-4 mt-4 rounded-md ${
-                        testResult.success ? 'bg-green/10 border border-green/20' : 'bg-red-500/10 border border-red-500/20'
+                        testResult.success ? 'border border-emerald-200 bg-emerald-50' : 'border border-rose-200 bg-rose-50'
                       }`}>
                         <div className="flex items-center">
                           {testResult.success ? (
-                            <CheckCircle className="h-5 w-5 text-green mr-2" />
+                            <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
                           ) : (
-                            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                            <AlertCircle className="h-5 w-5 text-rose-700 mr-2" />
                           )}
-                          <span className={testResult.success ? 'text-green' : 'text-red-500'}>
+                          <span className={testResult.success ? 'text-emerald-800' : 'text-rose-800'}>
                             {testResult.message}
                           </span>
                         </div>
