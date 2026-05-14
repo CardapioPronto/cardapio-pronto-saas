@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
+import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import { captureEdgeException } from "../_shared/observability.ts";
 
 const corsHeaders = {
@@ -79,6 +80,8 @@ const MANAGER_PERMISSIONS = [
   "whatsapp_configure_automation",
 ];
 
+const DEFAULT_SECURITY_ALERT_EMAILS = ["juniorfalcao.jc@gmail.com"];
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -99,6 +102,77 @@ const assertEmail = (email: string) => {
 const nameFromEmail = (email: string) => {
   const localPart = email.split("@")[0]?.replace(/[._-]+/g, " ").trim();
   return localPart || email;
+};
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+const getSecurityAlertRecipients = () => {
+  const configured = Deno.env.get("ADMIN_SECURITY_ALERT_EMAILS")
+    || Deno.env.get("ADMIN_SECURITY_ALERT_EMAIL")
+    || Deno.env.get("SECURITY_ALERT_EMAILS")
+    || "";
+
+  const recipients = configured
+    .split(/[,\s;]+/)
+    .map((email) => normalizeEmail(email))
+    .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+  return recipients.length > 0 ? Array.from(new Set(recipients)) : DEFAULT_SECURITY_ALERT_EMAILS;
+};
+
+const extractEmails = (value: unknown) => {
+  if (!value || typeof value !== "object") return [];
+  const record = value as Record<string, unknown>;
+  const rawEmails = Array.isArray(record.emails)
+    ? record.emails
+    : typeof record.email === "string"
+      ? [record.email]
+      : [];
+
+  return rawEmails
+    .map((email) => normalizeEmail(String(email)))
+    .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+};
+
+const getConfiguredSecurityAlerts = async () => {
+  const { data, error } = await admin
+    .from("system_settings")
+    .select("value")
+    .eq("key", "admin.security_alerts")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("admin-super-admins security alert config lookup failed", error.message);
+    return {
+      enabled: true,
+      recipients: getSecurityAlertRecipients(),
+      source: "fallback",
+    };
+  }
+
+  if (!data?.value || typeof data.value !== "object") {
+    return {
+      enabled: true,
+      recipients: getSecurityAlertRecipients(),
+      source: "fallback",
+    };
+  }
+
+  const value = data.value as Record<string, unknown>;
+  const enabled = value.enabled !== false;
+  const dbRecipients = extractEmails(value);
+
+  return {
+    enabled,
+    recipients: dbRecipients.length > 0 ? Array.from(new Set(dbRecipients)) : getSecurityAlertRecipients(),
+    source: dbRecipients.length > 0 ? "system_settings" : "fallback",
+  };
 };
 
 const getAuthenticatedUser = async (req: Request) => {
@@ -123,15 +197,30 @@ const logAdminAction = async (
   targetUserId: string,
   details: Record<string, unknown>,
 ) => {
-  const { error } = await admin.from("admin_activity_logs").insert({
-    user_id: callerId,
-    action,
-    entity_type: "system_admins",
-    entity_id: targetUserId,
-    details,
-  });
+  const { data, error } = await admin
+    .from("admin_activity_logs")
+    .insert({
+      user_id: callerId,
+      action,
+      entity_type: "system_admins",
+      entity_id: targetUserId,
+      details,
+    })
+    .select("id")
+    .single();
 
   if (error) console.warn("admin-super-admins audit log failed", error.message);
+  return data?.id as string | undefined;
+};
+
+const updateAdminActionDetails = async (logId: string | undefined, details: Record<string, unknown>) => {
+  if (!logId) return;
+  const { error } = await admin
+    .from("admin_activity_logs")
+    .update({ details })
+    .eq("id", logId);
+
+  if (error) console.warn("admin-super-admins audit log update failed", error.message);
 };
 
 const loadProfiles = async (userIds: string[]) => {
@@ -171,6 +260,192 @@ const getAuthUserById = async (userId: string): Promise<AuthUserSummary | null> 
     last_sign_in_at: data.user.last_sign_in_at || null,
     user_metadata: data.user.user_metadata as Record<string, unknown> | undefined,
   };
+};
+
+const getUserIdentity = async (userId: string) => {
+  const [profiles, authUser] = await Promise.all([
+    loadProfiles([userId]),
+    getAuthUserById(userId),
+  ]);
+  const profile = profiles.get(userId) || null;
+
+  return {
+    id: userId,
+    email: authUser?.email || profile?.email || null,
+    name: profile?.name || null,
+    role: profile?.role || null,
+    user_type: profile?.user_type || null,
+    restaurant_id: profile?.restaurant_id || null,
+  };
+};
+
+const formatIdentity = (identity: Awaited<ReturnType<typeof getUserIdentity>>) =>
+  identity.name || identity.email || identity.id;
+
+const adminActionLabel = (action: string) => {
+  if (action === "grant_super_admin") return "Super admin criado";
+  if (action === "revoke_super_admin") return "Super admin removido";
+  return action;
+};
+
+const sendAdminSecurityAlert = async (input: {
+  action: string;
+  actor: Awaited<ReturnType<typeof getUserIdentity>>;
+  target: Awaited<ReturnType<typeof getUserIdentity>>;
+  details: Record<string, unknown>;
+  logId?: string;
+  recipients: string[];
+}) => {
+  const recipients = input.recipients;
+  if (recipients.length === 0) {
+    return {
+      recipients,
+      sent_count: 0,
+      failed_count: 0,
+      failures: [],
+    };
+  }
+
+  const occurredAt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const actionLabel = adminActionLabel(input.action);
+  const subject = `[Pubfy Admin] ${actionLabel}: ${formatIdentity(input.target)}`;
+
+  const rows = [
+    ["Ação", actionLabel],
+    ["Data/hora", occurredAt],
+    ["Executado por", `${formatIdentity(input.actor)} (${input.actor.email || "sem e-mail"})`],
+    ["ID do executor", input.actor.id],
+    ["Usuário afetado", `${formatIdentity(input.target)} (${input.target.email || "sem e-mail"})`],
+    ["ID afetado", input.target.id],
+    ["Restaurante", input.details.restaurant_name || input.details.restaurant_id || "-"],
+    ["Log ID", input.logId || "-"],
+  ];
+
+  const htmlRows = rows.map(([label, value]) => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#475569;font-weight:600">${escapeHtml(label)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#0f172a">${escapeHtml(value)}</td>
+    </tr>
+  `).join("");
+
+  const html = `
+    <div style="font-family:Inter,Arial,sans-serif;line-height:1.5;color:#0f172a">
+      <h2 style="margin:0 0 12px">Alerta de segurança - Administração Pubfy</h2>
+      <p style="margin:0 0 16px">Uma ação sensível foi executada no módulo de super administradores.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:760px;border:1px solid #e5e7eb">
+        <tbody>${htmlRows}</tbody>
+      </table>
+      <p style="margin:16px 0 0;color:#64748b;font-size:13px">
+        Este aviso é automático. Revise o log administrativo caso esta ação não tenha sido autorizada.
+      </p>
+    </div>
+  `;
+
+  const text = rows.map(([label, value]) => `${label}: ${value}`).join("\n");
+
+  const results = await Promise.allSettled(recipients.map((recipient) =>
+    sendManagedEmail({
+      admin,
+      emailType: "operational",
+      to: recipient,
+      recipientName: "Admin Pubfy",
+      subject,
+      html,
+      text,
+      contextType: "system_admins",
+      contextId: input.target.id,
+      metadata: {
+        source: "admin_super_admins_security_alert",
+        action: input.action,
+        log_id: input.logId || null,
+        target_user_id: input.target.id,
+        actor_user_id: input.actor.id,
+      },
+    })
+  ));
+
+  const failed = results
+    .map((result, index) => ({ result, recipient: recipients[index] }))
+    .filter((item) => item.result.status === "rejected")
+    .map((item) => ({
+      recipient: item.recipient,
+      error: item.result.status === "rejected"
+        ? item.result.reason instanceof Error
+          ? item.result.reason.message
+          : String(item.result.reason)
+        : null,
+    }));
+
+  if (failed.length > 0) {
+    console.warn("admin-super-admins security alert email failed", failed);
+  }
+
+  return {
+    recipients,
+    sent_count: results.length - failed.length,
+    failed_count: failed.length,
+    failures: failed,
+  };
+};
+
+const recordAdminSecurityEvent = async (
+  callerId: string,
+  action: "grant_super_admin" | "revoke_super_admin",
+  targetUserId: string,
+  details: Record<string, unknown>,
+) => {
+  const [actor, target] = await Promise.all([
+    getUserIdentity(callerId),
+    getUserIdentity(targetUserId),
+  ]);
+  const alertConfig = await getConfiguredSecurityAlerts();
+
+  const enrichedDetails = {
+    ...details,
+    action_label: adminActionLabel(action),
+    occurred_at: new Date().toISOString(),
+    actor,
+    target,
+    email_alert: {
+      status: alertConfig.enabled ? "pending" : "disabled",
+      recipients: alertConfig.recipients,
+      config_source: alertConfig.source,
+    },
+  };
+
+  const logId = await logAdminAction(callerId, action, targetUserId, enrichedDetails);
+  if (!alertConfig.enabled) return;
+
+  try {
+    const emailAlert = await sendAdminSecurityAlert({
+      action,
+      actor,
+      target,
+      details: enrichedDetails,
+      logId,
+      recipients: alertConfig.recipients,
+    });
+    await updateAdminActionDetails(logId, {
+      ...enrichedDetails,
+      email_alert: {
+        status: emailAlert.failed_count > 0 ? "partial_failure" : "sent",
+        config_source: alertConfig.source,
+        ...emailAlert,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("admin-super-admins security alert failed", message);
+    await updateAdminActionDetails(logId, {
+      ...enrichedDetails,
+      email_alert: {
+        status: "failed",
+        recipients: alertConfig.recipients,
+        config_source: alertConfig.source,
+        error: message,
+      },
+    });
+  }
 };
 
 const toAuthSummary = (user: {
@@ -583,8 +858,9 @@ const addAdmin = async (req: Request, callerId: string, payload: Payload) => {
       console.warn("admin-super-admins auth metadata update failed", metadataError);
     }
 
-    await logAdminAction(callerId, "grant_super_admin", targetUser.id, {
+    await recordAdminSecurityEvent(callerId, "grant_super_admin", targetUser.id, {
       email,
+      name: membership.name,
       notes,
       invited,
       restaurant_id: membership.restaurant_id,
@@ -642,10 +918,15 @@ const removeAdmin = async (callerId: string, payload: Payload) => {
 
   if (profileUpdateError) throw profileUpdateError;
 
-  await logAdminAction(callerId, "revoke_super_admin", targetUserId, {
+  const restaurant = profile?.restaurant_id ? await getRestaurant(profile.restaurant_id).catch(() => null) : null;
+
+  await recordAdminSecurityEvent(callerId, "revoke_super_admin", targetUserId, {
+    email: profile?.email || null,
+    name: profile?.name || null,
     previous_role: profile?.role || null,
     next_role: nextRole,
     restaurant_id: profile?.restaurant_id || null,
+    restaurant_name: restaurant?.name || null,
   });
 
   return await listAdmins(callerId);
