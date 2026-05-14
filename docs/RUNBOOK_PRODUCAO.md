@@ -89,10 +89,10 @@ Validação:
 
 ### 3.5 Observabilidade
 
-- [ ] `SENTRY_DSN` (Edge) configurado — DSN do Sentry já criado pela operação.
-- [ ] `VITE_SENTRY_DSN` (frontend) — opcional; o código tem o DSN público
+- [x] `SENTRY_DSN` (Edge) configurado — DSN do Sentry já criado pela operação.
+- [x] `VITE_SENTRY_DSN` (frontend) — opcional; o código tem o DSN público
       embutido como fallback.
-- [ ] `SENTRY_ENVIRONMENT` = `production`, `SENTRY_RELEASE` = versão do app.
+- [x] `SENTRY_ENVIRONMENT` = `production`, `SENTRY_RELEASE` = versão do app.
 
 ---
 

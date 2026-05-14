@@ -89,7 +89,7 @@ Onde olhar:
 Vão ser ligados quando o tópico Sentry voltar ao plano. Lista de alertas
 esperados:
 
-- [ ] Sentry: Edge Function error rate > 1% em janela de 5 min.
+- [x] Sentry: Edge Function errors > 0 em janela de 5 min. Monitor criado em 2026-05-14 como `Edge Functions errors - production` (`runtime:supabase_edge level:error`, `Number of Errors`, ambiente `production`). Error rate percentual > 1% fica condicionado a instrumentar transações/métricas de requisições totais nas Edge Functions.
 - [ ] Sentry: p95 de tempo de resposta da Edge `create-public-menu-order` > 1.5s.
 - [ ] Sentry: novo issue React com `level = error` afetando 10+ usuários.
 - [ ] Pagar.me Dashboard: webhook failed > 3% em 30 min (alerta nativo).
