@@ -11,8 +11,9 @@ function check(name, condition, detail) {
 }
 
 function functionBlock(config, functionName) {
-  const pattern = new RegExp(`\\[functions\\.${functionName}\\]\\s+verify_jwt\\s*=\\s*(true|false)`, "m");
-  return config.match(pattern)?.[1] ?? null;
+  const pattern = new RegExp(`\\[functions\\.${functionName}\\]([\\s\\S]*?)(?=\\n\\[|$)`);
+  const block = config.match(pattern)?.[1] ?? "";
+  return block.match(/verify_jwt\s*=\s*(true|false)/)?.[1] ?? null;
 }
 
 function authEmailConfirmationsEnabled(config) {
@@ -42,6 +43,7 @@ const demonstracao = read("src/pages/Demonstracao.tsx");
 const adminPagarme = read("src/pages/admin/AdminPagarme.tsx");
 const adminPagarmeWebhooks = read("src/pages/admin/AdminPagarmeWebhooks.tsx");
 const resendWebhook = read("supabase/functions/resend-webhook/index.ts");
+const adminSuperAdmins = read("supabase/functions/admin-super-admins/index.ts");
 
 for (const functionName of [
   "create-storage-buckets",
@@ -63,6 +65,17 @@ for (const functionName of [
     `${functionName} should not be anonymously callable without a Supabase JWT`,
   );
 }
+
+check(
+  "Super admin management is manually authenticated",
+  functionBlock(config, "admin-super-admins") === "false"
+    && adminSuperAdmins.includes("Access-Control-Allow-Methods")
+    && adminSuperAdmins.includes("getAuthenticatedUser")
+    && adminSuperAdmins.includes("assertCallerIsSuperAdmin")
+    && adminSuperAdmins.includes("admin.auth.getUser(token)")
+    && adminSuperAdmins.includes('if (req.method === "OPTIONS")'),
+  "admin-super-admins must allow anonymous OPTIONS for CORS while validating JWT and super admin status inside every POST",
+);
 
 check(
   "Owner signup requires email confirmation",
@@ -126,6 +139,7 @@ check(
     && edgeObservability.includes("application/x-sentry-envelope")
     && [
       "create-employee",
+      "admin-super-admins",
       "create-trial-subscription",
       "finalize-owner-signup",
       "cleanup-unverified-owner-signups",

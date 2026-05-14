@@ -27,7 +27,7 @@ const AdminDashboard = () => {
   // Calculate statistics
   const stats = {
     totalRestaurants: restaurants?.data?.length || 0,
-    totalAdmins: admins?.data?.length || 0,
+    totalAdmins: admins?.admins?.length || 0,
     activeSubscriptions: activeSubscriptions?.length || 0,
     recentActivity: 0 // Placeholder for recent activity count
   };

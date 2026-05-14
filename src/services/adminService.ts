@@ -1,18 +1,34 @@
 
 import { supabase } from '@/lib/supabase';
-import { PostgrestError } from '@supabase/supabase-js';
+import { FunctionsHttpError, PostgrestError } from '@supabase/supabase-js';
 import type { Database, Json } from '@/integrations/supabase/types';
 
-type SystemAdmin = Database['public']['Tables']['system_admins']['Row'];
 type SystemSetting = Database['public']['Tables']['system_settings']['Row'];
 type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 type Restaurant = Database['public']['Tables']['restaurants']['Row'];
 
-// Interface para criar/atualizar um super admin
-interface SuperAdminData {
+export interface SuperAdminRecord {
   user_id: string;
-  notes?: string;
+  email: string | null;
+  name: string | null;
+  role: string | null;
+  user_type: string | null;
+  restaurant_id: string | null;
+  restaurant_name: string | null;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+  created_by_email: string | null;
+  created_by_name: string | null;
+  auth_created_at: string | null;
+  last_sign_in_at: string | null;
+  is_current_user: boolean;
+}
+
+interface SuperAdminsResponse {
+  currentUserId: string;
+  admins: SuperAdminRecord[];
 }
 
 // Interface para configurações do sistema
@@ -40,38 +56,38 @@ export async function checkCurrentUserIsSuperAdmin(): Promise<boolean> {
   return !!data;
 }
 
+async function getFunctionErrorMessage(error: unknown) {
+  if (error instanceof FunctionsHttpError) {
+    const body = await error.context.clone().json().catch(() => null) as { error?: string } | null;
+    if (body?.error) return body.error;
+  }
+
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+async function invokeSuperAdmins(action: 'list' | 'add' | 'remove', body: Record<string, unknown> = {}) {
+  const { data, error } = await supabase.functions.invoke<SuperAdminsResponse>('admin-super-admins', {
+    body: { action, ...body }
+  });
+
+  if (error) throw new Error(await getFunctionErrorMessage(error));
+  if (!data?.admins) throw new Error('Resposta inválida do serviço de administradores');
+  return data;
+}
+
 // Função para listar todos os super admins
-export async function listSuperAdmins(): Promise<{ data: SystemAdmin[] | null; error: PostgrestError | null }> {
-  return await supabase
-    .from('system_admins')
-    .select(`
-      user_id,
-      notes,
-      created_at,
-      created_by
-    `)
-    .order('created_at', { ascending: false });
+export async function listSuperAdmins(): Promise<SuperAdminsResponse> {
+  return await invokeSuperAdmins('list');
 }
 
 // Função para adicionar um super admin
-export async function addSuperAdmin(data: SuperAdminData): Promise<{ data: SystemAdmin[] | null; error: PostgrestError | null }> {
-  const { data: currentUser } = await supabase.auth.getUser();
-  
-  return await supabase
-    .from('system_admins')
-    .insert({
-      ...data,
-      created_by: currentUser.user?.id
-    })
-    .select();
+export async function addSuperAdmin(params: { email: string; name?: string; notes?: string }): Promise<SuperAdminsResponse> {
+  return await invokeSuperAdmins('add', params);
 }
 
 // Função para remover um super admin
-export async function removeSuperAdmin(userId: string): Promise<{ error: PostgrestError | null }> {
-  return await supabase
-    .from('system_admins')
-    .delete()
-    .eq('user_id', userId);
+export async function removeSuperAdmin(userId: string): Promise<SuperAdminsResponse> {
+  return await invokeSuperAdmins('remove', { userId });
 }
 
 // Função para listar configurações do sistema
