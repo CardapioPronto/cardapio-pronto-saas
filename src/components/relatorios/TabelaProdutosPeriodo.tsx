@@ -1,4 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PackageSearch } from "lucide-react";
 
 interface TabelaProdutosPeriodoProps {
   data: Array<{
@@ -10,13 +12,24 @@ interface TabelaProdutosPeriodoProps {
 }
 
 export const TabelaProdutosPeriodo = ({ data }: TabelaProdutosPeriodoProps) => {
+  if (data.length === 0) {
+    return (
+      <EmptyState
+        icon={PackageSearch}
+        title="Nenhum produto no período"
+        description="Ajuste o período ou os filtros para analisar os itens vendidos."
+        compact
+      />
+    );
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Produto</TableHead>
-            <TableHead className="text-right">Qtd</TableHead>
+            <TableHead className="text-right">Qtd.</TableHead>
             <TableHead className="text-right">Pedidos</TableHead>
             <TableHead className="text-right">Receita</TableHead>
           </TableRow>
@@ -35,13 +48,6 @@ export const TabelaProdutosPeriodo = ({ data }: TabelaProdutosPeriodoProps) => {
               </TableCell>
             </TableRow>
           ))}
-          {data.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">
-                Nenhum produto encontrado no período
-              </TableCell>
-            </TableRow>
-          )}
         </TableBody>
       </Table>
     </div>

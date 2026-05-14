@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Copy, Plus, RefreshCw, Save, Send } from "lucide-react";
+import { Copy, FileText, Inbox, Mail, Plus, RefreshCw, Save, Send, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/sonner-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -75,10 +76,10 @@ export function EmailOperationsPanel({ scope }: Props) {
   const templateTitle = isSystemScope ? "Templates do Pubfy" : "Templates do restaurante";
   const templateDescription = isSystemScope
     ? "Modelos globais usados por e-mails do sistema, assinatura, contato e recibos."
-    : "Modelos proprios deste restaurante. Templates globais do Pubfy ficam somente no dashboard de super admin.";
+    : "Modelos próprios deste restaurante. Templates globais do Pubfy ficam somente no dashboard de super admin.";
   const emptyTemplatesMessage = isSystemScope
     ? "Nenhum template global encontrado."
-    : "Nenhum template proprio ainda. Os e-mails automaticos continuam usando os modelos padrao do Pubfy.";
+    : "Nenhum template próprio ainda. Os e-mails automáticos continuam usando os modelos padrão do Pubfy.";
 
   const load = async () => {
     setLoading(true);
@@ -332,10 +333,19 @@ export function EmailOperationsPanel({ scope }: Props) {
                 >
                   <div className="font-medium">{template.name}</div>
                   <div className="text-xs text-muted-foreground">{template.template_key}</div>
-                  <Badge variant="outline" className="mt-2">{template.category}</Badge>
+                  <Badge variant="outline" className="mt-2 border-slate-200 bg-slate-50 text-slate-700">
+                    {template.category}
+                  </Badge>
                 </button>
               ))}
-              {!templates.length && <p className="text-sm text-muted-foreground">{emptyTemplatesMessage}</p>}
+              {!templates.length && (
+                <EmptyState
+                  icon={FileText}
+                  title="Nenhum template disponível"
+                  description={emptyTemplatesMessage}
+                  compact
+                />
+              )}
             </CardContent>
           </Card>
 
@@ -415,7 +425,14 @@ export function EmailOperationsPanel({ scope }: Props) {
                 </div>
               </div>
             ))}
-            {!logs.length && <p className="text-sm text-muted-foreground">Nenhum envio registrado ainda.</p>}
+            {!logs.length && (
+              <EmptyState
+                icon={Inbox}
+                title="Nenhum envio registrado"
+                description="Os envios aparecerão aqui assim que e-mails forem processados pelo Pubfy."
+                compact
+              />
+            )}
           </CardContent>
         </Card>
       </TabsContent>
@@ -439,8 +456,15 @@ export function EmailOperationsPanel({ scope }: Props) {
                   <CardDescription>{campaignEntitlement?.planName || "Carregando..."}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Badge variant={campaignEntitlement?.campaignsEnabled ? "default" : "outline"}>
-                    {campaignEntitlement?.campaignsEnabled ? "Campanhas habilitadas" : "Recurso avancado"}
+                  <Badge
+                    variant="outline"
+                    className={
+                      campaignEntitlement?.campaignsEnabled
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700"
+                    }
+                  >
+                    {campaignEntitlement?.campaignsEnabled ? "Campanhas habilitadas" : "Recurso avançado"}
                   </Badge>
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
@@ -523,14 +547,19 @@ export function EmailOperationsPanel({ scope }: Props) {
                           <div className="font-medium">{campaign.name}</div>
                           <div className="line-clamp-1 text-xs text-muted-foreground">{campaign.subject}</div>
                         </div>
-                        <Badge variant="outline">{campaign.status}</Badge>
+                        <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                          {campaign.status}
+                        </Badge>
                       </div>
                     </button>
                   ))}
                   {!campaigns.length && (
-                    <p className="text-sm text-muted-foreground">
-                      Crie a primeira campanha quando o plano permitir e houver contatos com opt-in.
-                    </p>
+                    <EmptyState
+                      icon={Mail}
+                      title="Nenhuma campanha criada"
+                      description="Crie a primeira campanha quando o plano permitir e houver contatos com opt-in."
+                      compact
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -676,10 +705,12 @@ export function EmailOperationsPanel({ scope }: Props) {
                       </div>
                     </>
                   ) : (
-                    <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
-                      <BarChart3 className="h-8 w-8" />
-                      <p>Selecione ou crie uma campanha para começar.</p>
-                    </div>
+                    <EmptyState
+                      icon={Mail}
+                      title="Selecione uma campanha"
+                      description="Escolha uma campanha existente ou crie uma nova para editar conteúdo, público e envio."
+                      className="min-h-[260px]"
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -696,8 +727,12 @@ export function EmailOperationsPanel({ scope }: Props) {
                     <div className="font-medium">{contact.name || contact.email}</div>
                     <div className="text-muted-foreground">{contact.email}</div>
                     <Badge
-                      variant={contact.accepts_marketing && !contact.unsubscribed_at ? "default" : "outline"}
-                      className="mt-2"
+                      variant="outline"
+                      className={
+                        contact.accepts_marketing && !contact.unsubscribed_at
+                          ? "mt-2 border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "mt-2 border-slate-200 bg-slate-50 text-slate-700"
+                      }
                     >
                       {contact.unsubscribed_at
                         ? "Descadastrado"
@@ -707,7 +742,16 @@ export function EmailOperationsPanel({ scope }: Props) {
                     </Badge>
                   </div>
                 ))}
-                {!contacts.length && <p className="text-sm text-muted-foreground">Nenhum contato capturado ainda.</p>}
+                {!contacts.length && (
+                  <div className="md:col-span-2 xl:col-span-3">
+                    <EmptyState
+                      icon={Users}
+                      title="Nenhum contato capturado"
+                      description="Contatos com e-mail e autorização de marketing aparecerão aqui após novos pedidos."
+                      compact
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

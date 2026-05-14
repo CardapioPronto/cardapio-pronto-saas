@@ -12,7 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { DeleteProdutoDialog } from "./DeleteProdutoDialog";
 import { useState } from "react";
 import { EditProdutoDialog } from "./EditProdutoDialog";
@@ -48,14 +49,15 @@ export function ProdutosList({
 
   if (produtosFiltrados.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-md p-8 text-center">
-        <p className="text-gray-500 mb-2">Nenhum produto encontrado</p>
-        {canManage && (
-          <p className="text-sm text-gray-400">
-            Adicione seu primeiro produto clicando no botão "Adicionar Produto" acima
-          </p>
-        )}
-      </div>
+      <EmptyState
+        icon={PackageSearch}
+        title="Nenhum produto encontrado"
+        description={
+          canManage
+            ? "Cadastre um produto ou ajuste os filtros para visualizar o cardápio."
+            : "Ajuste os filtros para visualizar os produtos disponíveis."
+        }
+      />
     );
   }
 
@@ -111,9 +113,13 @@ export function ProdutosList({
               <TableCell>{formatCurrency(produto.price)}</TableCell>
               <TableCell>
                 {produto.available ? (
-                  <Badge>Disponível</Badge>
+                  <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                    Disponível
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary">Indisponível</Badge>
+                  <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                    Indisponível
+                  </Badge>
                 )}
               </TableCell>
               {canManage && (

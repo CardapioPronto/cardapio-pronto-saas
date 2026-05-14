@@ -362,11 +362,11 @@ Checklist:
 
 - [x] Trocar loader inicial informal por loader da marca.
 - [x] Remover/gatear `console.log` de login/admin/Pagar.me em producao.
-- [ ] Revisar textos com acentos e padrao de tom profissional.
+- [~] Revisar textos com acentos e padrao de tom profissional. (2026-05-14: copy operacional de templates/campanhas de e-mail revisada; ainda resta auditoria ampla em landing pages e modulos secundarios.)
 - [x] Melhorar tabela de Pedidos em mobile com `overflow-x-auto` ou layout responsivo.
-- [~] Revisar empty states de Produtos, Pedidos, Relatorios, Campanhas e iFood (Pedidos migrado; demais pendentes de auditoria).
-- [ ] Padronizar cards/alerts/badges para uma aparencia mais SaaS operacional.
-- [ ] Verificar contraste e acessibilidade de botoes/badges.
+- [~] Revisar empty states de Produtos, Pedidos, Relatorios, Campanhas e iFood (Pedidos, Produtos, Relatorios e Campanhas/Email migrados; iFood segue com aviso operacional, pendente revisao visual final).
+- [~] Padronizar cards/alerts/badges para uma aparencia mais SaaS operacional. (2026-05-14: badges de status em Produtos e Campanhas/Email ajustados para estados operacionais com contraste explicito; auditoria global ainda pendente.)
+- [~] Verificar contraste e acessibilidade de botoes/badges. (2026-05-14: badges tocados nesta rodada usam `outline` com cores textuais explicitas; revisao completa de botoes/badges do app ainda pendente.)
 - [ ] Validar PDV em tablet/notebook com tela cheia.
 - [ ] Validar Cozinha em TV/monitor e notebook.
 - [x] Revisar pagina de Assinaturas para clareza de trial, plano ativo e atraso (alertas dedicados ja cobrem trialing, active e past_due em `src/pages/Assinaturas.tsx`).
@@ -384,8 +384,10 @@ Evidencia:
 - `console.log` retirado/gateado em `src/pages/Login.tsx`, `src/pages/Admin.tsx`, `src/components/admin/AdminProtectedRoute.tsx`, `src/services/payment/config.ts` e `src/main.tsx`; Pagar.me agora respeita `import.meta.env.DEV` para o flag `debug`.
 - Pagina de Pedidos: tabela embrulhada em wrapper `overflow-x-auto` com colunas auxiliares ocultas em telas pequenas e linha-resumo `mesa · cliente` para mobile; estado vazio migrado para componente reusavel.
 - Novo componente `src/components/ui/empty-state.tsx` (icon + titulo + descricao + acao) preparado para uniformizar telas restantes (Produtos, Relatorios, Campanhas, iFood) em sprints proximos.
+- 2026-05-14: `EmptyState` aplicado em `src/components/produtos/ProdutosList.tsx`, `src/components/relatorios/TabelaProdutosPeriodo.tsx` e `src/components/email/EmailOperationsPanel.tsx` para Produtos, Top Produtos em Relatorios, Templates, Logs, Campanhas e Contatos. Copy de e-mail/campanhas revisada com acentos e tom mais operacional.
+- 2026-05-14: Badges de Produtos e Campanhas/Email passaram a usar `outline` com estados `emerald`, `amber` e `slate`, evitando depender apenas do `default` do tema.
 - Itens nao marcados acima dependem de validacao manual em hardware real (tablet, TV/monitor) ou de revisao de copy/contraste em massa, que ficam para o ciclo de hardening antes do go-live (Bloco 10).
-- Verificacao: `npm run typecheck`, `npm run lint:src`, `npm test -- --run` (27 testes, 4 arquivos).
+- Verificacao: `npm run typecheck`, `npm run lint:src`, `npm test -- --run` (27 testes, 4 arquivos). 2026-05-14: `npm run typecheck`; `npm run build` (primeira execucao falhou no sandbox com `spawn EPERM`, execucao aprovada fora do sandbox passou).
 
 ---
 
