@@ -3,6 +3,7 @@ import { Product, Category } from "@/types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,19 @@ interface ProdutoFormProps {
   categories: Category[];
   loadingCategories: boolean;
   saving?: boolean;
+  /**
+   * Quando false, a seção "Estoque" não aparece — mesmo que o produto
+   * já tenha `stock_tracking_enabled`. O dono do restaurante precisa
+   * ligar a chave geral em `Personalização → Controle de estoque`
+   * antes de gerenciar saldos.
+   */
+  stockControlEnabled?: boolean;
+  /**
+   * Quando true, exibe o input de "contagem inicial" no momento da
+   * criação/ativação. Em edição de produto já rastreado, o saldo é
+   * alterado pela ação "Ajustar estoque" (modal próprio).
+   */
+  allowInitialStockEntry?: boolean;
 }
 
 export const ProdutoForm = ({
@@ -36,7 +50,10 @@ export const ProdutoForm = ({
   categories,
   loadingCategories,
   saving = false,
+  stockControlEnabled = false,
+  allowInitialStockEntry = false,
 }: ProdutoFormProps) => {
+  const trackingEnabled = Boolean(produto.stock_tracking_enabled);
   return (
     <>
       <div className="grid gap-4 py-4">
@@ -146,6 +163,103 @@ export const ProdutoForm = ({
           />
           <Label htmlFor="disponivel">Disponível para venda</Label>
         </div>
+
+        {stockControlEnabled && (
+          <div className="rounded-lg border border-border p-4 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="stock-tracking" className="text-sm font-medium">
+                  Controlar estoque deste produto
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Vendas (cardápio público e PDV) deduzem o saldo automaticamente. Cancelamentos restauram.
+                </p>
+              </div>
+              <Switch
+                id="stock-tracking"
+                checked={trackingEnabled}
+                onCheckedChange={(value) =>
+                  onChangeProduto({
+                    ...produto,
+                    stock_tracking_enabled: value,
+                    // Ao desligar, limpa campos auxiliares para não ficarem fantasmas no banco.
+                    ...(value
+                      ? {}
+                      : {
+                          stock_min_quantity: null,
+                          stock_is_fractional: false,
+                        }),
+                  })
+                }
+              />
+            </div>
+
+            {trackingEnabled && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {allowInitialStockEntry && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="stock-initial">Contagem inicial</Label>
+                    <Input
+                      id="stock-initial"
+                      type="number"
+                      min={0}
+                      step={produto.stock_is_fractional ? "0.001" : "1"}
+                      value={produto.stock_quantity ?? 0}
+                      onChange={(e) =>
+                        onChangeProduto({
+                          ...produto,
+                          stock_quantity:
+                            e.target.value === "" ? 0 : Math.max(parseFloat(e.target.value) || 0, 0),
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Pode começar com 0 e registrar entrada depois.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-2">
+                  <Label htmlFor="stock-min">Saldo mínimo (opcional)</Label>
+                  <Input
+                    id="stock-min"
+                    type="number"
+                    min={0}
+                    step={produto.stock_is_fractional ? "0.001" : "1"}
+                    value={produto.stock_min_quantity ?? ""}
+                    placeholder="Sem alerta"
+                    onChange={(e) =>
+                      onChangeProduto({
+                        ...produto,
+                        stock_min_quantity:
+                          e.target.value === "" ? null : Math.max(parseFloat(e.target.value) || 0, 0),
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Quando o saldo cai a este valor, o produto é destacado na lista.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 sm:col-span-2">
+                  <Switch
+                    id="stock-fractional"
+                    checked={Boolean(produto.stock_is_fractional)}
+                    onCheckedChange={(value) =>
+                      onChangeProduto({
+                        ...produto,
+                        stock_is_fractional: value,
+                      })
+                    }
+                  />
+                  <Label htmlFor="stock-fractional" className="text-sm">
+                    Permitir quantidades fracionadas (peso, dose)
+                  </Label>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 mt-4">

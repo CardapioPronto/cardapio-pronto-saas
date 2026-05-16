@@ -14,6 +14,7 @@ import {
 import { ProdutoForm } from "./ProdutoForm";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { useStockSettings } from "@/hooks/useStockSettings";
 
 interface EditProdutoDialogProps {
   produto: Product;
@@ -33,6 +34,13 @@ export const EditProdutoDialog = ({
   const [isOpen, setIsOpen] = useState(true); // Sempre aberto quando o componente existe
   const [produtoEditando, setProdutoEditando] = useState<Product>(produto);
   const { deleteImage } = useImageUpload(restaurantId);
+  const { enabled: stockControlEnabled } = useStockSettings(restaurantId);
+
+  // Em edição, só permite contagem inicial quando o produto está sendo
+  // ATIVADO agora (antes não era rastreado). Para produtos já rastreados,
+  // o saldo só muda via "Ajustar estoque".
+  const allowInitialStockEntry =
+    !produto.stock_tracking_enabled && Boolean(produtoEditando.stock_tracking_enabled);
 
   const handleSave = async () => {
     const success = await onSave(produtoEditando);
@@ -87,6 +95,8 @@ export const EditProdutoDialog = ({
           categories={categorias}
           loadingCategories={loading}
           saving={isSaving}
+          stockControlEnabled={stockControlEnabled}
+          allowInitialStockEntry={allowInitialStockEntry}
         />
       </DialogContent>
     </Dialog>

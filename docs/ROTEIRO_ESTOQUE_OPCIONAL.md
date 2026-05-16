@@ -288,29 +288,40 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
 **Objetivo:** gestão pelo dono da loja. Toda escrita passa pelas RPCs do Bloco C — nenhum componente faz `UPDATE` direto em `products.stock_quantity`.
 
 ### E1. Configuração geral do restaurante
-- [ ] Toggle “Usar controle de estoque” no painel de configurações (provavelmente em `PersonalizacaoTab` ou aba dedicada de operação) — flag `restaurant_settings.stock_control_enabled`.
-- [ ] Quando desligada, não exibir nenhuma seção de estoque na UI; produtos individuais permanecem com `stock_tracking_enabled = false`.
+- [x] Card `StockSettingsCard` (`src/components/produtos/StockSettingsCard.tsx`) plugado em `PersonalizacaoTab` (perto do `HoursManager`). Hook `useStockSettings` (`src/hooks/useStockSettings.ts`) lê e grava em `restaurant_settings` no padrão **key/value** (`setting_key='stock_control'`, `setting_value={enabled}`).
+- [x] **Decisão de modelagem:** abandonamos a coluna plana `restaurant_settings.stock_control_enabled` (criada na migration B1 mas ambígua, já que `restaurant_settings` é tabela key/value). A flag oficial vive no JSON. A coluna plana fica como _deprecated/no-op_ para evitar mais uma migration agora.
+- [x] Quando a chave global está desligada, a seção de estoque some no formulário de produto e os botões "Ajustar estoque" e "Histórico" deixam de aparecer na lista.
 
 ### E2. Cadastro de produto
-- [ ] Em `src/components/produtos/AddProdutoDialog` (e edição equivalente): seção “Estoque” visível somente quando a chave geral estiver ligada.
-- [ ] Toggle “Controlar estoque deste produto” (`stock_tracking_enabled`).
-- [ ] Quando ligado: campo **contagem inicial obrigatório** (com botão “começar com 0”), `stock_min_quantity` opcional, toggle “permite fração” (`stock_is_fractional`).
-- [ ] Ao **ligar pela primeira vez**, gerar movimento `inventory_count` com a contagem informada via RPC `apply_stock_movement`.
-- [ ] Bloquear edição direta de `stock_quantity` no formulário (saldo só muda por movimento).
+- [x] `ProdutoForm` ganhou seção "Estoque" condicionada à flag global (`stockControlEnabled` prop). `AddProdutoDialog` e `EditProdutoDialog` resolvem a flag via `useStockSettings`.
+- [x] Toggle "Controlar estoque deste produto" (`stock_tracking_enabled`); ao desligar, limpa `stock_min_quantity` e `stock_is_fractional` para evitar lixo no banco.
+- [x] Campo "Contagem inicial" só aparece em **criação** ou quando o produto está sendo **ativado** agora (antes não rastreava). Em produtos já rastreados, o saldo só muda via "Ajustar estoque".
+- [x] Após o `INSERT` do produto, `useProdutos` chama a RPC `adjust_stock` com `movement_type='inventory_count'` para registrar a contagem inicial — saldo nunca é gravado direto pela UI. A migração da rota de **edição** segue o mesmo caminho quando o tracking é ativado pela primeira vez.
+- [x] `PRODUCT_SELECT` foi estendido com `stock_*` e o helper `withProductAuditFields` passou a stripar essas colunas no fallback legado.
 
 ### E3. Página de produtos
-- [ ] Lista (`src/pages/Produtos.tsx` / `ProdutosList`): badge “Sem controle” / saldo numérico; destaque visual para `stock_quantity <= stock_min_quantity` quando mínimo definido.
-- [ ] Filtro novo no `useProdutos`: “abaixo do mínimo” / “esgotados”.
-- [ ] Ações rápidas por linha: “Ajustar estoque”, “Histórico”.
+- [x] `StockBadge` na coluna "Estoque" do `ProdutosList`: "Sem controle" (slate), saldo (emerald), "Baixo · X" (amber, quando `stock_quantity <= stock_min_quantity`), "Esgotado" (red, quando `<= 0`). Usa `Math.round` para saldos inteiros e `toLocaleString('pt-BR', { maximumFractionDigits: 3 })` para fracionados.
+- [x] Coluna só aparece quando a flag global está ligada **ou** quando algum produto já está rastreado (resiliente ao caso "desliguei a global mas tem rastreamento legado").
+- [x] Botões "Ajustar estoque" (ícone `Boxes`) e "Histórico" (ícone `History`) por linha, gated por `canManage` e por `stock_tracking_enabled`.
+- [ ] **Falta:** filtros novos no `useProdutos` ("abaixo do mínimo" / "esgotados") como tabs adicionais. Não bloqueia o MVP — a coluna já evidencia visualmente.
 
-### E4. Movimentações
-- [ ] Modal ou drawer “Ajustar estoque” com tipos: **entrada**, **saída**, **inventário (define saldo absoluto)** + campo motivo obrigatório.
-- [ ] Tela/aba “Histórico de movimentos” paginada (filtro por produto, tipo, período).
-- [ ] Apresentar saldo derivado e o usuário responsável.
+### E4. Ajuste manual / inventário
+- [x] `AjustarEstoqueDialog` (`src/components/produtos/AjustarEstoqueDialog.tsx`) com três tipos: entrada / saída / inventário. Inventário envia `target_quantity` e o servidor calcula o delta (sem race com saldo lido na UI).
+- [x] Motivo obrigatório (front + back).
+- [x] Chama `supabase.rpc('adjust_stock', { p_args })`. Mensagem de erro do back é exibida via `toast.error(error.message)`.
+- [x] `Produtos.tsx` passa `fetchProdutos` como `onStockChanged` para a lista re-buscar saldos depois do ajuste.
 
-### E5. Permissões na UI
-- [ ] Toda ação de escrita (toggle, ajuste, contagem) gated por `hasPermission('products_manage')`.
-- [ ] Visualização de saldo respeita o padrão atual de `products_view`.
+### E5. Histórico de movimentações
+- [x] `HistoricoEstoqueDialog` (`src/components/produtos/HistoricoEstoqueDialog.tsx`) lê os 50 últimos movimentos do produto (filtro `product_id`), ordenados por `created_at desc`.
+- [x] Layout em lista vertical: badge tipificada por `movement_type` (cores por categoria), data formatada `pt-BR`, motivo, observações, link curto para `order_id` quando houver, e delta colorido (vermelho saída, verde entrada).
+- [x] RLS (`stock_movements_select_own_restaurant`) garante que só usuários do restaurante leem.
+- [ ] **Falta (pós-MVP):** paginação real, filtros por tipo/período, e exibição do nome do `created_by` (hoje só temos o UUID).
+
+### E6. Permissões na UI
+- [x] Toda ação de escrita (toggle global, ajuste, edição com tracking) já é gated pelo `hasPermission('products_manage')` existente em `Produtos.tsx`. A RPC `adjust_stock` também valida `products_manage` no servidor (defesa em profundidade).
+- [x] Visualização de saldo segue o padrão atual de `products_view` (lista de produtos é gated por `products_view` na rota).
+
+**Verificação:** `npx tsc --noEmit` ✅ · `npm run lint:src` ✅ · `npx vitest run` (29/29) ✅.
 
 ---
 

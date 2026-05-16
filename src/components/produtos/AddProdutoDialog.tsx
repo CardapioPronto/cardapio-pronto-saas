@@ -14,6 +14,7 @@ import {
 import { ProdutoForm } from "./ProdutoForm";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { useStockSettings } from "@/hooks/useStockSettings";
 
 interface AddProdutoDialogProps {
   onAddProduto: (produto: Partial<Product>) => Promise<boolean>;
@@ -30,10 +31,15 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId, isSaving = false 
     price: undefined,
     category: null,
     available: true,
+    stock_tracking_enabled: false,
+    stock_quantity: 0,
+    stock_min_quantity: null,
+    stock_is_fractional: false,
   });
   
   const { categorias, loading } = useCategorias();
   const { deleteImage } = useImageUpload(restaurantId);
+  const { enabled: stockControlEnabled } = useStockSettings(restaurantId);
 
   const handleAddProduto = async () => {
     const success = await onAddProduto(novoProduto);
@@ -52,6 +58,10 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId, isSaving = false 
       image_url: undefined,
       image_storage_path: null,
       available: true,
+      stock_tracking_enabled: false,
+      stock_quantity: 0,
+      stock_min_quantity: null,
+      stock_is_fractional: false,
     });
   };
   
@@ -99,6 +109,8 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId, isSaving = false 
           categories={categorias}
           loadingCategories={loading}
           saving={isSaving}
+          stockControlEnabled={stockControlEnabled}
+          allowInitialStockEntry={true}
         />
       </DialogContent>
     </Dialog>

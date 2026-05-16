@@ -40,6 +40,10 @@ const PRODUCT_SELECT = `
   restaurant_id,
   created_at,
   updated_at,
+  stock_tracking_enabled,
+  stock_quantity,
+  stock_min_quantity,
+  stock_is_fractional,
   category:categories!products_category_id_fkey (
     id,
     name,
@@ -117,6 +121,12 @@ const withProductAuditFields = <T extends Record<string, unknown>>(
     image_uploaded_at: _imageUploadedAt,
     created_by: _createdBy,
     updated_by: _updatedBy,
+    // Estoque: colunas mais recentes que as de auditoria, então quando o
+    // ambiente é legado o fallback precisa removê-las também.
+    stock_tracking_enabled: _stockTrackingEnabled,
+    stock_quantity: _stockQuantity,
+    stock_min_quantity: _stockMinQuantity,
+    stock_is_fractional: _stockIsFractional,
     ...legacyPayload
   } = payload;
 
@@ -325,6 +335,11 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       setOperationsLoading(prev => ({ ...prev, adding: true })); // ✅ Loading específico
       const userId = await getCurrentUserId();
 
+      const stockTrackingEnabled = Boolean(novoProduto.stock_tracking_enabled);
+      const initialStockQuantity = stockTrackingEnabled
+        ? Math.max(Number(novoProduto.stock_quantity ?? 0), 0)
+        : 0;
+
       const payload = {
         name: novoProduto.name!.trim(),
         description: novoProduto.description?.trim() ?? "",
@@ -337,18 +352,32 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         image_uploaded_at: novoProduto.image_url ? new Date().toISOString() : null,
         created_by: userId,
         updated_by: userId,
-        restaurant_id: restaurantId
+        restaurant_id: restaurantId,
+        stock_tracking_enabled: stockTrackingEnabled,
+        // Saldo nunca é gravado direto pela UI: a row entra com 0 e a
+        // contagem inicial vai por adjust_stock logo abaixo (gera movimento auditável).
+        stock_quantity: 0,
+        stock_min_quantity: stockTrackingEnabled
+          ? (novoProduto.stock_min_quantity ?? null)
+          : null,
+        stock_is_fractional: stockTrackingEnabled
+          ? Boolean(novoProduto.stock_is_fractional)
+          : false,
       };
 
-      let { error } = await supabase
+      let { data: insertResult, error } = await supabase
         .from("products")
-        .insert(withProductAuditFields(payload, productAuditColumnsAvailableRef.current));
+        .insert(withProductAuditFields(payload, productAuditColumnsAvailableRef.current))
+        .select("id")
+        .single();
 
       if (error && isMissingColumnError(error)) {
         productAuditColumnsAvailableRef.current = false;
-        ({ error } = await supabase
+        ({ data: insertResult, error } = await supabase
           .from("products")
-          .insert(withProductAuditFields(payload, false)));
+          .insert(withProductAuditFields(payload, false))
+          .select("id")
+          .single());
       }
       
       if (error) {
@@ -364,7 +393,27 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         
         return false;
       }
-      
+
+      // Estoque: se o produto nasce rastreado com saldo inicial > 0,
+      // grava uma contagem inicial via RPC (movimento auditável).
+      if (stockTrackingEnabled && initialStockQuantity > 0 && insertResult?.id) {
+        const { error: stockError } = await supabase.rpc("adjust_stock", {
+          p_args: {
+            restaurant_id: restaurantId,
+            product_id: insertResult.id,
+            movement_type: "inventory_count",
+            target_quantity: initialStockQuantity,
+            reason: "Contagem inicial ao cadastrar produto",
+          },
+        });
+        if (stockError) {
+          console.error("Erro ao registrar contagem inicial de estoque:", stockError);
+          toast.error(
+            "Produto criado, mas falhou ao registrar a contagem inicial de estoque. Use Ajustar estoque para corrigir.",
+          );
+        }
+      }
+
       await fetchProdutos();
       await fetchIndicadores();
       toast.success("Produto adicionado com sucesso!");
@@ -412,6 +461,8 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       const produtoAnterior = produtos.find((p) => p.id === produtoAtualizado.id);
       const imageChanged = produtoAnterior?.image_url !== produtoAtualizado.image_url;
 
+      const stockTrackingEnabled = Boolean(produtoAtualizado.stock_tracking_enabled);
+
       const payload = {
         name: produtoAtualizado.name.trim(),
         description: produtoAtualizado.description.trim(),
@@ -423,7 +474,15 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         image_uploaded_by: imageChanged && produtoAtualizado.image_url ? userId : produtoAtualizado.image_uploaded_by || null,
         image_uploaded_at: imageChanged && produtoAtualizado.image_url ? new Date().toISOString() : produtoAtualizado.image_uploaded_at || null,
         updated_by: userId,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        stock_tracking_enabled: stockTrackingEnabled,
+        // Saldo nunca é gravado pela UI — só por movimento de estoque.
+        stock_min_quantity: stockTrackingEnabled
+          ? (produtoAtualizado.stock_min_quantity ?? null)
+          : null,
+        stock_is_fractional: stockTrackingEnabled
+          ? Boolean(produtoAtualizado.stock_is_fractional)
+          : false,
       };
 
       let { error } = await supabase
@@ -457,6 +516,33 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       
       if (imageChanged && produtoAnterior?.image_url) {
         await removeProductImage(produtoAnterior.image_url, produtoAnterior.image_storage_path);
+      }
+
+      // Estoque: o produto está sendo ATIVADO agora (antes não rastreava)
+      // e o usuário informou contagem inicial > 0. Trata igual à criação:
+      // grava um inventory_count via RPC para deixar trilha auditável.
+      const wasTrackingBefore = Boolean(produtoAnterior?.stock_tracking_enabled);
+      const initialStockQuantity = Math.max(Number(produtoAtualizado.stock_quantity ?? 0), 0);
+      if (
+        stockTrackingEnabled
+        && !wasTrackingBefore
+        && initialStockQuantity > 0
+      ) {
+        const { error: stockError } = await supabase.rpc("adjust_stock", {
+          p_args: {
+            restaurant_id: restaurantId,
+            product_id: produtoAtualizado.id,
+            movement_type: "inventory_count",
+            target_quantity: initialStockQuantity,
+            reason: "Contagem inicial ao ativar controle de estoque",
+          },
+        });
+        if (stockError) {
+          console.error("Erro ao registrar contagem inicial de estoque:", stockError);
+          toast.error(
+            "Produto atualizado, mas falhou ao registrar a contagem inicial. Use Ajustar estoque para corrigir.",
+          );
+        }
       }
 
       await fetchProdutos();

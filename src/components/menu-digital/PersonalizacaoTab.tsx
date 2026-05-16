@@ -20,6 +20,7 @@ import { SlugEditor } from './SlugEditor';
 import { HoursManager } from './HoursManager';
 import { PromotionsManager } from './PromotionsManager';
 import { ReorderList, type DraggableItem } from './ReorderList';
+import { StockSettingsCard } from '@/components/produtos/StockSettingsCard';
 
 const PAYMENT_OPTIONS: Array<{ value: DeliveryConfig['payment_methods'][number]; label: string }> = [
   { value: 'pix', label: 'PIX' },
@@ -497,6 +498,9 @@ export const PersonalizacaoTab = () => {
 
       {/* Horário de Funcionamento */}
       {restaurantId && <HoursManager restaurantId={restaurantId} />}
+
+      {/* Controle de Estoque (chave geral por restaurante) */}
+      {restaurantId && <StockSettingsCard restaurantId={restaurantId} />}
 
       {/* Gerenciar Promoções */}
       <Card>

@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { ProdutosList } from "@/components/produtos/ProdutosList";
 import { ProdutosFiltro } from "@/components/produtos/ProdutosFiltro";
 import { AddProdutoDialog } from "@/components/produtos/AddProdutoDialog";
+import { useStockSettings } from "@/hooks/useStockSettings";
 import {
   ProdutosSortDirection,
   ProdutosSortKey,
@@ -91,6 +92,7 @@ const Produtos = () => {
     atualizarProduto,
     removerProduto,
     atualizarProdutosEmLote,
+    fetchProdutos,
   } = useProdutos(restaurantId, {
     busca: filtro,
     categoriaId: categoriaFiltrada,
@@ -103,6 +105,7 @@ const Produtos = () => {
 
   const { categorias, loading: loadingCategorias } = useCategorias();
   const canManageProducts = hasPermission("products_manage");
+  const { enabled: stockControlEnabled } = useStockSettings(restaurantId);
   const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
   const primeiraLinha = total === 0 ? 0 : (pagina - 1) * ITENS_POR_PAGINA + 1;
   const ultimaLinha = Math.min(pagina * ITENS_POR_PAGINA, total);
@@ -355,6 +358,8 @@ const Produtos = () => {
               onSelectAllVisible={handleSelectAllVisible}
               isUpdating={isUpdating}
               isDeleting={isDeleting}
+              stockControlEnabled={stockControlEnabled}
+              onStockChanged={fetchProdutos}
             />
           )}
         </CardContent>
