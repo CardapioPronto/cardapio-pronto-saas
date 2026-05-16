@@ -15,8 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   salvarPedido, 
   listarPedidos, 
-  alterarStatusPedido 
+  alterarStatusPedido,
 } from "../services/pedidoService";
+import type { SalvarPedidoResult } from "../services/pedidoService";
 import {
   getDateRangeByPeriod,
   getInitialHistoricoFiltros,
@@ -46,6 +47,13 @@ export const usePDVHook = (restaurantId: string) => {
     pedidosAbertos: 0,
     cancelados: 0,
   });
+
+  // Estado do diálogo de "vender mesmo assim sem saldo".
+  const [stockOverride, setStockOverride] = useState<{
+    open: boolean;
+    errorMessage: string;
+    pendingClient: DadosClientePedido;
+  }>({ open: false, errorMessage: "", pendingClient: {} });
 
   const trocarTipoPedido = useCallback((novoTipo: "mesa" | "balcao") => {
     setTipoPedido(novoTipo);
@@ -202,6 +210,44 @@ export const usePDVHook = (restaurantId: string) => {
     0
   );
 
+  const submitPedido = useCallback(
+    async (
+      dadosCliente: DadosClientePedido,
+      override?: { allowNegative: boolean; reason: string },
+    ): Promise<SalvarPedidoResult> => {
+      const mesa = tipoPedido === "mesa" && mesaSelecionada ? `Mesa ${mesaSelecionada}` : "Balcão";
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return { success: false };
+      }
+
+      const nomeClientePedido = dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined;
+      const telefoneClientePedido = dadosCliente.telefoneCliente?.trim() || undefined;
+
+      return salvarPedido(
+        restaurantId,
+        mesa,
+        itensPedido,
+        totalPedido,
+        user.id,
+        nomeClientePedido,
+        telefoneClientePedido,
+        tipoPedido === "mesa" ? mesaSelecionada : undefined,
+        override,
+      );
+    },
+    [
+      itensPedido,
+      mesaSelecionada,
+      nomeCliente,
+      restaurantId,
+      tipoPedido,
+      totalPedido,
+    ],
+  );
+
   // Finalizar pedido
   const finalizarPedido = async (dadosCliente: DadosClientePedido = {}) => {
     if (itensPedido.length === 0) {
@@ -222,30 +268,20 @@ export const usePDVHook = (restaurantId: string) => {
     
     try {
       setSalvandoPedido(true);
-      const mesa = tipoPedido === "mesa" && mesaSelecionada ? `Mesa ${mesaSelecionada}` : "Balcão";
-      
-      // Obter o ID do usuário atual da sessão
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("Usuário não autenticado");
+
+      const result = await submitPedido(dadosCliente);
+
+      if (!result.success && result.needsStockOverride) {
+        // Sinal do back: estoque insuficiente. Abre o diálogo de override
+        // mantendo o pedido na tela; o caller (PDV) decide se confirma.
+        setStockOverride({
+          open: true,
+          errorMessage: result.errorMessage ?? "Estoque insuficiente.",
+          pendingClient: dadosCliente,
+        });
         return false;
       }
 
-      const nomeClientePedido = dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined;
-      const telefoneClientePedido = dadosCliente.telefoneCliente?.trim() || undefined;
-      
-      const result = await salvarPedido(
-        restaurantId,
-        mesa,
-        itensPedido,
-        totalPedido,
-        user.id, // ID do funcionário/usuário logado
-        nomeClientePedido,
-        telefoneClientePedido,
-        tipoPedido === "mesa" ? mesaSelecionada : undefined
-      );
-      
       if (result.success) {
         setItensPedido([]);
         setNomeCliente("");
@@ -262,6 +298,34 @@ export const usePDVHook = (restaurantId: string) => {
     } finally {
       setSalvandoPedido(false);
     }
+  };
+
+  const confirmarOverrideEstoque = async (reason: string) => {
+    try {
+      setSalvandoPedido(true);
+      const result = await submitPedido(stockOverride.pendingClient, {
+        allowNegative: true,
+        reason,
+      });
+      if (result.success) {
+        setStockOverride({ open: false, errorMessage: "", pendingClient: {} });
+        setItensPedido([]);
+        setNomeCliente("");
+        setMesaSelecionada("");
+        setVisualizacaoAtiva("historico");
+        await carregarHistoricoPedidos();
+        return true;
+      }
+      // Se ainda assim falhou (ex.: usuário sem permissão), o salvarPedido já
+      // jogou um toast com a mensagem real.
+      return false;
+    } finally {
+      setSalvandoPedido(false);
+    }
+  };
+
+  const cancelarOverrideEstoque = () => {
+    setStockOverride({ open: false, errorMessage: "", pendingClient: {} });
   };
 
   // Mudar status do pedido
@@ -317,6 +381,9 @@ export const usePDVHook = (restaurantId: string) => {
     handleAlterarStatusPedido,
     carregarHistoricoPedidos,
     nomeCliente,
-    setNomeCliente
+    setNomeCliente,
+    stockOverride,
+    confirmarOverrideEstoque,
+    cancelarOverrideEstoque,
   };
 };

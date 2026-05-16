@@ -84,7 +84,7 @@ export const ElegantTheme = ({ data }: ElegantThemeProps) => {
                 .map(product => (
                 <Card 
                   key={product.id} 
-                  className={`theme-card border-0 ${theme.borderRadius} overflow-hidden`}
+                  className={`theme-card border-0 ${theme.borderRadius} overflow-hidden ${product.is_sold_out ? 'opacity-70' : ''}`}
                   style={{ backgroundColor: theme.colors.accent }}
                 >
                   <CardContent className="p-0">
@@ -106,6 +106,11 @@ export const ElegantTheme = ({ data }: ElegantThemeProps) => {
                             style={{ color: theme.colors.primary }}
                           >
                             {product.name}
+                            {product.is_sold_out && (
+                              <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wide bg-zinc-800 text-white px-2 py-0.5 rounded-full">
+                                Esgotado
+                              </span>
+                            )}
                           </h3>
                           
                           {product.description && (

@@ -195,6 +195,7 @@ const DeliveryLayout = ({ data }: Props) => {
                           price: p.price,
                           description: p.description,
                           image_url: p.image_url,
+                          is_sold_out: p.is_sold_out,
                           promotion: p.promotion
                             ? {
                                 id: p.promotion.id,
@@ -321,6 +322,7 @@ const ProductCard = ({
 }) => {
   const promotion = product.promotion;
   const finalPrice = promotion?.final_price ?? product.price;
+  const isSoldOut = Boolean(product.is_sold_out);
   const promoLabel = promotion
     ? promotion.discount_type === 'percentage'
       ? `${promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
@@ -328,13 +330,18 @@ const ProductCard = ({
     : null;
 
   return (
-    <div className="bg-card rounded-xl p-3 flex gap-3 shadow-sm hover:shadow-md transition-shadow relative">
+    <div className={`bg-card rounded-xl p-3 flex gap-3 shadow-sm transition-shadow relative ${isSoldOut ? 'opacity-75' : 'hover:shadow-md'}`}>
       {promoLabel && (
         <span
           className="absolute -top-2 left-3 text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full shadow"
           style={{ backgroundColor: primary }}
         >
           {promoLabel}
+        </span>
+      )}
+      {isSoldOut && (
+        <span className="absolute -top-2 right-3 text-[10px] font-bold uppercase tracking-wide bg-zinc-800 text-white px-2 py-0.5 rounded-full shadow">
+          Esgotado
         </span>
       )}
       <div className="flex-1 min-w-0">
@@ -361,11 +368,12 @@ const ProductCard = ({
           </div>
           <button
             onClick={onAdd}
-            className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:opacity-90 transition"
-            style={{ backgroundColor: primary }}
+            disabled={isSoldOut}
+            className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:opacity-90 transition disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ backgroundColor: isSoldOut ? '#3f3f46' : primary }}
           >
-            <Plus className="h-3.5 w-3.5" />
-            Adicionar
+            {!isSoldOut && <Plus className="h-3.5 w-3.5" />}
+            {isSoldOut ? 'Esgotado' : 'Adicionar'}
           </button>
         </div>
       </div>

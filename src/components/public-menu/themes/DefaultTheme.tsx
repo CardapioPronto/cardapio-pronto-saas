@@ -50,7 +50,7 @@ export const DefaultTheme = ({ data }: DefaultThemeProps) => {
               {category.products
                 .filter(product => product.available)
                 .map(product => (
-                <Card key={product.id} className={`theme-card ${theme.borderRadius}`}>
+                <Card key={product.id} className={`theme-card ${theme.borderRadius} ${product.is_sold_out ? 'opacity-70' : ''}`}>
                   <CardContent className={theme.spacing.card}>
                     <div className="flex gap-3">
                       {/* Imagem do produto */}
@@ -68,6 +68,11 @@ export const DefaultTheme = ({ data }: DefaultThemeProps) => {
                           <div className="flex-1">
                             <h3 className="font-bold theme-heading flex items-center gap-2">
                               {product.name}
+                              {product.is_sold_out && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide bg-zinc-800 text-white px-2 py-0.5 rounded-full">
+                                  Esgotado
+                                </span>
+                              )}
                               {product.promotion && (
                                 <span
                                   className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full"

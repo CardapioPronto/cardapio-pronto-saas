@@ -329,9 +329,11 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
 
 **Objetivo:** cliente não finalize compra impossível nem veja item “disponível” quando zerado (conforme política).
 
-- [ ] Ao montar dados públicos (**`src/services/menuThemeService.ts`**, tipos em **`src/types/menuTheme.ts`**): expor flag derivada (ex.: esgotado) quando `stock_tracking_enabled` e quantidade insuficiente — sem vazar dados sensíveis no payload público se política de privacidade exigir ocultar número exato.
-- [ ] Componentes de tema / modal de item (**`src/components/public-menu/themes/*`**, **`AddItemModal`**): UX **“Esgotado”** ou ocultar — decisão fixada no Bloco A.
-- [ ] Garantir condição de corrida: validação final **na RPC** `create_public_menu_order` (fonte da verdade).
+- [x] Ao montar dados públicos (**`src/services/menuThemeService.ts`**, tipos em **`src/types/menuTheme.ts`**): o serviço busca `stock_tracking_enabled`/`stock_quantity` apenas para derivar `is_sold_out`, e retorna ao cliente somente a flag booleana — sem vazar saldo numérico.
+- [x] Componentes de tema / modal de item (**`src/components/public-menu/themes/*`**, **`AddItemModal`**): UX **“Esgotado”** exibida nos temas; no tema operacional de delivery, o botão “Adicionar” fica bloqueado e o modal também impede confirmação defensivamente.
+- [x] Garantir condição de corrida: validação final continua **na RPC** `create_public_menu_order` (fonte da verdade). A flag pública é apenas UX/antecipação.
+
+**Verificação:** `npx tsc --noEmit -p tsconfig.app.json` ✅ · `npm run lint:src` ✅ · `npx vitest run` (29/29) ✅.
 
 ---
 
@@ -339,10 +341,14 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
 
 **Objetivo:** paridade com menu público + override controlado.
 
-- [ ] PDV (`src/pages/PDVOnline.tsx`) e `salvarPedido` em `src/features/pdv/services/pedidoService.ts`: tratar erro de estoque com toast amigável usando a mensagem da RPC.
-- [ ] Quando a RPC bloquear por falta de saldo, exibir diálogo com opção “Vender mesmo assim (registrar saída excepcional)” **apenas** se o usuário tiver `products_manage`. Confirmação envia o pedido novamente com `allow_negative_override: true` + `reason` obrigatório.
-- [ ] Histórico / mudança de status: `alterarStatusPedido` → `update_order_status`; UI deve mostrar erro específico de “não foi possível reabrir: saldo insuficiente em X” quando a reabertura falhar (ver Bloco D3).
-- [ ] Validação otimista no cliente (mostrar “Esgotado” no card do produto no PDV) — **nunca** substitui a checagem na RPC.
+- [x] PDV (`src/pages/PDV.tsx`) + `salvarPedido` em `src/features/pdv/services/pedidoService.ts`: erros de estoque detectados por regex na mensagem da RPC (`Estoque insuficiente…`, permissão/motivo de override) retornam `needsStockOverride` **sem** toast genérico; demais erros seguem com toast.
+- [x] Quando `needsStockOverride`, `usePDVHook` abre `OverrideEstoqueDialog` (`src/features/pdv/components/OverrideEstoqueDialog.tsx`). Botão “Vender mesmo assim” só aparece com `hasPermission('products_manage')`; confirmação chama `create_pos_order` com `allow_negative_override: true` + `negative_override_reason` (motivo obrigatório na UI).
+- [x] Histórico / mudança de status: `alterarStatusPedido` → `update_order_status`; falha na reabertura (`pendente`) por falta de saldo exibe toast explícito com o texto da RPC (`Não foi possível reabrir o pedido: …`). Sucesso de reabertura / estorno usa toasts distintos quando o payload inclui `reopened` / `reverted_stock`.
+- [ ] Validação otimista no cliente (mostrar “Esgotado” no card do produto no PDV) — **nunca** substitui a checagem na RPC *(opcional pós-MVP)*.
+
+**Verificação:** `npx tsc --noEmit -p tsconfig.app.json` ✅ · `npm run lint:src` ✅ · `npx vitest run` (29/29) ✅.
+
+**Nota:** `src/pages/PDVOnline.tsx` é página de marketing (landing); o fluxo operacional do PDV é `PDV.tsx`.
 
 ---
 
@@ -350,20 +356,26 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
 
 **Objetivo:** não divergir estoque entre canais — com política realista para dados incompletos.
 
-- [ ] **H0 — Documentar limitação atual:** `supabase/functions/ifood-integration/index.ts` grava itens com **`product_id` nulo** → baixa automática por produto **não aplica** até haver mapeamento.
-- [ ] **H1 — MVP operacional:** estoque interno continua verdadeiro para cardápio + PDV; pedidos iFood entram como hoje e podem ser reconciliados por **ajuste manual** (Bloco E) ou ignorados no relatório de consumo por SKU.
-- [ ] **H2 — Evolução:** tabela ou campo de **mapeamento** (SKU/código iFood → `products.id`) na importação; só então aplicar mesma RPC de baixa ou fatiar movimento na Edge Function com **service role** e função interna idempotente (`ifood_id` + índice da linha).
-- [ ] Quando status iFood → cancelado já refletir em `orders.status`/`update_order_status`, acoplar **estorno** aos mesmos ganhos do Bloco D; se hoje só atualizar texto/status parcial, documentar gap antes de prometer paridade.
+- [x] **H0 — Documentar limitação atual:** `supabase/functions/ifood-integration/index.ts` grava itens com **`product_id` nulo** → baixa automática por produto **não aplica** até haver mapeamento. Ver `docs/INTEGRACOES_ESTOQUE.md`.
+- [x] **H1 — MVP operacional:** estoque interno continua verdadeiro para cardápio + PDV; pedidos iFood entram como hoje e podem ser reconciliados por **ajuste manual** (Bloco E) ou ignorados no relatório de consumo por SKU.
+- [x] **Instrumentação mínima:** a Edge Function do iFood registra em log quantos itens foram importados sem vínculo de produto (`unmappedItems`), preservando comportamento atual.
+- [x] **H2 — Evolução documentada:** tabela/campo de **mapeamento** (SKU/código iFood → `products.id`) na importação; só então aplicar mesma RPC de baixa ou fatiar movimento na Edge Function com **service role** e função interna idempotente (`ifood_id` + índice da linha).
+- [x] Quando status iFood → cancelado já refletir em `orders.status`/`update_order_status`, acoplar **estorno** aos mesmos ganhos do Bloco D; hoje `updateOrderStatusInIfood` ainda não está habilitado, então a paridade de cancelamento com estoque fica como fase posterior ao mapeamento.
 - [ ] (Opcional) Pausar item no marketplace quando zerado — depende da API iFood e do catálogo vinculado.
+
+**Verificação:** documentação + log sem alteração de contrato; `npx tsc --noEmit -p tsconfig.app.json` ✅ · `npm run lint:src` ✅.
 
 ---
 
 ## Bloco I — Relatórios, alertas, polish
 
-- [ ] Relatório ou widget: produtos **abaixo do mínimo** (pode integrar **`src/pages/GestaoCompleta`** / dashboard existente ou RPCs em `supabase/migrations/20260515091500_dashboard_metrics_rpc.sql` — avaliar impacto de performance).
+- [x] Relatório/widget inicial: `src/pages/Produtos.tsx` agora exibe indicador **Baixo estoque** e aba dedicada. O cálculo considera produtos com tracking ativo e saldo zerado ou `stock_quantity <= stock_min_quantity`.
+- [x] Filtro operacional em `src/hooks/useProdutos.ts`: aba **Baixo estoque** pagina apenas produtos que exigem atenção, reaproveitando busca/categoria/ordenação da lista.
 - [ ] Exportação simples (CSV) de movimentos — se aceito no checklist de decisões.
 - [ ] Dashboard opcional: consumo por período (derivado de `stock_movements` tipo sale).
-- [ ] Empty states e textos de ajuda na UI.
+- [x] Empty states/textos de ajuda básicos seguem o `ProdutosList`; baixo estoque sem resultados reutiliza o estado “Nenhum produto encontrado”.
+
+**Verificação:** `npx tsc --noEmit -p tsconfig.app.json` ✅ · `npm run lint:src` ✅ · `npx vitest run` (29/29) ✅.
 
 ---
 
@@ -408,4 +420,4 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
 
 ---
 
-**Última atualização:** 2026-05-15 — Bloco A fechado, Blocos B–G detalhados ao modelo único de baixa, branch `controle-estoque-opcional` criada. Marque os checkboxes nos demais blocos conforme avançar.
+**Última atualização:** 2026-05-16 — Blocos F, G, H e recorte inicial do I implementados/documentados; pendem QA/manual e itens opcionais de relatório/exportação.

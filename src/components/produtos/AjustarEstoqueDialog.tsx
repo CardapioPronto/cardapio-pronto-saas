@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Product } from "@/types";
+import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +80,7 @@ export const AjustarEstoqueDialog = ({
 
         setSubmitting(true);
         try {
-            const args: Record<string, unknown> = {
+            const args: Record<string, Json | undefined> = {
                 restaurant_id: restaurantId,
                 product_id: produto.id,
                 movement_type: type,
@@ -92,7 +93,7 @@ export const AjustarEstoqueDialog = ({
                 args.quantity = numericQuantity;
             }
 
-            const { error } = await supabase.rpc("adjust_stock", { p_args: args });
+            const { error } = await supabase.rpc("adjust_stock", { p_args: args as Json });
             if (error) {
                 throw error;
             }

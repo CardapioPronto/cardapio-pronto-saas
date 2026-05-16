@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { formatProductFromSupabase } from "@/utils/formatProductFromSupabase";
 import { toast } from "@/components/ui/sonner-toast";
 
-export type ProdutosTab = "todos" | "disponiveis" | "indisponiveis" | "sem-imagem" | "sem-categoria";
+export type ProdutosTab = "todos" | "disponiveis" | "indisponiveis" | "sem-imagem" | "sem-categoria" | "baixo-estoque";
 export type ProdutosSortKey = "created_at" | "name" | "price" | "category" | "available";
 export type ProdutosSortDirection = "asc" | "desc";
 
@@ -13,6 +13,7 @@ export interface ProdutosIndicadores {
   disponiveis: number;
   indisponiveis: number;
   semImagem: number;
+  baixoEstoque: number;
 }
 
 interface UseProdutosOptions {
@@ -109,6 +110,28 @@ const removeProductImage = async (imageUrl?: string | null, storagePath?: string
 const sanitizeSearch = (value: string) =>
   value.replace(/[%_,()]/g, " ").trim();
 
+const isLowStockProduct = (product: Product) => {
+  if (!product.stock_tracking_enabled) return false;
+
+  const quantity = product.stock_quantity ?? 0;
+  const minimum = product.stock_min_quantity ?? null;
+
+  return quantity <= 0 || (minimum !== null && quantity <= minimum);
+};
+
+const isLowStockRow = (row: {
+  stock_tracking_enabled?: boolean | null;
+  stock_quantity?: number | null;
+  stock_min_quantity?: number | null;
+}) => {
+  if (!row.stock_tracking_enabled) return false;
+
+  const quantity = Number(row.stock_quantity ?? 0);
+  const minimum = row.stock_min_quantity ?? null;
+
+  return quantity <= 0 || (minimum !== null && quantity <= Number(minimum));
+};
+
 const withProductAuditFields = <T extends Record<string, unknown>>(
   payload: T,
   auditFieldsAvailable: boolean,
@@ -148,6 +171,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
     disponiveis: 0,
     indisponiveis: 0,
     semImagem: 0,
+    baixoEstoque: 0,
   });
   const productAuditColumnsAvailableRef = useRef(true);
   
@@ -177,9 +201,20 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
 
   const fetchIndicadores = useCallback(async () => {
     if (!restaurantId) {
-      setIndicadores({ total: 0, disponiveis: 0, indisponiveis: 0, semImagem: 0 });
+      setIndicadores({ total: 0, disponiveis: 0, indisponiveis: 0, semImagem: 0, baixoEstoque: 0 });
       return;
     }
+
+    type LowStockQueryResult = {
+      data: Array<{
+        id: string;
+        stock_tracking_enabled: boolean | null;
+        stock_quantity: number | null;
+        stock_min_quantity: number | null;
+      }> | null;
+      error: unknown;
+    };
+    interface LowStockQuery extends ProductFilterQuery<LowStockQuery>, PromiseLike<LowStockQueryResult> {}
 
     const makeCountQuery = () => applyCommonFilters(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,11 +227,17 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       disponiveisResult,
       indisponiveisResult,
       semImagemResult,
+      baixoEstoqueResult,
     ] = await Promise.all([
       makeCountQuery(),
       makeCountQuery().eq("available", true),
       makeCountQuery().eq("available", false),
       makeCountQuery().or("image_url.is.null,image_url.eq."),
+      applyCommonFilters(
+        supabase
+          .from("products")
+          .select("id, stock_tracking_enabled, stock_quantity, stock_min_quantity") as unknown as LowStockQuery
+      ),
     ]);
 
     const countError = totalResult.error || disponiveisResult.error || indisponiveisResult.error || semImagemResult.error;
@@ -210,6 +251,9 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       disponiveis: disponiveisResult.count || 0,
       indisponiveis: indisponiveisResult.count || 0,
       semImagem: semImagemResult.count || 0,
+      baixoEstoque: baixoEstoqueResult.error
+        ? 0
+        : (baixoEstoqueResult.data || []).filter(isLowStockRow).length,
     });
   }, [restaurantId, applyCommonFilters]);
 
@@ -232,7 +276,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       const to = from + itensPorPagina - 1;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const buildQuery = (selectClause: string): any => {
+      const buildQuery = (selectClause: string, withRange = true): any => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let nextQuery: any = supabase
           .from("products")
@@ -259,16 +303,18 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
           nextQuery = nextQuery.order(sortKey, { ascending, nullsFirst: false });
         }
 
-        return nextQuery.range(from, to);
+        return withRange ? nextQuery.range(from, to) : nextQuery;
       };
 
+      const isLowStockTab = options.tab === "baixo-estoque";
       let { data, error, count } = await buildQuery(
-        productAuditColumnsAvailableRef.current ? PRODUCT_SELECT : LEGACY_PRODUCT_SELECT
+        productAuditColumnsAvailableRef.current ? PRODUCT_SELECT : LEGACY_PRODUCT_SELECT,
+        !isLowStockTab,
       );
 
       if (error && isMissingColumnError(error)) {
         productAuditColumnsAvailableRef.current = false;
-        ({ data, error, count } = await buildQuery(LEGACY_PRODUCT_SELECT));
+        ({ data, error, count } = await buildQuery(LEGACY_PRODUCT_SELECT, !isLowStockTab));
       }
 
       if (error) {
@@ -277,8 +323,15 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         setProdutos([]);
         setTotal(0);
       } else if (data) {
-        setProdutos(formatProductFromSupabase(data as never));
-        setTotal(count || 0);
+        const formattedProducts = formatProductFromSupabase(data as never);
+        if (isLowStockTab) {
+          const lowStockProducts = formattedProducts.filter(isLowStockProduct);
+          setProdutos(lowStockProducts.slice(from, to + 1));
+          setTotal(lowStockProducts.length);
+        } else {
+          setProdutos(formattedProducts);
+          setTotal(count || 0);
+        }
       } else {
         setProdutos([]);
         setTotal(0);

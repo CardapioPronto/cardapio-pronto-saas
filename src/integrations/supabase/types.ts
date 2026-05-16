@@ -3157,6 +3157,12 @@ export type Database = {
         Args: { ignored_fields?: string[]; new_data: Json; old_data: Json }
         Returns: Json
       }
+      adjust_stock: { Args: { p_args: Json }; Returns: Json }
+      apply_stock_for_order: {
+        Args: { p_order_id: string; p_allow_negative: boolean }
+        Returns: Json
+      }
+      apply_stock_movement: { Args: { p_args: Json }; Returns: Json }
       can_manage_restaurant_employees: {
         Args: { target_restaurant_id: string }
         Returns: boolean
@@ -3288,6 +3294,7 @@ export type Database = {
         Returns: string
       }
       repair_missing_restaurant_subscriptions: { Args: never; Returns: number }
+      revert_stock_for_order: { Args: { p_order_id: string }; Returns: Json }
       update_order_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: Json

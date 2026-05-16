@@ -63,7 +63,7 @@ export const ModernTheme = ({ data }: ModernThemeProps) => {
                 .map(product => (
                 <Card 
                   key={product.id} 
-                  className={`theme-card ${theme.borderRadius} hover:scale-105 transition-transform overflow-hidden`}
+                  className={`theme-card ${theme.borderRadius} transition-transform overflow-hidden ${product.is_sold_out ? 'opacity-70' : 'hover:scale-105'}`}
                 >
                   <CardContent className="p-0">
                     <div className="flex">
@@ -82,6 +82,11 @@ export const ModernTheme = ({ data }: ModernThemeProps) => {
                           <div className="flex-1">
                             <h3 className="font-bold text-lg theme-heading mb-1 flex items-center gap-2">
                               {product.name}
+                              {product.is_sold_out && (
+                                <Badge className="text-[10px] font-bold uppercase tracking-wide border-0 bg-zinc-800 text-white">
+                                  Esgotado
+                                </Badge>
+                              )}
                               {product.promotion && (
                                 <Badge
                                   className="text-[10px] font-bold uppercase tracking-wide border-0"

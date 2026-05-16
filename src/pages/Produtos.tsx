@@ -48,6 +48,7 @@ const tabs: Array<{ value: ProdutosTab; label: string }> = [
   { value: "todos", label: "Todos" },
   { value: "disponiveis", label: "Disponíveis" },
   { value: "indisponiveis", label: "Indisponíveis" },
+  { value: "baixo-estoque", label: "Baixo estoque" },
   { value: "sem-imagem", label: "Sem imagem" },
   { value: "sem-categoria", label: "Sem categoria" },
 ];
@@ -210,7 +211,7 @@ const Produtos = () => {
             categorias={categorias}
             loadingCategorias={loadingCategorias}
           />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <div className="rounded-md border px-3 py-2">
               <div className="text-xs text-muted-foreground">Total</div>
               <div className="text-lg font-semibold">{indicadores.total}</div>
@@ -227,6 +228,18 @@ const Produtos = () => {
               <div className="text-xs text-muted-foreground">Sem imagem</div>
               <div className="text-lg font-semibold">{indicadores.semImagem}</div>
             </div>
+            <button
+              type="button"
+              className="rounded-md border px-3 py-2 text-left transition hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
+              onClick={() => setTabAtiva("baixo-estoque")}
+              disabled={!stockControlEnabled && indicadores.baixoEstoque === 0}
+              title="Ver produtos com estoque zerado ou abaixo do mínimo"
+            >
+              <div className="text-xs text-muted-foreground">Baixo estoque</div>
+              <div className={indicadores.baixoEstoque > 0 ? "text-lg font-semibold text-amber-700" : "text-lg font-semibold"}>
+                {indicadores.baixoEstoque}
+              </div>
+            </button>
           </div>
         </div>
 

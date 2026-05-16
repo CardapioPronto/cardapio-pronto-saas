@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import {
   HistoricoPedidosResumo,
   HistoricoPedidosResultado,
@@ -85,6 +86,35 @@ const parseResumoRpc = (raw: unknown): HistoricoPedidosResumo => {
   };
 };
 
+/**
+ * Resultado de `salvarPedido`. Quando `needsStockOverride` é true, a RPC
+ * recusou o pedido por falta de saldo e o caller (PDV) deve abrir o
+ * diálogo de "vender mesmo assim". `errorMessage` traz a mensagem
+ * humanizada vinda do servidor (ex.: 'Estoque insuficiente para "X":
+ * disponível 0, solicitado 2.').
+ */
+export interface SalvarPedidoOverrideOptions {
+  allowNegative: boolean;
+  reason: string;
+}
+
+export interface SalvarPedidoResult {
+  success: boolean;
+  pedido?: unknown;
+  error?: unknown;
+  needsStockOverride?: boolean;
+  errorMessage?: string;
+}
+
+const STOCK_ERROR_PATTERNS = [
+  /^Estoque insuficiente/i,
+  /Sem permissão para vender sem saldo/i,
+  /Informe o motivo da venda sem saldo/i,
+];
+
+const isStockShortageError = (message: string | undefined) =>
+  Boolean(message && STOCK_ERROR_PATTERNS.some((re) => re.test(message)));
+
 export async function salvarPedido(
   restaurantId: string,
   mesaOuBalcao: string,
@@ -93,8 +123,9 @@ export async function salvarPedido(
   _employeeId: string,
   nomeCliente?: string,
   telefoneCliente?: string,
-  mesaId?: string
-) {
+  mesaId?: string,
+  override?: SalvarPedidoOverrideOptions,
+): Promise<SalvarPedidoResult> {
   try {
     // Determinar se é mesa ou balcão
     const isMesa = mesaOuBalcao.startsWith('Mesa');
@@ -104,26 +135,51 @@ export async function salvarPedido(
       toast.error('Selecione uma mesa válida para finalizar o pedido.');
       return { success: false, error: new Error('Mesa não selecionada') };
     }
-    
+
+    const payload: Record<string, Json | undefined> = {
+      restaurant_id: restaurantId,
+      order_type: isMesa ? 'mesa' : 'balcao',
+      table_id: tableId,
+      customer_name: nomeCliente || undefined,
+      customer_phone: telefoneCliente || undefined,
+      items: itensPedido.map((item) => ({
+        product_id: item.produto.id,
+        quantity: item.quantidade,
+        observations: item.observacao || undefined,
+      })),
+    };
+
+    if (override?.allowNegative) {
+      payload.allow_negative_override = true;
+      payload.negative_override_reason = override.reason;
+    }
+
     const { data: order, error: orderError } = await supabase.rpc('create_pos_order', {
-      payload: {
-        restaurant_id: restaurantId,
-        order_type: isMesa ? 'mesa' : 'balcao',
-        table_id: tableId,
-        customer_name: nomeCliente || undefined,
-        customer_phone: telefoneCliente || undefined,
-        items: itensPedido.map((item) => ({
-          product_id: item.produto.id,
-          quantity: item.quantidade,
-          observations: item.observacao || undefined,
-        })),
-      },
+      payload: payload as Json,
     });
 
     if (orderError || !order) {
+      const errorMessage = orderError?.message ?? '';
       console.error('Erro ao criar pedido:', orderError);
-      toast.error('Erro ao salvar o pedido. Por favor, tente novamente.');
-      return { success: false, error: orderError || new Error('Pedido não retornado') };
+
+      // Quando a RPC bloqueia por falta de saldo, devolvemos um sinal
+      // específico para o caller abrir o diálogo de override em vez de
+      // já jogar um toast genérico.
+      if (!override?.allowNegative && isStockShortageError(errorMessage)) {
+        return {
+          success: false,
+          error: orderError,
+          needsStockOverride: true,
+          errorMessage,
+        };
+      }
+
+      toast.error(errorMessage || 'Erro ao salvar o pedido. Por favor, tente novamente.');
+      return {
+        success: false,
+        error: orderError || new Error('Pedido não retornado'),
+        errorMessage,
+      };
     }
 
     if (isMesa && mesaId) {
@@ -143,7 +199,11 @@ export async function salvarPedido(
       }
     }
 
-    toast.success('Pedido finalizado com sucesso!');
+    toast.success(
+      override?.allowNegative
+        ? 'Pedido finalizado (venda autorizada sem saldo).'
+        : 'Pedido finalizado com sucesso!',
+    );
     return { success: true, pedido: order };
   } catch (error) {
     console.error('Erro ao processar pedido:', error);
@@ -267,17 +327,34 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoSt
     });
 
     if (error) {
+      const errorMessage = error.message ?? '';
       console.error('Erro ao alterar status do pedido:', error);
-      toast.error('Erro ao atualizar o status do pedido.');
+
+      // Reabertura bloqueada por estoque vem como "Estoque insuficiente
+      // para X: disponível Y, solicitado Z" do back. Mostra a mensagem
+      // direta — o usuário precisa entender qual produto falta.
+      if (isStockShortageError(errorMessage) && novoStatus === 'pendente') {
+        toast.error(
+          `Não foi possível reabrir o pedido: ${errorMessage}`,
+        );
+      } else {
+        toast.error(errorMessage || 'Erro ao atualizar o status do pedido.');
+      }
       return { success: false, error };
     }
 
-    const updatedRow = data as { restaurant_id?: string; table_id?: string } | null;
+    const updatedRow = data as { restaurant_id?: string; table_id?: string; reopened?: boolean; reverted_stock?: boolean } | null;
     if (updatedRow?.restaurant_id && updatedRow?.table_id) {
       notifyMesasChanged(String(updatedRow.restaurant_id));
     }
 
-    toast.success(`Status do pedido atualizado para ${novoStatus}`);
+    if (updatedRow?.reopened) {
+      toast.success('Pedido reaberto. Saldo de estoque foi re-aplicado.');
+    } else if (updatedRow?.reverted_stock) {
+      toast.success(`Status do pedido atualizado para ${novoStatus}. Estoque estornado.`);
+    } else {
+      toast.success(`Status do pedido atualizado para ${novoStatus}`);
+    }
     return { success: true, data };
   } catch (error) {
     console.error('Erro ao alterar status:', error);

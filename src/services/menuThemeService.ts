@@ -263,7 +263,7 @@ export const menuThemeService = {
 
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('id, name, description, price, image_url, available, category_id, order_position')
+        .select('id, name, description, price, image_url, available, category_id, order_position, stock_tracking_enabled, stock_quantity')
         .eq('restaurant_id', restaurant.id)
         .eq('available', true)
         .not('category_id', 'is', null)
@@ -308,15 +308,27 @@ export const menuThemeService = {
         .sort(sortMenuItems)
         .map(category => ({
           ...category,
-          products: (productsByCategory[category.id] || []).map(product => ({
-            ...product,
-            description: product.description || undefined,
-            image_url: product.image_url || undefined,
-            promotion: pickApplicablePromotion(
-              { id: product.id, price: Number(product.price) || 0, category_id: product.category_id },
-              promotions,
-            ),
-          })),
+          products: (productsByCategory[category.id] || []).map(product => {
+            const price = Number(product.price) || 0;
+            const isSoldOut = Boolean(product.stock_tracking_enabled) && Number(product.stock_quantity ?? 0) <= 0;
+
+            // Não retornamos stock_quantity/stock_tracking_enabled no payload público.
+            return {
+              id: product.id,
+              name: product.name,
+              description: product.description || undefined,
+              price,
+              image_url: product.image_url || undefined,
+              available: product.available,
+              category_id: product.category_id || undefined,
+              order_position: product.order_position,
+              is_sold_out: isSoldOut,
+              promotion: pickApplicablePromotion(
+                { id: product.id, price, category_id: product.category_id },
+                promotions,
+              ),
+            };
+          }),
         }))
         .filter(cat => cat.products && cat.products.length > 0);
 

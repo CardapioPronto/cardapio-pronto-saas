@@ -5,6 +5,7 @@ import { ObservacaoModal } from "@/features/pdv/components/ObservacaoModal";
 import { HistoricoPedidos } from "@/features/pdv/components/HistoricoPedidos";
 import { NovoPedido } from "@/features/pdv/components/NovoPedido";
 import { PDVTabs } from "@/features/pdv/components/PDVTabs";
+import { OverrideEstoqueDialog } from "@/features/pdv/components/OverrideEstoqueDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
@@ -33,6 +34,7 @@ export default function PDV() {
   const canViewOrderHistory = hasPermission("orders_view");
   const canViewFinancials = hasPermission("orders_metrics_view");
   const canManageOrders = hasPermission("orders_manage");
+  const canOverrideStock = hasPermission("products_manage");
   
   // Usar o hook refatorado que contém toda a lógica
   const {
@@ -72,7 +74,10 @@ export default function PDV() {
     handleAlterarStatusPedido,
     carregarHistoricoPedidos,
     nomeCliente,
-    setNomeCliente
+    setNomeCliente,
+    stockOverride,
+    confirmarOverrideEstoque,
+    cancelarOverrideEstoque,
   } = usePDVHook(restaurantId);
 
   useEffect(() => {
@@ -266,6 +271,14 @@ export default function PDV() {
         setObservacaoAtual={setObservacaoAtual}
         confirmarAdicao={confirmarAdicao}
         cancelarAdicao={cancelarAdicao}
+      />
+
+      <OverrideEstoqueDialog
+        open={stockOverride.open}
+        errorMessage={stockOverride.errorMessage}
+        canOverride={canOverrideStock}
+        onCancel={cancelarOverrideEstoque}
+        onConfirm={confirmarOverrideEstoque}
       />
     </div>
   );

@@ -12,6 +12,7 @@ export interface AddItemModalProduct {
   price: number;
   description?: string;
   image_url?: string;
+  is_sold_out?: boolean;
   promotion?: {
     id: string;
     name: string;
@@ -47,6 +48,7 @@ export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Prop
   };
 
   const handleConfirm = () => {
+    if (product?.is_sold_out) return;
     onConfirm({ quantity, observations: observations.trim() || undefined });
     setQuantity(1);
     setObservations('');
@@ -57,6 +59,7 @@ export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Prop
   const finalUnitPrice = product.promotion?.final_price ?? product.price;
   const total = finalUnitPrice * quantity;
   const hasPromotion = !!product.promotion && product.promotion.unit_discount > 0;
+  const isSoldOut = Boolean(product.is_sold_out);
   const promotionLabel = product.promotion
     ? product.promotion.discount_type === 'percentage'
       ? `${product.promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
@@ -130,16 +133,23 @@ export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Prop
           </div>
         </div>
 
+        {isSoldOut && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Produto esgotado no momento. O restaurante já foi protegido contra novas vendas deste item.
+          </div>
+        )}
+
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
+            disabled={isSoldOut}
             className="text-white hover:opacity-90"
             style={{ backgroundColor: primaryColor }}
           >
-            Adicionar • {formatBRL(total)}
+            {isSoldOut ? 'Esgotado' : `Adicionar • ${formatBRL(total)}`}
           </Button>
         </DialogFooter>
       </DialogContent>

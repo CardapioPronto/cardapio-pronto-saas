@@ -69,6 +69,8 @@ export interface MenuData {
       price: number;
       image_url?: string;
       available: boolean;
+      /** Derivada no serviço público; não expõe saldo numérico. */
+      is_sold_out?: boolean;
       category_id?: string;
       order_position?: number | null;
       promotion?: PublicMenuPromotionApplied | null;

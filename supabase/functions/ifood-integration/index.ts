@@ -384,6 +384,15 @@ const importOrder = async (restaurantId: string, order: Record<string, unknown>)
   });
 
   if (items.length > 0) {
+    console.info("iFood order imported with unmapped stock items", {
+      restaurantId,
+      ifoodId,
+      orderId: inserted.id,
+      unmappedItems: items.length,
+    });
+  }
+
+  if (items.length > 0) {
     const { error: itemsError } = await admin.from("order_items").insert(items);
     if (itemsError) throw itemsError;
   }
