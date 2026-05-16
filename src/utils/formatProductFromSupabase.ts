@@ -19,6 +19,10 @@ type ProductSupabaseRow = {
     created_at?: string | null;
     updated_at?: string | null;
     category?: ProductCategoryRow | ProductCategoryRow[] | null;
+    stock_tracking_enabled?: boolean | null;
+    stock_quantity?: number | null;
+    stock_min_quantity?: number | null;
+    stock_is_fractional?: boolean | null;
 };
 
 export function formatProductFromSupabase(data: ProductSupabaseRow[]): Product[] {
@@ -38,5 +42,9 @@ export function formatProductFromSupabase(data: ProductSupabaseRow[]): Product[]
         created_at: item.created_at,
         updated_at: item.updated_at,
         category: Array.isArray(item.category) ? item.category[0] : item.category ?? null,
+        stock_tracking_enabled: item.stock_tracking_enabled ?? false,
+        stock_quantity: item.stock_quantity ?? 0,
+        stock_min_quantity: item.stock_min_quantity ?? null,
+        stock_is_fractional: item.stock_is_fractional ?? false,
     }));
 }

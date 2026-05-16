@@ -2075,6 +2075,10 @@ export type Database = {
           order_position: number | null
           price: number
           restaurant_id: string
+          stock_is_fractional: boolean
+          stock_min_quantity: number | null
+          stock_quantity: number
+          stock_tracking_enabled: boolean
           updated_at: string
           updated_by: string | null
         }
@@ -2093,6 +2097,10 @@ export type Database = {
           order_position?: number | null
           price: number
           restaurant_id: string
+          stock_is_fractional?: boolean
+          stock_min_quantity?: number | null
+          stock_quantity?: number
+          stock_tracking_enabled?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -2111,6 +2119,10 @@ export type Database = {
           order_position?: number | null
           price?: number
           restaurant_id?: string
+          stock_is_fractional?: boolean
+          stock_min_quantity?: number | null
+          stock_quantity?: number
+          stock_tracking_enabled?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -2372,6 +2384,7 @@ export type Database = {
           restaurant_id: string
           setting_key: string
           setting_value: Json
+          stock_control_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -2381,6 +2394,7 @@ export type Database = {
           restaurant_id: string
           setting_key: string
           setting_value: Json
+          stock_control_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -2390,6 +2404,7 @@ export type Database = {
           restaurant_id?: string
           setting_key?: string
           setting_value?: Json
+          stock_control_enabled?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -2458,6 +2473,80 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          idempotency_key: string | null
+          movement_type: string
+          notes: string | null
+          order_id: string | null
+          order_item_id: string | null
+          product_id: string
+          quantity_delta: number
+          reason: string | null
+          restaurant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          movement_type: string
+          notes?: string | null
+          order_id?: string | null
+          order_item_id?: string | null
+          product_id: string
+          quantity_delta: number
+          reason?: string | null
+          restaurant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          movement_type?: string
+          notes?: string | null
+          order_id?: string | null
+          order_item_id?: string | null
+          product_id?: string
+          quantity_delta?: number
+          reason?: string | null
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
