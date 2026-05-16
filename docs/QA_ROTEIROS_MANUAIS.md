@@ -45,6 +45,12 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [ ] Cardápio Digital → Produtos: criar produto com foto, descrição e
       preço; marcar como indisponível e verificar que some do cardápio
       público.
+- [ ] Cardápio Digital → Personalização: ativar **Controle de estoque**.
+      Em Produtos, criar um produto com controle ligado, saldo inicial e
+      estoque mínimo. Verificar badge de saldo e aba **Baixo estoque**.
+- [ ] Ajustar estoque manualmente (entrada, saída e inventário) com motivo
+      obrigatório. Abrir o histórico do produto e conferir o movimento
+      registrado.
 - [ ] Cardápio Digital → Promoções: criar promoção de produto, de
       categoria e de pedido. Verificar que aparecem no cardápio público
       com badge e preço riscado.
@@ -59,6 +65,11 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       ocupada manualmente e verificar status.
 - [ ] PDV: lançar pedido em mesa, finalizar, conferir aparição em
       Pedidos com `status = finalizado` e mesa volta a `livre`.
+- [ ] PDV: tentar vender produto com controle ligado e saldo insuficiente.
+      Usuário sem `products_manage` vê bloqueio sem opção de forçar venda.
+- [ ] PDV: com usuário gestor (`products_manage`), repetir venda sem saldo,
+      informar motivo no diálogo **Vender mesmo assim** e confirmar. O pedido
+      é criado e o histórico de estoque registra override/saída excepcional.
 
 ### 1.4 Assinatura
 
@@ -82,6 +93,9 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       pelo cardápio e confirmar que o bot/operador recebe a mensagem.
 - [ ] iFood: configurar credenciais (apenas se contratado). Verificar
       que pedidos do iFood aparecem na lista de pedidos com `source = ifood`.
+- [ ] iFood + estoque: pedido importado aparece normalmente, mas não baixa
+      estoque por SKU enquanto os itens vierem sem `product_id`. Validar que
+      a reconciliação manual por ajuste de estoque funciona.
 
 ---
 
@@ -104,6 +118,12 @@ Cobre o turno do operador no balcão/mesa.
 - [ ] Repetir com pagamento via cartão online (Pagar.me) → status fica
       `aguardando_pagamento`, muda para `pendente` quando webhook chega.
 - [ ] Cancelar pedido aberto → mesa volta para `livre`.
+- [ ] Cancelar pedido com produto rastreado → saldo retorna e histórico mostra
+      estorno.
+- [ ] Reabrir pedido cancelado/finalizado com saldo suficiente → pedido volta
+      para `pendente` e estoque é baixado novamente.
+- [ ] Reabrir pedido quando o saldo atual não comporta a venda → ação bloqueada
+      com mensagem específica do produto sem saldo.
 
 ### 2.3 Pedidos do dia
 
@@ -158,11 +178,15 @@ Pessoa que abre o link do restaurante no celular.
 - [ ] Banner do restaurante visível.
 - [ ] Categorias listadas na ordem configurada.
 - [ ] Produto promocional mostra badge e preço riscado.
+- [ ] Produto com estoque rastreado e saldo zero aparece como **Esgotado**,
+      sem expor quantidade numérica ao cliente.
 
 ### 4.2 Pedido
 
 - [ ] Abrir produto → modal mostra descrição, preço final, observação.
 - [ ] Adicionar ao carrinho → contador no topo atualiza.
+- [ ] Produto esgotado não permite clicar em **Adicionar** nem concluir a
+      inclusão pelo modal.
 - [ ] Ajustar quantidade no carrinho → total recalcula.
 - [ ] Aplicar cupom `BEMVINDO10` → desconto aplicado. Caso haja
       promoção de pedido ativa, mensagem "Cupom e promoção não somam"

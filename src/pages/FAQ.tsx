@@ -42,7 +42,11 @@ const faqs = [
   },
   {
     question: "É possível controlar o estoque dos produtos?",
-    answer: "Sim, todos os planos incluem controle básico de estoque. Nos planos superiores, oferecemos controle avançado com alertas e relatórios detalhados."
+    answer: "Sim. O controle de estoque é opcional: o restaurante pode ativar o módulo e escolher quais produtos serão rastreados. Produtos sem controle continuam vendendo normalmente; produtos rastreados podem aparecer como esgotados no cardápio e bloquear vendas sem saldo."
+  },
+  {
+    question: "Pedidos do iFood baixam estoque automaticamente?",
+    answer: "No MVP, pedidos importados do iFood não baixam estoque por produto enquanto não houver mapeamento entre o item do marketplace e o produto interno. A reconciliação pode ser feita por ajuste manual de estoque, e a baixa automática fica para a etapa de integração com SKU/mapeamento."
   },
   {
     question: "Como funciona o suporte técnico?",

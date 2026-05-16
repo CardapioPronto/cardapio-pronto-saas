@@ -251,12 +251,18 @@ Um por restaurante novo:
 
 - [ ] Plano Pubfy ativo (não trial).
 - [ ] Cardápio configurado: categorias, produtos com preço/foto, horários.
+- [ ] Se o restaurante usa estoque: ativar **Controle de estoque**, configurar
+      produtos rastreados, saldo inicial e mínimo; validar produto esgotado no
+      cardápio público e bloqueio/override no PDV.
 - [ ] Frete configurado (zonas/raio) ou desabilitado conscientemente.
 - [ ] Pagamento online testado (1 pedido real ≤ R$ 1, depois reembolsado).
 - [ ] Mesas/balcão cadastrados se for uso PDV.
 - [ ] Funcionários criados com permissões corretas.
 - [ ] Logo, cor e segmento do tema validados no cardápio público em mobile.
 - [ ] WhatsApp/n8n testado: pedido pelo cardápio gera mensagem ao restaurante.
+- [ ] Se usa iFood: confirmar que pedidos entram com `source = ifood` e que a
+      política de estoque foi explicada (MVP não baixa itens sem `product_id`;
+      reconciliação por ajuste manual).
 - [ ] Cliente de teste consegue acompanhar pedido pelo link em `PUBLIC_SITE_URL`.
 
 Após go-live, monitorar pelas primeiras 48h via Supabase Logs +

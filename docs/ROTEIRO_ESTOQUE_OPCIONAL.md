@@ -381,7 +381,7 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
 
 ## Bloco J — QA, documentação, go-live
 
-- [ ] Casos de teste manuais (roteirar em `docs/QA_ROTEIROS_MANUAIS.md`):
+- [x] Casos de teste manuais (roteirados em `docs/QA_ROTEIROS_MANUAIS.md`):
   - Venda feliz com tracking ligado / desligado.
   - Falta de estoque no cardápio público (ver “Esgotado”).
   - Falta de estoque no PDV + override por gestor com motivo.
@@ -391,9 +391,9 @@ Esta seção amarra o roteiro ao que o código e as migrations indicam **hoje**,
   - Pedido pago online: aguardando_pagamento mantém baixa; pagamento_falhou estorna.
   - Pedido iFood entra com `product_id` nulo → não baixa, não quebra; ajuste manual funciona.
   - Idempotência: rodar a mesma RPC duas vezes não duplica movimento.
-- [ ] Atualizar FAQ (`src/pages/FAQ.tsx`) e textos de planos (`src/components/landing/*` se mencionar estoque).
-- [ ] Atualizar `docs/IMPLEMENTATION_STATUS.md` movendo “Sistema de Estoque” para concluído.
-- [ ] Checklist de deploy: rodar migrations em staging, smoke test, monitorar Sentry; documentar em `docs/RUNBOOK_PRODUCAO.md`.
+- [x] Atualizar FAQ (`src/pages/FAQ.tsx`) com regra de estoque opcional e limitação iFood. Textos de planos/landing não prometem baixa automática de estoque.
+- [x] Atualizar `docs/IMPLEMENTATION_STATUS.md` movendo “Sistema de Estoque” para concluído.
+- [x] Checklist de deploy/smoke test documentado em `docs/RUNBOOK_PRODUCAO.md`.
 - [ ] Comunicação de release para usuários existentes (“ativa quando quiser por produto”).
 - [ ] Abrir o PR final da branch `controle-estoque-opcional` para `main` com este documento como changelog principal.
 

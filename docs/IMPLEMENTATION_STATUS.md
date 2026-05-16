@@ -17,6 +17,15 @@
 
 ---
 
+## ✅ Sistema de Estoque Opcional
+
+- **Status:** Implementado na branch `controle-estoque-opcional`.
+- **Escopo entregue:** schema/RPCs transacionais, UI administrativa, ajustes e histórico, bloqueio no cardápio público, override controlado no PDV, documentação para iFood e filtro de baixo estoque.
+- **Política MVP:** controle global opcional e tracking por produto; produtos sem tracking não afetam saldo. iFood não baixa estoque automaticamente enquanto itens externos vierem sem `product_id`.
+- **Documentação principal:** `docs/ROTEIRO_ESTOQUE_OPCIONAL.md` e `docs/INTEGRACOES_ESTOQUE.md`.
+
+---
+
 ## ✅ P0 - Tarefas Críticas (COMPLETO)
 
 ### 1. ✅ Visualizar cardápio digital públicamente
