@@ -9,6 +9,7 @@ interface SubscriptionOverviewProps {
   subscription: MySubscription | null;
   onManage: (subscription: MySubscription) => void;
   onViewPlans: () => void;
+  onActivatePlan?: () => void;
 }
 
 const BILLING_CYCLE_LABEL: Record<string, string> = {
@@ -44,6 +45,7 @@ const SubscriptionOverview = ({
   subscription,
   onManage,
   onViewPlans,
+  onActivatePlan,
 }: SubscriptionOverviewProps) => {
   if (!subscription) {
     return (
@@ -92,12 +94,32 @@ const SubscriptionOverview = ({
                 Dados vindos da tabela de assinaturas e sincronizados pelos eventos do Pagar.me.
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={() => onManage(subscription)}>
-              <Settings className="mr-2 h-4 w-4" />
-              Gerenciar
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {subscription.status === "trialing" && onActivatePlan && (
+                <Button
+                  size="sm"
+                  className="bg-green text-white hover:bg-green-dark"
+                  onClick={onActivatePlan}
+                >
+                  Ativar plano pago
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => onManage(subscription)}>
+                <Settings className="mr-2 h-4 w-4" />
+                Gerenciar
+              </Button>
+            </div>
           </div>
         </CardHeader>
+
+        {subscription.status === "trialing" && !subscription.has_pagarme_subscription && (
+          <CardContent className="pt-0">
+            <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
+              Você está no teste gratuito. Use <strong>Ativar plano pago</strong> para contratar com cartão,
+              boleto ou PIX e validar a integração com o Pagar.me em homologação.
+            </p>
+          </CardContent>
+        )}
 
         {subscription.status === "pending" && (
           <CardContent className="pt-0">

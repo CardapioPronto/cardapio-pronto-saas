@@ -34,7 +34,7 @@ export const TrialBanner = () => {
         <Button 
           variant={isExpiringSoon ? "default" : "outline"}
           size="sm"
-          onClick={() => navigate('/assinaturas')}
+          onClick={() => navigate('/assinaturas?tab=plans')}
           className="ml-4"
         >
           Ver Planos

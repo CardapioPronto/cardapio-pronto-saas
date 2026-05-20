@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "@/components/ui/sonner-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { CheckCircle, AlertTriangle, Clock, FileText } from "lucide-react";
 import { DISPLAYABLE_SUBSCRIPTION_STATUSES } from "@/lib/subscriptionStatusUi";
 import PaymentForm, { PaymentSuccessData } from "@/components/payment/PaymentForm";
@@ -12,15 +14,24 @@ import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview"
 import PlansGrid from "@/components/assinaturas/PlansGrid";
 import MySubscriptionsList from "@/components/assinaturas/MySubscriptionsList";
 import ManageSubscriptionDialog from "@/components/assinaturas/ManageSubscriptionDialog";
-import { fetchPlanos } from "@/services/planosService";
+import { fetchCheckoutPlanos } from "@/services/planosService";
 import { useMySubscriptions, MySubscription } from "@/hooks/useMySubscriptions";
 import { usePendingSubscriptionPoll } from "@/hooks/usePendingSubscriptionPoll";
 import { Plano } from "@/types/plano";
 
+const VALID_TABS = ["overview", "my-subscriptions", "plans"] as const;
+
 const Assinaturas = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab =
+    tabFromUrl && VALID_TABS.includes(tabFromUrl as (typeof VALID_TABS)[number])
+      ? tabFromUrl
+      : "overview";
+
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<string>("overview");
+  const [selectedTab, setSelectedTab] = useState(initialTab);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<Plano | null>(null);
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<"monthly" | "yearly">("monthly");
@@ -47,9 +58,19 @@ const Assinaturas = () => {
   usePendingSubscriptionPoll(currentSubscription?.status, refetchMySubs);
 
   useEffect(() => {
+    if (
+      tabFromUrl &&
+      VALID_TABS.includes(tabFromUrl as (typeof VALID_TABS)[number]) &&
+      tabFromUrl !== selectedTab
+    ) {
+      setSelectedTab(tabFromUrl);
+    }
+  }, [tabFromUrl, selectedTab]);
+
+  useEffect(() => {
     const loadPlanos = async () => {
       try {
-        const planosData = await fetchPlanos();
+        const planosData = await fetchCheckoutPlanos();
         setPlanos(planosData);
       } catch (error) {
         console.error("Erro ao carregar planos:", error);
@@ -62,7 +83,14 @@ const Assinaturas = () => {
     loadPlanos();
   }, []);
 
-  // Alterar plano
+  const handleTabChange = (tab: string) => {
+    setSelectedTab(tab);
+    const next = new URLSearchParams(searchParams);
+    if (tab === "overview") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
+
   const alterarPlano = (plano: Plano, billingCycle: "monthly" | "yearly") => {
     setSelectedPlanForPayment(plano);
     setSelectedBillingCycle(billingCycle);
@@ -74,7 +102,29 @@ const Assinaturas = () => {
     setShowPaymentDialog(false);
     setSelectedPlanForPayment(null);
     await refetchMySubs();
-    setSelectedTab("overview");
+    handleTabChange("overview");
+  };
+
+  const startCheckout = (billingCycle: "monthly" | "yearly" = "monthly") => {
+    const plan =
+      planos.find((p) => p.id === currentSubscription?.plan_id) ?? planos[0] ?? null;
+    if (!plan) {
+      handleTabChange("plans");
+      toast.error("Nenhum plano disponível para checkout. Sincronize o Plano Pubfy no admin.");
+      return;
+    }
+    const pagarmePlanId =
+      billingCycle === "monthly"
+        ? plan.pagarme_plan_id_monthly
+        : plan.pagarme_plan_id_yearly;
+    if (!pagarmePlanId) {
+      handleTabChange("plans");
+      toast.error(
+        "Plano ainda não sincronizado no Pagar.me. Em Admin → Planos, clique em Sincronizar no Plano Pubfy.",
+      );
+      return;
+    }
+    alterarPlano(plan, billingCycle);
   };
 
   if (loading) {
@@ -94,8 +144,17 @@ const Assinaturas = () => {
           <Alert className="border-orange/40 bg-orange/5">
             <Clock className="h-4 w-4 text-orange" />
             <AlertTitle>Você está no período de teste gratuito (14 dias)</AlertTitle>
-            <AlertDescription>
-              Restam <strong>{daysLeftInTrial} dia(s)</strong> de teste. Ative seu plano para continuar usando o Pubfy sem interrupção.
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Restam <strong>{daysLeftInTrial} dia(s)</strong> de teste. Ative seu plano para continuar usando o Pubfy sem interrupção.
+              </span>
+              <Button
+                size="sm"
+                className="shrink-0 bg-green text-white hover:bg-green-dark"
+                onClick={() => startCheckout("monthly")}
+              >
+                Ativar plano pago
+              </Button>
             </AlertDescription>
           </Alert>
         )}
@@ -133,7 +192,7 @@ const Assinaturas = () => {
         
         <Tabs 
           value={selectedTab} 
-          onValueChange={setSelectedTab} 
+          onValueChange={handleTabChange} 
           className="w-full"
         >
           <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex mb-4">
@@ -151,7 +210,8 @@ const Assinaturas = () => {
               <SubscriptionOverview
                 subscription={currentSubscription}
                 onManage={(sub) => setManageSub(sub)}
-                onViewPlans={() => setSelectedTab("plans")}
+                onViewPlans={() => handleTabChange("plans")}
+                onActivatePlan={() => startCheckout("monthly")}
               />
             )}
           </TabsContent>
@@ -162,7 +222,7 @@ const Assinaturas = () => {
               loading={mySubsLoading}
               error={mySubsError}
               onRefetch={refetchMySubs}
-              onViewPlans={() => setSelectedTab("plans")}
+              onViewPlans={() => handleTabChange("plans")}
               onManage={(sub) => setManageSub(sub)}
             />
           </TabsContent>
@@ -200,6 +260,7 @@ const Assinaturas = () => {
         subscription={manageSub}
         onClose={() => setManageSub(null)}
         onUpdated={() => refetchMySubs()}
+        onActivatePlan={() => startCheckout("monthly")}
       />
     </DashboardLayout>
   );

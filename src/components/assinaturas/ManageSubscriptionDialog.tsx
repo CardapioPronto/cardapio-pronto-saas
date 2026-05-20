@@ -43,6 +43,7 @@ interface ManageSubscriptionDialogProps {
   subscription: MySubscription | null;
   onClose: () => void;
   onUpdated: () => void;
+  onActivatePlan?: () => void;
 }
 
 const formatDate = (value: string | null | undefined) => {
@@ -84,7 +85,7 @@ const DetailItem = ({
 );
 
 const ManageSubscriptionDialog = ({
-  open, subscription, onClose, onUpdated,
+  open, subscription, onClose, onUpdated, onActivatePlan,
 }: ManageSubscriptionDialogProps) => {
   const [actionLoading, setActionLoading] = useState<null | "cancel" | "cycle">(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -168,15 +169,32 @@ const ManageSubscriptionDialog = ({
           ) : (
           <div className="space-y-5 px-6 py-5 text-sm">
             {!hasPagarmeSubscription && (
-              <div className="flex gap-3 rounded-md border border-orange/30 bg-orange/5 p-3 text-orange">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="space-y-1">
-                  <p className="font-medium">Assinatura criada manualmente</p>
-                  <p className="text-xs text-orange/90">
-                    Esta assinatura não possui ID do Pagar.me. Comprovante,
-                    cancelamento e troca de ciclo precisam de uma assinatura criada pelo checkout.
-                  </p>
+              <div className="flex flex-col gap-3 rounded-md border border-orange/30 bg-orange/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-orange">
+                      {status === "trialing" ? "Período de teste" : "Assinatura sem checkout Pagar.me"}
+                    </p>
+                    <p className="text-xs text-orange/90">
+                      {status === "trialing"
+                        ? "Para efetivar o plano pago e testar boleto, PIX ou cartão, conclua o checkout."
+                        : "Comprovante, cancelamento e troca de ciclo exigem assinatura criada pelo checkout."}
+                    </p>
+                  </div>
                 </div>
+                {status === "trialing" && onActivatePlan && (
+                  <Button
+                    type="button"
+                    className="shrink-0 bg-green hover:bg-green-dark"
+                    onClick={() => {
+                      onClose();
+                      onActivatePlan();
+                    }}
+                  >
+                    Ativar com pagamento
+                  </Button>
+                )}
               </div>
             )}
 
