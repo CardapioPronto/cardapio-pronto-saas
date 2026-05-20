@@ -68,6 +68,13 @@ type PagarmeSubscription = PagarmeSubscriptionPayload & {
   invoices?: Array<{ charges?: PagarmeCharge[] }> | null;
 };
 
+type PagarmeOrder = {
+  id?: string;
+  charges?: PagarmeCharge[] | null;
+};
+
+const PLATFORM_SUBSCRIPTION_SOURCE = "pubfy_platform_subscription";
+
 function authHeader() {
   const key = Deno.env.get("PAGARME_SECRET_KEY");
   if (!key) throw new Error("PAGARME_SECRET_KEY not configured");
@@ -80,7 +87,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function pagarmeErrorMessage(data: unknown, status: number) {
   const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
-  return payload?.message || payload?.errors?.[0]?.message || `HTTP ${status}`;
+  const fieldError = payload?.errors?.map((e) => e.message).filter(Boolean).join("; ");
+  return fieldError || payload?.message || `HTTP ${status}`;
 }
 
 async function pagarme<T>(path: string, method: string, body?: unknown): Promise<T> {
@@ -120,28 +128,36 @@ function validateBody(b: unknown): RequestBody {
   return b as RequestBody;
 }
 
-function buildSubscriptionPayload(
-  pagarmePlanId: string,
-  customerId: string,
-  paymentMethod: PaymentMethod,
-) {
-  const base: Record<string, unknown> = {
+function buildSubscriptionPayload(pagarmePlanId: string, customerId: string) {
+  return {
     plan_id: pagarmePlanId,
     customer_id: customerId,
-    payment_method: paymentMethod,
+    payment_method: "boleto",
+    boleto_due_days: 3,
   };
+}
 
-  if (paymentMethod === "boleto") {
-    base.boleto_due_days = 3;
-  } else {
-    base.pix = { expires_in: 3600 };
-  }
-
-  return base;
+function planAmountCents(
+  plan: { price_monthly: number; price_yearly: number },
+  billingCycle: BillingCycle,
+) {
+  const amount = billingCycle === "monthly"
+    ? Number(plan.price_monthly)
+    : Number(plan.price_yearly) * 12;
+  return Math.round(amount * 100);
 }
 
 function hasPaymentPayload(info: Record<string, unknown>) {
   return Object.values(info).some((value) => value != null && value !== "");
+}
+
+function extractPixPaymentInfo(tx: PagarmeTransaction | null | undefined) {
+  if (!tx) return {};
+  return {
+    pix_qr_code: tx.qr_code ?? tx.qrcode ?? null,
+    pix_qr_code_url: tx.qr_code_url ?? tx.qrcode_url ?? null,
+    pix_expires_at: tx.expires_at ?? null,
+  };
 }
 
 function extractPaymentInfo(
@@ -163,11 +179,13 @@ function extractPaymentInfo(
     };
   }
 
-  return {
-    pix_qr_code: tx.qr_code ?? tx.qrcode ?? null,
-    pix_qr_code_url: tx.qr_code_url ?? tx.qrcode_url ?? null,
-    pix_expires_at: tx.expires_at ?? null,
-  };
+  return extractPixPaymentInfo(tx);
+}
+
+function extractOrderPaymentInfo(order: PagarmeOrder, paymentMethod: PaymentMethod) {
+  const tx = order.charges?.[0]?.last_transaction ?? null;
+  if (paymentMethod === "pix") return extractPixPaymentInfo(tx);
+  return {};
 }
 
 Deno.serve(async (req) => {
@@ -283,18 +301,6 @@ Deno.serve(async (req) => {
     });
     if (!customer.id) throw new Error("Pagar.me customer response missing id");
 
-    const created = await pagarme<PagarmeSubscription>(
-      "/subscriptions",
-      "POST",
-      buildSubscriptionPayload(pagarmePlanId, customer.id, body.payment_method),
-    );
-    if (!created.id) throw new Error("Pagar.me subscription response missing id");
-
-    const subscription = await pagarme<PagarmeSubscription>(
-      `/subscriptions/${created.id}`,
-      "GET",
-    );
-
     const now = new Date();
 
     const { data: priorSub } = await admin
@@ -305,6 +311,133 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (body.payment_method === "pix") {
+      const amountCents = planAmountCents(plan, body.billing_cycle);
+      if (amountCents < 100) {
+        throw new Error("Valor do plano inválido para cobrança PIX (mínimo R$ 1,00).");
+      }
+
+      const localSub = buildLocalSubscriptionFromPagarme({
+        pagarme: { status: "pending" },
+        billingCycle: body.billing_cycle,
+        paymentMethod: "pix",
+        planTrialDays: plan.trial_days,
+        priorEntitlement: priorSub,
+      });
+
+      await admin
+        .from("subscriptions")
+        .update({ status: "canceled", end_date: now.toISOString() })
+        .eq("restaurant_id", restaurant.id)
+        .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE]);
+
+      const { data: inserted, error: insertErr } = await admin
+        .from("subscriptions")
+        .insert({
+          restaurant_id: restaurant.id,
+          plan_id: plan.id,
+          ...localSub,
+          pagarme_customer_id: customer.id,
+        })
+        .select()
+        .single();
+
+      if (insertErr) {
+        throw new Error(`Falha ao registrar assinatura local: ${insertErr.message}`);
+      }
+
+      const cycleLabel = body.billing_cycle === "monthly" ? "Mensal" : "Anual";
+      const order = await pagarme<PagarmeOrder>("/orders", "POST", {
+        code: `pubfy_sub_${inserted.id}`.slice(0, 52),
+        closed: true,
+        items: [{
+          amount: amountCents,
+          description: `${plan.name} (${cycleLabel})`,
+          quantity: 1,
+          code: plan.id,
+        }],
+        customer_id: customer.id,
+        payments: [{
+          payment_method: "pix",
+          pix: { expires_in: 3600 },
+        }],
+        metadata: {
+          source: PLATFORM_SUBSCRIPTION_SOURCE,
+          subscription_id: inserted.id,
+          restaurant_id: restaurant.id,
+          plan_id: plan.id,
+          billing_cycle: body.billing_cycle,
+        },
+      });
+
+      if (!order.id) throw new Error("Pagar.me order response missing id");
+
+      await admin
+        .from("subscriptions")
+        .update({ pagarme_subscription_id: order.id })
+        .eq("id", inserted.id);
+
+      let paymentInfo = extractOrderPaymentInfo(order, "pix");
+      if (!hasPaymentPayload(paymentInfo)) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const refreshed = await pagarme<PagarmeOrder>(`/orders/${order.id}`, "GET");
+        paymentInfo = extractOrderPaymentInfo(refreshed, "pix");
+      }
+
+      const subscriptionRow = { ...inserted, pagarme_subscription_id: order.id };
+
+      try {
+        await sendManagedEmail({
+          admin,
+          restaurantId: restaurant.id,
+          templateKey: "subscription_created",
+          emailType: "transactional",
+          to: body.customer.email,
+          recipientName: body.customer.name,
+          contextType: "subscription",
+          contextId: inserted.id,
+          variables: {
+            customer_name: body.customer.name,
+            plan_name: plan.name,
+            status: localSub.status,
+          },
+          metadata: {
+            source: "pagarme_create_boleto_pix",
+            billing_cycle: body.billing_cycle,
+            payment_method: "pix",
+            pagarme_order_id: order.id,
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send subscription email:", emailError);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        subscription: subscriptionRow,
+        period_credit_days: localSub.period_credit_days ?? 0,
+        payment: paymentInfo,
+        pagarme: {
+          order_id: order.id,
+          customer_id: customer.id,
+          status: "pending",
+          payment_method: "pix",
+        },
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const created = await pagarme<PagarmeSubscription>(
+      "/subscriptions",
+      "POST",
+      buildSubscriptionPayload(pagarmePlanId, customer.id),
+    );
+    if (!created.id) throw new Error("Pagar.me subscription response missing id");
+
+    const subscription = await pagarme<PagarmeSubscription>(
+      `/subscriptions/${created.id}`,
+      "GET",
+    );
 
     const localSub = buildLocalSubscriptionFromPagarme({
       pagarme: subscription,

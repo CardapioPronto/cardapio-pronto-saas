@@ -31,6 +31,7 @@ import {
   formatCardExpiryInput,
   formatCardNumberInput,
   formatPhoneInput,
+  parseCardExpiry,
 } from "@/lib/paymentInputFormatters";
 
 type CheckoutPaymentMethod = "credit_card" | "boleto" | "pix";
@@ -205,9 +206,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
     try {
       if (paymentMethod === "credit_card") {
-        const expParts = (values.cardExpiry || "").split("/");
-        const expMonth = expParts[0]?.padStart(2, "0") ?? "";
-        const expYearRaw = expParts[1] ?? "";
+        const parsedExpiry = parseCardExpiry(values.cardExpiry || "");
+        if (!parsedExpiry) {
+          toast.error("Informe a validade no formato MM/AA");
+          return;
+        }
         const result = await createPagarmeSubscription({
           local_plan_id: planId,
           billing_cycle: values.billingType,
@@ -220,8 +223,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           card: {
             number: digitsOnly(values.cardNumber || ""),
             holder_name: values.cardName || values.name,
-            exp_month: expMonth,
-            exp_year: expYearRaw,
+            exp_month: parsedExpiry.expMonth,
+            exp_year: parsedExpiry.expYear,
             cvv: digitsOnly(values.cardCvc || ""),
           },
         });
@@ -303,7 +306,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const price = selectedBillingType === "yearly" ? planPriceYearly * 12 : planPriceMonthly;
 
   return (
-    <Card className="mx-auto flex w-full max-w-lg max-h-[inherit] flex-col border-0 shadow-none" data-payment-form>
+    <Card className="mx-auto flex w-full max-w-lg flex-col border-0 shadow-none" data-payment-form>
       <CardHeader className="shrink-0 border-b px-6 py-4">
         <CardTitle>Assinar plano {planName}</CardTitle>
         <CardDescription>
@@ -321,9 +324,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             form.setValue("paymentMethod", selectedPaymentMethod);
             void form.handleSubmit(onSubmit, onInvalid)(e);
           }}
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex flex-col"
         >
-          <CardContent className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <CardContent className="px-6 py-4">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -501,8 +504,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                                 inputMode="numeric"
                                 autoComplete="cc-exp"
                                 maxLength={5}
-                                {...field}
-                                onChange={(e) => field.onChange(formatCardExpiryInput(e.target.value))}
+                                name={field.name}
+                                ref={field.ref}
+                                value={field.value ?? ""}
+                                onBlur={(e) => {
+                                  field.onChange(formatCardExpiryInput(e.target.value));
+                                  field.onBlur();
+                                }}
+                                onChange={(e) => {
+                                  field.onChange(formatCardExpiryInput(e.target.value));
+                                }}
+                                onInput={(e) => {
+                                  const target = e.target as HTMLInputElement;
+                                  const formatted = formatCardExpiryInput(target.value);
+                                  if (target.value !== formatted) {
+                                    field.onChange(formatted);
+                                  }
+                                }}
                               />
                             </FormControl>
                             <FormMessage />

@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
+function extractEdgeFunctionError(
+  data: unknown,
+  error: { message?: string } | null,
+): string {
+  if (data && typeof data === "object" && "error" in data) {
+    const message = (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return error?.message || "Falha ao criar assinatura";
+}
+
 export interface CreateSubscriptionInput {
   local_plan_id: string;
   billing_cycle: "monthly" | "yearly";
@@ -50,7 +61,7 @@ export async function createPagarmeBoletoPix(input: CreateOfflineSubscriptionInp
     "pagarme-create-boleto-pix",
     { body: input },
   );
-  if (error) throw new Error(error.message || "Falha ao criar assinatura");
+  if (error) throw new Error(extractEdgeFunctionError(data, error));
   if (data?.success === false) throw new Error(data.error || "Falha ao criar assinatura");
   return data;
 }
