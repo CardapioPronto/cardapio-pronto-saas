@@ -105,7 +105,7 @@ export default function Planos() {
                     Após criar ou editar, clique no botão <strong>sincronizar</strong> para enviar as
                     alterações ao gateway. Alterações <strong>não afetam assinaturas existentes</strong>.
                     Na sincronização, só vão cartão/boleto/débito; <strong>PIX</strong> vale no checkout.
-                    Preços mensal e anual (12×) precisam ser de pelo menos <strong>R$ 1,00</strong>.
+                    Planos de assinatura no Pagar.me precisam gerar cobrança de pelo menos <strong>R$ 5,00</strong>.
                   </AlertDescription>
                 </Alert>
                 <Card>

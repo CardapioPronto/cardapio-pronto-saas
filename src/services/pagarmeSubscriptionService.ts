@@ -84,6 +84,16 @@ export async function createPagarmeBoletoPix(input: CreateOfflineSubscriptionInp
   return data;
 }
 
+export async function syncPagarmePendingPayment(subscription_id: string) {
+  const { data, error } = await supabase.functions.invoke(
+    "pagarme-update-subscription",
+    { body: { action: "sync_payment", subscription_id } },
+  );
+  if (error) throw new Error(await extractEdgeFunctionError(data, error));
+  if (data?.success === false) throw new Error(data.error || "Falha ao sincronizar pagamento");
+  return data;
+}
+
 export async function cancelPagarmeSubscription(subscription_id: string) {
   const { data, error } = await supabase.functions.invoke(
     "pagarme-update-subscription",

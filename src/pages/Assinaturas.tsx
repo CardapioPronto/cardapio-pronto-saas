@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "@/components/ui/sonner-toast";
@@ -80,7 +80,11 @@ const Assinaturas = () => {
     ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000))
     : 0;
 
-  usePendingSubscriptionPoll(currentSubscription?.status, refetchMySubs);
+  const pendingSubscriptionIds = useMemo(
+    () => mySubscriptions.filter((s) => s.status === "pending").map((s) => s.id),
+    [mySubscriptions],
+  );
+  usePendingSubscriptionPoll(pendingSubscriptionIds, refetchMySubs);
 
   useEffect(() => {
     if (

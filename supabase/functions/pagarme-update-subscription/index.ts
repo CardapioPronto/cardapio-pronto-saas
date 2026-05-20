@@ -1,7 +1,19 @@
 // Edge Function: pagarme-update-subscription
-// Permite trocar o plano (cycle) ou cancelar uma assinatura existente.
-// Ações suportadas: change_plan | cancel
+// Permite trocar o plano (cycle), cancelar ou sincronizar pagamento pendente.
+// Ações suportadas: change_plan | cancel | sync_payment
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  computeRemainingCreditMs,
+  resolvePaidSubscriptionPeriod,
+  type BillingCycle,
+  type PriorEntitlement,
+} from "../_shared/pagarme-checkout-subscription.ts";
+import {
+  isPagarmeSubscriptionExternalId,
+  isPlatformOrderExternalId,
+  localStatusFromOrderCharge,
+  primaryOrderChargeStatus,
+} from "../_shared/pagarme-platform-order.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,8 +37,53 @@ type SubscriptionWithRestaurant = {
   pagarme_subscription_id: string | null;
   billing_cycle: string | null;
   status: string;
+  is_trial?: boolean | null;
+  trial_ends_at?: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
   restaurants?: { owner_id?: string | null } | null;
 };
+
+type PagarmeOrder = {
+  id?: string;
+  charges?: Array<{ status?: string | null }> | null;
+};
+
+type PagarmeSubscriptionRemote = {
+  status?: string | null;
+};
+
+async function applyPaidLocalPeriod(
+  admin: ReturnType<typeof createClient>,
+  sub: SubscriptionWithRestaurant,
+  update: Record<string, unknown>,
+) {
+  const now = new Date();
+  const billingCycle: BillingCycle = sub.billing_cycle === "yearly" ? "yearly" : "monthly";
+  const periodStart = sub.current_period_start
+    ? new Date(sub.current_period_start)
+    : now;
+  const prior: PriorEntitlement = {
+    status: sub.status,
+    is_trial: sub.is_trial ?? null,
+    current_period_end: sub.current_period_end ?? null,
+    trial_ends_at: sub.trial_ends_at ?? null,
+  };
+  const { periodEnd, nextBilling } = resolvePaidSubscriptionPeriod({
+    billingCycle,
+    periodStart,
+    remainingCreditMs: computeRemainingCreditMs(now, prior),
+  });
+  update.status = "active";
+  update.last_payment_at = now.toISOString();
+  update.is_trial = false;
+  update.trial_start = null;
+  update.trial_ends_at = null;
+  update.billing_cycle = billingCycle;
+  update.current_period_start = periodStart.toISOString();
+  update.current_period_end = periodEnd.toISOString();
+  update.next_billing_at = nextBilling.toISOString();
+}
 
 function authHeader() {
   const key = Deno.env.get("PAGARME_SECRET_KEY");
@@ -107,7 +164,9 @@ Deno.serve(async (req) => {
     // Carrega a subscription e valida ownership
     const { data: subData, error: subErr } = await admin
       .from("subscriptions")
-      .select("id, restaurant_id, plan_id, pagarme_subscription_id, billing_cycle, status, restaurants:restaurant_id(owner_id)")
+      .select(
+        "id, restaurant_id, plan_id, pagarme_subscription_id, billing_cycle, status, is_trial, trial_ends_at, current_period_start, current_period_end, restaurants:restaurant_id(owner_id)",
+      )
       .eq("id", subscription_id)
       .maybeSingle();
 
@@ -124,22 +183,95 @@ Deno.serve(async (req) => {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!sub.pagarme_subscription_id) {
-      return new Response(JSON.stringify({ error: "Subscription has no Pagar.me ID" }), {
-        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (action === "sync_payment") {
+      if (sub.status !== "pending") {
+        return new Response(JSON.stringify({ success: true, subscription: sub, unchanged: true }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const externalId = sub.pagarme_subscription_id;
+      if (!externalId) {
+        return new Response(JSON.stringify({ error: "Subscription has no Pagar.me ID" }), {
+          status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const update: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (isPlatformOrderExternalId(externalId)) {
+        const order = await pagarme<PagarmeOrder>(`/orders/${externalId}`, "GET");
+        const chargeStatus = primaryOrderChargeStatus(order);
+        update.last_payment_status = chargeStatus || null;
+        const mapped = localStatusFromOrderCharge(chargeStatus);
+        if (mapped === "canceled") {
+          update.status = "canceled";
+          update.end_date = new Date().toISOString();
+        } else if (mapped === "active") {
+          await applyPaidLocalPeriod(admin, sub, update);
+        }
+      } else if (isPagarmeSubscriptionExternalId(externalId)) {
+        const remote = await pagarme<PagarmeSubscriptionRemote>(
+          `/subscriptions/${externalId}`,
+          "GET",
+        );
+        const remoteStatus = (remote.status ?? "").toLowerCase();
+        update.last_payment_status = remoteStatus || null;
+        if (remoteStatus === "active" || remoteStatus === "paid") {
+          await applyPaidLocalPeriod(admin, sub, update);
+        } else if (remoteStatus === "canceled" || remoteStatus === "failed") {
+          update.status = "canceled";
+          update.end_date = new Date().toISOString();
+        }
+      } else {
+        return new Response(JSON.stringify({ error: "Unsupported Pagar.me reference" }), {
+          status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!update.status) {
+        return new Response(JSON.stringify({ success: true, subscription: sub, unchanged: true }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: updated, error: updateErr } = await admin
+        .from("subscriptions")
+        .update(update)
+        .eq("id", sub.id)
+        .select()
+        .single();
+      if (updateErr) throw new Error(updateErr.message);
+
+      return new Response(JSON.stringify({ success: true, subscription: updated }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (action === "cancel") {
-      await pagarme<unknown>(`/subscriptions/${sub.pagarme_subscription_id}`, "DELETE");
+      const externalId = sub.pagarme_subscription_id;
+      if (externalId && isPagarmeSubscriptionExternalId(externalId)) {
+        await pagarme<unknown>(`/subscriptions/${externalId}`, "DELETE");
+      }
       const { data: updated } = await admin
         .from("subscriptions")
-        .update({ status: "canceled", end_date: new Date().toISOString() })
+        .update({
+          status: "canceled",
+          end_date: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", sub.id)
         .select()
         .single();
       return new Response(JSON.stringify({ success: true, subscription: updated }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!sub.pagarme_subscription_id) {
+      return new Response(JSON.stringify({ error: "Subscription has no Pagar.me ID" }), {
+        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

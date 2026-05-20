@@ -56,6 +56,10 @@ type PagarmeSubscription = {
   invoices?: Array<{ charges?: PagarmeCharge[] }> | null;
 };
 
+type PagarmeOrder = {
+  charges?: PagarmeCharge[] | null;
+};
+
 type SubscriptionWithRestaurant = {
   id: string;
   restaurant_id: string;
@@ -178,28 +182,38 @@ Deno.serve(async (req) => {
     }
     if (!sub.pagarme_subscription_id) throw new Error("Subscription is not linked to Pagar.me");
 
-    // Tenta listar charges da assinatura (mais confiável p/ recibos)
+    const externalId = sub.pagarme_subscription_id;
     let charges: PagarmeCharge[] = [];
-    try {
-      const list = await pagarme<PagarmeChargesList>(
-        `/charges?subscription_id=${encodeURIComponent(sub.pagarme_subscription_id)}&size=10`,
-      );
-      charges = list?.data ?? [];
-    } catch (_e) { /* fallback abaixo */ }
 
-    // Fallback: busca a assinatura e extrai charge do current_cycle / invoices
-    let fallbackCharge: PagarmeCharge | null = null;
-    if (charges.length === 0) {
-      const subscription = await pagarme<PagarmeSubscription>(
-        `/subscriptions/${encodeURIComponent(sub.pagarme_subscription_id)}`,
+    if (externalId.startsWith("ord_")) {
+      const order = await pagarme<PagarmeOrder>(
+        `/orders/${encodeURIComponent(externalId)}`,
       );
-      fallbackCharge =
-        subscription?.current_cycle?.charges?.[0]
-        ?? subscription?.invoices?.[0]?.charges?.[0]
-        ?? null;
+      charges = order?.charges?.filter(Boolean) ?? [];
+    } else {
+      try {
+        const list = await pagarme<PagarmeChargesList>(
+          `/charges?subscription_id=${encodeURIComponent(externalId)}&size=10`,
+        );
+        charges = list?.data ?? [];
+      } catch (_e) { /* fallback abaixo */ }
+
+      let fallbackCharge: PagarmeCharge | null = null;
+      if (charges.length === 0) {
+        const subscription = await pagarme<PagarmeSubscription>(
+          `/subscriptions/${encodeURIComponent(externalId)}`,
+        );
+        fallbackCharge =
+          subscription?.current_cycle?.charges?.[0]
+          ?? subscription?.invoices?.[0]?.charges?.[0]
+          ?? null;
+      }
+      if (charges.length === 0 && fallbackCharge) {
+        charges = [fallbackCharge];
+      }
     }
 
-    const allCharges = charges.length > 0 ? charges : (fallbackCharge ? [fallbackCharge] : []);
+    const allCharges = charges;
     const latest = allCharges[0] ?? null;
     const lastPaid = allCharges.find((c) => c?.status === "paid") ?? null;
 

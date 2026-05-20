@@ -108,15 +108,24 @@ const ManageSubscriptionDialog = ({
       ? subscription.plan?.price_yearly
       : subscription.plan?.price_monthly;
   const hasPagarmeSubscription = Boolean(subscription.has_pagarme_subscription);
-  const isPendingPayment = status === "pending" && hasPagarmeSubscription;
+  const canUsePagarmeActions = hasPagarmeSubscription || status === "pending";
+  const isPendingPayment = status === "pending";
+  const paymentFailed =
+    subscription.last_payment_status === "failed"
+    || subscription.last_payment_status === "canceled";
 
   const handleCancel = async () => {
     setActionLoading("cancel");
     try {
       await cancelPagarmeSubscription(subscription.id);
-      toast.success("Assinatura cancelada", {
-        description: "O status foi atualizado após o cancelamento no Pagar.me.",
-      });
+      toast.success(
+        isPendingPayment ? "Tentativa de pagamento cancelada" : "Assinatura cancelada",
+        {
+          description: isPendingPayment
+            ? "Você pode iniciar um novo checkout quando quiser."
+            : "O status foi atualizado após o cancelamento no Pagar.me.",
+        },
+      );
       onUpdated();
       onClose();
     } catch (err) {
@@ -201,10 +210,13 @@ const ManageSubscriptionDialog = ({
             {isPendingPayment && (
               <div className="flex flex-col gap-3 rounded-md border border-orange/30 bg-orange/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-medium text-orange">Pagamento pendente</p>
+                  <p className="font-medium text-orange">
+                    {paymentFailed ? "Pagamento não concluído" : "Pagamento pendente"}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Abra o comprovante para ver o boleto ou o QR Code PIX. A página atualiza
-                    automaticamente quando o pagamento for confirmado.
+                    {paymentFailed
+                      ? "O PIX ou boleto não foi aprovado. Cancele esta tentativa e inicie um novo checkout, ou escolha outro método."
+                      : "Abra o comprovante para ver o boleto ou o QR Code PIX. A página atualiza automaticamente quando o pagamento for confirmado."}
                   </p>
                 </div>
                 <Button
@@ -276,7 +288,7 @@ const ManageSubscriptionDialog = ({
                       variant="outline"
                       className="justify-start"
                       onClick={() => setView("receipt")}
-                      disabled={actionLoading !== null || !hasPagarmeSubscription}
+                      disabled={actionLoading !== null || !canUsePagarmeActions}
                     >
                       <Receipt className="h-4 w-4 mr-2" />
                       Ver comprovante
@@ -295,11 +307,11 @@ const ManageSubscriptionDialog = ({
                     <Button
                       variant="destructive"
                       onClick={() => setConfirmCancel(true)}
-                      disabled={actionLoading !== null || !hasPagarmeSubscription}
+                      disabled={actionLoading !== null || !canUsePagarmeActions}
                       className="justify-start sm:col-span-2"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Cancelar assinatura
+                      {isPendingPayment ? "Cancelar tentativa de pagamento" : "Cancelar assinatura"}
                     </Button>
                   </div>
                   {targetPrice != null && hasPagarmeSubscription && (

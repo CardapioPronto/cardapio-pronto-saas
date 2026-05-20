@@ -153,15 +153,23 @@ async function processPlatformSubscriptionOrderPayment(
   data: PagarmeData,
 ): Promise<boolean> {
   const metadata = getPlatformSubscriptionMetadata(data);
-  if (!metadata) return false;
+  const pagarmeOrderId = extractPagarmeOrderId(type, data);
 
-  const subscriptionId = metadata.subscription_id ?? null;
+  let subscriptionId = metadata?.subscription_id ?? null;
+  if (!subscriptionId && pagarmeOrderId) {
+    const { data: localSub } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("pagarme_subscription_id", pagarmeOrderId)
+      .maybeSingle();
+    subscriptionId = localSub?.id ?? null;
+  }
+
+  if (!subscriptionId && !metadata) return false;
   if (!subscriptionId) return true;
 
   const newPaymentStatus = mapOrderPaymentStatus(type, data.status);
   if (!newPaymentStatus) return true;
-
-  const pagarmeOrderId = extractPagarmeOrderId(type, data);
   const update: Record<string, unknown> = {
     last_payment_status: data.status ?? type,
     updated_at: new Date().toISOString(),
@@ -189,7 +197,8 @@ async function processPlatformSubscriptionOrderPayment(
       await applyPaidPeriodToUpdate(lookupId, update);
     }
   } else if (newPaymentStatus === "failed") {
-    update.status = "past_due";
+    update.status = "canceled";
+    update.end_date = new Date().toISOString();
   } else if (newPaymentStatus === "canceled") {
     update.status = "canceled";
     update.end_date = new Date().toISOString();
