@@ -1,5 +1,6 @@
 
-import { Plano } from "@/types/plano";
+import { supabase } from "@/integrations/supabase/client";
+import { PagarmePaymentMethod, Plano } from "@/types/plano";
 import { fetchPublicPlanSummaries, type PublicPlanSummary } from "./publicPlansService";
 
 const PUBFY_SINGLE_PLAN_ID = "4953d3fc-4945-4d80-bc84-58e4f6f26698";
@@ -58,6 +59,75 @@ export const fetchPlanos = async (): Promise<Plano[]> => {
     return pubfyPlan ? [pubfyPlan] : planos;
   } catch (error) {
     console.error("Erro ao buscar planos:", error);
+    return [];
+  }
+};
+
+const PAGARME_METHODS = new Set<PagarmePaymentMethod>([
+  "credit_card",
+  "debit_card",
+  "boleto",
+  "pix",
+  "cash",
+]);
+
+const normalizeSyncStatus = (status: string | null | undefined): Plano["pagarme_sync_status"] =>
+  status === "synced" || status === "error" ? status : "pending";
+
+const normalizePaymentMethods = (methods: string[] | null | undefined): PagarmePaymentMethod[] => {
+  const valid = (methods ?? []).filter((method): method is PagarmePaymentMethod =>
+    PAGARME_METHODS.has(method as PagarmePaymentMethod),
+  );
+  return valid.length ? valid : ["credit_card", "boleto"];
+};
+
+type CheckoutPlanRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  price_monthly: number;
+  price_yearly: number;
+  is_active: boolean;
+  trial_days: number | null;
+  pagarme_plan_id_monthly: string | null;
+  pagarme_plan_id_yearly: string | null;
+  pagarme_sync_status: string | null;
+  pagarme_payment_methods: string[] | null;
+  features?: PublicPlanSummary["features"];
+};
+
+/** Planos ativos com IDs Pagar.me — uso em /assinaturas (checkout do dono). */
+export const fetchCheckoutPlanos = async (): Promise<Plano[]> => {
+  try {
+    const { data, error } = await supabase.rpc("get_checkout_plan_summaries");
+    if (error) throw error;
+    if (!Array.isArray(data)) return [];
+
+    const planos = (data as CheckoutPlanRow[]).map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price_monthly: Number(item.price_monthly),
+      price_yearly: Number(item.price_yearly),
+      is_active: Boolean(item.is_active),
+      trial_days: item.trial_days ?? 14,
+      pagarme_plan_id_monthly: item.pagarme_plan_id_monthly ?? null,
+      pagarme_plan_id_yearly: item.pagarme_plan_id_yearly ?? null,
+      pagarme_synced_at: null,
+      pagarme_sync_status: normalizeSyncStatus(item.pagarme_sync_status),
+      pagarme_sync_error: null,
+      pagarme_payment_methods: normalizePaymentMethods(item.pagarme_payment_methods),
+      features: item.features ?? [],
+      email_campaigns_enabled: false,
+      email_campaign_monthly_limit: 0,
+      email_campaign_contact_limit: 0,
+      email_custom_templates_enabled: true,
+    })) as Plano[];
+
+    const pubfyPlan = planos.find((plano) => plano.id === PUBFY_SINGLE_PLAN_ID);
+    return pubfyPlan ? [pubfyPlan] : planos;
+  } catch (error) {
+    console.error("Erro ao buscar planos para checkout:", error);
     return [];
   }
 };

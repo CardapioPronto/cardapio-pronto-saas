@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar, CreditCard, RefreshCw, Settings } from "lucide-react";
+import { AlertTriangle, Calendar, Clock, CreditCard, RefreshCw, Settings } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
 import { getSubscriptionStatusMeta } from "@/lib/subscriptionStatusUi";
 

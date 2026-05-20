@@ -79,9 +79,13 @@ const PlansGrid = ({ planos, currentSubscription, onSelectPlan }: PlansGridProps
       >
         {planos.map((plano) => {
           const price = billingCycle === "yearly" ? plano.price_yearly : plano.price_monthly;
-          const isCurrentPlan =
-            currentSubscription?.plan_id === plano.id &&
-            currentSubscription?.status !== "canceled" &&
+          const isSamePlan = currentSubscription?.plan_id === plano.id;
+          const subscriptionStatus = currentSubscription?.status;
+          const isTrialing = subscriptionStatus === "trialing";
+          const isPending = subscriptionStatus === "pending";
+          const isActivePaid =
+            subscriptionStatus === "active" &&
+            isSamePlan &&
             currentSubscription?.billing_cycle === billingCycle;
           const isSynced = isPlanSyncedForCycle(plano, billingCycle);
           const paymentMethods = plano.pagarme_payment_methods ?? [];
@@ -89,13 +93,19 @@ const PlansGrid = ({ planos, currentSubscription, onSelectPlan }: PlansGridProps
             method === "credit_card" || method === "boleto" || method === "pix",
           );
           const canSubscribe = isSynced && hasSupportedPaymentMethod;
-          const buttonLabel = isCurrentPlan
-            ? "Plano atual"
-            : !canSubscribe
-              ? "Pagamento em configuração"
-              : currentSubscription?.status === "past_due"
-                ? "Regularizar plano"
-                : "Começar agora";
+          const canCheckout =
+            canSubscribe && !isActivePaid && !(isPending && isSamePlan);
+          const buttonLabel = !canSubscribe
+            ? "Pagamento em configuração"
+            : isActivePaid
+              ? "Plano atual"
+              : isTrialing && isSamePlan
+                ? "Ativar plano pago"
+                : isPending && isSamePlan
+                  ? "Aguardando pagamento"
+                  : subscriptionStatus === "past_due" && isSamePlan
+                    ? "Regularizar plano"
+                    : "Começar agora";
 
           return (
             <Card key={plano.id} className="relative flex flex-col overflow-hidden border-2 border-green/50 shadow-sm">
@@ -113,10 +123,15 @@ const PlansGrid = ({ planos, currentSubscription, onSelectPlan }: PlansGridProps
                       {plano.description ?? "Plano Pubfy para operação do restaurante"}
                     </p>
                   </div>
-                  {isCurrentPlan && (
+                  {isActivePaid && (
                     <Badge className="bg-green text-white hover:bg-green-dark">
                       <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                       Atual
+                    </Badge>
+                  )}
+                  {isTrialing && isSamePlan && (
+                    <Badge className="bg-orange/15 text-orange border border-orange/30">
+                      Em teste
                     </Badge>
                   )}
                 </div>
@@ -159,7 +174,7 @@ const PlansGrid = ({ planos, currentSubscription, onSelectPlan }: PlansGridProps
 
                 <Button
                   className="mt-5 h-11 w-full bg-green font-semibold text-white hover:bg-green-dark"
-                  disabled={isCurrentPlan || !canSubscribe}
+                  disabled={!canCheckout}
                   onClick={() => onSelectPlan(plano, billingCycle)}
                 >
                   {buttonLabel}
