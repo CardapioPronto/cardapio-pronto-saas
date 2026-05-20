@@ -24,10 +24,19 @@ const supabase = createClient(
 const WEBHOOK_SECRET = Deno.env.get("PAGARME_WEBHOOK_SECRET") ?? "";
 const PAGARME_SECRET_KEY = Deno.env.get("PAGARME_SECRET_KEY") ?? "";
 
+type PlatformSubscriptionMetadata = {
+  source?: string | null;
+  subscription_id?: string | null;
+  restaurant_id?: string | null;
+  plan_id?: string | null;
+  billing_cycle?: string | null;
+  order_id?: string | null;
+};
+
 type PagarmeNestedObject = {
   id?: string | null;
   subscription_id?: string | null;
-  metadata?: { order_id?: string | null } | null;
+  metadata?: PlatformSubscriptionMetadata | null;
 };
 
 type PagarmeData = {
@@ -41,7 +50,7 @@ type PagarmeData = {
   interval?: string | null;
   amount?: number | null;
   paid_amount?: number | null;
-  metadata?: { order_id?: string | null } | null;
+  metadata?: PlatformSubscriptionMetadata | null;
   subscription?: PagarmeNestedObject | null;
   invoice?: PagarmeNestedObject | null;
   order?: PagarmeNestedObject | null;
@@ -127,6 +136,71 @@ function extractPagarmeSubscriptionId(type: string, data: PagarmeData) {
 function extractPagarmeOrderId(type: string, data: PagarmeData) {
   if (type.startsWith("order.")) return data.id ?? null;
   return data.order?.id ?? data.order_id ?? null;
+}
+
+const PLATFORM_SUBSCRIPTION_SOURCE = "pubfy_platform_subscription";
+
+function getPlatformSubscriptionMetadata(
+  data: PagarmeData,
+): PlatformSubscriptionMetadata | null {
+  const metadata = data.metadata ?? data.order?.metadata ?? null;
+  if (!metadata || metadata.source !== PLATFORM_SUBSCRIPTION_SOURCE) return null;
+  return metadata;
+}
+
+async function processPlatformSubscriptionOrderPayment(
+  type: string,
+  data: PagarmeData,
+): Promise<boolean> {
+  const metadata = getPlatformSubscriptionMetadata(data);
+  if (!metadata) return false;
+
+  const subscriptionId = metadata.subscription_id ?? null;
+  if (!subscriptionId) return true;
+
+  const newPaymentStatus = mapOrderPaymentStatus(type, data.status);
+  if (!newPaymentStatus) return true;
+
+  const pagarmeOrderId = extractPagarmeOrderId(type, data);
+  const update: Record<string, unknown> = {
+    last_payment_status: data.status ?? type,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (pagarmeOrderId) {
+    update.pagarme_subscription_id = pagarmeOrderId;
+  }
+
+  if (newPaymentStatus === "paid") {
+    update.status = "active";
+    update.last_payment_at = new Date().toISOString();
+    update.is_trial = false;
+    update.trial_start = null;
+    update.trial_ends_at = null;
+
+    const { data: localSub } = await supabase
+      .from("subscriptions")
+      .select("pagarme_subscription_id, billing_cycle")
+      .eq("id", subscriptionId)
+      .maybeSingle();
+
+    const lookupId = pagarmeOrderId ?? localSub?.pagarme_subscription_id ?? null;
+    if (lookupId) {
+      await applyPaidPeriodToUpdate(lookupId, update);
+    }
+  } else if (newPaymentStatus === "failed") {
+    update.status = "past_due";
+  } else if (newPaymentStatus === "canceled") {
+    update.status = "canceled";
+    update.end_date = new Date().toISOString();
+  }
+
+  await supabase
+    .from("subscriptions")
+    .update(update)
+    .eq("id", subscriptionId);
+
+  return true;
 }
 
 function mapStatus(pagarmeStatus: string): string {
@@ -256,6 +330,9 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
   // Charge / invoice events
   if (type.startsWith("charge.") || type.startsWith("invoice.")) {
     const charge = data;
+    if (await processPlatformSubscriptionOrderPayment(type, charge)) {
+      return;
+    }
     const pagarmeSubId = charge.subscription_id ?? charge.subscription?.id ?? charge.invoice?.subscription_id;
     if (!pagarmeSubId) {
       await processOrderPaymentEvent(type, charge);
@@ -305,6 +382,10 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
 }
 
 async function processOrderPaymentEvent(type: string, data: PagarmeData) {
+  if (await processPlatformSubscriptionOrderPayment(type, data)) {
+    return;
+  }
+
   const pagarmeOrderId = extractPagarmeOrderId(type, data);
   const pagarmeChargeId = data.id && type.startsWith("charge.")
     ? data.id
