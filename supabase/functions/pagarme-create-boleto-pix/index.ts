@@ -439,8 +439,6 @@ Deno.serve(async (req) => {
       "GET",
     );
 
-    const now = new Date();
-
     const localSub = buildLocalSubscriptionFromPagarme({
       pagarme: subscription,
       billingCycle: body.billing_cycle,
