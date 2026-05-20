@@ -31,20 +31,51 @@ type PagarmePlanResponse = {
 type PagarmeRequestData = PagarmePlanResponse | { raw: string } | null;
 
 const DEFAULT_PAYMENT_METHODS = ["credit_card", "boleto"];
-const ALLOWED_PAYMENT_METHODS = new Set([
+
+/** Métodos aceitos na API de *planos* do Pagar.me (assinaturas). PIX não entra aqui. */
+const PAGARME_PLAN_API_METHODS = new Set([
   "credit_card",
-  "debit_card",
-  "cash",
   "boleto",
-  "pix",
+  "debit_card",
 ]);
 
-function normalizePaymentMethods(methods: string[] | null | undefined) {
+function normalizePlanPaymentMethodsForPagarme(methods: string[] | null | undefined) {
   const validMethods = (methods ?? DEFAULT_PAYMENT_METHODS).filter((method) =>
-    ALLOWED_PAYMENT_METHODS.has(method)
+    PAGARME_PLAN_API_METHODS.has(method)
   );
 
   return validMethods.length > 0 ? validMethods : DEFAULT_PAYMENT_METHODS;
+}
+
+type PagarmeErrorPayload = {
+  message?: string;
+  errors?: Array<{ message?: string; field?: string }>;
+  raw?: string;
+};
+
+function pagarmeErrorMessage(data: PagarmeRequestData, status: number) {
+  if (data && typeof data === "object") {
+    const payload = data as PagarmeErrorPayload;
+    const detail = payload.errors?.[0]?.message;
+    if (detail) return detail;
+    if (payload.message) return payload.message;
+    if (payload.raw) return payload.raw.slice(0, 400);
+  }
+  return `Pagar.me retornou HTTP ${status}`;
+}
+
+function amountCentsForInterval(plan: LocalPlan, interval: "month" | "year") {
+  const amount = interval === "month"
+    ? Number(plan.price_monthly)
+    : Number(plan.price_yearly) * 12;
+  const cents = Math.round(amount * 100);
+  if (!Number.isFinite(cents) || cents < 100) {
+    const label = interval === "month" ? "mensal" : "anual (12x)";
+    throw new Error(
+      `Preço ${label} deve ser de pelo menos R$ 1,00 para sincronizar no Pagar.me. Valor atual: R$ ${amount}`,
+    );
+  }
+  return cents;
 }
 
 function authHeader() {
@@ -67,7 +98,7 @@ function buildPlanBody(
     interval,
     interval_count: 1,
     billing_type: "prepaid",
-    payment_methods: normalizePaymentMethods(plan.pagarme_payment_methods),
+    payment_methods: normalizePlanPaymentMethodsForPagarme(plan.pagarme_payment_methods),
     installments: [1],
     minimum_price: amountCents,
     trial_period_days: plan.trial_days || 0,
@@ -114,9 +145,7 @@ async function upsertPagarmePlan(
   interval: "month" | "year",
   existingId: string | null,
 ) {
-  const amountCents = Math.round(
-    (interval === "month" ? plan.price_monthly : plan.price_yearly * 12) * 100,
-  );
+  const amountCents = amountCentsForInterval(plan, interval);
   const body = buildPlanBody(plan, interval, amountCents);
 
   if (existingId) {
@@ -127,14 +156,16 @@ async function upsertPagarmePlan(
         const created = await pagarmeRequest("/plans", "POST", body);
         if (!created.ok) {
           throw new Error(
-            `Pagar.me create failed: ${JSON.stringify(created.data)}`,
+            `Pagar.me create failed: ${pagarmeErrorMessage(created.data, created.status)}`,
           );
         }
         const createdId = getPagarmePlanId(created.data);
         if (!createdId) throw new Error("Pagar.me create response missing id");
         return createdId;
       }
-      throw new Error(`Pagar.me update failed: ${JSON.stringify(res.data)}`);
+      throw new Error(
+        `Pagar.me update failed: ${pagarmeErrorMessage(res.data, res.status)}`,
+      );
     }
     return existingId;
   }
@@ -142,7 +173,7 @@ async function upsertPagarmePlan(
   const created = await pagarmeRequest("/plans", "POST", body);
   if (!created.ok) {
     throw new Error(
-      `Pagar.me create failed (${created.status}): ${JSON.stringify(created.data)}`,
+      `Pagar.me create failed (${created.status}): ${pagarmeErrorMessage(created.data, created.status)}`,
     );
   }
   const createdId = getPagarmePlanId(created.data);
@@ -279,7 +310,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: msg }),
         {
-          status: 502,
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
