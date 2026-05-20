@@ -3,9 +3,14 @@
 // a partir de um plano local sincronizado, e persiste em `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
-import { SUBSCRIPTION_STATUSES_TO_SUPERSEDE } from "../_shared/pagarme-subscription-status.ts";
+import { pagarmeErrorMessage } from "../_shared/pagarme-errors.ts";
+import {
+  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
+  supersedePriorSubscriptions,
+} from "../_shared/pagarme-subscription-status.ts";
 import {
   buildLocalSubscriptionFromPagarme,
+  subscriptionInsertRow,
   type PagarmeSubscriptionPayload,
 } from "../_shared/pagarme-checkout-subscription.ts";
 
@@ -35,12 +40,6 @@ interface RequestBody {
   payment_method: PaymentMethod;
   customer: CustomerInput;
 }
-
-type PagarmeErrorPayload = {
-  message?: string;
-  errors?: Array<{ message?: string }>;
-  raw?: string;
-};
 
 type PagarmeCustomer = {
   id?: string;
@@ -83,12 +82,6 @@ function authHeader() {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function pagarmeErrorMessage(data: unknown, status: number) {
-  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
-  const fieldError = payload?.errors?.map((e) => e.message).filter(Boolean).join("; ");
-  return fieldError || payload?.message || `HTTP ${status}`;
 }
 
 async function pagarme<T>(path: string, method: string, body?: unknown): Promise<T> {
@@ -326,18 +319,12 @@ Deno.serve(async (req) => {
         priorEntitlement: priorSub,
       });
 
-      await admin
-        .from("subscriptions")
-        .update({ status: "canceled", end_date: now.toISOString() })
-        .eq("restaurant_id", restaurant.id)
-        .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE]);
-
       const { data: inserted, error: insertErr } = await admin
         .from("subscriptions")
         .insert({
           restaurant_id: restaurant.id,
           plan_id: plan.id,
-          ...localSub,
+          ...subscriptionInsertRow(localSub),
           pagarme_customer_id: customer.id,
         })
         .select()
@@ -348,16 +335,34 @@ Deno.serve(async (req) => {
       }
 
       const cycleLabel = body.billing_cycle === "monthly" ? "Mensal" : "Anual";
-      const order = await pagarme<PagarmeOrder>("/orders", "POST", {
+      const phoneDigits = digits(body.customer.phone);
+      const areaCode = phoneDigits.slice(0, 2);
+      const phoneNumber = phoneDigits.slice(2);
+      let order: PagarmeOrder;
+      try {
+        order = await pagarme<PagarmeOrder>("/orders", "POST", {
         code: `pubfy_sub_${inserted.id}`.slice(0, 52),
         closed: true,
         items: [{
           amount: amountCents,
-          description: `${plan.name} (${cycleLabel})`,
+          description: `${plan.name} (${cycleLabel})`.slice(0, 256),
           quantity: 1,
-          code: plan.id,
+          code: String(plan.id).slice(0, 52),
         }],
-        customer_id: customer.id,
+        customer: {
+          name: body.customer.name,
+          email: body.customer.email,
+          document: docDigits,
+          document_type: docType,
+          type: docType === "cnpj" ? "company" : "individual",
+          phones: {
+            mobile_phone: {
+              country_code: "55",
+              area_code: areaCode,
+              number: phoneNumber,
+            },
+          },
+        },
         payments: [{
           payment_method: "pix",
           pix: { expires_in: 3600 },
@@ -370,13 +375,22 @@ Deno.serve(async (req) => {
           billing_cycle: body.billing_cycle,
         },
       });
+      } catch (orderError) {
+        await admin.from("subscriptions").delete().eq("id", inserted.id);
+        throw orderError;
+      }
 
-      if (!order.id) throw new Error("Pagar.me order response missing id");
+      if (!order.id) {
+        await admin.from("subscriptions").delete().eq("id", inserted.id);
+        throw new Error("Pagar.me order response missing id");
+      }
 
       await admin
         .from("subscriptions")
         .update({ pagarme_subscription_id: order.id })
         .eq("id", inserted.id);
+
+      await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
 
       let paymentInfo = extractOrderPaymentInfo(order, "pix");
       if (!hasPaymentPayload(paymentInfo)) {
@@ -439,8 +453,6 @@ Deno.serve(async (req) => {
       "GET",
     );
 
-    const now = new Date();
-
     const localSub = buildLocalSubscriptionFromPagarme({
       pagarme: subscription,
       billingCycle: body.billing_cycle,
@@ -449,18 +461,12 @@ Deno.serve(async (req) => {
       priorEntitlement: priorSub,
     });
 
-    await admin
-      .from("subscriptions")
-      .update({ status: "canceled", end_date: now.toISOString() })
-      .eq("restaurant_id", restaurant.id)
-      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE]);
-
     const { data: inserted, error: insertErr } = await admin
       .from("subscriptions")
       .insert({
         restaurant_id: restaurant.id,
         plan_id: plan.id,
-        ...localSub,
+        ...subscriptionInsertRow(localSub),
         pagarme_subscription_id: subscription.id ?? created.id,
         pagarme_customer_id: customer.id,
       })
@@ -475,6 +481,8 @@ Deno.serve(async (req) => {
         pagarme_customer_id: customer.id,
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
 
     try {
       await sendManagedEmail({

@@ -1,13 +1,31 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-function extractEdgeFunctionError(
+async function extractEdgeFunctionError(
   data: unknown,
-  error: { message?: string } | null,
-): string {
+  error: { message?: string; context?: Response } | null,
+): Promise<string> {
   if (data && typeof data === "object" && "error" in data) {
     const message = (data as { error?: unknown }).error;
     if (typeof message === "string" && message.trim()) return message;
   }
+
+  if (error instanceof FunctionsHttpError) {
+    const body = await error.context.clone().json().catch(() => null) as
+      | { error?: string; message?: string }
+      | null;
+    if (body?.error) return body.error;
+    if (body?.message) return body.message;
+  }
+
+  if (error?.context) {
+    const body = await error.context.clone().json().catch(() => null) as
+      | { error?: string; message?: string }
+      | null;
+    if (body?.error) return body.error;
+    if (body?.message) return body.message;
+  }
+
   return error?.message || "Falha ao criar assinatura";
 }
 
@@ -35,7 +53,7 @@ export async function createPagarmeSubscription(input: CreateSubscriptionInput) 
     "pagarme-create-subscription",
     { body: input },
   );
-  if (error) throw new Error(error.message || "Falha ao criar assinatura");
+  if (error) throw new Error(await extractEdgeFunctionError(data, error));
   if (data?.success === false) throw new Error(data.error || "Falha ao criar assinatura");
   return data;
 }
@@ -61,7 +79,7 @@ export async function createPagarmeBoletoPix(input: CreateOfflineSubscriptionInp
     "pagarme-create-boleto-pix",
     { body: input },
   );
-  if (error) throw new Error(extractEdgeFunctionError(data, error));
+  if (error) throw new Error(await extractEdgeFunctionError(data, error));
   if (data?.success === false) throw new Error(data.error || "Falha ao criar assinatura");
   return data;
 }
@@ -71,7 +89,7 @@ export async function cancelPagarmeSubscription(subscription_id: string) {
     "pagarme-update-subscription",
     { body: { action: "cancel", subscription_id } },
   );
-  if (error) throw new Error(error.message || "Falha ao cancelar");
+  if (error) throw new Error(await extractEdgeFunctionError(data, error));
   if (data?.success === false) throw new Error(data.error || "Falha ao cancelar");
   return data;
 }
@@ -84,7 +102,7 @@ export async function changePagarmeSubscriptionCycle(
     "pagarme-update-subscription",
     { body: { action: "change_plan", subscription_id, billing_cycle } },
   );
-  if (error) throw new Error(error.message || "Falha ao alterar plano");
+  if (error) throw new Error(await extractEdgeFunctionError(data, error));
   if (data?.success === false) throw new Error(data.error || "Falha ao alterar plano");
   return data;
 }
@@ -125,7 +143,7 @@ export async function getPagarmeReceipt(
     "pagarme-get-receipt",
     { body: { subscription_id } },
   );
-  if (error) throw new Error(error.message || "Falha ao buscar comprovante");
+  if (error) throw new Error(await extractEdgeFunctionError(data, error));
   if (data?.success === false) throw new Error(data.error || "Falha ao buscar comprovante");
   return data as PagarmeReceiptResponse;
 }

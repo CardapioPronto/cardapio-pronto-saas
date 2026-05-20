@@ -6,9 +6,20 @@ import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 
 export const TrialBanner = () => {
   const navigate = useNavigate();
-  const { isInTrial, daysLeftInTrial, hasActiveSubscription, isLoading } = useSubscriptionStatus();
+  const {
+    isInTrial,
+    daysLeftInTrial,
+    hasActiveSubscription,
+    subscriptionStatus,
+    isLoading,
+  } = useSubscriptionStatus();
 
-  if (isLoading || !isInTrial || !hasActiveSubscription) {
+  if (
+    isLoading ||
+    subscriptionStatus === "pending" ||
+    !isInTrial ||
+    !hasActiveSubscription
+  ) {
     return null;
   }
 

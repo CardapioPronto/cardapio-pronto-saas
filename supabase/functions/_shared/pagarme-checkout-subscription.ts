@@ -142,3 +142,11 @@ export function buildLocalSubscriptionFromPagarme(input: {
     period_credit_days: periodCreditDays,
   };
 }
+
+/** Campos persistíveis em `subscriptions` (sem metadados só de resposta da API). */
+export function subscriptionInsertRow(
+  localSub: ReturnType<typeof buildLocalSubscriptionFromPagarme>,
+) {
+  const { period_credit_days: _credit, ...row } = localSub;
+  return row;
+}

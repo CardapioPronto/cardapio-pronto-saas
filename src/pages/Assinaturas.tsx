@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "@/components/ui/sonner-toast";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -54,9 +54,19 @@ const Assinaturas = () => {
         next_billing_at: currentSubscription.next_billing_at,
       })
     : null;
+  const hasPendingPayment = currentSubscription?.status === "pending";
+  const effectiveStatus =
+    !hasPendingPayment &&
+    currentSubscription?.status === "canceled" &&
+    currentSubscription.is_trial &&
+    currentSubscription.trial_ends_at &&
+    new Date(currentSubscription.trial_ends_at).getTime() >= Date.now()
+      ? "trialing"
+      : currentSubscription?.status;
+
   const subscriptionAccess = currentSubscription
     ? computeSubscriptionAccess({
-        status: currentSubscription.status,
+        status: effectiveStatus ?? currentSubscription.status,
         is_trial: currentSubscription.is_trial,
         trial_ends_at: currentSubscription.trial_ends_at,
         current_period_end: currentSubscription.current_period_end,
@@ -155,7 +165,7 @@ const Assinaturas = () => {
   return (
     <DashboardLayout title="Assinaturas">
       <div className="space-y-6">
-        {currentSubscription?.status === "trialing" && (
+        {effectiveStatus === "trialing" && (
           <Alert className="border-orange/40 bg-orange/5">
             <Clock className="h-4 w-4 text-orange" />
             <AlertTitle>Você está no período de teste gratuito (14 dias)</AlertTitle>
@@ -204,6 +214,7 @@ const Assinaturas = () => {
           </Alert>
         )}
         {!mySubsLoading &&
+          !hasPendingPayment &&
           !subscriptionAccess?.hasActiveSubscription &&
           !subscriptionAccess?.showPastDueGraceAlert && (
             <Alert variant="destructive">
@@ -289,6 +300,10 @@ const Assinaturas = () => {
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="left-[50%] top-[max(0.5rem,env(safe-area-inset-top))] flex max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 translate-y-0 flex-col overflow-y-auto overscroll-contain p-0 sm:max-w-[525px]">
+          <DialogTitle className="sr-only">Ativar plano</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulário de pagamento para assinatura do plano selecionado.
+          </DialogDescription>
           {selectedPlanForPayment && (
             <PaymentForm
               planId={selectedPlanForPayment.id}
