@@ -10,7 +10,7 @@ export function primaryOrderChargeStatus(order: PagarmeOrderSnapshot): string {
 }
 
 export function isPlatformOrderExternalId(id: string | null | undefined): boolean {
-  return typeof id === "string" && id.startsWith("ord_");
+  return typeof id === "string" && (id.startsWith("or_") || id.startsWith("ord_"));
 }
 
 export function isPagarmeSubscriptionExternalId(id: string | null | undefined): boolean {
