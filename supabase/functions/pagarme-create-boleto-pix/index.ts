@@ -143,6 +143,10 @@ function buildSubscriptionPayload(
   return base;
 }
 
+function hasPaymentPayload(info: Record<string, unknown>) {
+  return Object.values(info).some((value) => value != null && value !== "");
+}
+
 function extractPaymentInfo(
   subscription: PagarmeSubscription,
   paymentMethod: PaymentMethod,
@@ -366,7 +370,16 @@ Deno.serve(async (req) => {
       console.error("Failed to send subscription email:", emailError);
     }
 
-    const paymentInfo = extractPaymentInfo(subscription, body.payment_method);
+    let paymentInfo = extractPaymentInfo(subscription, body.payment_method);
+
+    if (!hasPaymentPayload(paymentInfo) && subscription.id) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const refreshed = await pagarme<PagarmeSubscription>(
+        `/subscriptions/${subscription.id}`,
+        "GET",
+      );
+      paymentInfo = extractPaymentInfo(refreshed, body.payment_method);
+    }
 
     return new Response(JSON.stringify({
       success: true,
