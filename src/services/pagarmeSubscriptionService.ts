@@ -29,10 +29,10 @@ export async function createPagarmeSubscription(input: CreateSubscriptionInput) 
   return data;
 }
 
-export interface CreateBoletoPixInput {
+export interface CreateOfflineSubscriptionInput {
   local_plan_id: string;
   billing_cycle: "monthly" | "yearly";
-  payment_method: "boleto";
+  payment_method: "boleto" | "pix";
   customer: {
     name: string;
     email: string;
@@ -42,7 +42,10 @@ export interface CreateBoletoPixInput {
   };
 }
 
-export async function createPagarmeBoletoPix(input: CreateBoletoPixInput) {
+/** @deprecated Use CreateOfflineSubscriptionInput */
+export type CreateBoletoPixInput = CreateOfflineSubscriptionInput;
+
+export async function createPagarmeBoletoPix(input: CreateOfflineSubscriptionInput) {
   const { data, error } = await supabase.functions.invoke(
     "pagarme-create-boleto-pix",
     { body: input },

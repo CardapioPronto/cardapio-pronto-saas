@@ -58,6 +58,19 @@ describe("computeSubscriptionAccess", () => {
     expect(r.hasActiveSubscription).toBe(true);
   });
 
+  it("pending não libera acesso", () => {
+    const r = computeSubscriptionAccess(
+      {
+        status: "pending",
+        is_trial: false,
+        trial_ends_at: null,
+        current_period_end: null,
+      },
+      fixed,
+    );
+    expect(r.hasActiveSubscription).toBe(false);
+  });
+
   it("past_due fora da graça bloqueia", () => {
     const r = computeSubscriptionAccess(
       {

@@ -36,6 +36,7 @@ const ALLOWED_PAYMENT_METHODS = new Set([
   "debit_card",
   "cash",
   "boleto",
+  "pix",
 ]);
 
 function normalizePaymentMethods(methods: string[] | null | undefined) {

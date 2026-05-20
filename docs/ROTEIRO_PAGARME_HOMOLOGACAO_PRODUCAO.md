@@ -223,7 +223,8 @@ WHERE is_active = true;
 
 Esperado: `pagarme_sync_status = 'synced'` e ambos os IDs preenchidos (ou justificar plano só mensal).
 
-- [ ] `pagarme_payment_methods` inclui os métodos que o plano deve oferecer (ex.: `credit_card`, `boleto`).
+- [ ] `pagarme_payment_methods` inclui os métodos do plano (ex.: `credit_card`, `boleto`, `pix`).
+- [ ] Após adicionar PIX a um plano existente: **re-sincronizar** no Admin (IDs Pagar.me do plano precisam incluir PIX).
 
 ### B2. Validação negativa
 
@@ -285,10 +286,11 @@ Esperado: `status IN ('active','trialing')`, `pagarme_subscription_id` preenchid
 - [ ] Concluir formulário (sem dados de cartão).
 - [ ] Edge `pagarme-create-boleto-pix` retorna `success: true` e objeto `payment` com `boleto_url` / `boleto_line` quando a API enviar na primeira fatura.
 
-**Comportamento atual da UI (validar):**
+**Comportamento esperado (pós-correção I1–I3):**
 
-- [ ] Toast genérico “criada com sucesso” — **não** exibe link do boleto na tela (Pendência I2).
-- [ ] Verificar se o status local ficou `active` indevidamente enquanto o Pagar.me está `pending` (Pendência I1).
+- [ ] Tela de confirmação com link do boleto e linha digitável.
+- [ ] Status local `pending` até webhook de pagamento.
+- [ ] Alerta “Aguardando confirmação do pagamento” em `/assinaturas`.
 
 ### D2. Pagamento simulado
 
@@ -298,8 +300,28 @@ Esperado: `status IN ('active','trialing')`, `pagarme_subscription_id` preenchid
 
 ### D3. Acesso durante pendência
 
-- [ ] Com boleto pendente, confirmar o que o dono vê em `/assinaturas` (alertas de trial / past_due / ativo).
-- [ ] Documentar resultado — hoje `pending` **não** entra em `get_my_subscription_summaries` (Pendência I3).
+- [ ] Com boleto pendente: alerta laranja, **sem** alerta verde “Plano ativo”.
+- [ ] `get_restaurant_subscription_entitlement` **não** libera produto até `active`.
+
+---
+
+## Bloco D-Pix — Assinatura com PIX
+
+**Pré-requisito:** plano com `pix` em `pagarme_payment_methods` e sync no Pagar.me.
+
+**Rota:** `/assinaturas` → aba **PIX**.
+
+### D-Pix1. Sucesso (valor do plano ≤ R$ 500 no simulador)
+
+- [ ] Escolher ciclo mensal cujo total ≤ R$ 500 (ajustar preço do plano em Admin se necessário).
+- [ ] Concluir formulário → tela com QR Code e copia e cola.
+- [ ] SQL: `status = 'pending'` logo após criar; após simulação automática, `status = 'active'`.
+- [ ] Webhook `charge.paid` em `pagarme_webhook_events`.
+
+### D-Pix2. Falha (valor > R$ 500)
+
+- [ ] Plano anual/mensal com total > R$ 500 → erro ou `failed` conforme simulador.
+- [ ] Nenhuma assinatura `active` indevida.
 
 ---
 
@@ -406,43 +428,36 @@ Execute após Blocos C–F para aumentar confiança.
 
 ## Bloco I — Pendências de código (antes de produção comercial ampla)
 
-Estas pendências foram identificadas na revisão do código; homologação pode **continuar**, mas o go-live amplo deve aguardar ou aceitar o risco explicitamente.
-
 ### I1. Status `pending` gravado como `active` (boleto)
 
-**Onde:** `pagarme-create-subscription` e `pagarme-create-boleto-pix` — fallback final do mapeamento de status.
-
-**Risco:** cliente vê “Plano ativo” antes do pagamento do boleto.
-
-- [ ] Corrigir mapeamento: `subscription.status === 'pending'` → `pending` no banco.
-- [ ] Homologar de novo Bloco D após o fix.
+- [x] `mapPagarmeSubscriptionStatus` em `supabase/functions/_shared/pagarme-subscription-status.ts`.
+- [x] Cancelamento de assinaturas anteriores inclui `pending`.
+- [ ] Revalidar Bloco D (boleto) em homologação após deploy.
 
 ### I2. UI não exibe boleto após criar assinatura
 
-**Onde:** `PaymentForm.tsx` ignora `result.payment`.
-
-- [ ] Após boleto: modal com `boleto_url`, linha digitável, vencimento; toast “Aguardando pagamento”.
-- [ ] Opcional: link para `SubscriptionReceiptView`.
+- [x] `BoletoPaymentConfirmation` + passo pós-submit em `PaymentForm.tsx`.
+- [x] Cópia de linha digitável e link do PDF.
 
 ### I3. Assinatura `pending` invisível para o dono
 
-**Onde:** `get_my_subscription_summaries` e `useMySubscriptions` filtram sem `pending`.
-
-- [ ] Incluir `pending` no RPC e no hook.
-- [ ] Alerta dedicado em `Assinaturas.tsx`: “Aguardando pagamento do boleto”.
+- [x] Migration `20260519143000_subscription_pending_visibility.sql`.
+- [x] `useMySubscriptions`, alertas e badges em Assinaturas / Overview / Lista.
 
 ### I4. PIX em assinaturas
 
-- [ ] Produto: decidir se entra no MVP.
-- [ ] Se sim: estender `pagarme-create-boleto-pix` (ou nova Edge), `PaymentForm`, tipos `PagarmePaymentMethod`, sync de planos.
+- [x] Edge `pagarme-create-boleto-pix` aceita `payment_method: pix` + `pix.expires_in`.
+- [x] `PaymentForm` com aba PIX e `PixPaymentConfirmation` (QR + copia e cola).
+- [x] Admin planos: método PIX em Add/Edit + sync Pagar.me.
+- [ ] Homologar: plano com PIX habilitado → re-sync → assinatura com valor ≤ R$ 500 (simulador).
 
 ### I5. Remover ou isolar código legado `src/services/payment/*`
 
-- [ ] Garantir que nenhuma rota importa `processCardPayment` / `processPixPayment` no fluxo de assinatura atual.
+- [x] `paymentService.ts` marcado `@deprecated`; fluxo real usa `pagarmeSubscriptionService`.
 
 ### I6. Documentar cartões de teste no QA
 
-- [ ] Atualizar `docs/QA_ROTEIROS_MANUAIS.md` §1.4 com link para este roteiro (feito na mesma entrega).
+- [x] `docs/QA_ROTEIROS_MANUAIS.md` §1.4 com link para este roteiro.
 
 ---
 
@@ -453,7 +468,7 @@ Estas pendências foram identificadas na revisão do código; homologação pode
 ### J1. Pré-cutover (checklist)
 
 - [ ] Blocos A–H concluídos em **homologação**.
-- [ ] Pendências I1–I3 resolvidas **ou** aceitas por escrito com mitigação (ex.: desabilitar boleto em planos até corrigir).
+- [x] Pendências I1–I3 implementadas no código (revalidar em homologação).
 - [ ] `npm run preflight:prod`, `npm run typecheck`, `npm run test` verdes.
 - [ ] QA manual `docs/QA_ROTEIROS_MANUAIS.md` §1.4 e §2.2 (assinatura + PIX PDV/cardápio).
 

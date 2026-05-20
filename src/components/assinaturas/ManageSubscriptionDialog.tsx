@@ -62,6 +62,7 @@ const formatCurrency = (value: number | null | undefined) =>
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   active: { label: "Ativa", className: "bg-green text-white" },
   trialing: { label: "Em teste", className: "bg-orange/15 text-orange border border-orange/30" },
+  pending: { label: "Aguardando pagamento", className: "bg-orange/15 text-orange border border-orange/30" },
   past_due: { label: "Em atraso", className: "bg-destructive text-destructive-foreground" },
   canceled: { label: "Cancelada", className: "bg-muted text-muted-foreground" },
 };

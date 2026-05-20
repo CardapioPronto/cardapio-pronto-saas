@@ -83,8 +83,9 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [ ] (Opcional) Cartão de falha `4000000000000028` → erro na UI, sem
       assinatura ativa nova.
 - [ ] (Opcional) Boleto: criar assinatura, pagar no simulador, conferir
-      webhook e status `active` (ver pendências de UI em
-      `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` Bloco I).
+      webhook e status `active` (`docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` Bloco D).
+- [ ] (Opcional) PIX assinatura: plano com PIX + sync, total ≤ R$ 500,
+      QR Code exibido, status `pending` → `active` (Bloco D-Pix do roteiro).
 - [ ] Simular `past_due` (cartão de falha na renovação ou
       `charge.payment_failed` no painel) → alert de pagamento em atraso.
 

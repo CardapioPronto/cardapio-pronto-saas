@@ -25,4 +25,4 @@ export type Plano = {
     }[];
 };
 
-export type PagarmePaymentMethod = 'credit_card' | 'debit_card' | 'boleto' | 'cash';
+export type PagarmePaymentMethod = 'credit_card' | 'debit_card' | 'boleto' | 'pix' | 'cash';

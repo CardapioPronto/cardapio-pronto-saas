@@ -7,6 +7,7 @@ const PAGARME_METHODS = new Set<PagarmePaymentMethod>([
     "credit_card",
     "debit_card",
     "boleto",
+    "pix",
     "cash",
 ]);
 

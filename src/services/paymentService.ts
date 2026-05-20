@@ -1,21 +1,21 @@
 
-// Arquivo principal que exporta todas as funções do serviço de pagamento
-// Este arquivo serve como ponto de entrada para o serviço
+/**
+ * @deprecated Use `@/services/pagarmeSubscriptionService` para assinaturas Pagar.me
+ * (Edge Functions server-side). Este módulo mantém apenas reexports legados para
+ * compatibilidade; não chama a API Pagar.me no browser.
+ */
 
-// Re-exportar os tipos
 export * from './payment/types';
 
-// Exportar funções de configuração
-export { 
+export {
   configurePaymentService,
   getPlanName,
-  getPlanPrice
+  getPlanPrice,
 } from './payment/config';
 
-// Exportar funções de assinatura
 export {
   createSubscription,
   cancelSubscription,
   getSubscriptionDetails,
-  checkPaymentIntegrationStatus
+  checkPaymentIntegrationStatus,
 } from './payment/subscriptionService';

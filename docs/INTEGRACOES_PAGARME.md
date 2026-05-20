@@ -17,7 +17,7 @@ O restaurante paga o plano Pubfy (mensal/anual).
 | Async | `pagarme-webhook` (`subscription.*`, `charge.*`, `invoice.*`) |
 | Pós-venda | `pagarme-update-subscription`, `pagarme-get-receipt` |
 
-**Métodos hoje:** cartão e boleto na UI. PIX de assinatura não está no fluxo atual.
+**Métodos hoje:** cartão, boleto e PIX na UI (`pagarme-create-boleto-pix` com `payment_method: boleto | pix`).
 
 ### 2. Pagamento online do pedido (B2C)
 
@@ -60,11 +60,10 @@ Detalhes e matriz completa: `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`.
 
 ## Limitações conhecidas (maio/2026)
 
-1. Boleto pode gravar `active` local enquanto Pagar.me está `pending` — corrigir antes de go-live amplo.
-2. UI não mostra link do boleto após criar assinatura.
-3. Status `pending` não aparece em `get_my_subscription_summaries`.
-4. `src/services/payment/*` é legado; não usar para homologação.
-5. Simulador PIX não funciona com Split (doc Pagar.me).
+1. `src/services/payment/*` é legado; usar `pagarmeSubscriptionService` + Edge Functions.
+2. Simulador PIX não funciona com Split (doc Pagar.me) — vale para pedidos marketplace.
+3. Status `pending` (boleto/PIX) não libera acesso ao produto até webhook `charge.paid` — intencional.
+4. Planos com PIX precisam ser **re-sincronizados** no Admin após habilitar o método no plano.
 
 ## Onde olhar em incidente
 

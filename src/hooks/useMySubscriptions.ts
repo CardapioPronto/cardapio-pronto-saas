@@ -36,7 +36,7 @@ export interface MySubscription {
   } | null;
 }
 
-const VISIBLE_STATUSES = ["active", "trialing", "past_due", "canceled"];
+const VISIBLE_STATUSES = ["active", "trialing", "past_due", "pending", "canceled"];
 
 type PlanSummary = NonNullable<MySubscription["plan"]>;
 type SubscriptionRow = Omit<MySubscription, "plan"> & {

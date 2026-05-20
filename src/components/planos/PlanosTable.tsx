@@ -11,6 +11,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: "Crédito",
   debit_card: "Débito",
   boleto: "Boleto",
+  pix: "PIX",
   cash: "Dinheiro",
 };
 

@@ -3,6 +3,10 @@
 // sincronizado, e persiste a assinatura na tabela `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import {
+  mapPagarmeSubscriptionStatus,
+  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
+} from "../_shared/pagarme-subscription-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -288,15 +292,10 @@ Deno.serve(async (req) => {
       ? new Date(now.getTime() + trialDays * 86400000)
       : null;
 
-    const status: string = subscription.status === "trialing"
-      ? "trialing"
-      : subscription.status === "active"
-        ? "active"
-        : subscription.status === "past_due"
-          ? "past_due"
-          : subscription.status === "canceled"
-            ? "canceled"
-            : (trialEnd ? "trialing" : "active");
+    const status = mapPagarmeSubscriptionStatus(subscription.status, {
+      trialDays,
+      paymentMethod: "credit_card",
+    });
 
     const nextBilling = subscription.next_billing_at
       ? new Date(subscription.next_billing_at)
@@ -311,7 +310,7 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .update({ status: "canceled", end_date: now.toISOString() })
       .eq("restaurant_id", restaurant.id)
-      .in("status", ["active", "trialing", "past_due"]);
+      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE]);
 
     // 8) Persiste
     const { data: inserted, error: insertErr } = await admin
