@@ -42,3 +42,34 @@ export const SUBSCRIPTION_STATUSES_TO_SUPERSEDE = [
   "past_due",
   "pending",
 ] as const;
+
+type SupabaseAdmin = {
+  from: (table: string) => {
+    update: (values: Record<string, unknown>) => {
+      eq: (col: string, val: string) => {
+        in: (col: string, vals: readonly string[]) => {
+          neq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+        };
+      };
+    };
+  };
+};
+
+/** Cancela assinaturas anteriores somente após a nova estar persistida com sucesso. */
+export async function supersedePriorSubscriptions(
+  admin: SupabaseAdmin,
+  restaurantId: string,
+  keepSubscriptionId: string,
+) {
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from("subscriptions")
+    .update({ status: "canceled", end_date: now })
+    .eq("restaurant_id", restaurantId)
+    .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE])
+    .neq("id", keepSubscriptionId);
+
+  if (error) {
+    throw new Error(`Failed to supersede prior subscriptions: ${error.message}`);
+  }
+}

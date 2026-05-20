@@ -3,9 +3,13 @@
 // sincronizado, e persiste a assinatura na tabela `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
-import { SUBSCRIPTION_STATUSES_TO_SUPERSEDE } from "../_shared/pagarme-subscription-status.ts";
+import {
+  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
+  supersedePriorSubscriptions,
+} from "../_shared/pagarme-subscription-status.ts";
 import {
   buildLocalSubscriptionFromPagarme,
+  subscriptionInsertRow,
   type PagarmeSubscriptionPayload,
 } from "../_shared/pagarme-checkout-subscription.ts";
 
@@ -304,20 +308,12 @@ Deno.serve(async (req) => {
       priorEntitlement: priorSub,
     });
 
-    // 7) Cancela assinaturas locais anteriores (trial ou pendentes)
-    await admin
-      .from("subscriptions")
-      .update({ status: "canceled", end_date: now.toISOString() })
-      .eq("restaurant_id", restaurant.id)
-      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE]);
-
-    // 8) Persiste
     const { data: inserted, error: insertErr } = await admin
       .from("subscriptions")
       .insert({
         restaurant_id: restaurant.id,
         plan_id: plan.id,
-        ...localSub,
+        ...subscriptionInsertRow(localSub),
         pagarme_subscription_id: subscription.id ?? created.id,
         pagarme_customer_id: customer.id,
       })
@@ -336,6 +332,8 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
 
     try {
       await sendManagedEmail({
