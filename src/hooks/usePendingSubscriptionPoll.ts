@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { syncPagarmePendingPayment } from "@/services/pagarmeSubscriptionService";
 
 const POLL_INTERVAL_MS = 8_000;
@@ -11,21 +11,31 @@ export function usePendingSubscriptionPoll(
   pendingSubscriptionIds: string[],
   refetch: () => void | Promise<void>,
 ) {
+  const inFlightRef = useRef(false);
+
   const pendingKey = useMemo(
-    () => pendingSubscriptionIds.join("|"),
+    () => [...pendingSubscriptionIds].sort().join("|"),
     [pendingSubscriptionIds],
   );
 
   useEffect(() => {
-    if (pendingSubscriptionIds.length === 0) return;
+    if (!pendingKey) return;
+
+    const subscriptionIds = pendingKey.split("|");
 
     const syncAndRefetch = async () => {
-      await Promise.all(
-        pendingSubscriptionIds.map((id) =>
-          syncPagarmePendingPayment(id).catch(() => undefined),
-        ),
-      );
-      await Promise.resolve(refetch());
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      try {
+        await Promise.all(
+          subscriptionIds.map((id) =>
+            syncPagarmePendingPayment(id).catch(() => undefined),
+          ),
+        );
+        await Promise.resolve(refetch());
+      } finally {
+        inFlightRef.current = false;
+      }
     };
 
     void syncAndRefetch();
@@ -41,5 +51,5 @@ export function usePendingSubscriptionPoll(
       window.clearInterval(intervalId);
       window.clearTimeout(stopId);
     };
-  }, [pendingKey, pendingSubscriptionIds, refetch]);
+  }, [pendingKey, refetch]);
 }

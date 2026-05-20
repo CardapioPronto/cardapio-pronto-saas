@@ -2,6 +2,7 @@
 // Busca a última fatura/charge de uma assinatura no Pagar.me
 // e retorna dados de comprovante (boleto / PIX / cartão).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isPlatformOrderExternalId } from "../_shared/pagarme-platform-order.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,7 +27,9 @@ type PagarmeTransaction = {
   barcode?: string | null;
   line?: string | null;
   qr_code?: string | null;
+  qrcode?: string | null;
   qr_code_url?: string | null;
+  qrcode_url?: string | null;
   expires_at?: string | null;
   card?: {
     brand?: string | null;
@@ -114,8 +117,8 @@ function extractReceipt(charge: PagarmeCharge | null) {
     boleto_barcode: tx?.barcode ?? null,
     boleto_line: tx?.line ?? null,
     // PIX
-    pix_qr_code: tx?.qr_code ?? null,
-    pix_qr_code_url: tx?.qr_code_url ?? null,
+    pix_qr_code: tx?.qr_code ?? tx?.qrcode ?? null,
+    pix_qr_code_url: tx?.qr_code_url ?? tx?.qrcode_url ?? null,
     pix_expires_at: tx?.expires_at ?? null,
     // Cartão
     card_brand: tx?.card?.brand ?? null,
@@ -185,7 +188,7 @@ Deno.serve(async (req) => {
     const externalId = sub.pagarme_subscription_id;
     let charges: PagarmeCharge[] = [];
 
-    if (externalId.startsWith("ord_")) {
+    if (isPlatformOrderExternalId(externalId)) {
       const order = await pagarme<PagarmeOrder>(
         `/orders/${encodeURIComponent(externalId)}`,
       );
