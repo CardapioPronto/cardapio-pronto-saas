@@ -1,6 +1,7 @@
 // Edge Function: pagarme-sync-plan
 // Cria/atualiza os planos (mensal e anual) no Pagar.me a partir de um plano local.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { pagarmeErrorMessage } from "../_shared/pagarme-errors.ts";
 import { planAmountBreakdownForPagarmePlan } from "../_shared/pagarme-plan-pricing.ts";
 
 const corsHeaders = {
@@ -63,23 +64,6 @@ function normalizePlanPaymentMethodsForPagarme(methods: string[] | null | undefi
   return validMethods.length > 0 ? validMethods : DEFAULT_PAYMENT_METHODS;
 }
 
-type PagarmeErrorPayload = {
-  message?: string;
-  errors?: Array<{ message?: string; field?: string }>;
-  raw?: string;
-};
-
-function pagarmeErrorMessage(data: PagarmeRequestData, status: number) {
-  if (data && typeof data === "object") {
-    const payload = data as PagarmeErrorPayload;
-    const detail = payload.errors?.[0]?.message;
-    if (detail) return detail;
-    if (payload.message) return payload.message;
-    if (payload.raw) return payload.raw.slice(0, 400);
-  }
-  return `Pagar.me retornou HTTP ${status}`;
-}
-
 function amountCentsForInterval(plan: LocalPlan, interval: "month" | "year") {
   const billingCycle = interval === "month" ? "monthly" : "yearly";
   return planAmountBreakdownForPagarmePlan(plan, billingCycle).amount_cents;
@@ -124,7 +108,11 @@ function buildPlanCreateBody(
   interval: "month" | "year",
   amountCents: number,
 ) {
-  const base = buildPlanBase(plan, interval, amountCents);
+  const {
+    status: _status,
+    trial_period_days: _trialPeriodDays,
+    ...base
+  } = buildPlanBase(plan, interval, amountCents);
   return {
     ...base,
     items: [
