@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, CreditCard, RefreshCw, Clock, CheckCircle2, AlertTriangle, XCircle, Settings, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Calendar, CreditCard, RefreshCw, Settings } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
+import { getSubscriptionStatusMeta } from "@/lib/subscriptionStatusUi";
 
 interface MySubscriptionsListProps {
   subscriptions: MySubscription[];
@@ -30,16 +31,6 @@ const formatCurrency = (value: number | null | undefined) =>
   typeof value === "number"
     ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
     : "—";
-
-const STATUS_META: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: LucideIcon; className?: string }
-> = {
-  active: { label: "Ativa", variant: "default", icon: CheckCircle2, className: "bg-green text-white hover:bg-green-dark" },
-  trialing: { label: "Em teste", variant: "secondary", icon: Clock, className: "bg-orange/15 text-orange border-orange/30" },
-  past_due: { label: "Em atraso", variant: "destructive", icon: AlertTriangle },
-  canceled: { label: "Cancelada", variant: "outline", icon: XCircle, className: "bg-muted text-muted-foreground" },
-};
 
 const BILLING_CYCLE_LABEL: Record<string, string> = {
   monthly: "Mensal",
@@ -88,7 +79,7 @@ const MySubscriptionsList = ({
         <CardHeader>
           <CardTitle>Nenhuma assinatura ativa</CardTitle>
           <CardDescription>
-            Você não possui assinaturas ativas, em teste ou em atraso no momento.
+            Você não possui assinaturas ativas, em teste, aguardando pagamento ou em atraso no momento.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -112,11 +103,7 @@ const MySubscriptionsList = ({
       </div>
 
       {subscriptions.map((sub) => {
-        const statusMeta = STATUS_META[sub.status] ?? {
-          label: sub.status,
-          variant: "outline" as const,
-          icon: Clock,
-        };
+        const statusMeta = getSubscriptionStatusMeta(sub.status);
         const StatusIcon = statusMeta.icon;
         const cycleLabel = sub.billing_cycle
           ? BILLING_CYCLE_LABEL[sub.billing_cycle] ?? sub.billing_cycle
@@ -139,7 +126,7 @@ const MySubscriptionsList = ({
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={statusMeta.className} variant={statusMeta.variant}>
+                  <Badge className={statusMeta.className}>
                     <StatusIcon className="h-3.5 w-3.5 mr-1" />
                     {statusMeta.label}
                   </Badge>

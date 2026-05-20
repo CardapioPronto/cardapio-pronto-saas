@@ -59,11 +59,17 @@ Validação:
 
 ### 3.1 Pagar.me
 
-- [ ] `PAGARME_SECRET_KEY` em modo **live** (não usar `test_…`).
+Homologação passo a passo (simuladores, blocos A–K, matriz de falhas e
+cutover): **`docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`**. Resumo técnico:
+**`docs/INTEGRACOES_PAGARME.md`**.
+
+- [ ] Homologação em **test** concluída no roteiro Pagar.me (Blocos A–H).
+- [ ] `PAGARME_SECRET_KEY` em modo **live** (não usar `test_…` em produção).
 - [ ] `PAGARME_WEBHOOK_SECRET` definido e o mesmo cadastrado no painel da
-      Pagar.me em **Webhooks → URL → Sign with Secret**.
+      Pagar.me em **Webhooks → URL → Sign with Secret** (conta **live**).
 - [ ] `PAGARME_PLATFORM_RECIPIENT_ID` apontando para o recipient da empresa.
 - [ ] Endpoint do webhook em Pagar.me: `https://<project>.supabase.co/functions/v1/pagarme-webhook`.
+- [ ] Planos re-sincronizados no Super Admin **após** trocar para chave live.
 
 ### 3.2 Resend
 

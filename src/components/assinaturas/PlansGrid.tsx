@@ -85,7 +85,9 @@ const PlansGrid = ({ planos, currentSubscription, onSelectPlan }: PlansGridProps
             currentSubscription?.billing_cycle === billingCycle;
           const isSynced = isPlanSyncedForCycle(plano, billingCycle);
           const paymentMethods = plano.pagarme_payment_methods ?? [];
-          const hasSupportedPaymentMethod = paymentMethods.some((method) => method === "credit_card" || method === "boleto");
+          const hasSupportedPaymentMethod = paymentMethods.some((method) =>
+            method === "credit_card" || method === "boleto" || method === "pix",
+          );
           const canSubscribe = isSynced && hasSupportedPaymentMethod;
           const buttonLabel = isCurrentPlan
             ? "Plano atual"

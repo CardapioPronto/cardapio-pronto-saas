@@ -1,21 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, CheckCircle2, Clock, CreditCard, Settings, ShieldCheck, XCircle, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, CreditCard, Settings, ShieldCheck } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
+import { getSubscriptionStatusMeta } from "@/lib/subscriptionStatusUi";
 
 interface SubscriptionOverviewProps {
   subscription: MySubscription | null;
   onManage: (subscription: MySubscription) => void;
   onViewPlans: () => void;
 }
-
-const STATUS_META: Record<string, { label: string; className: string; icon: LucideIcon }> = {
-  active: { label: "Ativa", className: "bg-green text-white hover:bg-green-dark", icon: CheckCircle2 },
-  trialing: { label: "Em teste", className: "bg-orange/15 text-orange border border-orange/30", icon: Clock },
-  past_due: { label: "Em atraso", className: "bg-destructive text-destructive-foreground", icon: XCircle },
-  canceled: { label: "Cancelada", className: "bg-muted text-muted-foreground", icon: XCircle },
-};
 
 const BILLING_CYCLE_LABEL: Record<string, string> = {
   monthly: "Mensal",
@@ -57,7 +51,7 @@ const SubscriptionOverview = ({
         <CardHeader>
           <CardTitle>Sem assinatura ativa</CardTitle>
           <CardDescription>
-            Nenhuma assinatura ativa, em teste ou em atraso foi encontrada para este restaurante.
+            Nenhuma assinatura ativa, em teste, aguardando pagamento ou em atraso foi encontrada para este restaurante.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -74,11 +68,7 @@ const SubscriptionOverview = ({
     );
   }
 
-  const statusMeta = STATUS_META[subscription.status] ?? {
-    label: subscription.status,
-    className: "bg-muted text-muted-foreground",
-    icon: Clock,
-  };
+  const statusMeta = getSubscriptionStatusMeta(subscription.status);
   const StatusIcon = statusMeta.icon;
   const cycleLabel = subscription.billing_cycle
     ? BILLING_CYCLE_LABEL[subscription.billing_cycle] ?? subscription.billing_cycle
@@ -108,6 +98,15 @@ const SubscriptionOverview = ({
             </Button>
           </div>
         </CardHeader>
+
+        {subscription.status === "pending" && (
+          <CardContent className="pt-0">
+            <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
+              Pagamento (boleto ou PIX) em análise. Use <strong>Gerenciar</strong> para ver o QR Code, boleto ou
+              acompanhar a confirmação.
+            </p>
+          </CardContent>
+        )}
 
         <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-md border bg-background p-4">

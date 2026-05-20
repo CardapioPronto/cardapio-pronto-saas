@@ -20,6 +20,7 @@ const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string
   { value: "credit_card", label: "Cartão de crédito" },
   { value: "debit_card", label: "Cartão de débito" },
   { value: "boleto", label: "Boleto" },
+  { value: "pix", label: "PIX" },
   { value: "cash", label: "Dinheiro" },
 ];
 

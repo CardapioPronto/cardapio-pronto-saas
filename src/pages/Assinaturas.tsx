@@ -5,7 +5,8 @@ import { toast } from "@/components/ui/sonner-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { CheckCircle, AlertTriangle, Clock, FileText } from "lucide-react";
+import { DISPLAYABLE_SUBSCRIPTION_STATUSES } from "@/lib/subscriptionStatusUi";
 import PaymentForm, { PaymentSuccessData } from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
@@ -32,8 +33,9 @@ const Assinaturas = () => {
   const [manageSub, setManageSub] = useState<MySubscription | null>(null);
 
   const currentSubscription =
-    mySubscriptions.find((sub) => ["active", "trialing", "past_due"].includes(sub.status)) ??
-    null;
+    mySubscriptions.find((sub) =>
+      (DISPLAYABLE_SUBSCRIPTION_STATUSES as readonly string[]).includes(sub.status),
+    ) ?? null;
   const trialEndsAt = currentSubscription?.trial_ends_at
     ? new Date(currentSubscription.trial_ends_at)
     : null;
@@ -94,8 +96,20 @@ const Assinaturas = () => {
             </AlertDescription>
           </Alert>
         )}
+        {currentSubscription?.status === "pending" && (
+          <Alert className="border-orange/40 bg-orange/5">
+            <FileText className="h-4 w-4 text-orange" />
+            <AlertTitle>Aguardando confirmação do pagamento</AlertTitle>
+            <AlertDescription>
+              Sua assinatura do {currentSubscription.plan?.name ?? "Plano Pubfy"} foi registrada.
+              O acesso completo será liberado após a confirmação do boleto ou PIX.
+              Abra <strong>Gerenciar assinatura</strong> para ver o comprovante ou QR Code.
+            </AlertDescription>
+          </Alert>
+        )}
         {!mySubsLoading &&
-          (!currentSubscription || currentSubscription.status === "past_due") && (
+          (!currentSubscription ||
+            (currentSubscription.status === "past_due")) && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>{currentSubscription?.status === "past_due" ? "Pagamento em atraso" : "Plano expirado ou inativo"}</AlertTitle>

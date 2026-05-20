@@ -13,9 +13,25 @@ import {
   createPagarmeSubscription,
   createPagarmeBoletoPix,
 } from "@/services/pagarmeSubscriptionService";
-import { Loader2, CreditCard, FileText } from "lucide-react";
+import { Loader2, CreditCard, FileText, QrCode } from "lucide-react";
 import { toast } from "@/components/ui/sonner-toast";
 import { PagarmePaymentMethod } from "@/types/plano";
+import BoletoPaymentConfirmation, {
+  type BoletoPaymentDetails,
+} from "@/components/payment/BoletoPaymentConfirmation";
+import PixPaymentConfirmation, {
+  type PixPaymentDetails,
+} from "@/components/payment/PixPaymentConfirmation";
+import {
+  getLocalSubscriptionStatus,
+  isPendingPaymentSubscription,
+} from "@/lib/subscriptionStatusUi";
+
+type CheckoutPaymentMethod = "credit_card" | "boleto" | "pix";
+
+type OfflineConfirmation =
+  | { kind: "boleto"; result: PaymentSuccessData; payment: BoletoPaymentDetails }
+  | { kind: "pix"; result: PaymentSuccessData; payment: PixPaymentDetails };
 
 export type PaymentSuccessData = {
   success: boolean;
@@ -44,10 +60,9 @@ const paymentFormSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
   document: z.string().min(11, { message: "CPF/CNPJ inválido" }),
   phone: z.string().min(10, { message: "Telefone inválido" }),
-  paymentMethod: z.enum(["credit_card", "boleto"]),
+  paymentMethod: z.enum(["credit_card", "boleto", "pix"]),
   billingType: z.enum(["monthly", "yearly"]),
-  
-  // Credit card fields (conditional)
+
   cardNumber: z.string().optional(),
   cardName: z.string().optional(),
   cardExpiry: z.string().optional(),
@@ -77,18 +92,27 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   initialBillingType = "monthly",
   allowedPaymentMethods = ["credit_card", "boleto"],
   onSuccess,
-  onCancel
+  onCancel,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [offlineConfirmation, setOfflineConfirmation] = useState<OfflineConfirmation | null>(null);
+
   const availablePaymentMethods = useMemo(
-    () => allowedPaymentMethods.filter((method) => method === "credit_card" || method === "boleto"),
+    () =>
+      allowedPaymentMethods.filter(
+        (method): method is CheckoutPaymentMethod =>
+          method === "credit_card" || method === "boleto" || method === "pix",
+      ),
     [allowedPaymentMethods],
   );
-  const defaultPaymentMethod = availablePaymentMethods.includes("credit_card")
+  const defaultPaymentMethod: CheckoutPaymentMethod = availablePaymentMethods.includes("credit_card")
     ? "credit_card"
-    : "boleto";
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"credit_card" | "boleto">(defaultPaymentMethod);
-  
+    : availablePaymentMethods.includes("pix")
+      ? "pix"
+      : "boleto";
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<CheckoutPaymentMethod>(defaultPaymentMethod);
+
   const form = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
@@ -113,16 +137,25 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   }, [availablePaymentMethods, defaultPaymentMethod, form, selectedPaymentMethod]);
 
   const handlePaymentMethodChange = (value: string) => {
-    const method = value as "credit_card" | "boleto";
+    const method = value as CheckoutPaymentMethod;
     setSelectedPaymentMethod(method);
     form.setValue("paymentMethod", method);
+  };
+
+  const finishWithSuccess = (result: PaymentSuccessData, options?: { immediateToast?: boolean }) => {
+    const status = getLocalSubscriptionStatus(result.subscription as { status?: string });
+    if (options?.immediateToast !== false && status === "active") {
+      toast.success(`Assinatura ${planName} ativada com sucesso!`);
+    } else if (status === "trialing") {
+      toast.success(`Período de teste do plano ${planName} iniciado.`);
+    }
+    onSuccess(result);
   };
 
   async function onSubmit(values: z.infer<typeof paymentFormSchema>) {
     setIsSubmitting(true);
 
     try {
-      // Cartão de crédito → fluxo via Edge Function (server-side, plano sincronizado no Pagar.me)
       if (values.paymentMethod === "credit_card") {
         const expParts = (values.cardExpiry || "").split("/");
         const expMonth = expParts[0]?.padStart(2, "0") ?? "";
@@ -144,16 +177,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             cvv: values.cardCvc || "",
           },
         });
-        toast.success(`Assinatura ${planName} criada com sucesso!`);
-        onSuccess(result);
+        finishWithSuccess(result);
         return;
       }
 
-      // Boleto → Edge Function dedicada (server-side, plano sincronizado)
+      const offlineMethod = values.paymentMethod === "pix" ? "pix" : "boleto";
       const result = await createPagarmeBoletoPix({
         local_plan_id: planId,
         billing_cycle: values.billingType,
-        payment_method: "boleto",
+        payment_method: offlineMethod,
         customer: {
           name: values.name,
           email: values.email,
@@ -161,14 +193,62 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           phone: values.phone,
         },
       });
-      toast.success(`Assinatura ${planName} criada com sucesso!`);
-      onSuccess(result);
+
+      if (isPendingPaymentSubscription(result)) {
+        if (offlineMethod === "pix") {
+          setOfflineConfirmation({
+            kind: "pix",
+            result,
+            payment: {
+              pix_qr_code: (result.payment?.pix_qr_code as string) ?? null,
+              pix_qr_code_url: (result.payment?.pix_qr_code_url as string) ?? null,
+              pix_expires_at: (result.payment?.pix_expires_at as string) ?? null,
+            },
+          });
+        } else {
+          setOfflineConfirmation({
+            kind: "boleto",
+            result,
+            payment: {
+              boleto_url: (result.payment?.boleto_url as string) ?? null,
+              boleto_barcode: (result.payment?.boleto_barcode as string) ?? null,
+              boleto_line: (result.payment?.boleto_line as string) ?? null,
+              due_at: (result.payment?.due_at as string) ?? null,
+            },
+          });
+        }
+        return;
+      }
+
+      finishWithSuccess(result);
     } catch (error) {
       console.error("Error creating subscription:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao processar pagamento. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (offlineConfirmation) {
+    return (
+      <Card className="w-full max-w-lg mx-auto border-0 shadow-none">
+        {offlineConfirmation.kind === "pix" ? (
+          <PixPaymentConfirmation
+            planName={planName}
+            payment={offlineConfirmation.payment}
+            onContinue={() =>
+              finishWithSuccess(offlineConfirmation.result, { immediateToast: false })}
+          />
+        ) : (
+          <BoletoPaymentConfirmation
+            planName={planName}
+            payment={offlineConfirmation.payment}
+            onContinue={() =>
+              finishWithSuccess(offlineConfirmation.result, { immediateToast: false })}
+          />
+        )}
+      </Card>
+    );
   }
 
   const selectedBillingType = form.watch("billingType");
@@ -203,7 +283,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="email"
@@ -217,7 +297,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -232,7 +312,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="phone"
@@ -254,8 +334,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Período de cobrança</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -275,13 +355,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
               <div className="space-y-2">
                 <FormLabel>Método de pagamento</FormLabel>
-                <Tabs 
+                <Tabs
                   value={selectedPaymentMethod}
                   onValueChange={handlePaymentMethodChange}
                 >
                   <TabsList
                     className={`mb-4 grid ${
-                      availablePaymentMethods.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                      availablePaymentMethods.length >= 3
+                        ? "grid-cols-3"
+                        : availablePaymentMethods.length > 1
+                          ? "grid-cols-2"
+                          : "grid-cols-1"
                     }`}
                   >
                     {availablePaymentMethods.includes("credit_card") && (
@@ -296,8 +380,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         <span>Boleto</span>
                       </TabsTrigger>
                     )}
+                    {availablePaymentMethods.includes("pix") && (
+                      <TabsTrigger value="pix" className="flex items-center gap-2">
+                        <QrCode className="h-4 w-4" />
+                        <span>PIX</span>
+                      </TabsTrigger>
+                    )}
                   </TabsList>
-                
+
                   <TabsContent value="credit_card" className="space-y-4">
                     <FormField
                       control={form.control}
@@ -312,7 +402,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="cardName"
@@ -326,7 +416,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         </FormItem>
                       )}
                     />
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -341,7 +431,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="cardCvc"
@@ -357,23 +447,35 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                       />
                     </div>
                   </TabsContent>
-                  
+
                   <TabsContent value="boleto">
-                    <div className="bg-muted p-4 rounded-md text-center">
-                      <p>Você receberá o boleto por email após confirmar a assinatura.</p>
-                      <p className="text-sm text-muted-foreground mt-2">O acesso será liberado após a confirmação do pagamento.</p>
+                    <div className="rounded-md bg-muted p-4 text-center text-sm">
+                      <p>Após confirmar, exibiremos o boleto para pagamento.</p>
+                      <p className="mt-2 text-muted-foreground">
+                        O plano só é ativado após a confirmação do pagamento pelo banco.
+                      </p>
                     </div>
                   </TabsContent>
-                  
+
+                  <TabsContent value="pix">
+                    <div className="rounded-md bg-muted p-4 text-center text-sm">
+                      <p>Após confirmar, exibiremos o QR Code PIX.</p>
+                      <p className="mt-2 text-muted-foreground">
+                        O plano é ativado assim que o pagamento for confirmado (no teste, valores até R$ 500
+                        simulam sucesso automático).
+                      </p>
+                    </div>
+                  </TabsContent>
+
                 </Tabs>
               </div>
             </div>
-            
+
             <div className="rounded-md bg-muted/50 p-3 text-sm">
               Total: <span className="font-semibold">R$ {price.toFixed(2)}</span>
               {selectedBillingType === "yearly" ? " por ano" : " por mês"}
             </div>
-            
+
             <div className="flex justify-end space-x-2">
               <Button variant="outline" type="button" onClick={onCancel}>
                 Cancelar
@@ -384,6 +486,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processando...
                   </>
+                ) : selectedPaymentMethod === "boleto" ? (
+                  "Gerar boleto"
+                ) : selectedPaymentMethod === "pix" ? (
+                  "Gerar PIX"
                 ) : (
                   "Finalizar assinatura"
                 )}

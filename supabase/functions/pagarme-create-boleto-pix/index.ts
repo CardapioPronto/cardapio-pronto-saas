@@ -1,8 +1,12 @@
 // Edge Function: pagarme-create-boleto-pix
-// Cria customer + subscription no Pagar.me usando boleto
+// Cria customer + subscription no Pagar.me com boleto ou PIX
 // a partir de um plano local sincronizado, e persiste em `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import {
+  mapPagarmeSubscriptionStatus,
+  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
+} from "../_shared/pagarme-subscription-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +18,7 @@ const corsHeaders = {
 const PAGARME_API_URL = "https://api.pagar.me/core/v5";
 
 type BillingCycle = "monthly" | "yearly";
-type PaymentMethod = "boleto";
+type PaymentMethod = "boleto" | "pix";
 
 interface CustomerInput {
   name: string;
@@ -47,6 +51,11 @@ type PagarmeTransaction = {
   barcode?: string | null;
   line?: string | null;
   due_at?: string | null;
+  qr_code?: string | null;
+  qrcode?: string | null;
+  qr_code_url?: string | null;
+  qrcode_url?: string | null;
+  expires_at?: string | null;
 };
 
 type PagarmeCharge = {
@@ -105,13 +114,59 @@ function validateBody(b: unknown): RequestBody {
   if (b.billing_cycle !== "monthly" && b.billing_cycle !== "yearly") {
     throw new Error("billing_cycle must be monthly or yearly");
   }
-  if (b.payment_method !== "boleto") {
-    throw new Error("payment_method must be boleto");
+  if (b.payment_method !== "boleto" && b.payment_method !== "pix") {
+    throw new Error("payment_method must be boleto or pix");
   }
   if (!customer?.name || !customer.email || !customer.document || !customer.phone) {
     throw new Error("customer fields are required");
   }
   return b as RequestBody;
+}
+
+function buildSubscriptionPayload(
+  pagarmePlanId: string,
+  customerId: string,
+  paymentMethod: PaymentMethod,
+) {
+  const base: Record<string, unknown> = {
+    plan_id: pagarmePlanId,
+    customer_id: customerId,
+    payment_method: paymentMethod,
+  };
+
+  if (paymentMethod === "boleto") {
+    base.boleto_due_days = 3;
+  } else {
+    base.pix = { expires_in: 3600 };
+  }
+
+  return base;
+}
+
+function extractPaymentInfo(
+  subscription: PagarmeSubscription,
+  paymentMethod: PaymentMethod,
+): Record<string, unknown> {
+  const charge = subscription.current_cycle?.charges?.[0]
+    ?? subscription.invoices?.[0]?.charges?.[0]
+    ?? null;
+  const tx = charge?.last_transaction ?? null;
+  if (!tx) return {};
+
+  if (paymentMethod === "boleto") {
+    return {
+      boleto_url: tx.url ?? tx.pdf ?? null,
+      boleto_barcode: tx.barcode ?? null,
+      boleto_line: tx.line ?? null,
+      due_at: tx.due_at ?? null,
+    };
+  }
+
+  return {
+    pix_qr_code: tx.qr_code ?? tx.qrcode ?? null,
+    pix_qr_code_url: tx.qr_code_url ?? tx.qrcode_url ?? null,
+    pix_expires_at: tx.expires_at ?? null,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -159,8 +214,6 @@ Deno.serve(async (req) => {
 
     const { data: isSuperAdmin } = await admin.rpc("is_super_admin", { user_id: userId });
 
-    // 1) Restaurante. O front usa users.restaurant_id, então o backend precisa
-    // respeitar o mesmo vínculo antes de cair no owner_id.
     let restaurantQuery = admin
       .from("restaurants")
       .select("id, name, owner_id");
@@ -169,8 +222,7 @@ Deno.serve(async (req) => {
       ? restaurantQuery.eq("id", profile.restaurant_id)
       : restaurantQuery.eq("owner_id", userId);
 
-    const { data: restaurant, error: restErr } = await restaurantQuery
-      .maybeSingle();
+    const { data: restaurant, error: restErr } = await restaurantQuery.maybeSingle();
 
     if (restErr || !restaurant) {
       return new Response(JSON.stringify({ error: "Restaurant not found for user" }), {
@@ -180,12 +232,10 @@ Deno.serve(async (req) => {
 
     if (restaurant.owner_id !== userId && !isSuperAdmin) {
       return new Response(JSON.stringify({ error: "Only the restaurant owner can subscribe" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 2) Plano local sincronizado
     const { data: plan, error: planErr } = await admin
       .from("plans")
       .select("id, name, is_active, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly")
@@ -210,7 +260,6 @@ Deno.serve(async (req) => {
       }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 3) Customer
     const docDigits = digits(body.customer.document);
     const docType = body.customer.document_type || (docDigits.length === 14 ? "cnpj" : "cpf");
     const phoneDigits = digits(body.customer.phone);
@@ -233,31 +282,22 @@ Deno.serve(async (req) => {
     });
     if (!customer.id) throw new Error("Pagar.me customer response missing id");
 
-    // 4) Subscription (boleto)
-    const subscriptionPayload: Record<string, unknown> = {
-      plan_id: pagarmePlanId,
-      customer_id: customer.id,
-      payment_method: body.payment_method,
-      boleto_due_days: 3,
-    };
-    const subscription = await pagarme<PagarmeSubscription>("/subscriptions", "POST", subscriptionPayload);
+    const subscription = await pagarme<PagarmeSubscription>(
+      "/subscriptions",
+      "POST",
+      buildSubscriptionPayload(pagarmePlanId, customer.id, body.payment_method),
+    );
     if (!subscription.id) throw new Error("Pagar.me subscription response missing id");
 
-    // 5) Datas e status
     const now = new Date();
     const trialDays = plan.trial_days ?? 0;
     const trialStart = trialDays > 0 ? now : null;
     const trialEnd = trialDays > 0 ? new Date(now.getTime() + trialDays * 86400000) : null;
 
-    const status: string = subscription.status === "trialing"
-      ? "trialing"
-      : subscription.status === "active"
-        ? "active"
-        : subscription.status === "past_due"
-          ? "past_due"
-          : subscription.status === "canceled"
-            ? "canceled"
-            : (trialEnd ? "trialing" : "active");
+    const status = mapPagarmeSubscriptionStatus(subscription.status, {
+      trialDays,
+      paymentMethod: body.payment_method,
+    });
 
     const nextBilling = subscription.next_billing_at
       ? new Date(subscription.next_billing_at)
@@ -266,14 +306,12 @@ Deno.serve(async (req) => {
       ? new Date(subscription.current_period_end)
       : (trialEnd ?? null);
 
-    // 6) Cancela assinaturas vivas anteriores
     await admin
       .from("subscriptions")
       .update({ status: "canceled", end_date: now.toISOString() })
       .eq("restaurant_id", restaurant.id)
-      .in("status", ["active", "trialing", "past_due"]);
+      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE]);
 
-    // 7) Persiste
     const { data: inserted, error: insertErr } = await admin
       .from("subscriptions")
       .insert({
@@ -318,26 +356,17 @@ Deno.serve(async (req) => {
           plan_name: plan.name,
           status,
         },
-        metadata: { source: "pagarme_create_boleto_pix", billing_cycle: body.billing_cycle },
+        metadata: {
+          source: "pagarme_create_boleto_pix",
+          billing_cycle: body.billing_cycle,
+          payment_method: body.payment_method,
+        },
       });
     } catch (emailError) {
       console.error("Failed to send subscription email:", emailError);
     }
 
-    // 8) Extrai dados do boleto da última fatura/charge se disponível
-    const latestInvoice = subscription.current_cycle ?? null;
-    const charge = latestInvoice?.charges?.[0]
-      ?? subscription?.invoices?.[0]?.charges?.[0]
-      ?? null;
-    const lastTransaction = charge?.last_transaction ?? null;
-
-    const paymentInfo: Record<string, unknown> = {};
-    if (lastTransaction) {
-      paymentInfo.boleto_url = lastTransaction.url ?? lastTransaction.pdf ?? null;
-      paymentInfo.boleto_barcode = lastTransaction.barcode ?? null;
-      paymentInfo.boleto_line = lastTransaction.line ?? null;
-      paymentInfo.due_at = lastTransaction.due_at ?? null;
-    }
+    const paymentInfo = extractPaymentInfo(subscription, body.payment_method);
 
     return new Response(JSON.stringify({
       success: true,
@@ -347,6 +376,7 @@ Deno.serve(async (req) => {
         subscription_id: subscription.id,
         customer_id: customer.id,
         status: subscription.status,
+        payment_method: body.payment_method,
       },
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {

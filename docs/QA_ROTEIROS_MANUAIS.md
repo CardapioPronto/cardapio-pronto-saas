@@ -73,11 +73,21 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 
 ### 1.4 Assinatura
 
+> Checklist completo (simuladores, boleto, webhook, PIX cardápio e cutover
+> live): **`docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`**.
+
 - [ ] Assinaturas: visualizar alert de trial com dias restantes.
-- [ ] Mudar para plano pago via Pagar.me (use cartão de teste em modo
-      sandbox). Após pagamento, alert muda para "Plano ativo".
-- [ ] Simular `past_due` (cancelar cartão e aguardar webhook) → alert
-      de pagamento em atraso aparece.
+- [ ] Mudar para plano pago via Pagar.me — cartão de teste **sucesso**
+      `4000000000000010` (validade futura, ex. `12/30`, CVV `123`) em loja
+      de teste. Após pagamento, alert muda para "Plano ativo".
+- [ ] (Opcional) Cartão de falha `4000000000000028` → erro na UI, sem
+      assinatura ativa nova.
+- [ ] (Opcional) Boleto: criar assinatura, pagar no simulador, conferir
+      webhook e status `active` (`docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` Bloco D).
+- [ ] (Opcional) PIX assinatura: plano com PIX + sync, total ≤ R$ 500,
+      QR Code exibido, status `pending` → `active` (Bloco D-Pix do roteiro).
+- [ ] Simular `past_due` (cartão de falha na renovação ou
+      `charge.payment_failed` no painel) → alert de pagamento em atraso.
 
 ### 1.5 Relatórios
 
