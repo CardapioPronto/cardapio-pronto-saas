@@ -3,10 +3,11 @@
 // sincronizado, e persiste a assinatura na tabela `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import { SUBSCRIPTION_STATUSES_TO_SUPERSEDE } from "../_shared/pagarme-subscription-status.ts";
 import {
-  mapPagarmeSubscriptionStatus,
-  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
-} from "../_shared/pagarme-subscription-status.ts";
+  buildLocalSubscriptionFromPagarme,
+  type PagarmeSubscriptionPayload,
+} from "../_shared/pagarme-checkout-subscription.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,12 +57,7 @@ type PagarmeCard = {
   id?: string;
 };
 
-type PagarmeSubscription = {
-  id?: string;
-  status?: string;
-  next_billing_at?: string | null;
-  current_period_end?: string | null;
-};
+type PagarmeSubscription = PagarmeSubscriptionPayload;
 
 function authHeader() {
   const key = Deno.env.get("PAGARME_SECRET_KEY");
@@ -275,37 +271,40 @@ Deno.serve(async (req) => {
     if (!card.id) throw new Error("Pagar.me card response missing id");
 
     // 5) Subscription
-    const subscription = await pagarme<PagarmeSubscription>("/subscriptions", "POST", {
+    const created = await pagarme<PagarmeSubscription>("/subscriptions", "POST", {
       plan_id: pagarmePlanId,
       customer_id: customer.id,
       card_id: card.id,
       payment_method: "credit_card",
       installments: 1,
     });
-    if (!subscription.id) throw new Error("Pagar.me subscription response missing id");
+    if (!created.id) throw new Error("Pagar.me subscription response missing id");
 
-    // 6) Datas
+    const subscription = await pagarme<PagarmeSubscription>(
+      `/subscriptions/${created.id}`,
+      "GET",
+    );
+
     const now = new Date();
-    const trialDays = plan.trial_days ?? 0;
-    const trialStart = trialDays > 0 ? now : null;
-    const trialEnd = trialDays > 0
-      ? new Date(now.getTime() + trialDays * 86400000)
-      : null;
 
-    const status = mapPagarmeSubscriptionStatus(subscription.status, {
-      trialDays,
+    const { data: priorSub } = await admin
+      .from("subscriptions")
+      .select("status, is_trial, current_period_end, trial_ends_at")
+      .eq("restaurant_id", restaurant.id)
+      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const localSub = buildLocalSubscriptionFromPagarme({
+      pagarme: subscription,
+      billingCycle: body.billing_cycle,
       paymentMethod: "credit_card",
+      planTrialDays: plan.trial_days,
+      priorEntitlement: priorSub,
     });
 
-    const nextBilling = subscription.next_billing_at
-      ? new Date(subscription.next_billing_at)
-      : (trialEnd ?? null);
-
-    const currentPeriodEnd = subscription.current_period_end
-      ? new Date(subscription.current_period_end)
-      : (trialEnd ?? null);
-
-    // 7) Cancela trial local existente, se houver
+    // 7) Cancela assinaturas locais anteriores (trial ou pendentes)
     await admin
       .from("subscriptions")
       .update({ status: "canceled", end_date: now.toISOString() })
@@ -318,16 +317,8 @@ Deno.serve(async (req) => {
       .insert({
         restaurant_id: restaurant.id,
         plan_id: plan.id,
-        status,
-        is_trial: trialDays > 0,
-        billing_cycle: body.billing_cycle,
-        start_date: now.toISOString(),
-        trial_start: trialStart?.toISOString() ?? null,
-        trial_ends_at: trialEnd?.toISOString() ?? null,
-        current_period_start: now.toISOString(),
-        current_period_end: currentPeriodEnd?.toISOString() ?? null,
-        next_billing_at: nextBilling?.toISOString() ?? null,
-        pagarme_subscription_id: subscription.id,
+        ...localSub,
+        pagarme_subscription_id: subscription.id ?? created.id,
         pagarme_customer_id: customer.id,
       })
       .select()
@@ -359,7 +350,7 @@ Deno.serve(async (req) => {
         variables: {
           customer_name: body.customer.name,
           plan_name: plan.name,
-          status,
+          status: localSub.status,
         },
         metadata: { source: "pagarme_create_subscription", billing_cycle: body.billing_cycle },
       });
@@ -371,6 +362,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         subscription: inserted,
+        period_credit_days: localSub.period_credit_days ?? 0,
         pagarme: {
           subscription_id: subscription.id,
           customer_id: customer.id,

@@ -3,10 +3,11 @@
 // a partir de um plano local sincronizado, e persiste em `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import { SUBSCRIPTION_STATUSES_TO_SUPERSEDE } from "../_shared/pagarme-subscription-status.ts";
 import {
-  mapPagarmeSubscriptionStatus,
-  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
-} from "../_shared/pagarme-subscription-status.ts";
+  buildLocalSubscriptionFromPagarme,
+  type PagarmeSubscriptionPayload,
+} from "../_shared/pagarme-checkout-subscription.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,11 +63,7 @@ type PagarmeCharge = {
   last_transaction?: PagarmeTransaction | null;
 };
 
-type PagarmeSubscription = {
-  id?: string;
-  status?: string;
-  next_billing_at?: string | null;
-  current_period_end?: string | null;
+type PagarmeSubscription = PagarmeSubscriptionPayload & {
   current_cycle?: { charges?: PagarmeCharge[] } | null;
   invoices?: Array<{ charges?: PagarmeCharge[] }> | null;
 };
@@ -286,29 +283,36 @@ Deno.serve(async (req) => {
     });
     if (!customer.id) throw new Error("Pagar.me customer response missing id");
 
-    const subscription = await pagarme<PagarmeSubscription>(
+    const created = await pagarme<PagarmeSubscription>(
       "/subscriptions",
       "POST",
       buildSubscriptionPayload(pagarmePlanId, customer.id, body.payment_method),
     );
-    if (!subscription.id) throw new Error("Pagar.me subscription response missing id");
+    if (!created.id) throw new Error("Pagar.me subscription response missing id");
+
+    const subscription = await pagarme<PagarmeSubscription>(
+      `/subscriptions/${created.id}`,
+      "GET",
+    );
 
     const now = new Date();
-    const trialDays = plan.trial_days ?? 0;
-    const trialStart = trialDays > 0 ? now : null;
-    const trialEnd = trialDays > 0 ? new Date(now.getTime() + trialDays * 86400000) : null;
 
-    const status = mapPagarmeSubscriptionStatus(subscription.status, {
-      trialDays,
+    const { data: priorSub } = await admin
+      .from("subscriptions")
+      .select("status, is_trial, current_period_end, trial_ends_at")
+      .eq("restaurant_id", restaurant.id)
+      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const localSub = buildLocalSubscriptionFromPagarme({
+      pagarme: subscription,
+      billingCycle: body.billing_cycle,
       paymentMethod: body.payment_method,
+      planTrialDays: plan.trial_days,
+      priorEntitlement: priorSub,
     });
-
-    const nextBilling = subscription.next_billing_at
-      ? new Date(subscription.next_billing_at)
-      : (trialEnd ?? null);
-    const currentPeriodEnd = subscription.current_period_end
-      ? new Date(subscription.current_period_end)
-      : (trialEnd ?? null);
 
     await admin
       .from("subscriptions")
@@ -321,16 +325,8 @@ Deno.serve(async (req) => {
       .insert({
         restaurant_id: restaurant.id,
         plan_id: plan.id,
-        status,
-        is_trial: trialDays > 0,
-        billing_cycle: body.billing_cycle,
-        start_date: now.toISOString(),
-        trial_start: trialStart?.toISOString() ?? null,
-        trial_ends_at: trialEnd?.toISOString() ?? null,
-        current_period_start: now.toISOString(),
-        current_period_end: currentPeriodEnd?.toISOString() ?? null,
-        next_billing_at: nextBilling?.toISOString() ?? null,
-        pagarme_subscription_id: subscription.id,
+        ...localSub,
+        pagarme_subscription_id: subscription.id ?? created.id,
         pagarme_customer_id: customer.id,
       })
       .select()
@@ -358,7 +354,7 @@ Deno.serve(async (req) => {
         variables: {
           customer_name: body.customer.name,
           plan_name: plan.name,
-          status,
+          status: localSub.status,
         },
         metadata: {
           source: "pagarme_create_boleto_pix",
@@ -384,6 +380,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       subscription: inserted,
+      period_credit_days: localSub.period_credit_days ?? 0,
       payment: paymentInfo,
       pagarme: {
         subscription_id: subscription.id,

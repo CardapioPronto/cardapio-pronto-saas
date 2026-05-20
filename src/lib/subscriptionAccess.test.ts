@@ -71,6 +71,21 @@ describe("computeSubscriptionAccess", () => {
     expect(r.hasActiveSubscription).toBe(false);
   });
 
+  it("active com renovação em 5 dias exibe alerta", () => {
+    const r = computeSubscriptionAccess(
+      {
+        status: "active",
+        is_trial: false,
+        trial_ends_at: null,
+        current_period_end: "2026-06-20T00:00:00Z",
+        next_billing_at: "2026-06-20T00:00:00Z",
+      },
+      fixed,
+    );
+    expect(r.showRenewalAlert).toBe(true);
+    expect(r.daysUntilRenewal).toBe(5);
+  });
+
   it("past_due fora da graça bloqueia", () => {
     const r = computeSubscriptionAccess(
       {
@@ -82,5 +97,34 @@ describe("computeSubscriptionAccess", () => {
       fixed,
     );
     expect(r.hasActiveSubscription).toBe(false);
+  });
+
+  it("past_due com período vencido ainda na tolerância de 7 dias libera", () => {
+    const r = computeSubscriptionAccess(
+      {
+        status: "past_due",
+        is_trial: false,
+        trial_ends_at: null,
+        current_period_end: "2026-06-10T00:00:00Z",
+      },
+      fixed,
+    );
+    expect(r.hasActiveSubscription).toBe(true);
+    expect(r.showPastDueGraceAlert).toBe(true);
+    expect(r.daysUntilBlock).toBeGreaterThan(0);
+  });
+
+  it("active com período vencido dentro da tolerância libera", () => {
+    const r = computeSubscriptionAccess(
+      {
+        status: "active",
+        is_trial: false,
+        trial_ends_at: null,
+        current_period_end: "2026-06-10T00:00:00Z",
+      },
+      fixed,
+    );
+    expect(r.hasActiveSubscription).toBe(true);
+    expect(r.showPastDueGraceAlert).toBe(true);
   });
 });

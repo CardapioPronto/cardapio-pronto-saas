@@ -3,6 +3,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import { captureEdgeException } from "../_shared/observability.ts";
+import {
+  computeRemainingCreditMs,
+  resolvePaidSubscriptionPeriod,
+  type BillingCycle,
+  type PriorEntitlement,
+} from "../_shared/pagarme-checkout-subscription.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,6 +136,9 @@ function mapStatus(pagarmeStatus: string): string {
       return "active";
     case "trialing":
       return "trialing";
+    case "future":
+    case "scheduled":
+      return "pending";
     case "past_due":
     case "unpaid":
     case "failed":
@@ -142,6 +151,57 @@ function mapStatus(pagarmeStatus: string): string {
     default:
       return pagarmeStatus;
   }
+}
+
+async function applyPaidPeriodToUpdate(
+  pagarmeSubId: string,
+  update: Record<string, unknown>,
+  pagarmePeriodStart?: string | null,
+  pagarmePeriodEnd?: string | null,
+  pagarmeNextBilling?: string | null,
+  pagarmeInterval?: string | null,
+) {
+  const { data: localSub } = await supabase
+    .from("subscriptions")
+    .select(
+      "billing_cycle, current_period_start, current_period_end, trial_ends_at, status, is_trial",
+    )
+    .eq("pagarme_subscription_id", pagarmeSubId)
+    .maybeSingle();
+
+  const billingCycle: BillingCycle =
+    pagarmeInterval === "year" || localSub?.billing_cycle === "yearly"
+      ? "yearly"
+      : "monthly";
+
+  const now = new Date();
+  const periodStart = pagarmePeriodStart
+    ? new Date(pagarmePeriodStart)
+    : localSub?.current_period_start
+      ? new Date(localSub.current_period_start)
+      : now;
+
+  const prior: PriorEntitlement | null = localSub
+    ? {
+        status: localSub.status,
+        is_trial: localSub.is_trial,
+        current_period_end: localSub.current_period_end,
+        trial_ends_at: localSub.trial_ends_at,
+      }
+    : null;
+
+  const { periodEnd, nextBilling } = resolvePaidSubscriptionPeriod({
+    billingCycle,
+    periodStart,
+    pagarmePeriodEnd,
+    pagarmeNextBilling,
+    remainingCreditMs: computeRemainingCreditMs(now, prior),
+  });
+
+  update.billing_cycle = billingCycle;
+  update.current_period_start = periodStart.toISOString();
+  update.current_period_end = periodEnd.toISOString();
+  update.next_billing_at = nextBilling.toISOString();
 }
 
 async function processEvent(event: PagarmeEvent): Promise<void> {
@@ -158,17 +218,33 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
       ? "canceled"
       : mapStatus(subscription.status ?? "active");
 
-    const update: Record<string, string | null> = {
+    const update: Record<string, unknown> = {
       status: newStatus,
       updated_at: new Date().toISOString(),
     };
-    if (subscription.next_billing_at) update.next_billing_at = subscription.next_billing_at;
     if (subscription.customer?.id) update.pagarme_customer_id = subscription.customer.id;
-    if (subscription.current_period_start) update.current_period_start = subscription.current_period_start;
-    if (subscription.current_period_end) update.current_period_end = subscription.current_period_end;
-    if (subscription.interval === "month") update.billing_cycle = "monthly";
-    else if (subscription.interval === "year") update.billing_cycle = "yearly";
     if (newStatus === "canceled") update.end_date = new Date().toISOString();
+    if (newStatus === "active") {
+      update.is_trial = false;
+      update.trial_start = null;
+      update.trial_ends_at = null;
+      await applyPaidPeriodToUpdate(
+        pagarmeSubId,
+        update,
+        subscription.current_period_start,
+        subscription.current_period_end,
+        subscription.next_billing_at,
+        subscription.interval,
+      );
+    } else {
+      if (subscription.next_billing_at) update.next_billing_at = subscription.next_billing_at;
+      if (subscription.current_period_start) {
+        update.current_period_start = subscription.current_period_start;
+      }
+      if (subscription.current_period_end) update.current_period_end = subscription.current_period_end;
+      if (subscription.interval === "month") update.billing_cycle = "monthly";
+      else if (subscription.interval === "year") update.billing_cycle = "yearly";
+    }
 
     await supabase
       .from("subscriptions")
@@ -191,12 +267,25 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
     else if (type === "charge.payment_failed" || type === "invoice.payment_failed") newStatus = "past_due";
     else if (type === "charge.refunded") newStatus = "canceled";
 
-    const update: Record<string, string | null> = {
+    const update: Record<string, unknown> = {
       last_payment_at: new Date().toISOString(),
       last_payment_status: charge.status ?? type,
       updated_at: new Date().toISOString(),
     };
     if (newStatus) update.status = newStatus;
+    if (newStatus === "active") {
+      update.is_trial = false;
+      update.trial_start = null;
+      update.trial_ends_at = null;
+      await applyPaidPeriodToUpdate(
+        pagarmeSubId,
+        update,
+        charge.current_period_start ?? charge.subscription?.current_period_start,
+        charge.current_period_end ?? charge.subscription?.current_period_end,
+        charge.next_billing_at ?? charge.subscription?.next_billing_at,
+        charge.subscription?.interval,
+      );
+    }
 
     await supabase
       .from("subscriptions")

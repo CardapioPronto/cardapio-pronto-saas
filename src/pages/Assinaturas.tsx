@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, AlertTriangle, Clock, FileText } from "lucide-react";
-import { DISPLAYABLE_SUBSCRIPTION_STATUSES } from "@/lib/subscriptionStatusUi";
+import { pickCurrentSubscription } from "@/lib/pickCurrentSubscription";
+import { computeRenewalAlert, computeSubscriptionAccess } from "@/lib/subscriptionAccess";
 import PaymentForm, { PaymentSuccessData } from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
@@ -44,10 +45,24 @@ const Assinaturas = () => {
   } = useMySubscriptions();
   const [manageSub, setManageSub] = useState<MySubscription | null>(null);
 
-  const currentSubscription =
-    mySubscriptions.find((sub) =>
-      (DISPLAYABLE_SUBSCRIPTION_STATUSES as readonly string[]).includes(sub.status),
-    ) ?? null;
+  const currentSubscription = pickCurrentSubscription(mySubscriptions);
+  const renewalAlert = currentSubscription
+    ? computeRenewalAlert({
+        status: currentSubscription.status,
+        is_trial: currentSubscription.is_trial,
+        current_period_end: currentSubscription.current_period_end,
+        next_billing_at: currentSubscription.next_billing_at,
+      })
+    : null;
+  const subscriptionAccess = currentSubscription
+    ? computeSubscriptionAccess({
+        status: currentSubscription.status,
+        is_trial: currentSubscription.is_trial,
+        trial_ends_at: currentSubscription.trial_ends_at,
+        current_period_end: currentSubscription.current_period_end,
+        next_billing_at: currentSubscription.next_billing_at,
+      })
+    : null;
   const trialEndsAt = currentSubscription?.trial_ends_at
     ? new Date(currentSubscription.trial_ends_at)
     : null;
@@ -169,26 +184,60 @@ const Assinaturas = () => {
             </AlertDescription>
           </Alert>
         )}
+        {subscriptionAccess?.showPastDueGraceAlert && (
+          <Alert variant={subscriptionAccess.daysUntilBlock <= 3 ? "destructive" : "default"}>
+            <Clock className="h-4 w-4" />
+            <AlertTitle>
+              {currentSubscription?.status === "past_due"
+                ? "Pagamento em atraso"
+                : "Renovação pendente"}
+            </AlertTitle>
+            <AlertDescription>
+              Você ainda tem acesso por{" "}
+              <strong>
+                {subscriptionAccess.daysUntilBlock}{" "}
+                {subscriptionAccess.daysUntilBlock === 1 ? "dia" : "dias"}
+              </strong>
+              . Depois disso, a conta será bloqueada até a renovação do plano. Regularize o
+              pagamento em <strong>Gerenciar assinatura</strong> ou escolha um plano abaixo.
+            </AlertDescription>
+          </Alert>
+        )}
         {!mySubsLoading &&
-          (!currentSubscription ||
-            (currentSubscription.status === "past_due")) && (
+          !subscriptionAccess?.hasActiveSubscription &&
+          !subscriptionAccess?.showPastDueGraceAlert && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>{currentSubscription?.status === "past_due" ? "Pagamento em atraso" : "Plano expirado ou inativo"}</AlertTitle>
+              <AlertTitle>Plano expirado ou inativo</AlertTitle>
               <AlertDescription>
                 Ative o Plano Pubfy para voltar a usar todos os recursos.
               </AlertDescription>
             </Alert>
           )}
-        {currentSubscription?.status === "active" && (
+        {currentSubscription?.status === "active" && !renewalAlert?.showRenewalAlert && (
             <Alert className="border-green/40 bg-green/5">
               <CheckCircle className="h-4 w-4 text-green" />
               <AlertTitle>Plano ativo</AlertTitle>
               <AlertDescription>
                 Sua assinatura do {currentSubscription.plan?.name ?? "Plano Pubfy"} está em dia.
+                {currentSubscription.current_period_end && (
+                  <> Próxima renovação em{" "}
+                    {new Date(currentSubscription.current_period_end).toLocaleDateString("pt-BR")}.
+                  </>
+                )}
               </AlertDescription>
             </Alert>
           )}
+        {renewalAlert?.showRenewalAlert && currentSubscription?.status === "active" && (
+          <Alert variant={renewalAlert.daysUntilRenewal <= 3 ? "destructive" : "default"}>
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Renovação em {renewalAlert.daysUntilRenewal} dia(s)</AlertTitle>
+            <AlertDescription>
+              Sua assinatura do {currentSubscription.plan?.name ?? "Plano Pubfy"} renova em breve.
+              Mantenha o cartão ou forma de pagamento atualizada no Pagar.me.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Tabs 
           value={selectedTab} 
@@ -239,7 +288,7 @@ const Assinaturas = () => {
       
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="sm:max-w-[525px] p-0">
+        <DialogContent className="flex max-h-[min(90vh,720px)] w-[calc(100%-2rem)] flex-col overflow-hidden p-0 sm:max-w-[525px]">
           {selectedPlanForPayment && (
             <PaymentForm
               planId={selectedPlanForPayment.id}

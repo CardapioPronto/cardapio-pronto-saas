@@ -22,6 +22,9 @@ export function mapPagarmeSubscriptionStatus(
       return "canceled";
     case "pending":
       return "pending";
+    case "future":
+    case "scheduled":
+      return trialDays > 0 ? "trialing" : "pending";
     case "failed":
       return "past_due";
     default:
