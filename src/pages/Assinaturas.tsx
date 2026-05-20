@@ -288,7 +288,7 @@ const Assinaturas = () => {
       
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="flex max-h-[min(90vh,720px)] w-[calc(100%-2rem)] flex-col overflow-hidden p-0 sm:max-w-[525px]">
+        <DialogContent className="left-[50%] top-[max(0.5rem,env(safe-area-inset-top))] flex max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 translate-y-0 flex-col overflow-y-auto overscroll-contain p-0 sm:max-w-[525px]">
           {selectedPlanForPayment && (
             <PaymentForm
               planId={selectedPlanForPayment.id}
