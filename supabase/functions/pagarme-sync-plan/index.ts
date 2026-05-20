@@ -26,9 +26,24 @@ interface LocalPlan {
 
 type PagarmePlanResponse = {
   id?: string;
+  name?: string;
+  status?: string;
+  currency?: string;
+  interval?: string;
+  interval_count?: number;
+  items?: Array<{
+    id?: string;
+    name?: string;
+    status?: string;
+    pricing_scheme?: { price?: number; scheme_type?: string };
+  }>;
 };
 
 type PagarmeRequestData = PagarmePlanResponse | { raw: string } | null;
+
+type PagarmePlanListResponse = {
+  data?: PagarmePlanResponse[];
+};
 
 const DEFAULT_PAYMENT_METHODS = ["credit_card", "boleto"];
 
@@ -84,14 +99,20 @@ function authHeader() {
   return `Basic ${btoa(key + ":")}`;
 }
 
-function buildPlanBody(
+function planDisplayName(plan: LocalPlan, interval: "month" | "year") {
+  const suffix = interval === "month" ? "Mensal" : "Anual";
+  return `${plan.name} ${suffix}`;
+}
+
+function buildPlanBase(
   plan: LocalPlan,
   interval: "month" | "year",
   amountCents: number,
 ) {
-  const suffix = interval === "month" ? "Mensal" : "Anual";
   return {
-    name: `${plan.name} ${suffix}`,
+    name: planDisplayName(plan, interval),
+    status: "active",
+    currency: "BRL",
     description:
       plan.description ||
       `Assinatura ${interval === "month" ? "mensal" : "anual"} do Pubfy`,
@@ -101,16 +122,68 @@ function buildPlanBody(
     payment_methods: normalizePlanPaymentMethodsForPagarme(plan.pagarme_payment_methods),
     installments: [1],
     minimum_price: amountCents,
-    trial_period_days: plan.trial_days || 0,
+    trial_period_days: 0,
+    statement_descriptor: "PUBFY",
+  };
+}
+
+function buildPlanCreateBody(
+  plan: LocalPlan,
+  interval: "month" | "year",
+  amountCents: number,
+) {
+  const base = buildPlanBase(plan, interval, amountCents);
+  return {
+    ...base,
     items: [
       {
-        name: `${plan.name} ${suffix}`,
+        name: base.name,
         quantity: 1,
         pricing_scheme: { price: amountCents, scheme_type: "unit" },
       },
     ],
-    statement_descriptor: "PUBFY",
   };
+}
+
+/** PUT exige name, status, currency, interval e interval_count (doc Pagar.me v5). */
+function buildPlanUpdateBody(
+  plan: LocalPlan,
+  interval: "month" | "year",
+  amountCents: number,
+  remotePlan: PagarmePlanResponse | null,
+) {
+  const base = buildPlanBase(plan, interval, amountCents);
+  const remoteItems = remotePlan?.items ?? [];
+  if (remoteItems.length === 0) {
+    return base;
+  }
+  return {
+    ...base,
+    items: remoteItems.map((item) => ({
+      id: item.id,
+      name: item.name ?? base.name,
+      status: item.status ?? "active",
+      quantity: 1,
+      pricing_scheme: {
+        price: amountCents,
+        scheme_type: item.pricing_scheme?.scheme_type ?? "unit",
+      },
+    })),
+  };
+}
+
+function extractPlanList(data: PagarmeRequestData): PagarmePlanResponse[] {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data)) return data as PagarmePlanResponse[];
+  const payload = data as PagarmePlanListResponse;
+  return Array.isArray(payload.data) ? payload.data : [];
+}
+
+async function findPagarmePlanByName(planName: string): Promise<string | null> {
+  const res = await pagarmeRequest("/plans?page=1&size=100", "GET");
+  if (!res.ok) return null;
+  const match = extractPlanList(res.data).find((p) => p.name === planName);
+  return match?.id ?? null;
 }
 
 async function pagarmeRequest(
@@ -140,37 +213,59 @@ function getPagarmePlanId(data: PagarmeRequestData) {
   return data && "id" in data && typeof data.id === "string" ? data.id : null;
 }
 
+type UpsertPlanResult = {
+  id: string;
+  linkedOnly?: boolean;
+  warning?: string;
+};
+
 async function upsertPagarmePlan(
   plan: LocalPlan,
   interval: "month" | "year",
   existingId: string | null,
-) {
+): Promise<UpsertPlanResult> {
   const amountCents = amountCentsForInterval(plan, interval);
-  const body = buildPlanBody(plan, interval, amountCents);
+  const displayName = planDisplayName(plan, interval);
+  let planId = existingId;
 
-  if (existingId) {
-    const res = await pagarmeRequest(`/plans/${existingId}`, "PUT", body);
-    if (!res.ok) {
-      // se o plano não existir mais no Pagar.me (404), recria
-      if (res.status === 404) {
-        const created = await pagarmeRequest("/plans", "POST", body);
-        if (!created.ok) {
-          throw new Error(
-            `Pagar.me create failed: ${pagarmeErrorMessage(created.data, created.status)}`,
-          );
-        }
-        const createdId = getPagarmePlanId(created.data);
-        if (!createdId) throw new Error("Pagar.me create response missing id");
-        return createdId;
+  if (planId) {
+    const remote = await pagarmeRequest(`/plans/${planId}`, "GET");
+    if (!remote.ok && remote.status === 404) {
+      planId = null;
+    } else if (remote.ok) {
+      const remotePlan = remote.data as PagarmePlanResponse;
+      const updateBody = buildPlanUpdateBody(plan, interval, amountCents, remotePlan);
+      const updated = await pagarmeRequest(`/plans/${planId}`, "PUT", updateBody);
+      if (updated.ok) {
+        return { id: planId };
+      }
+      // Plano existe mas não aceita alteração (ex.: assinaturas vinculadas) — mantém vínculo.
+      if (updated.status === 400 || updated.status === 422 || updated.status === 403) {
+        return {
+          id: planId,
+          linkedOnly: true,
+          warning:
+            `${displayName}: vinculado sem alterar no Pagar.me (${pagarmeErrorMessage(updated.data, updated.status)}).`,
+        };
       }
       throw new Error(
-        `Pagar.me update failed: ${pagarmeErrorMessage(res.data, res.status)}`,
+        `Pagar.me update failed: ${pagarmeErrorMessage(updated.data, updated.status)}`,
       );
     }
-    return existingId;
   }
 
-  const created = await pagarmeRequest("/plans", "POST", body);
+  if (!planId) {
+    planId = await findPagarmePlanByName(displayName);
+    if (planId) {
+      return upsertPagarmePlan(plan, interval, planId);
+    }
+  }
+
+  const created = await pagarmeRequest(
+    "/plans",
+    "POST",
+    buildPlanCreateBody(plan, interval, amountCents),
+  );
   if (!created.ok) {
     throw new Error(
       `Pagar.me create failed (${created.status}): ${pagarmeErrorMessage(created.data, created.status)}`,
@@ -178,7 +273,7 @@ async function upsertPagarmePlan(
   }
   const createdId = getPagarmePlanId(created.data);
   if (!createdId) throw new Error("Pagar.me create response missing id");
-  return createdId;
+  return { id: createdId };
 }
 
 Deno.serve(async (req) => {
@@ -263,25 +358,28 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const monthlyId = await upsertPagarmePlan(
+      const monthly = await upsertPagarmePlan(
         plan as LocalPlan,
         "month",
         plan.pagarme_plan_id_monthly,
       );
-      const yearlyId = await upsertPagarmePlan(
+      const yearly = await upsertPagarmePlan(
         plan as LocalPlan,
         "year",
         plan.pagarme_plan_id_yearly,
       );
 
+      const warnings = [monthly.warning, yearly.warning].filter(Boolean);
+      const syncNote = warnings.length > 0 ? warnings.join(" ") : null;
+
       const { error: updErr } = await admin
         .from("plans")
         .update({
-          pagarme_plan_id_monthly: monthlyId,
-          pagarme_plan_id_yearly: yearlyId,
+          pagarme_plan_id_monthly: monthly.id,
+          pagarme_plan_id_yearly: yearly.id,
           pagarme_synced_at: new Date().toISOString(),
           pagarme_sync_status: "synced",
-          pagarme_sync_error: null,
+          pagarme_sync_error: syncNote,
         })
         .eq("id", plan_id);
 
@@ -290,8 +388,10 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          pagarme_plan_id_monthly: monthlyId,
-          pagarme_plan_id_yearly: yearlyId,
+          pagarme_plan_id_monthly: monthly.id,
+          pagarme_plan_id_yearly: yearly.id,
+          linked_only: Boolean(monthly.linkedOnly || yearly.linkedOnly),
+          warning: syncNote,
         }),
         {
           status: 200,

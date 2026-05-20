@@ -74,7 +74,11 @@ export default function Planos() {
             throw new Error(details || error.message);
           }
           if (data?.success === false) throw new Error(data.error || "Falha ao sincronizar");
-          toast.success("Plano sincronizado com o Pagar.me");
+          if (data?.warning) {
+            toast.success("Plano vinculado ao Pagar.me", { description: String(data.warning) });
+          } else {
+            toast.success("Plano sincronizado com o Pagar.me");
+          }
           await fetchPlanos();
         } catch (e) {
           const message = e instanceof Error ? e.message : "desconhecido";

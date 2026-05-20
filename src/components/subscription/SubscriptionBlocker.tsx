@@ -12,7 +12,13 @@ interface SubscriptionBlockerProps {
 
 export const SubscriptionBlocker = ({ children, disabled = false }: SubscriptionBlockerProps) => {
   const navigate = useNavigate();
-  const { hasActiveSubscription, isInTrial, daysLeftInTrial, isLoading } = useSubscriptionStatus();
+  const {
+    hasActiveSubscription,
+    isInTrial,
+    daysLeftInTrial,
+    isLoading,
+    subscriptionStatus,
+  } = useSubscriptionStatus();
 
   const shouldBlock = !disabled && !isLoading && !hasActiveSubscription && (!isInTrial || daysLeftInTrial <= 0);
 
@@ -51,13 +57,16 @@ export const SubscriptionBlocker = ({ children, disabled = false }: Subscription
             <CardTitle>Assinatura Necessária</CardTitle>
           </div>
           <CardDescription>
-            Seu período de teste expirou ou você não possui uma assinatura ativa.
+            {subscriptionStatus === "past_due"
+              ? "O prazo de tolerância após o vencimento terminou."
+              : "Seu período de teste expirou ou você não possui uma assinatura ativa."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Para continuar usando o sistema, escolha um dos nossos planos.
-            Redirecionando em 3 segundos...
+            {subscriptionStatus === "past_due"
+              ? "O acesso foi encerrado após o período de tolerância. Renove o plano para voltar a usar o sistema. Redirecionando em 3 segundos..."
+              : "Para continuar usando o sistema, escolha um dos nossos planos. Redirecionando em 3 segundos..."}
           </p>
           <Button 
             onClick={() => navigate('/assinaturas')}

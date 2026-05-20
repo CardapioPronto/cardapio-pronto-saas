@@ -26,6 +26,12 @@ import {
   getLocalSubscriptionStatus,
   isPendingPaymentSubscription,
 } from "@/lib/subscriptionStatusUi";
+import {
+  digitsOnly,
+  formatCardExpiryInput,
+  formatCardNumberInput,
+  formatPhoneInput,
+} from "@/lib/paymentInputFormatters";
 
 type CheckoutPaymentMethod = "credit_card" | "boleto" | "pix";
 
@@ -36,6 +42,7 @@ type OfflineConfirmation =
 export type PaymentSuccessData = {
   success: boolean;
   subscription?: unknown;
+  period_credit_days?: number;
   payment?: Record<string, unknown>;
   pagarme?: {
     subscription_id?: string;
@@ -58,8 +65,14 @@ interface PaymentFormProps {
 const paymentFormSchema = z.object({
   name: z.string().min(3, { message: "Nome completo é obrigatório" }),
   email: z.string().email({ message: "Email inválido" }),
-  document: z.string().min(11, { message: "CPF/CNPJ inválido" }),
-  phone: z.string().min(10, { message: "Telefone inválido" }),
+  document: z
+    .string()
+    .min(1, { message: "CPF/CNPJ é obrigatório" })
+    .refine((v) => digitsOnly(v).length >= 11, { message: "CPF/CNPJ inválido" }),
+  phone: z
+    .string()
+    .min(1, { message: "Telefone é obrigatório" })
+    .refine((v) => digitsOnly(v).length >= 10, { message: "Telefone inválido" }),
   paymentMethod: z.enum(["credit_card", "boleto", "pix"]),
   billingType: z.enum(["monthly", "yearly"]),
 
@@ -68,7 +81,8 @@ const paymentFormSchema = z.object({
   cardExpiry: z.string().optional(),
   cardCvc: z.string().optional(),
 }).superRefine((values, ctx) => {
-  if (values.paymentMethod !== "credit_card") return;
+  const method = values.paymentMethod;
+  if (method !== "credit_card") return;
 
   if (!values.cardNumber || values.cardNumber.replace(/\D/g, "").length < 13) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardNumber"], message: "Número do cartão inválido" });
@@ -76,8 +90,8 @@ const paymentFormSchema = z.object({
   if (!values.cardName || values.cardName.length < 3) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardName"], message: "Nome no cartão é obrigatório" });
   }
-  if (!values.cardExpiry || !/^\d{2}\/\d{2,4}$/.test(values.cardExpiry)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardExpiry"], message: "Use MM/AA ou MM/AAAA" });
+  if (!values.cardExpiry || !/^\d{2}\/\d{2}$/.test(values.cardExpiry)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardExpiry"], message: "Informe a validade no formato MM/AA" });
   }
   if (!values.cardCvc || values.cardCvc.replace(/\D/g, "").length < 3) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardCvc"], message: "CVV inválido" });
@@ -144,19 +158,53 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
   const finishWithSuccess = (result: PaymentSuccessData, options?: { immediateToast?: boolean }) => {
     const status = getLocalSubscriptionStatus(result.subscription as { status?: string });
+    const creditDays = Math.max(0, Number(result.period_credit_days ?? 0));
     if (options?.immediateToast !== false && status === "active") {
-      toast.success(`Assinatura ${planName} ativada com sucesso!`);
+      const creditNote =
+        creditDays > 0
+          ? ` Incluímos ${creditDays} ${creditDays === 1 ? "dia" : "dias"} restantes do seu período atual no novo ciclo.`
+          : "";
+      toast.success(`Assinatura ${planName} ativada com sucesso!${creditNote}`);
     } else if (status === "trialing") {
       toast.success(`Período de teste do plano ${planName} iniciado.`);
+    } else if (creditDays > 0 && options?.immediateToast !== false) {
+      toast.success(
+        `Assinatura registrada. ${creditDays} ${creditDays === 1 ? "dia" : "dias"} do período anterior foram somados ao novo ciclo após a confirmação do pagamento.`,
+      );
     }
     onSuccess(result);
   };
 
+  const scrollToFirstError = () => {
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(
+        '[data-payment-form] [aria-invalid="true"], [data-payment-form] .text-destructive',
+      );
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
+  const onInvalid = () => {
+    const errors = form.formState.errors;
+    const firstMessage =
+      errors.name?.message ||
+      errors.email?.message ||
+      errors.document?.message ||
+      errors.phone?.message ||
+      errors.cardNumber?.message ||
+      errors.cardName?.message ||
+      errors.cardExpiry?.message ||
+      errors.cardCvc?.message;
+    toast.error(firstMessage?.toString() || "Revise os campos destacados antes de continuar.");
+    scrollToFirstError();
+  };
+
   async function onSubmit(values: z.infer<typeof paymentFormSchema>) {
+    const paymentMethod = selectedPaymentMethod;
     setIsSubmitting(true);
 
     try {
-      if (values.paymentMethod === "credit_card") {
+      if (paymentMethod === "credit_card") {
         const expParts = (values.cardExpiry || "").split("/");
         const expMonth = expParts[0]?.padStart(2, "0") ?? "";
         const expYearRaw = expParts[1] ?? "";
@@ -166,22 +214,22 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           customer: {
             name: values.name,
             email: values.email,
-            document: values.document,
-            phone: values.phone,
+            document: digitsOnly(values.document),
+            phone: digitsOnly(values.phone),
           },
           card: {
-            number: values.cardNumber || "",
+            number: digitsOnly(values.cardNumber || ""),
             holder_name: values.cardName || values.name,
             exp_month: expMonth,
             exp_year: expYearRaw,
-            cvv: values.cardCvc || "",
+            cvv: digitsOnly(values.cardCvc || ""),
           },
         });
         finishWithSuccess(result);
         return;
       }
 
-      const offlineMethod = values.paymentMethod === "pix" ? "pix" : "boleto";
+      const offlineMethod = paymentMethod === "pix" ? "pix" : "boleto";
       const result = await createPagarmeBoletoPix({
         local_plan_id: planId,
         billing_cycle: values.billingType,
@@ -189,8 +237,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         customer: {
           name: values.name,
           email: values.email,
-          document: values.document,
-          phone: values.phone,
+          document: digitsOnly(values.document),
+          phone: digitsOnly(values.phone),
         },
       });
 
@@ -255,8 +303,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const price = selectedBillingType === "yearly" ? planPriceYearly * 12 : planPriceMonthly;
 
   return (
-    <Card className="w-full max-w-lg mx-auto">
-      <CardHeader>
+    <Card className="mx-auto flex w-full max-w-lg max-h-[inherit] flex-col border-0 shadow-none" data-payment-form>
+      <CardHeader className="shrink-0 border-b px-6 py-4">
         <CardTitle>Assinar plano {planName}</CardTitle>
         <CardDescription>
           {form.watch("billingType") === "yearly" ? (
@@ -266,9 +314,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           )}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <Form {...form}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.setValue("paymentMethod", selectedPaymentMethod);
+            void form.handleSubmit(onSubmit, onInvalid)(e);
+          }}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <CardContent className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -306,7 +361,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     <FormItem>
                       <FormLabel>CPF/CNPJ</FormLabel>
                       <FormControl>
-                        <Input placeholder="Somente números" {...field} />
+                        <Input
+                          placeholder="Somente números"
+                          inputMode="numeric"
+                          {...field}
+                          onChange={(e) => field.onChange(digitsOnly(e.target.value))}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -320,7 +380,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input placeholder="(00) 00000-0000" {...field} />
+                        <Input
+                          placeholder="(00) 00000-0000"
+                          inputMode="tel"
+                          {...field}
+                          onChange={(e) => field.onChange(formatPhoneInput(e.target.value))}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -396,7 +461,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         <FormItem>
                           <FormLabel>Número do cartão</FormLabel>
                           <FormControl>
-                            <Input placeholder="0000 0000 0000 0000" {...field} />
+                            <Input
+                              placeholder="0000 0000 0000 0000"
+                              inputMode="numeric"
+                              autoComplete="cc-number"
+                              {...field}
+                              onChange={(e) => field.onChange(formatCardNumberInput(e.target.value))}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -425,7 +496,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                           <FormItem>
                             <FormLabel>Validade</FormLabel>
                             <FormControl>
-                              <Input placeholder="MM/AA" {...field} />
+                              <Input
+                                placeholder="MM/AA"
+                                inputMode="numeric"
+                                autoComplete="cc-exp"
+                                maxLength={5}
+                                {...field}
+                                onChange={(e) => field.onChange(formatCardExpiryInput(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -439,7 +517,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                           <FormItem>
                             <FormLabel>CVV</FormLabel>
                             <FormControl>
-                              <Input placeholder="123" {...field} />
+                              <Input
+                                placeholder="123"
+                                inputMode="numeric"
+                                autoComplete="cc-csc"
+                                maxLength={4}
+                                {...field}
+                                onChange={(e) => field.onChange(digitsOnly(e.target.value))}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -470,14 +555,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 </Tabs>
               </div>
             </div>
+          </CardContent>
 
+          <div className="shrink-0 space-y-3 border-t bg-background px-6 py-4">
             <div className="rounded-md bg-muted/50 p-3 text-sm">
               Total: <span className="font-semibold">R$ {price.toFixed(2)}</span>
               {selectedBillingType === "yearly" ? " por ano" : " por mês"}
             </div>
 
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" type="button" onClick={onCancel}>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={onCancel} disabled={isSubmitting}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-green hover:bg-green-dark">
@@ -495,9 +582,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 )}
               </Button>
             </div>
-          </form>
-        </Form>
-      </CardContent>
+          </div>
+        </form>
+      </Form>
     </Card>
   );
 };

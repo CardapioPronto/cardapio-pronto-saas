@@ -9,6 +9,12 @@ export interface SubscriptionStatus {
   isInTrial: boolean;
   trialEndsAt: Date | null;
   daysLeftInTrial: number;
+  renewalEndsAt: Date | null;
+  daysUntilRenewal: number;
+  showRenewalAlert: boolean;
+  graceEndsAt: Date | null;
+  daysUntilBlock: number;
+  showPastDueGraceAlert: boolean;
   planName: string | null;
   subscriptionStatus: string | null;
   isLoading: boolean;
@@ -27,6 +33,7 @@ type SubscriptionEntitlement = {
   is_trial?: boolean | null;
   trial_ends_at?: string | null;
   current_period_end?: string | null;
+  next_billing_at?: string | null;
 };
 
 type SubscriptionStatusRow = {
@@ -45,6 +52,12 @@ export const useSubscriptionStatus = () => {
     isInTrial: false,
     trialEndsAt: null,
     daysLeftInTrial: 0,
+    renewalEndsAt: null,
+    daysUntilRenewal: 0,
+    showRenewalAlert: false,
+    graceEndsAt: null,
+    daysUntilBlock: 0,
+    showPastDueGraceAlert: false,
     planName: null,
     subscriptionStatus: null,
     isLoading: true,
@@ -59,6 +72,7 @@ export const useSubscriptionStatus = () => {
           is_trial: subscription.is_trial,
           trial_ends_at: subscription.trial_ends_at,
           current_period_end: subscription.current_period_end ?? null,
+          next_billing_at: subscription.next_billing_at ?? null,
         },
         now,
       );
@@ -75,6 +89,12 @@ export const useSubscriptionStatus = () => {
         isInTrial: access.isInTrial,
         trialEndsAt: access.trialEndsAt,
         daysLeftInTrial: access.daysLeftInTrial,
+        renewalEndsAt: access.renewalEndsAt,
+        daysUntilRenewal: access.daysUntilRenewal,
+        showRenewalAlert: access.showRenewalAlert,
+        graceEndsAt: access.graceEndsAt,
+        daysUntilBlock: access.daysUntilBlock,
+        showPastDueGraceAlert: access.showPastDueGraceAlert,
         planName,
         subscriptionStatus: subscription.status,
         isLoading: false,
@@ -114,6 +134,12 @@ export const useSubscriptionStatus = () => {
               isInTrial: false,
               trialEndsAt: null,
               daysLeftInTrial: 0,
+              renewalEndsAt: null,
+              daysUntilRenewal: 0,
+              showRenewalAlert: false,
+              graceEndsAt: null,
+              daysUntilBlock: 0,
+              showPastDueGraceAlert: false,
               planName: null,
               subscriptionStatus: null,
               isLoading: false,
@@ -128,13 +154,14 @@ export const useSubscriptionStatus = () => {
             is_trial: entitlementData.is_trial ?? false,
             trial_ends_at: entitlementData.trial_ends_at ?? null,
             current_period_end: entitlementData.current_period_end ?? null,
+            next_billing_at: entitlementData.next_billing_at ?? null,
           });
           return;
         }
 
         const { data: subscription, error } = await supabase
           .from('subscriptions')
-          .select('plan_id, status, is_trial, trial_ends_at, current_period_end')
+          .select('plan_id, status, is_trial, trial_ends_at, current_period_end, next_billing_at')
           .eq('restaurant_id', user.restaurant_id)
           .in('status', ['active', 'trialing', 'past_due'])
           .order('created_at', { ascending: false })
@@ -153,6 +180,12 @@ export const useSubscriptionStatus = () => {
             isInTrial: false,
             trialEndsAt: null,
             daysLeftInTrial: 0,
+            renewalEndsAt: null,
+            daysUntilRenewal: 0,
+            showRenewalAlert: false,
+            graceEndsAt: null,
+            daysUntilBlock: 0,
+            showPastDueGraceAlert: false,
             planName: null,
             subscriptionStatus: null,
             isLoading: false,

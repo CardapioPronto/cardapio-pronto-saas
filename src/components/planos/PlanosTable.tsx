@@ -32,6 +32,7 @@ function dateTimeToMinute(value: string): number {
 }
 
 function needsSync(p: Plano): boolean {
+  if (p.pagarme_sync_status === "error") return true;
   if (p.pagarme_sync_status !== "synced") return true;
   if (!p.pagarme_synced_at) return true;
   if (p.updated_at && dateTimeToMinute(p.updated_at) > dateTimeToMinute(p.pagarme_synced_at)) return true;
