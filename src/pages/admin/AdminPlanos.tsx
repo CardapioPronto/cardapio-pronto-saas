@@ -100,6 +100,8 @@ export default function Planos() {
                     Cada plano local cria <strong>dois planos no Pagar.me</strong> (mensal e anual).
                     Após criar ou editar, clique no botão <strong>sincronizar</strong> para enviar as
                     alterações ao gateway. Alterações <strong>não afetam assinaturas existentes</strong>.
+                    Na sincronização, só vão cartão/boleto/débito; <strong>PIX</strong> vale no checkout.
+                    Preços mensal e anual (12×) precisam ser de pelo menos <strong>R$ 1,00</strong>.
                   </AlertDescription>
                 </Alert>
                 <Card>
