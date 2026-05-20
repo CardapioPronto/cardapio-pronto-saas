@@ -1,23 +1,38 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { syncPagarmePendingPayment } from "@/services/pagarmeSubscriptionService";
 
 const POLL_INTERVAL_MS = 8_000;
 const POLL_MAX_MS = 5 * 60_000;
 
 /**
- * Reconsulta assinatura enquanto status = pending (boleto/PIX aguardando webhook).
+ * Consulta Pagar.me e atualiza assinaturas com status pending (boleto/PIX).
  */
 export function usePendingSubscriptionPoll(
-  status: string | null | undefined,
+  pendingSubscriptionIds: string[],
   refetch: () => void | Promise<void>,
 ) {
-  useEffect(() => {
-    if (status !== "pending") return;
+  const pendingKey = useMemo(
+    () => pendingSubscriptionIds.join("|"),
+    [pendingSubscriptionIds],
+  );
 
-    const runRefetch = () => {
-      void Promise.resolve(refetch());
+  useEffect(() => {
+    if (pendingSubscriptionIds.length === 0) return;
+
+    const syncAndRefetch = async () => {
+      await Promise.all(
+        pendingSubscriptionIds.map((id) =>
+          syncPagarmePendingPayment(id).catch(() => undefined),
+        ),
+      );
+      await Promise.resolve(refetch());
     };
 
-    const intervalId = window.setInterval(runRefetch, POLL_INTERVAL_MS);
+    void syncAndRefetch();
+
+    const intervalId = window.setInterval(() => {
+      void syncAndRefetch();
+    }, POLL_INTERVAL_MS);
     const stopId = window.setTimeout(() => {
       window.clearInterval(intervalId);
     }, POLL_MAX_MS);
@@ -26,5 +41,5 @@ export function usePendingSubscriptionPoll(
       window.clearInterval(intervalId);
       window.clearTimeout(stopId);
     };
-  }, [status, refetch]);
+  }, [pendingKey, pendingSubscriptionIds, refetch]);
 }

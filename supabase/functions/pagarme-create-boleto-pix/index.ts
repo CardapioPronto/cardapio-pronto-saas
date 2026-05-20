@@ -13,6 +13,12 @@ import {
   subscriptionInsertRow,
   type PagarmeSubscriptionPayload,
 } from "../_shared/pagarme-checkout-subscription.ts";
+import { planAmountBreakdown } from "../_shared/pagarme-plan-pricing.ts";
+import {
+  localStatusFromOrderCharge,
+  pixChargeRejectedMessage,
+  primaryOrderChargeStatus,
+} from "../_shared/pagarme-platform-order.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +65,7 @@ type PagarmeTransaction = {
 };
 
 type PagarmeCharge = {
+  status?: string | null;
   last_transaction?: PagarmeTransaction | null;
 };
 
@@ -128,16 +135,6 @@ function buildSubscriptionPayload(pagarmePlanId: string, customerId: string) {
     payment_method: "boleto",
     boleto_due_days: 3,
   };
-}
-
-function planAmountCents(
-  plan: { price_monthly: number; price_yearly: number },
-  billingCycle: BillingCycle,
-) {
-  const amount = billingCycle === "monthly"
-    ? Number(plan.price_monthly)
-    : Number(plan.price_yearly) * 12;
-  return Math.round(amount * 100);
 }
 
 function hasPaymentPayload(info: Record<string, unknown>) {
@@ -250,7 +247,9 @@ Deno.serve(async (req) => {
 
     const { data: plan, error: planErr } = await admin
       .from("plans")
-      .select("id, name, is_active, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly")
+      .select(
+        "id, name, is_active, trial_days, price_monthly, price_yearly, pagarme_plan_id_monthly, pagarme_plan_id_yearly",
+      )
       .eq("id", body.local_plan_id)
       .maybeSingle();
     if (planErr || !plan) {
@@ -306,10 +305,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (body.payment_method === "pix") {
-      const amountCents = planAmountCents(plan, body.billing_cycle);
-      if (amountCents < 100) {
-        throw new Error("Valor do plano inválido para cobrança PIX (mínimo R$ 1,00).");
-      }
+      const billingAmount = planAmountBreakdown(plan, body.billing_cycle, {
+        applyHomologPixCap: true,
+      });
+      const amountCents = billingAmount.amount_cents;
 
       const localSub = buildLocalSubscriptionFromPagarme({
         pagarme: { status: "pending" },
@@ -373,6 +372,8 @@ Deno.serve(async (req) => {
           restaurant_id: restaurant.id,
           plan_id: plan.id,
           billing_cycle: body.billing_cycle,
+          catalog_amount_cents: billingAmount.catalog_amount_cents,
+          homolog_pix_amount_capped: billingAmount.homolog_test_override,
         },
       });
       } catch (orderError) {
@@ -392,11 +393,27 @@ Deno.serve(async (req) => {
 
       await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
 
+      let finalOrder = order;
       let paymentInfo = extractOrderPaymentInfo(order, "pix");
       if (!hasPaymentPayload(paymentInfo)) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        const refreshed = await pagarme<PagarmeOrder>(`/orders/${order.id}`, "GET");
-        paymentInfo = extractOrderPaymentInfo(refreshed, "pix");
+        finalOrder = await pagarme<PagarmeOrder>(`/orders/${order.id}`, "GET");
+        paymentInfo = extractOrderPaymentInfo(finalOrder, "pix");
+      }
+
+      const chargeStatus = primaryOrderChargeStatus(finalOrder);
+      const mappedStatus = localStatusFromOrderCharge(chargeStatus);
+      if (mappedStatus === "canceled") {
+        await admin
+          .from("subscriptions")
+          .update({
+            status: "canceled",
+            end_date: new Date().toISOString(),
+            last_payment_status: chargeStatus || "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", inserted.id);
+        throw new Error(pixChargeRejectedMessage(amountCents));
       }
 
       const subscriptionRow = { ...inserted, pagarme_subscription_id: order.id };
@@ -431,12 +448,14 @@ Deno.serve(async (req) => {
         success: true,
         subscription: subscriptionRow,
         period_credit_days: localSub.period_credit_days ?? 0,
+        billing_amount: billingAmount,
         payment: paymentInfo,
         pagarme: {
           order_id: order.id,
           customer_id: customer.id,
           status: "pending",
           payment_method: "pix",
+          amount_cents: amountCents,
         },
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

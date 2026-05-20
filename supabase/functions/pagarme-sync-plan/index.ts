@@ -1,6 +1,7 @@
 // Edge Function: pagarme-sync-plan
 // Cria/atualiza os planos (mensal e anual) no Pagar.me a partir de um plano local.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { planAmountBreakdownForPagarmePlan } from "../_shared/pagarme-plan-pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,17 +81,8 @@ function pagarmeErrorMessage(data: PagarmeRequestData, status: number) {
 }
 
 function amountCentsForInterval(plan: LocalPlan, interval: "month" | "year") {
-  const amount = interval === "month"
-    ? Number(plan.price_monthly)
-    : Number(plan.price_yearly) * 12;
-  const cents = Math.round(amount * 100);
-  if (!Number.isFinite(cents) || cents < 100) {
-    const label = interval === "month" ? "mensal" : "anual (12x)";
-    throw new Error(
-      `Preço ${label} deve ser de pelo menos R$ 1,00 para sincronizar no Pagar.me. Valor atual: R$ ${amount}`,
-    );
-  }
-  return cents;
+  const billingCycle = interval === "month" ? "monthly" : "yearly";
+  return planAmountBreakdownForPagarmePlan(plan, billingCycle).amount_cents;
 }
 
 function authHeader() {

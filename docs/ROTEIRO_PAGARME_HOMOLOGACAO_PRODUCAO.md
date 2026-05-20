@@ -100,10 +100,16 @@ Fonte: [Simulador de cartão de crédito](https://docs.pagar.me/docs/simulador-d
 
 | Valor da transação | Cenário |
 |--------------------|---------|
-| ≤ R$ 500,00 | Sucesso: `pending` → em segundos `paid` (simulação automática) |
-| > R$ 500,00 | Falha: `failed` |
+| Doc oficial: ≤ R$ 500,00 | Sucesso (valor em reais na documentação) |
+| Doc oficial: > R$ 500,00 | Falha |
 
-Fonte: [Simulador PIX](https://docs.pagar.me/docs/simulador-pix).  
+Fonte: [Simulador PIX](https://docs.pagar.me/docs/simulador-pix).
+
+**Comportamento observado em `sk_test` (maio/2026):** o simulador compara o campo `amount` da API (já em **centavos**) com **500**. Ex.: Plano R$ 59,90 → `amount: 5990` → **falha** (`5990 > 500`). Valores de teste precisam ter `amount ≤ 500` (R$ 5,00).
+
+**Pubfy em homologação:** `pagarme-create-boleto-pix` envia automaticamente **500 centavos (R$ 5,00)** quando o plano é maior, e grava o valor de catálogo em `metadata.catalog_amount_cents`. Opcional: secret `PAGARME_PIX_TEST_AMOUNT_CENTS=100` (R$ 1,00).
+
+**Produção (`sk_live`):** usa o valor real do plano (ex.: **5990** centavos = R$ 59,90) — sem cap.  
 **Nota:** simulador PIX **não** funciona com Split ativo — validar modo marketplace do restaurante.
 
 ### Boleto

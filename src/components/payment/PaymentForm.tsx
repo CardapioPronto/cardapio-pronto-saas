@@ -44,11 +44,20 @@ export type PaymentSuccessData = {
   success: boolean;
   subscription?: unknown;
   period_credit_days?: number;
+  billing_amount?: {
+    billing_cycle?: string;
+    catalog_amount_reais?: number;
+    catalog_amount_cents?: number;
+    amount_reais?: number;
+    amount_cents?: number;
+    homolog_test_override?: boolean;
+  };
   payment?: Record<string, unknown>;
   pagarme?: {
     subscription_id?: string;
     customer_id?: string;
     status?: string;
+    amount_cents?: number;
   };
 };
 
@@ -246,6 +255,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       });
 
       if (isPendingPaymentSubscription(result)) {
+        const billing = result.billing_amount;
+        if (billing?.amount_cents != null && offlineMethod === "pix") {
+          const chargedReais = billing.amount_reais ?? billing.amount_cents / 100;
+          const catalogReais = billing.catalog_amount_reais ?? chargedReais;
+          const homologNote = billing.homolog_test_override
+            ? ` Homologação: cobrança de teste R$ ${chargedReais.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (${billing.amount_cents} centavos); plano R$ ${catalogReais.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`
+            : ` (${billing.amount_cents} centavos no Pagar.me).`;
+          toast.info(`PIX gerado: R$ ${chargedReais.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.${homologNote}`);
+        }
         if (offlineMethod === "pix") {
           setOfflineConfirmation({
             kind: "pix",
