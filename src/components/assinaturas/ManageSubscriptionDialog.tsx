@@ -107,6 +107,7 @@ const ManageSubscriptionDialog = ({
       ? subscription.plan?.price_yearly
       : subscription.plan?.price_monthly;
   const hasPagarmeSubscription = Boolean(subscription.has_pagarme_subscription);
+  const isPendingPayment = status === "pending" && hasPagarmeSubscription;
 
   const handleCancel = async () => {
     setActionLoading("cancel");
@@ -176,6 +177,26 @@ const ManageSubscriptionDialog = ({
                     cancelamento e troca de ciclo precisam de uma assinatura criada pelo checkout.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {isPendingPayment && (
+              <div className="flex flex-col gap-3 rounded-md border border-orange/30 bg-orange/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium text-orange">Pagamento pendente</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Abra o comprovante para ver o boleto ou o QR Code PIX. A página atualiza
+                    automaticamente quando o pagamento for confirmado.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  className="shrink-0 bg-green hover:bg-green-dark"
+                  onClick={() => setView("receipt")}
+                >
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Ver pagamento
+                </Button>
               </div>
             )}
 

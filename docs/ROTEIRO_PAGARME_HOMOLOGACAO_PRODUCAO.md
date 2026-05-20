@@ -146,6 +146,19 @@ flowchart LR
 
 ---
 
+## Ferramenta automatizada (smoke)
+
+Antes dos blocos manuais, rode no repositório:
+
+```bash
+npm run pagarme:smoke-homolog
+```
+
+Valida arquivos críticos do módulo e se o webhook retorna **401** sem assinatura.
+Opcional: `WEBHOOK_URL=https://<projeto>.supabase.co/functions/v1/pagarme-webhook npm run pagarme:smoke-homolog`
+
+---
+
 ## Bloco A — Infraestrutura sandbox
 
 **Objetivo:** garantir que o ambiente de teste está completo antes de qualquer fluxo de pagamento.
@@ -469,7 +482,7 @@ Execute após Blocos C–F para aumentar confiança.
 
 - [ ] Blocos A–H concluídos em **homologação**.
 - [x] Pendências I1–I3 implementadas no código (revalidar em homologação).
-- [ ] `npm run preflight:prod`, `npm run typecheck`, `npm run test` verdes.
+- [ ] `npm run pagarme:smoke-homolog`, `npm run preflight:prod`, `npm run typecheck`, `npm run test` verdes.
 - [ ] QA manual `docs/QA_ROTEIROS_MANUAIS.md` §1.4 e §2.2 (assinatura + PIX PDV/cardápio).
 
 ### J2. Pagar.me produção

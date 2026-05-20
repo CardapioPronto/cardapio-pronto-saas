@@ -14,6 +14,7 @@ import MySubscriptionsList from "@/components/assinaturas/MySubscriptionsList";
 import ManageSubscriptionDialog from "@/components/assinaturas/ManageSubscriptionDialog";
 import { fetchPlanos } from "@/services/planosService";
 import { useMySubscriptions, MySubscription } from "@/hooks/useMySubscriptions";
+import { usePendingSubscriptionPoll } from "@/hooks/usePendingSubscriptionPoll";
 import { Plano } from "@/types/plano";
 
 const Assinaturas = () => {
@@ -42,6 +43,8 @@ const Assinaturas = () => {
   const daysLeftInTrial = trialEndsAt
     ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000))
     : 0;
+
+  usePendingSubscriptionPoll(currentSubscription?.status, refetchMySubs);
 
   useEffect(() => {
     const loadPlanos = async () => {
