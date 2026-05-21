@@ -3,10 +3,7 @@
 // sincronizado, e persiste a assinatura na tabela `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
-import {
-  SUBSCRIPTION_ENTITLEMENT_STATUSES,
-  supersedePriorSubscriptions,
-} from "../_shared/pagarme-subscription-status.ts";
+import { SUBSCRIPTION_ENTITLEMENT_STATUSES } from "../_shared/pagarme-subscription-status.ts";
 import {
   buildLocalSubscriptionFromPagarme,
   subscriptionInsertRow,
@@ -99,6 +96,17 @@ async function pagarme<T>(path: string, method: string, body?: unknown): Promise
     throw new Error(`Pagar.me ${method} ${path}: ${msg}`);
   }
   return data as T;
+}
+
+async function cancelPagarmeSubscriptionSafe(subscriptionId: string | undefined, reason: string) {
+  if (!subscriptionId) return false;
+  try {
+    await pagarme<unknown>(`/subscriptions/${subscriptionId}`, "DELETE");
+    return true;
+  } catch (error) {
+    console.error(`Failed to cancel Pagar.me subscription after ${reason}:`, error);
+    return false;
+  }
 }
 
 function digits(s: string) {
@@ -307,33 +315,76 @@ Deno.serve(async (req) => {
       planTrialDays: plan.trial_days,
       priorEntitlement: priorSub,
     });
+    const remoteStatus = (subscription.status ?? created.status ?? "").toLowerCase();
+    const pagarmeSubscriptionId = subscription.id ?? created.id;
 
-    const { data: inserted, error: insertErr } = await admin
-      .from("subscriptions")
-      .insert({
-        restaurant_id: restaurant.id,
-        plan_id: plan.id,
-        ...subscriptionInsertRow(localSub),
-        pagarme_subscription_id: subscription.id ?? created.id,
-        pagarme_customer_id: customer.id,
-      })
-      .select()
-      .single();
+    if (localSub.status !== "active") {
+      const cleanupDone = await cancelPagarmeSubscriptionSafe(
+        pagarmeSubscriptionId,
+        `non-active checkout status ${remoteStatus || localSub.status}`,
+      );
 
-    if (insertErr) {
-      // Não dá rollback no Pagar.me, mas reporta para investigação
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Subscription created on Pagar.me but DB insert failed: ${insertErr.message}`,
-          pagarme_subscription_id: subscription.id,
+          error:
+            `Pagamento não confirmado no Pagar.me (${remoteStatus || localSub.status}). ` +
+            "Nenhuma alteração foi feita na assinatura atual. Confira os dados do cartão ou tente outro método.",
+          pagarme_subscription_id: pagarmeSubscriptionId,
           pagarme_customer_id: customer.id,
+          pagarme_status: remoteStatus || null,
+          cleanup_done: cleanupDone,
+        }),
+        {
+          status: remoteStatus === "failed" || remoteStatus === "unpaid" || remoteStatus === "past_due"
+            ? 402
+            : 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const insertRow = subscriptionInsertRow(localSub);
+    const { data: inserted, error: insertErr } = await admin.rpc(
+      "insert_paid_checkout_subscription",
+      {
+        p_restaurant_id: restaurant.id,
+        p_plan_id: plan.id,
+        p_status: insertRow.status,
+        p_is_trial: insertRow.is_trial,
+        p_trial_start: insertRow.trial_start,
+        p_trial_ends_at: insertRow.trial_ends_at,
+        p_billing_cycle: insertRow.billing_cycle,
+        p_start_date: insertRow.start_date,
+        p_current_period_start: insertRow.current_period_start,
+        p_current_period_end: insertRow.current_period_end,
+        p_next_billing_at: insertRow.next_billing_at,
+        p_pagarme_subscription_id: pagarmeSubscriptionId,
+        p_pagarme_customer_id: customer.id,
+        p_last_payment_status: subscription.status ?? "active",
+        p_last_payment_at: now.toISOString(),
+      },
+    );
+
+    if (insertErr) {
+      const cleanupDone = await cancelPagarmeSubscriptionSafe(
+        pagarmeSubscriptionId,
+        `DB insert failure: ${insertErr.message}`,
+      );
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            "Pagamento aprovado no Pagar.me, mas a assinatura local não pôde ser registrada. " +
+            `A assinatura criada no Pagar.me ${cleanupDone ? "foi cancelada" : "precisa ser cancelada manualmente"} para evitar duplicidade. ` +
+            `Detalhe: ${insertErr.message}`,
+          pagarme_subscription_id: pagarmeSubscriptionId,
+          pagarme_customer_id: customer.id,
+          cleanup_done: cleanupDone,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
 
     try {
       await sendManagedEmail({

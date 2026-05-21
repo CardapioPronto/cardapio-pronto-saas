@@ -499,7 +499,7 @@ Deno.serve(async (req) => {
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (localSub.status !== "pending") {
+    if (localSub.status === "active") {
       await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
     }
 

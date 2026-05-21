@@ -72,4 +72,19 @@ describe("resolvePaidSubscriptionPeriod", () => {
     expect(row.current_period_end).toBe("2026-05-20T18:20:11.000Z");
     expect(row.next_billing_at).toBe("2026-05-20T18:20:11.000Z");
   });
+
+  it("não transforma tentativa failed do Pagar.me em entitlement local", () => {
+    const localSub = buildLocalSubscriptionFromPagarme({
+      pagarme: { status: "failed" },
+      billingCycle: "monthly",
+      paymentMethod: "credit_card",
+      priorEntitlement: {
+        status: "trialing",
+        is_trial: true,
+        trial_ends_at: "2026-05-20T18:20:11Z",
+      },
+    });
+
+    expect(localSub.status).toBe("canceled");
+  });
 });
