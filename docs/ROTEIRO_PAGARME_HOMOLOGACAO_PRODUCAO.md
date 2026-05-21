@@ -173,8 +173,8 @@ Opcional: `WEBHOOK_URL=https://<projeto>.supabase.co/functions/v1/pagarme-webhoo
 
 Projeto: `jyrfjvyeikhqpuwcvdff` (ou o projeto ativo).
 
-- [ ] `PAGARME_SECRET_KEY` = chave **de teste** (`sk_test_…`) — você indicou que já está configurada.
-- [ ] `PAGARME_WEBHOOK_SECRET` definido e **igual** ao “Sign with Secret” do webhook no painel Pagar.me (homologação).
+- [x] `PAGARME_SECRET_KEY` = chave **de teste** (`sk_test_…`) — você indicou que já está configurada.
+- [x] `PAGARME_WEBHOOK_SECRET` definido e **igual** ao “Sign with Secret” do webhook no painel Pagar.me (homologação).
 - [ ] `PAGARME_PLATFORM_RECIPIENT_ID` preenchido se for usar **split** em pedidos do cardápio (obrigatório quando `marketplace_mode = split`).
 
 Validação:
@@ -187,18 +187,18 @@ Esperado: checks de `PAGARME_*` documentados em `.env.example` passam (secrets p
 
 ### A2. Painel Pagar.me (loja de teste)
 
-- [ ] Banner **“Loja de teste”** visível (vendas simuladas).
-- [ ] Em **Configurações → Meios de pagamento**: simuladores de **cartão**, **boleto** e **PIX** habilitados conforme o tipo de conta (Gateway vs PSP).
-- [ ] Chaves de API de teste copiadas apenas para o Supabase (não commitar).
+- [x] Banner **“Loja de teste”** visível (vendas simuladas).
+- [x] Em **Configurações → Meios de pagamento**: simuladores de **cartão**, **boleto** e **PIX** habilitados conforme o tipo de conta (Gateway vs PSP).
+- [x] Chaves de API de teste copiadas apenas para o Supabase (não commitar).
 
 ### A3. Webhook (homologação)
 
 Com base na sua configuração:
 
-- [ ] URL: `https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/pagarme-webhook`
-- [ ] Status: **active**
-- [ ] Envio bloqueado: **false**
-- [ ] Eventos mínimos assinados (recomendado manter os que você já tem):
+- [x] URL: `https://jyrfjvyeikhqpuwcvdff.supabase.co/functions/v1/pagarme-webhook`
+- [x] Status: **active**
+- [x] Envio bloqueado: **false**
+- [x] Eventos mínimos assinados (recomendado manter os que você já tem):
   - Assinatura: `subscription.*`
   - Cobrança: `charge.paid`, `charge.payment_failed`, `charge.pending`, `charge.processing`, `charge.refunded`
   - Fatura: `invoice.paid`, `invoice.payment_failed`
@@ -218,7 +218,7 @@ Teste real: no painel Pagar.me → Webhooks → **Enviar teste** (ou disparar ev
 
 ### A4. Super Admin no Pubfy
 
-- [ ] Usuário super admin consegue acessar `/admin/pagarme` e `/admin/planos`.
+- [x] Usuário super admin consegue acessar `/admin/pagarme` e `/admin/planos`.
 - [ ] Painel de webhooks em Admin lista eventos (`pagarme_webhook_events`).
 
 **Evidência sugerida:** print ou `event_id` do último evento com `signature_valid = true`.

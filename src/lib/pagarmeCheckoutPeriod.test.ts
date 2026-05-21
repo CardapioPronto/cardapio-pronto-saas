@@ -87,4 +87,15 @@ describe("resolvePaidSubscriptionPeriod", () => {
 
     expect(localSub.status).toBe("canceled");
   });
+
+  it("não trata trial remoto do Pagar.me como trial local no checkout pago", () => {
+    const localSub = buildLocalSubscriptionFromPagarme({
+      pagarme: { status: "trialing" },
+      billingCycle: "monthly",
+      paymentMethod: "credit_card",
+      planTrialDays: 14,
+    });
+
+    expect(localSub.status).toBe("pending");
+  });
 });

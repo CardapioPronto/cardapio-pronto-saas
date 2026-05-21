@@ -33,6 +33,7 @@ type PagarmePlanResponse = {
   currency?: string;
   interval?: string;
   interval_count?: number;
+  trial_period_days?: number | null;
   items?: Array<{
     id?: string;
     name?: string;
@@ -84,9 +85,10 @@ function buildPlanBase(
   plan: LocalPlan,
   interval: "month" | "year",
   amountCents: number,
+  name = planDisplayName(plan, interval),
 ) {
   return {
-    name: planDisplayName(plan, interval),
+    name,
     status: "active",
     currency: "BRL",
     description:
@@ -98,7 +100,6 @@ function buildPlanBase(
     payment_methods: normalizePlanPaymentMethodsForPagarme(plan.pagarme_payment_methods),
     installments: [1],
     minimum_price: amountCents,
-    trial_period_days: 0,
     statement_descriptor: "PUBFY",
   };
 }
@@ -107,12 +108,12 @@ function buildPlanCreateBody(
   plan: LocalPlan,
   interval: "month" | "year",
   amountCents: number,
+  name?: string,
 ) {
   const {
     status: _status,
-    trial_period_days: _trialPeriodDays,
     ...base
-  } = buildPlanBase(plan, interval, amountCents);
+  } = buildPlanBase(plan, interval, amountCents, name);
   return {
     ...base,
     items: [
@@ -123,6 +124,12 @@ function buildPlanCreateBody(
       },
     ],
   };
+}
+
+function replacementPlanName(displayName: string) {
+  const stamp = new Date().toISOString().replace(/\D/g, "").slice(2, 12);
+  const suffix = ` ${stamp}`;
+  return `${displayName.slice(0, 64 - suffix.length)}${suffix}`;
 }
 
 /** PUT exige name, status, currency, interval e interval_count (doc Pagar.me v5). */
@@ -208,25 +215,47 @@ async function upsertPagarmePlan(
   const displayName = planDisplayName(plan, interval);
   let planId = existingId;
 
+  const createPlan = async (reason?: string): Promise<UpsertPlanResult> => {
+    const name = reason ? replacementPlanName(displayName) : displayName;
+    const created = await pagarmeRequest(
+      "/plans",
+      "POST",
+      buildPlanCreateBody(plan, interval, amountCents, name),
+    );
+    if (!created.ok) {
+      throw new Error(
+        `Pagar.me create failed (${created.status}): ${pagarmeErrorMessage(created.data, created.status)}`,
+      );
+    }
+    const createdId = getPagarmePlanId(created.data);
+    if (!createdId) throw new Error("Pagar.me create response missing id");
+    return {
+      id: createdId,
+      warning: reason ? `${displayName}: novo plano Pagar.me criado (${reason}).` : undefined,
+    };
+  };
+
   if (planId) {
     const remote = await pagarmeRequest(`/plans/${planId}`, "GET");
     if (!remote.ok && remote.status === 404) {
       planId = null;
     } else if (remote.ok) {
       const remotePlan = remote.data as PagarmePlanResponse;
+      const remoteTrialDays = Number(remotePlan.trial_period_days ?? 0);
+      if (remoteTrialDays > 0) {
+        return createPlan(`plano remoto tinha trial_period_days=${remoteTrialDays}`);
+      }
       const updateBody = buildPlanUpdateBody(plan, interval, amountCents, remotePlan);
       const updated = await pagarmeRequest(`/plans/${planId}`, "PUT", updateBody);
       if (updated.ok) {
         return { id: planId };
       }
-      // Plano existe mas não aceita alteração (ex.: assinaturas vinculadas) — mantém vínculo.
+      // Planos já vinculados podem não aceitar alterações de preço, itens ou trial.
+      // Para novos checkouts é mais seguro criar um novo plano e manter assinaturas antigas no ID anterior.
       if (updated.status === 400 || updated.status === 422 || updated.status === 403) {
-        return {
-          id: planId,
-          linkedOnly: true,
-          warning:
-            `${displayName}: vinculado sem alterar no Pagar.me (${pagarmeErrorMessage(updated.data, updated.status)}).`,
-        };
+        return createPlan(
+          `atualização recusada pelo Pagar.me: ${pagarmeErrorMessage(updated.data, updated.status)}`,
+        );
       }
       throw new Error(
         `Pagar.me update failed: ${pagarmeErrorMessage(updated.data, updated.status)}`,
@@ -241,19 +270,7 @@ async function upsertPagarmePlan(
     }
   }
 
-  const created = await pagarmeRequest(
-    "/plans",
-    "POST",
-    buildPlanCreateBody(plan, interval, amountCents),
-  );
-  if (!created.ok) {
-    throw new Error(
-      `Pagar.me create failed (${created.status}): ${pagarmeErrorMessage(created.data, created.status)}`,
-    );
-  }
-  const createdId = getPagarmePlanId(created.data);
-  if (!createdId) throw new Error("Pagar.me create response missing id");
-  return { id: createdId };
+  return createPlan();
 }
 
 Deno.serve(async (req) => {
