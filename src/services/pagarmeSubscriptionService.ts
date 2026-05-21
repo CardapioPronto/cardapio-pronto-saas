@@ -46,6 +46,15 @@ export interface CreateSubscriptionInput {
     exp_year: number | string;
     cvv: string;
   };
+  billing_address?: {
+    zip_code: string;
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+  };
 }
 
 export async function createPagarmeSubscription(input: CreateSubscriptionInput) {

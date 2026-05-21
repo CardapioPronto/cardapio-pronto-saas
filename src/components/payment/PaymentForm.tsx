@@ -90,6 +90,13 @@ const paymentFormSchema = z.object({
   cardName: z.string().optional(),
   cardExpiry: z.string().optional(),
   cardCvc: z.string().optional(),
+  billingZipCode: z.string().optional(),
+  billingStreet: z.string().optional(),
+  billingNumber: z.string().optional(),
+  billingComplement: z.string().optional(),
+  billingNeighborhood: z.string().optional(),
+  billingCity: z.string().optional(),
+  billingState: z.string().optional(),
 }).superRefine((values, ctx) => {
   const method = values.paymentMethod;
   if (method !== "credit_card") return;
@@ -105,6 +112,24 @@ const paymentFormSchema = z.object({
   }
   if (!values.cardCvc || values.cardCvc.replace(/\D/g, "").length < 3) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cardCvc"], message: "CVV inválido" });
+  }
+  if (!values.billingZipCode || digitsOnly(values.billingZipCode).length !== 8) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["billingZipCode"], message: "CEP inválido" });
+  }
+  if (!values.billingStreet || values.billingStreet.trim().length < 3) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["billingStreet"], message: "Rua é obrigatória" });
+  }
+  if (!values.billingNumber || values.billingNumber.trim().length < 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["billingNumber"], message: "Número é obrigatório" });
+  }
+  if (!values.billingNeighborhood || values.billingNeighborhood.trim().length < 2) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["billingNeighborhood"], message: "Bairro é obrigatório" });
+  }
+  if (!values.billingCity || values.billingCity.trim().length < 2) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["billingCity"], message: "Cidade é obrigatória" });
+  }
+  if (!values.billingState || !/^[A-Za-z]{2}$/.test(values.billingState.trim())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["billingState"], message: "UF inválida" });
   }
 });
 
@@ -150,6 +175,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       cardName: "",
       cardExpiry: "",
       cardCvc: "",
+      billingZipCode: "",
+      billingStreet: "",
+      billingNumber: "",
+      billingComplement: "",
+      billingNeighborhood: "",
+      billingCity: "",
+      billingState: "",
     },
   });
 
@@ -204,7 +236,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       errors.cardNumber?.message ||
       errors.cardName?.message ||
       errors.cardExpiry?.message ||
-      errors.cardCvc?.message;
+      errors.cardCvc?.message ||
+      errors.billingZipCode?.message ||
+      errors.billingStreet?.message ||
+      errors.billingNumber?.message ||
+      errors.billingNeighborhood?.message ||
+      errors.billingCity?.message ||
+      errors.billingState?.message;
     toast.error(firstMessage?.toString() || "Revise os campos destacados antes de continuar.");
     scrollToFirstError();
   };
@@ -235,6 +273,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             exp_month: parsedExpiry.expMonth,
             exp_year: parsedExpiry.expYear,
             cvv: digitsOnly(values.cardCvc || ""),
+          },
+          billing_address: {
+            zip_code: digitsOnly(values.billingZipCode || ""),
+            street: values.billingStreet?.trim() || "",
+            number: values.billingNumber?.trim() || "",
+            complement: values.billingComplement?.trim() || undefined,
+            neighborhood: values.billingNeighborhood?.trim() || "",
+            city: values.billingCity?.trim() || "",
+            state: (values.billingState || "").trim().toUpperCase(),
           },
         });
         finishWithSuccess(result);
@@ -566,6 +613,123 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                           </FormItem>
                         )}
                       />
+                    </div>
+
+                    <div className="space-y-4 border-t pt-4">
+                      <FormField
+                        control={form.control}
+                        name="billingZipCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CEP de cobrança</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="00000000"
+                                inputMode="numeric"
+                                autoComplete="billing postal-code"
+                                maxLength={8}
+                                {...field}
+                                onChange={(e) => field.onChange(digitsOnly(e.target.value).slice(0, 8))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 md:grid-cols-[1fr_120px] gap-4">
+                        <FormField
+                          control={form.control}
+                          name="billingStreet"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Rua</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Rua" autoComplete="billing address-line1" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="billingNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Número</FormLabel>
+                              <FormControl>
+                                <Input placeholder="123" autoComplete="billing address-line2" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="billingComplement"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Complemento</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Apartamento, bloco, sala" autoComplete="billing address-line3" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_80px] gap-4">
+                        <FormField
+                          control={form.control}
+                          name="billingNeighborhood"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Bairro</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Bairro" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="billingCity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Cidade</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Cidade" autoComplete="billing address-level2" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="billingState"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>UF</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="SP"
+                                  autoComplete="billing address-level1"
+                                  maxLength={2}
+                                  {...field}
+                                  onChange={(e) => field.onChange(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </TabsContent>
 
