@@ -3,9 +3,11 @@
 // sincronizado, e persiste a assinatura na tabela `subscriptions`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
+import { pagarmeErrorMessage } from "../_shared/pagarme-errors.ts";
 import { SUBSCRIPTION_ENTITLEMENT_STATUSES } from "../_shared/pagarme-subscription-status.ts";
 import {
   buildLocalSubscriptionFromPagarme,
+  pendingSubscriptionInsertRow,
   subscriptionInsertRow,
   type PagarmeSubscriptionPayload,
 } from "../_shared/pagarme-checkout-subscription.ts";
@@ -44,12 +46,6 @@ interface RequestBody {
   card: CardInput;
 }
 
-type PagarmeErrorPayload = {
-  message?: string;
-  errors?: Array<{ message?: string }>;
-  raw?: string;
-};
-
 type PagarmeCustomer = {
   id?: string;
 };
@@ -68,11 +64,6 @@ function authHeader() {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function pagarmeErrorMessage(data: unknown, status: number) {
-  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
-  return payload?.message || payload?.errors?.[0]?.message || `HTTP ${status}`;
 }
 
 async function pagarme<T>(path: string, method: string, body?: unknown): Promise<T> {
@@ -218,7 +209,7 @@ Deno.serve(async (req) => {
     const { data: plan, error: planErr } = await admin
       .from("plans")
       .select(
-        "id, name, is_active, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly",
+        "id, name, is_active, trial_days, pagarme_plan_id_monthly, pagarme_plan_id_yearly, pagarme_sync_error",
       )
       .eq("id", body.local_plan_id)
       .maybeSingle();
@@ -317,6 +308,85 @@ Deno.serve(async (req) => {
     });
     const remoteStatus = (subscription.status ?? created.status ?? "").toLowerCase();
     const pagarmeSubscriptionId = subscription.id ?? created.id;
+    const remotePlanTrialStatus =
+      remoteStatus === "future" ||
+      remoteStatus === "scheduled" ||
+      remoteStatus === "trialing";
+
+    if (remotePlanTrialStatus) {
+      const cleanupDone = await cancelPagarmeSubscriptionSafe(
+        pagarmeSubscriptionId,
+        `remote plan trial status ${remoteStatus}`,
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            `O Pagar.me criou a assinatura com status ${remoteStatus}, sem cobrança imediata. ` +
+            "Isso normalmente indica que o plano remoto ainda está com trial/início futuro configurado. " +
+            "Re-sincronize o plano no Super Admin para gerar novos IDs Pagar.me e tente novamente. " +
+            "A assinatura atual não foi alterada.",
+          pagarme_subscription_id: pagarmeSubscriptionId,
+          pagarme_customer_id: customer.id,
+          pagarme_status: remoteStatus || null,
+          plan_sync_error: plan.pagarme_sync_error ?? null,
+          cleanup_done: cleanupDone,
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (localSub.status === "pending") {
+      const pendingRow = pendingSubscriptionInsertRow(localSub, priorSub);
+      const { data: insertedPending, error: pendingInsertErr } = await admin
+        .from("subscriptions")
+        .insert({
+          restaurant_id: restaurant.id,
+          plan_id: plan.id,
+          ...pendingRow,
+          pagarme_subscription_id: pagarmeSubscriptionId,
+          pagarme_customer_id: customer.id,
+          last_payment_status: remoteStatus || "pending",
+        })
+        .select()
+        .single();
+
+      if (pendingInsertErr) {
+        const cleanupDone = await cancelPagarmeSubscriptionSafe(
+          pagarmeSubscriptionId,
+          `pending DB insert failure: ${pendingInsertErr.message}`,
+        );
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Pagamento em processamento no Pagar.me, mas a tentativa local não pôde ser registrada. " +
+              `A assinatura criada no Pagar.me ${cleanupDone ? "foi cancelada" : "precisa ser cancelada manualmente"}. ` +
+              `Detalhe: ${pendingInsertErr.message}`,
+            pagarme_subscription_id: pagarmeSubscriptionId,
+            pagarme_customer_id: customer.id,
+            cleanup_done: cleanupDone,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          subscription: insertedPending,
+          period_credit_days: localSub.period_credit_days ?? 0,
+          pagarme: {
+            subscription_id: subscription.id,
+            customer_id: customer.id,
+            card_id: card.id,
+            status: subscription.status,
+          },
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     if (localSub.status !== "active") {
       const cleanupDone = await cancelPagarmeSubscriptionSafe(

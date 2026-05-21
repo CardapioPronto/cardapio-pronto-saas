@@ -11,7 +11,7 @@ export function mapPagarmeSubscriptionStatus(
 
   switch (normalized) {
     case "trialing":
-      return "trialing";
+      return trialDays > 0 ? "trialing" : "pending";
     case "active":
       return "active";
     case "past_due":
