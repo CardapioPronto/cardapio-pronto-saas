@@ -8,6 +8,7 @@ import {
   type BillingCycle,
   type PriorEntitlement,
 } from "../_shared/pagarme-checkout-subscription.ts";
+import { supersedePriorSubscriptions } from "../_shared/pagarme-subscription-status.ts";
 import {
   isPagarmeSubscriptionExternalId,
   isPlatformOrderExternalId,
@@ -60,9 +61,11 @@ async function applyPaidLocalPeriod(
 ) {
   const now = new Date();
   const billingCycle: BillingCycle = sub.billing_cycle === "yearly" ? "yearly" : "monthly";
-  const periodStart = sub.current_period_start
-    ? new Date(sub.current_period_start)
-    : now;
+  const periodStart = sub.status === "pending"
+    ? now
+    : sub.current_period_start
+      ? new Date(sub.current_period_start)
+      : now;
   const prior: PriorEntitlement = {
     status: sub.status,
     is_trial: sub.is_trial ?? null,
@@ -243,6 +246,10 @@ Deno.serve(async (req) => {
         .select()
         .single();
       if (updateErr) throw new Error(updateErr.message);
+
+      if (update.status === "active") {
+        await supersedePriorSubscriptions(admin, sub.restaurant_id, sub.id);
+      }
 
       return new Response(JSON.stringify({ success: true, subscription: updated }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },

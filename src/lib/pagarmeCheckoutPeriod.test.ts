@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLocalSubscriptionFromPagarme,
   computeRemainingCreditMs,
+  pendingSubscriptionInsertRow,
   resolvePaidSubscriptionPeriod,
 } from "../../supabase/functions/_shared/pagarme-checkout-subscription.ts";
 
@@ -46,5 +48,28 @@ describe("resolvePaidSubscriptionPeriod", () => {
       remainingCreditMs: creditMs,
     });
     expect(periodEnd.toISOString()).toBe("2026-06-20T18:20:11.000Z");
+  });
+
+  it("registro pending preserva só o fim do entitlement vigente para credito posterior", () => {
+    const localSub = buildLocalSubscriptionFromPagarme({
+      pagarme: { status: "pending" },
+      billingCycle: "monthly",
+      paymentMethod: "pix",
+      priorEntitlement: {
+        status: "trialing",
+        is_trial: true,
+        trial_ends_at: "2026-05-20T18:20:11Z",
+      },
+    });
+
+    const row = pendingSubscriptionInsertRow(localSub, {
+      status: "trialing",
+      is_trial: true,
+      trial_ends_at: "2026-05-20T18:20:11Z",
+    });
+
+    expect(row.status).toBe("pending");
+    expect(row.current_period_end).toBe("2026-05-20T18:20:11.000Z");
+    expect(row.next_billing_at).toBe("2026-05-20T18:20:11.000Z");
   });
 });

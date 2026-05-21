@@ -2,9 +2,9 @@ import { DISPLAYABLE_SUBSCRIPTION_STATUSES } from "@/lib/subscriptionStatusUi";
 
 const STATUS_PRIORITY: Record<string, number> = {
   active: 0,
-  pending: 1,
+  trialing: 1,
   past_due: 2,
-  trialing: 3,
+  pending: 3,
 };
 
 type SubscriptionLike = {

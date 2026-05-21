@@ -46,6 +46,20 @@ export function computeRemainingCreditMs(
   return Math.max(0, creditUntil.getTime() - now.getTime());
 }
 
+function entitlementEndsAt(prior: PriorEntitlement | null | undefined): Date | null {
+  if (!prior) return null;
+
+  const raw = (prior.status === "trialing" || prior.is_trial)
+    ? prior.trial_ends_at
+    : prior.status === "active" || prior.status === "past_due"
+      ? prior.current_period_end
+      : null;
+  if (!raw) return null;
+
+  const end = new Date(raw);
+  return Number.isNaN(end.getTime()) ? null : end;
+}
+
 export function remainingCreditDays(creditMs: number): number {
   if (creditMs <= 0) return 0;
   return Math.ceil(creditMs / 86400000);
@@ -149,4 +163,24 @@ export function subscriptionInsertRow(
 ) {
   const { period_credit_days: _credit, ...row } = localSub;
   return row;
+}
+
+/**
+ * Pending boleto/PIX does not grant a paid cycle yet. Keep only the previous
+ * entitlement end as carry-over so a later paid event can credit remaining time.
+ */
+export function pendingSubscriptionInsertRow(
+  localSub: ReturnType<typeof buildLocalSubscriptionFromPagarme>,
+  priorEntitlement?: PriorEntitlement | null,
+) {
+  const row = subscriptionInsertRow(localSub);
+  if (row.status !== "pending") return row;
+
+  const carryUntil = entitlementEndsAt(priorEntitlement);
+  const carryUntilIso = carryUntil?.toISOString() ?? null;
+  return {
+    ...row,
+    current_period_end: carryUntilIso,
+    next_billing_at: carryUntilIso,
+  };
 }

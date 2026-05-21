@@ -46,6 +46,10 @@ const Assinaturas = () => {
   const [manageSub, setManageSub] = useState<MySubscription | null>(null);
 
   const currentSubscription = pickCurrentSubscription(mySubscriptions);
+  const pendingPaymentSubscription = useMemo(
+    () => mySubscriptions.find((s) => s.status === "pending") ?? null,
+    [mySubscriptions],
+  );
   const renewalAlert = currentSubscription
     ? computeRenewalAlert({
         status: currentSubscription.status,
@@ -54,9 +58,9 @@ const Assinaturas = () => {
         next_billing_at: currentSubscription.next_billing_at,
       })
     : null;
-  const hasPendingPayment = currentSubscription?.status === "pending";
+  const hasPendingPayment = Boolean(pendingPaymentSubscription);
   const effectiveStatus =
-    !hasPendingPayment &&
+    currentSubscription?.status !== "pending" &&
     currentSubscription?.status === "canceled" &&
     currentSubscription.is_trial &&
     currentSubscription.trial_ends_at &&
@@ -187,14 +191,24 @@ const Assinaturas = () => {
             </AlertDescription>
           </Alert>
         )}
-        {currentSubscription?.status === "pending" && (
+        {pendingPaymentSubscription && (
           <Alert className="border-orange/40 bg-orange/5">
             <FileText className="h-4 w-4 text-orange" />
             <AlertTitle>Aguardando confirmação do pagamento</AlertTitle>
-            <AlertDescription>
-              Sua assinatura do {currentSubscription.plan?.name ?? "Plano Pubfy"} foi registrada.
-              O acesso completo será liberado após a confirmação do boleto ou PIX.
-              Abra <strong>Gerenciar assinatura</strong> para ver o comprovante ou QR Code.
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Sua assinatura do {pendingPaymentSubscription.plan?.name ?? "Plano Pubfy"} foi registrada.
+                Enquanto o boleto ou PIX aguarda confirmação, o acesso vigente permanece até o fim do
+                período atual.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                onClick={() => setManageSub(pendingPaymentSubscription)}
+              >
+                Ver pagamento
+              </Button>
             </AlertDescription>
           </Alert>
         )}
