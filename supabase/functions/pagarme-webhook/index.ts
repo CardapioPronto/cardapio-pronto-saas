@@ -229,8 +229,9 @@ function mapStatus(pagarmeStatus: string): string {
       return "pending";
     case "past_due":
     case "unpaid":
-    case "failed":
       return "past_due";
+    case "failed":
+      return "canceled";
     case "canceled":
     case "ended":
       return "canceled";

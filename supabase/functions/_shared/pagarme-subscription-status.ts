@@ -26,7 +26,7 @@ export function mapPagarmeSubscriptionStatus(
     case "scheduled":
       return trialDays > 0 ? "trialing" : "pending";
     case "failed":
-      return "past_due";
+      return "canceled";
     default:
       if (trialDays > 0) return "trialing";
       if (options.paymentMethod === "boleto" || options.paymentMethod === "pix") {
