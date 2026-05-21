@@ -43,6 +43,12 @@ export const SUBSCRIPTION_STATUSES_TO_SUPERSEDE = [
   "pending",
 ] as const;
 
+export const SUBSCRIPTION_ENTITLEMENT_STATUSES = [
+  "active",
+  "trialing",
+  "past_due",
+] as const;
+
 type SupabaseAdmin = {
   from: (table: string) => {
     update: (values: Record<string, unknown>) => {

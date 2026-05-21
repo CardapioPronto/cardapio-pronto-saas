@@ -9,6 +9,7 @@ import {
   type BillingCycle,
   type PriorEntitlement,
 } from "../_shared/pagarme-checkout-subscription.ts";
+import { supersedePriorSubscriptions } from "../_shared/pagarme-subscription-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -209,6 +210,10 @@ async function processPlatformSubscriptionOrderPayment(
     .update(update)
     .eq("id", subscriptionId);
 
+  if (update.status === "active") {
+    await supersedeSubscriptionById(subscriptionId);
+  }
+
   return true;
 }
 
@@ -260,7 +265,9 @@ async function applyPaidPeriodToUpdate(
   const now = new Date();
   const periodStart = pagarmePeriodStart
     ? new Date(pagarmePeriodStart)
-    : localSub?.current_period_start
+    : localSub?.status === "pending"
+      ? now
+      : localSub?.current_period_start
       ? new Date(localSub.current_period_start)
       : now;
 
@@ -285,6 +292,30 @@ async function applyPaidPeriodToUpdate(
   update.current_period_start = periodStart.toISOString();
   update.current_period_end = periodEnd.toISOString();
   update.next_billing_at = nextBilling.toISOString();
+}
+
+async function supersedeSubscriptionById(subscriptionId: string) {
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("id, restaurant_id")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+
+  if (sub?.restaurant_id) {
+    await supersedePriorSubscriptions(supabase, sub.restaurant_id, sub.id);
+  }
+}
+
+async function supersedeSubscriptionByPagarmeId(pagarmeSubId: string) {
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("id, restaurant_id")
+    .eq("pagarme_subscription_id", pagarmeSubId)
+    .maybeSingle();
+
+  if (sub?.restaurant_id) {
+    await supersedePriorSubscriptions(supabase, sub.restaurant_id, sub.id);
+  }
 }
 
 async function processEvent(event: PagarmeEvent): Promise<void> {
@@ -333,6 +364,10 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
       .from("subscriptions")
       .update(update)
       .eq("pagarme_subscription_id", pagarmeSubId);
+
+    if (newStatus === "active") {
+      await supersedeSubscriptionByPagarmeId(pagarmeSubId);
+    }
     return;
   }
 
@@ -379,6 +414,7 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
       .eq("pagarme_subscription_id", pagarmeSubId);
 
     if (newStatus === "active") {
+      await supersedeSubscriptionByPagarmeId(pagarmeSubId);
       await sendSubscriptionReceipt(pagarmeSubId, charge).catch((error) =>
         console.error("[pagarme-webhook] receipt email failed:", error),
       );

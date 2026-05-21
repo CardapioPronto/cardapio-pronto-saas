@@ -5,12 +5,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import { pagarmeErrorMessage } from "../_shared/pagarme-errors.ts";
 import {
-  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
+  SUBSCRIPTION_ENTITLEMENT_STATUSES,
   supersedePriorSubscriptions,
 } from "../_shared/pagarme-subscription-status.ts";
 import {
   buildLocalSubscriptionFromPagarme,
-  subscriptionInsertRow,
+  pendingSubscriptionInsertRow,
   type PagarmeSubscriptionPayload,
 } from "../_shared/pagarme-checkout-subscription.ts";
 import { planAmountBreakdown } from "../_shared/pagarme-plan-pricing.ts";
@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .select("status, is_trial, current_period_end, trial_ends_at")
       .eq("restaurant_id", restaurant.id)
-      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE])
+      .in("status", [...SUBSCRIPTION_ENTITLEMENT_STATUSES])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
         .insert({
           restaurant_id: restaurant.id,
           plan_id: plan.id,
-          ...subscriptionInsertRow(localSub),
+          ...pendingSubscriptionInsertRow(localSub, priorSub),
           pagarme_customer_id: customer.id,
         })
         .select()
@@ -390,8 +390,6 @@ Deno.serve(async (req) => {
         .from("subscriptions")
         .update({ pagarme_subscription_id: order.id })
         .eq("id", inserted.id);
-
-      await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
 
       let finalOrder = order;
       let paymentInfo = extractOrderPaymentInfo(order, "pix");
@@ -485,7 +483,7 @@ Deno.serve(async (req) => {
       .insert({
         restaurant_id: restaurant.id,
         plan_id: plan.id,
-        ...subscriptionInsertRow(localSub),
+        ...pendingSubscriptionInsertRow(localSub, priorSub),
         pagarme_subscription_id: subscription.id ?? created.id,
         pagarme_customer_id: customer.id,
       })
@@ -501,7 +499,9 @@ Deno.serve(async (req) => {
       }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
+    if (localSub.status !== "pending") {
+      await supersedePriorSubscriptions(admin, restaurant.id, inserted.id);
+    }
 
     try {
       await sendManagedEmail({

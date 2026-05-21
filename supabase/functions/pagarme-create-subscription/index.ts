@@ -4,7 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import {
-  SUBSCRIPTION_STATUSES_TO_SUPERSEDE,
+  SUBSCRIPTION_ENTITLEMENT_STATUSES,
   supersedePriorSubscriptions,
 } from "../_shared/pagarme-subscription-status.ts";
 import {
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
       .from("subscriptions")
       .select("status, is_trial, current_period_end, trial_ends_at")
       .eq("restaurant_id", restaurant.id)
-      .in("status", [...SUBSCRIPTION_STATUSES_TO_SUPERSEDE])
+      .in("status", [...SUBSCRIPTION_ENTITLEMENT_STATUSES])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
