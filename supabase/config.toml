@@ -109,14 +109,14 @@ verify_jwt = true
 [functions.ifood-integration]
 verify_jwt = true
 
+[functions.ifood-poll-cron]
+verify_jwt = false
+
 [functions.cleanup-unverified-owner-signups]
 verify_jwt = false
 
 [functions.pagarme-webhook]
 verify_jwt = false
-
-[functions.pagarme-webhook-admin]
-verify_jwt = true
 
 [functions.pagarme-create-order-payment]
 verify_jwt = true
