@@ -112,6 +112,9 @@ verify_jwt = true
 [functions.cleanup-unverified-owner-signups]
 verify_jwt = false
 
+[functions.ifood-poll-cron]
+verify_jwt = false
+
 [functions.pagarme-webhook]
 verify_jwt = false
 

@@ -324,8 +324,9 @@ const IfoodIntegracao = () => {
           <ShieldCheck className="h-4 w-4 text-amber-700" />
           <AlertTitle>Integração preparada para homologação</AlertTitle>
           <AlertDescription>
-            As chamadas sensíveis agora passam por Edge Function. O polling usa os endpoints atuais do iFood e registra eventos antes do ACK.
-            Para uso contínuo em produção, agende a função a cada 30 segundos no Supabase após validar as credenciais.
+            As chamadas sensíveis passam por Edge Function. O polling usa os endpoints atuais do iFood e registra eventos antes do ACK.
+            Com a sincronização automática ativada, o servidor consulta o iFood periodicamente (respeitando o intervalo configurado abaixo).
+            O botão &quot;Consultar agora&quot; continua disponível para forçar uma consulta imediata.
           </AlertDescription>
         </Alert>
 
