@@ -297,6 +297,7 @@ serve(async (req) => {
     };
 
     const supabase = await authorizeRequest(req, restaurantId, action);
+    await assertInstanceBelongsToRestaurant(supabase, instanceName, restaurantId, action);
 
     let response: Response;
     let result: unknown = {};
