@@ -54,9 +54,13 @@ Ao achar bug: anotar **fluxo** (atendimento / delivery criado / status PDV / iFo
 - Removida chamada em `pedidoService` a `sendOrderConfirmation`.
 - `.env.example` atualizado (sem variáveis UltraMsg).
 
-### Fase 2 — Dados
+### Fase 2 — Dados ✅ (branch `cursor/whatsapp-phase2-50a9`)
 
-- Migrar `ai_system_prompt` (e demais campos ainda úteis) para tabela de automação por instância (`whatsapp_automation_settings` ou equivalente já usada em Atendimento).
+- Migration `20260524120000_whatsapp_integration_phase2.sql` copia `ai_system_prompt` → `automation_settings.ai_persona`.
+- `generate-ai-response` lê `automation_settings` (instância ativa); `whatsapp_integration` só fallback.
+- Colunas legadas marcadas com `COMMENT` (sem DROP).
+
+- ~~Migrar `ai_system_prompt` (e demais campos ainda úteis) para tabela de automação por instância (`whatsapp_automation_settings` ou equivalente já usada em Atendimento).
 - Deprecar colunas `ultramsg_*`, `twilio_*`, `provider` em migration com comentário; não dropar até `generate-ai-response` e n8n não lerem mais `whatsapp_integration`.
 
 ### Fase 3 — Limpeza DB
