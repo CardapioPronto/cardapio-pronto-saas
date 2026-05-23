@@ -66,6 +66,9 @@ export function MesaSelectorModal({
           <DialogTitle>
             {tipoPedido === "mesa" ? "Selecionar Mesa" : "Mesa para Pedido no Balcão"}
           </DialogTitle>
+          <DialogDescription>
+            Escolha a mesa disponível. Mesas indisponíveis não aparecem na lista.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

@@ -95,6 +95,55 @@ export const usePDVHook = (restaurantId: string) => {
     }
   }, [restaurantId, visualizacaoAtiva, carregarHistoricoPedidos]);
 
+  const ordersRealtimeHandlers = useMemo(
+    () => ({
+      onUpdate: (row: Record<string, unknown>) => {
+        const orderId = row.id;
+        if (!orderId) return;
+
+        setPedidosHistorico((current) =>
+          current.map((pedido) =>
+            String(pedido.id) === String(orderId)
+              ? {
+                  ...pedido,
+                  status: (row.status as PedidoStatus) ?? pedido.status,
+                  total: typeof row.total === "number" ? row.total : pedido.total,
+                  payment_status:
+                    typeof row.payment_status === "string"
+                      ? row.payment_status
+                      : pedido.payment_status,
+                  payment_method:
+                    typeof row.payment_method === "string"
+                      ? row.payment_method
+                      : pedido.payment_method,
+                  source: (row.source as Pedido["source"]) ?? pedido.source,
+                }
+              : pedido,
+          ),
+        );
+      },
+      onDelete: (row: Record<string, unknown>) => {
+        const orderId = row.id;
+        if (!orderId) return;
+        setPedidosHistorico((current) =>
+          current.filter((pedido) => String(pedido.id) !== String(orderId)),
+        );
+      },
+      onReload: () => {
+        if (visualizacaoAtiva === "historico") {
+          void carregarHistoricoPedidos();
+        }
+      },
+    }),
+    [visualizacaoAtiva, carregarHistoricoPedidos],
+  );
+
+  useOrdersRealtimeSubscription(
+    restaurantId,
+    ordersRealtimeHandlers,
+    `pdv-orders-${restaurantId || "none"}`,
+  );
+
   const setHistoricoPeriodo = useCallback((periodo: HistoricoPeriodoFiltro) => {
     const range = periodo === "personalizado" ? {} : getDateRangeByPeriod(periodo);
     setHistoricoFiltros((filtros) => ({

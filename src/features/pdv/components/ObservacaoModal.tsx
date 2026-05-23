@@ -34,6 +34,9 @@ export const ObservacaoModal = ({
           <DialogTitle>
             Adicionar {produtoSelecionado?.name || "produto"}
           </DialogTitle>
+          <DialogDescription>
+            Opcional: informe observações para a cozinha (ex.: sem cebola, bem passado).
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
