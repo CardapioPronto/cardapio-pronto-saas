@@ -19,11 +19,11 @@ Este documento separa o que **não pode quebrar** no restaurante piloto do que �
 
 | Área | Caminho | Situação atual |
 |------|---------|----------------|
-| UltraMsg UI | `src/components/whatsapp/WhatsAppConfigTab.tsx`, `ultraMsgService.ts` | **Sem rota** no app (componentes órfãos) |
-| Envio direto UltraMsg | `messageService.sendMessage` | Retorna `false` + `console.warn` (desligado) |
-| Confirmação PDV via legado | `pedidoService` → `WhatsAppService.sendOrderConfirmation` | Chama cadeia legada → **no-op** na prática |
-| Histórico legado | `WhatsAppMessages.tsx`, tabela `whatsapp_messages` | UI órfã; log ainda possível |
-| Templates legado | `WhatsAppTemplatesTab`, `templateManagementService` | UI órfã |
+| UltraMsg UI | ~~`src/components/whatsapp/*`~~ | **Removido na Fase 1** |
+| Envio direto UltraMsg | ~~`messageService`~~ | **Removido na Fase 1** |
+| Confirmação PDV via legado | ~~`pedidoService.sendOrderConfirmation`~~ | **Removido na Fase 1** |
+| Histórico legado | tabela `whatsapp_messages` | UI removida; tabela permanece |
+| Templates legado | tabela `whatsapp_message_templates` | UI removida; tabela permanece |
 | Credenciais | `whatsapp_integration.ultramsg_*`, `provider: ultramsg` | Colunas no banco; não usar em produção nova |
 
 **Não remover na Fase 1:** tabela `whatsapp_integration` inteira — `generate-ai-response` ainda usa `ai_system_prompt`.
@@ -35,7 +35,7 @@ Checklist alinhado ao que está na branch `cursor/audit-fixes-50a9` (após deplo
 1. **Atendimento:** conectar instância em `/atendimento` → Instâncias; receber/responder conversa; automação (horário, handoff).
 2. **Delivery — pedido novo:** cardápio público delivery → loja recebe WhatsApp (`send-delivery-whatsapp`, `created`).
 3. **Delivery — mudança de status:** edge suporta `status_changed`, mas o PDV **ainda não chama** a função em `alterarStatusPedido` — se o piloto esperar aviso ao cliente ao mudar preparo/pronto, registrar como gap ou implementar na branch.
-4. **PDV balcão:** finalizar pedido com telefone — hoje **não envia** WhatsApp real (legado desligado); comportamento esperado ou bug de produto?
+4. **PDV balcão:** finalizar pedido com telefone — **não dispara** WhatsApp (Fase 1; delivery usa `send-delivery-whatsapp` no cardápio).
 5. **iFood + Pagar.me:** fora do escopo WhatsApp, mas no mesmo deploy do piloto.
 
 Ao achar bug: anotar **fluxo** (atendimento / delivery criado / status PDV / iFood), **restaurant_id**, horário e se a instância Evolution está `connected`.
@@ -48,11 +48,11 @@ Ao achar bug: anotar **fluxo** (atendimento / delivery criado / status PDV / iFo
 - Não dropar `whatsapp_integration` nem `whatsapp_messages`.
 - Opcional: esconder qualquer link antigo para UltraMsg (já não há rota para `WhatsAppConfigTab`).
 
-### Fase 1 — Código morto (PR pequeno, pós-piloto estável)
+### Fase 1 — Código morto ✅
 
-- Remover componentes órfãos: `src/components/whatsapp/*` (Config, Messages, Templates) se confirmado que nenhum deploy os referencia.
-- Remover `ultraMsgService.ts`, referências UltraMsg em `.env.example` (manter comentário “legado removido”).
-- Remover chamada em `pedidoService` a `WhatsAppService.sendOrderConfirmation` **ou** redirecionar para `send-delivery-whatsapp` só quando `fulfillment_type = delivery` e existir `delivery_order_id`.
+- Removidos: `src/components/whatsapp/*`, hooks `useWhatsAppIntegration` / `useWhatsAppTemplates`, services legado em `src/services/whatsapp/` (exceto `evolutionService.ts`), `src/types/whatsappTemplate.ts`.
+- Removida chamada em `pedidoService` a `sendOrderConfirmation`.
+- `.env.example` atualizado (sem variáveis UltraMsg).
 
 ### Fase 2 — Dados
 
@@ -75,8 +75,7 @@ PDV alterar status
   → [gap] send-delivery-whatsapp (status_changed) não ligado
 
 PDV finalizar pedido (telefone)
-  → WhatsAppService.sendOrderConfirmation
-  → messageService.sendMessage → false (legado)
+  → (sem notificação WhatsApp — delivery no cardápio ou atendimento manual)
 
 Atendimento conversa
   → conversationsService / instancesService
