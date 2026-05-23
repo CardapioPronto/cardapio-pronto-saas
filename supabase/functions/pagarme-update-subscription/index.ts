@@ -261,12 +261,26 @@ Deno.serve(async (req) => {
       if (externalId && isPagarmeSubscriptionExternalId(externalId)) {
         await pagarme<unknown>(`/subscriptions/${externalId}`, "DELETE");
       }
+      const now = new Date();
+      const periodEndCandidates = [
+        sub.current_period_end,
+        sub.next_billing_at,
+        sub.trial_ends_at,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => new Date(value))
+        .filter((date) => !Number.isNaN(date.getTime()));
+      const accessUntil = periodEndCandidates.reduce(
+        (latest, date) => (date.getTime() > latest.getTime() ? date : latest),
+        now,
+      );
+      const endDate = accessUntil.getTime() > now.getTime() ? accessUntil : now;
       const { data: updated } = await admin
         .from("subscriptions")
         .update({
           status: "canceled",
-          end_date: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          end_date: endDate.toISOString(),
+          updated_at: now.toISOString(),
         })
         .eq("id", sub.id)
         .select()

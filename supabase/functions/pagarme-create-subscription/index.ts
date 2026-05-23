@@ -1,17 +1,29 @@
 // Edge Function: pagarme-create-subscription
-// Cria a primeira cobrança de assinatura por cartão como pedido Pagar.me.
-// A assinatura local só é registrada quando a cobrança inicial é aceita ou fica
-// em processamento, evitando poluir Recorrência > Assinaturas a cada falha.
+// Checkout com cartão: customer + card + subscription no Pagar.me (sub_*).
+// Tentativas recusadas não gravam assinatura local; pendentes antigas são canceladas.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import { pagarmeErrorMessage } from "../_shared/pagarme-errors.ts";
+import {
+  buildCustomerPayload,
+  buildCardPayload,
+  createCardPlatformSubscription,
+  resolveCardCheckoutPaymentStatus,
+  subscriptionPaymentDiagnostics,
+} from "../_shared/pagarme-card-subscription-checkout.ts";
 import { SUBSCRIPTION_ENTITLEMENT_STATUSES } from "../_shared/pagarme-subscription-status.ts";
 import {
   buildLocalSubscriptionFromPagarme,
+  pagarmeSubscriptionStartAt,
   pendingSubscriptionInsertRow,
   subscriptionInsertRow,
 } from "../_shared/pagarme-checkout-subscription.ts";
-import { planAmountBreakdownForPagarmePlan } from "../_shared/pagarme-plan-pricing.ts";
+import {
+  planAmountBreakdownForCardCheckout,
+  type PlanAmountBreakdown,
+} from "../_shared/pagarme-plan-pricing.ts";
+import { pagarmePlanIdForCycle } from "../_shared/pagarme-recurring-subscription.ts";
+import { isPagarmeSubscriptionExternalId } from "../_shared/pagarme-platform-order.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,9 +47,9 @@ interface CardInput {
 interface CustomerInput {
   name: string;
   email: string;
-  document: string; // CPF/CNPJ - apenas dígitos
+  document: string;
   document_type?: "cpf" | "cnpj";
-  phone: string; // apenas dígitos com DDD, ex: 11999998888
+  phone: string;
 }
 
 interface BillingAddressInput {
@@ -57,35 +69,6 @@ interface RequestBody {
   card: CardInput;
   billing_address?: BillingAddressInput;
 }
-
-type PagarmeCustomer = {
-  id?: string;
-};
-
-type PagarmeTransaction = {
-  status?: string | null;
-  success?: boolean | null;
-  acquirer_message?: string | null;
-  acquirer_return_code?: string | null;
-  gateway_response?: unknown;
-  response_code?: string | null;
-  antifraud_response?: unknown;
-};
-
-type PagarmeCharge = {
-  id?: string;
-  status?: string | null;
-  payment_method?: string | null;
-  last_transaction?: PagarmeTransaction | null;
-};
-
-type PagarmeOrder = {
-  id?: string;
-  code?: string;
-  status?: string | null;
-  customer?: PagarmeCustomer | null;
-  charges?: PagarmeCharge[];
-};
 
 type PlanRow = {
   id: string;
@@ -165,15 +148,6 @@ function parseCardInput(card: CardInput) {
   };
 }
 
-function billingCycleLabel(cycle: BillingCycle) {
-  return cycle === "yearly" ? "Anual" : "Mensal";
-}
-
-function checkoutCode(restaurantId: string, billingCycle: BillingCycle) {
-  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-  return `pubfy_${restaurantId.slice(0, 8)}_${billingCycle}_${suffix}`.slice(0, 52);
-}
-
 function normalizeBillingAddress(input?: BillingAddressInput) {
   const zipCode = digits(input?.zip_code ?? "");
   const street = String(input?.street ?? "").trim();
@@ -215,111 +189,54 @@ function normalizeBillingAddress(input?: BillingAddressInput) {
   throw new Error("Endereço de cobrança é obrigatório para pagamento com cartão.");
 }
 
-function buildInitialCardOrderPayload(input: {
-  plan: PlanRow;
-  billingCycle: BillingCycle;
-  customer: CustomerInput;
-  docDigits: string;
-  docType: "cpf" | "cnpj";
-  phoneDigits: string;
-  card: ReturnType<typeof parseCardInput>;
-  billingAddress: ReturnType<typeof normalizeBillingAddress>;
-  restaurantId: string;
-}) {
-  const billing = planAmountBreakdownForPagarmePlan(input.plan, input.billingCycle);
-  const cycleLabel = billingCycleLabel(input.billingCycle);
-  const itemName = `${input.plan.name} (${cycleLabel})`.slice(0, 256);
-  const areaCode = input.phoneDigits.slice(0, 2);
-  const phoneNumber = input.phoneDigits.slice(2);
-
-  return {
-    code: checkoutCode(input.restaurantId, input.billingCycle),
-    closed: true,
-    items: [
-      {
-        amount: billing.amount_cents,
-        description: itemName,
-        quantity: 1,
-        code: String(input.plan.id).slice(0, 52),
-      },
-    ],
-    customer: {
-      name: input.customer.name,
-      email: input.customer.email,
-      document: input.docDigits,
-      document_type: input.docType,
-      type: input.docType === "cnpj" ? "company" : "individual",
-      address: input.billingAddress,
-      phones: {
-        mobile_phone: {
-          country_code: "55",
-          area_code: areaCode,
-          number: phoneNumber,
-        },
-      },
-    },
-    billing: {
-      name: input.customer.name,
-      address: input.billingAddress,
-    },
-    payments: [
-      {
-        payment_method: "credit_card",
-        credit_card: {
-          installments: 1,
-          statement_descriptor: "PUBFY",
-          card: {
-            ...input.card,
-            holder_document: input.docDigits,
-          },
-        },
-      },
-    ],
-    metadata: {
-      source: "pubfy_platform_subscription",
-      integration_model: "initial_card_order",
-      restaurant_id: input.restaurantId,
-      plan_id: input.plan.id,
-      billing_cycle: input.billingCycle,
-      catalog_amount_cents: billing.catalog_amount_cents,
-    },
-  };
+function formatCardDeclinedError(
+  paymentStatus: string,
+  billing: PlanAmountBreakdown,
+  diagnostics: Record<string, unknown> | null,
+): string {
+  const acquirer = typeof diagnostics?.acquirer_message === "string"
+    ? diagnostics.acquirer_message.trim()
+    : "";
+  const homologNote = isPagarmeTestKey()
+    ? " Homologação: cartão 4000000000000010, validade 12/30, CVV 123; nome no cartão só letras."
+    : "";
+  const amountNote =
+    ` Plano: R$ ${billing.catalog_amount_reais.toFixed(2)} (${billing.catalog_amount_cents} centavos).`;
+  const acquirerNote = acquirer ? ` Motivo: ${acquirer}.` : "";
+  return (
+    `Pagamento não confirmado no Pagar.me (${paymentStatus || "failed"}).` +
+    " Nenhuma assinatura foi ativada." +
+    homologNote +
+    amountNote +
+    acquirerNote
+  );
 }
 
-function primaryCreditCardCharge(order: PagarmeOrder): PagarmeCharge | null {
-  return order.charges?.find((charge) => charge.payment_method === "credit_card") ??
-    order.charges?.[0] ??
-    null;
-}
+async function cancelStalePendingCheckoutAttempts(
+  admin: ReturnType<typeof createClient>,
+  restaurantId: string,
+) {
+  const { data: staleRows } = await admin
+    .from("subscriptions")
+    .select("id, pagarme_subscription_id")
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "pending");
 
-function normalizePaymentStatus(order: PagarmeOrder): string {
-  const charge = primaryCreditCardCharge(order);
-  return String(charge?.status ?? order.status ?? "").toLowerCase();
-}
-
-function localStatusFromCardOrder(status: string): "active" | "pending" | "canceled" {
-  if (status === "paid" || status === "captured" || status === "authorized") return "active";
-  if (status === "pending" || status === "processing") return "pending";
-  return "canceled";
-}
-
-function paymentDiagnostics(order: PagarmeOrder) {
-  const charge = primaryCreditCardCharge(order);
-  const tx = charge?.last_transaction ?? null;
-  if (!charge && !tx) return null;
-
-  return {
-    order_status: order.status ?? null,
-    charge_id: charge?.id ?? null,
-    charge_status: charge?.status ?? null,
-    transaction_status: tx?.status ?? null,
-    transaction_success: tx?.success ?? null,
-    acquirer_message: tx?.acquirer_message ?? null,
-    acquirer_return_code: tx?.acquirer_return_code ?? null,
-    response_code: tx?.response_code ?? null,
-    gateway_response: tx?.gateway_response ?? null,
-    antifraud_response: tx?.antifraud_response ?? null,
-  };
+  const now = new Date().toISOString();
+  for (const row of staleRows ?? []) {
+    const externalId = row.pagarme_subscription_id;
+    if (externalId && isPagarmeSubscriptionExternalId(externalId)) {
+      try {
+        await pagarme(`/subscriptions/${encodeURIComponent(externalId)}`, "DELETE");
+      } catch (err) {
+        console.warn("[pagarme-create-subscription] cancel stale remote sub:", err);
+      }
+    }
+    await admin
+      .from("subscriptions")
+      .update({ status: "canceled", end_date: now, updated_at: now })
+      .eq("id", row.id);
+  }
 }
 
 function validateBody(b: unknown): RequestBody {
@@ -341,6 +258,10 @@ function validateBody(b: unknown): RequestBody {
     !card.cvv
   ) {
     throw new Error("card fields are required");
+  }
+  const phoneDigits = digits(String(customer.phone));
+  if (phoneDigits.length < 10) {
+    throw new Error("Telefone inválido (informe DDD + número).");
   }
   return b as RequestBody;
 }
@@ -396,8 +317,6 @@ Deno.serve(async (req) => {
 
     const { data: isSuperAdmin } = await admin.rpc("is_super_admin", { user_id: userId });
 
-    // 1) Restaurante do usuário. O painel usa users.restaurant_id; manter a
-    // mesma fonte evita que super admins/testes fiquem sem vínculo de cobrança.
     let restaurantQuery = admin
       .from("restaurants")
       .select("id, name, owner_id");
@@ -406,8 +325,7 @@ Deno.serve(async (req) => {
       ? restaurantQuery.eq("id", profile.restaurant_id)
       : restaurantQuery.eq("owner_id", userId);
 
-    const { data: restaurant, error: restErr } = await restaurantQuery
-      .maybeSingle();
+    const { data: restaurant, error: restErr } = await restaurantQuery.maybeSingle();
 
     if (restErr || !restaurant) {
       return new Response(
@@ -423,7 +341,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2) Plano local + IDs Pagar.me
     const { data: plan, error: planErr } = await admin
       .from("plans")
       .select(
@@ -443,8 +360,14 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    // 3) Primeira cobrança por cartão como pedido Pagar.me. Isso valida/cobra o
-    // cartão sem criar uma nova assinatura remota para cada tentativa recusada.
+
+    const pagarmePlanId = pagarmePlanIdForCycle(plan, body.billing_cycle);
+    if (!pagarmePlanId) {
+      return new Response(JSON.stringify({
+        error: `Plan is not synced with Pagar.me (${body.billing_cycle}). Sync from Super Admin first.`,
+      }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const docDigits = digits(body.customer.document);
     const docType =
       body.customer.document_type ||
@@ -452,51 +375,52 @@ Deno.serve(async (req) => {
     const phoneDigits = digits(body.customer.phone);
     const card = parseCardInput(body.card);
     const billingAddress = normalizeBillingAddress(body.billing_address);
+    const billingAmount = planAmountBreakdownForCardCheckout(plan, body.billing_cycle);
 
-    const order = await pagarme<PagarmeOrder>(
-      "/orders",
-      "POST",
-      buildInitialCardOrderPayload({
-        plan,
-        billingCycle: body.billing_cycle,
-        customer: body.customer,
-        docDigits,
-        docType,
-        phoneDigits,
-        card,
-        billingAddress,
-        restaurantId: restaurant.id,
-      }),
-    );
-    if (!order.id) throw new Error("Pagar.me order response missing id");
-
-    const now = new Date();
+    await cancelStalePendingCheckoutAttempts(admin, restaurant.id);
 
     const { data: priorSub } = await admin
       .from("subscriptions")
-      .select("status, is_trial, current_period_end, trial_ends_at")
+      .select("status, is_trial, trial_start, current_period_start, current_period_end, trial_ends_at")
       .eq("restaurant_id", restaurant.id)
       .in("status", [...SUBSCRIPTION_ENTITLEMENT_STATUSES])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const paymentStatus = normalizePaymentStatus(order);
-    const mappedOrderStatus = localStatusFromCardOrder(paymentStatus);
-    const customerId = order.customer?.id ?? null;
-    const diagnostics = paymentDiagnostics(order);
+    const subscriptionStartAt = pagarmeSubscriptionStartAt(new Date(), priorSub);
 
-    if (mappedOrderStatus === "canceled") {
+    const checkout = await createCardPlatformSubscription(pagarme, {
+      pagarmePlanId,
+      billingCycle: body.billing_cycle,
+      restaurantId: restaurant.id,
+      planId: plan.id,
+      startAt: subscriptionStartAt,
+      customer: buildCustomerPayload({
+        name: body.customer.name,
+        email: body.customer.email,
+        docDigits,
+        docType,
+        phoneDigits,
+        address: billingAddress,
+      }),
+      card: buildCardPayload(card, billingAddress),
+    });
+
+    const remoteStatus = checkout.subscription.status ?? "failed";
+    const mappedStatus = resolveCardCheckoutPaymentStatus(checkout.subscription);
+    const diagnostics = subscriptionPaymentDiagnostics(checkout.subscription);
+    const now = new Date();
+
+    if (mappedStatus === "canceled") {
       return new Response(
         JSON.stringify({
           success: false,
-          error:
-            `Pagamento não confirmado no Pagar.me (${paymentStatus || "failed"}). ` +
-            "Nenhuma assinatura local foi criada e nenhuma assinatura recorrente foi criada no Pagar.me. " +
-            "Confira os dados do cartão, o simulador ativo na conta de teste ou tente outro método.",
-          pagarme_order_id: order.id,
-          pagarme_customer_id: customerId,
-          pagarme_status: paymentStatus || null,
+          error: formatCardDeclinedError(remoteStatus, billingAmount, diagnostics),
+          billing_amount: billingAmount,
+          pagarme_subscription_id: checkout.subscription.id ?? null,
+          pagarme_customer_id: checkout.customerId,
+          pagarme_status: remoteStatus,
           payment_diagnostics: diagnostics,
         }),
         {
@@ -508,9 +432,12 @@ Deno.serve(async (req) => {
 
     const localSub = buildLocalSubscriptionFromPagarme({
       pagarme: {
-        id: order.id,
-        status: mappedOrderStatus === "active" ? "active" : "pending",
-        start_at: now.toISOString(),
+        ...checkout.subscription,
+        status: mappedStatus === "active"
+          ? "active"
+          : mappedStatus === "pending"
+            ? "pending"
+            : "failed",
       },
       billingCycle: body.billing_cycle,
       paymentMethod: "credit_card",
@@ -518,7 +445,7 @@ Deno.serve(async (req) => {
       priorEntitlement: priorSub,
     });
 
-    if (localSub.status === "pending") {
+    if (mappedStatus === "pending") {
       const pendingRow = pendingSubscriptionInsertRow(localSub, priorSub);
       const { data: insertedPending, error: pendingInsertErr } = await admin
         .from("subscriptions")
@@ -526,9 +453,9 @@ Deno.serve(async (req) => {
           restaurant_id: restaurant.id,
           plan_id: plan.id,
           ...pendingRow,
-          pagarme_subscription_id: order.id,
-          pagarme_customer_id: customerId,
-          last_payment_status: paymentStatus || "pending",
+          pagarme_subscription_id: checkout.subscription.id,
+          pagarme_customer_id: checkout.customerId,
+          last_payment_status: remoteStatus || "pending",
         })
         .select()
         .single();
@@ -538,10 +465,10 @@ Deno.serve(async (req) => {
           JSON.stringify({
             success: false,
             error:
-              "Pagamento em processamento no Pagar.me, mas a tentativa local não pôde ser registrada. " +
+              "Assinatura criada no Pagar.me em processamento, mas o registro local falhou. " +
               `Detalhe: ${pendingInsertErr.message}`,
-            pagarme_order_id: order.id,
-            pagarme_customer_id: customerId,
+            pagarme_subscription_id: checkout.subscription.id,
+            pagarme_customer_id: checkout.customerId,
             payment_diagnostics: diagnostics,
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -554,9 +481,9 @@ Deno.serve(async (req) => {
           subscription: insertedPending,
           period_credit_days: localSub.period_credit_days ?? 0,
           pagarme: {
-            order_id: order.id,
-            customer_id: customerId,
-            status: paymentStatus || "pending",
+            subscription_id: checkout.subscription.id,
+            customer_id: checkout.customerId,
+            status: remoteStatus || "pending",
             payment_method: "credit_card",
           },
         }),
@@ -579,9 +506,9 @@ Deno.serve(async (req) => {
         p_current_period_start: insertRow.current_period_start,
         p_current_period_end: insertRow.current_period_end,
         p_next_billing_at: insertRow.next_billing_at,
-        p_pagarme_subscription_id: order.id,
-        p_pagarme_customer_id: customerId,
-        p_last_payment_status: paymentStatus || "paid",
+        p_pagarme_subscription_id: checkout.subscription.id,
+        p_pagarme_customer_id: checkout.customerId,
+        p_last_payment_status: remoteStatus || "paid",
         p_last_payment_at: now.toISOString(),
       },
     );
@@ -591,10 +518,10 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           error:
-            "Pagamento aprovado no Pagar.me, mas a assinatura local não pôde ser registrada. " +
+            "Assinatura ativa no Pagar.me, mas o registro local falhou. " +
             `Detalhe: ${insertErr.message}`,
-          pagarme_order_id: order.id,
-          pagarme_customer_id: customerId,
+          pagarme_subscription_id: checkout.subscription.id,
+          pagarme_customer_id: checkout.customerId,
           payment_diagnostics: diagnostics,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -620,7 +547,7 @@ Deno.serve(async (req) => {
           source: "pagarme_create_subscription",
           billing_cycle: body.billing_cycle,
           payment_method: "credit_card",
-          pagarme_order_id: order.id,
+          pagarme_subscription_id: checkout.subscription.id,
         },
       });
     } catch (emailError) {
@@ -633,9 +560,9 @@ Deno.serve(async (req) => {
         subscription: inserted,
         period_credit_days: localSub.period_credit_days ?? 0,
         pagarme: {
-          order_id: order.id,
-          customer_id: customerId,
-          status: paymentStatus || "paid",
+          subscription_id: checkout.subscription.id,
+          customer_id: checkout.customerId,
+          status: remoteStatus || "active",
           payment_method: "credit_card",
         },
       }),

@@ -3,7 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Calendar, Clock, CreditCard, RefreshCw, Settings } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
-import { getSubscriptionStatusMeta } from "@/lib/subscriptionStatusUi";
+import {
+  getCustomerSubscriptionDisplay,
+  getVisibleSubscriptionsForCustomer,
+} from "@/lib/subscriptionCustomerDisplay";
+import { formatYearlyBillingShort } from "@/lib/planPricingDisplay";
 
 interface MySubscriptionsListProps {
   subscriptions: MySubscription[];
@@ -91,27 +95,34 @@ const MySubscriptionsList = ({
     );
   }
 
+  const visibleSubscriptions = getVisibleSubscriptionsForCustomer(subscriptions);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {subscriptions.length} assinatura(s) encontrada(s)
+          {visibleSubscriptions.length} assinatura(s) encontrada(s)
         </p>
         <Button variant="ghost" size="sm" onClick={onRefetch}>
           <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
         </Button>
       </div>
 
-      {subscriptions.map((sub) => {
-        const statusMeta = getSubscriptionStatusMeta(sub.status);
+      {visibleSubscriptions.map((sub) => {
+        const display = getCustomerSubscriptionDisplay(sub);
+        const statusMeta = display.statusMeta;
         const StatusIcon = statusMeta.icon;
         const cycleLabel = sub.billing_cycle
           ? BILLING_CYCLE_LABEL[sub.billing_cycle] ?? sub.billing_cycle
           : "—";
         const planPrice =
-          sub.billing_cycle === "yearly"
-            ? sub.plan?.price_yearly
+          sub.billing_cycle === "yearly" && sub.plan?.price_yearly != null
+            ? sub.plan.price_yearly * 12
             : sub.plan?.price_monthly;
+        const planPriceHint =
+          sub.billing_cycle === "yearly" && sub.plan?.price_yearly != null
+            ? formatYearlyBillingShort(sub.plan.price_yearly)
+            : null;
 
         return (
           <Card key={sub.id} className="overflow-hidden">
@@ -147,8 +158,12 @@ const MySubscriptionsList = ({
                     <p className="font-medium">{cycleLabel}</p>
                     {planPrice != null && (
                       <p className="text-xs text-muted-foreground">
-                        {formatCurrency(planPrice)}
-                        {sub.billing_cycle === "yearly" ? "/ano" : "/mês"}
+                        {planPriceHint ?? (
+                          <>
+                            {formatCurrency(planPrice)}
+                            {sub.billing_cycle === "yearly" ? "/ano" : "/mês"}
+                          </>
+                        )}
                       </p>
                     )}
                   </div>
@@ -157,11 +172,10 @@ const MySubscriptionsList = ({
                 <div className="flex items-start gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-muted-foreground text-xs">Período atual</p>
-                    <p className="font-medium">
-                      {formatDate(sub.current_period_start)} →{" "}
-                      {formatDate(sub.current_period_end)}
+                    <p className="text-muted-foreground text-xs">
+                      {display.periodPrimaryLabel}
                     </p>
+                    <p className="font-medium">{display.periodPrimaryValue}</p>
                   </div>
                 </div>
 
@@ -169,29 +183,29 @@ const MySubscriptionsList = ({
                   <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-muted-foreground text-xs">
-                      {sub.status === "trialing" || sub.is_trial
-                        ? "Fim do teste"
-                        : "Próxima cobrança"}
+                      {display.periodSecondaryLabel}
                     </p>
-                    <p className="font-medium">
-                      {sub.status === "trialing" || sub.is_trial
-                        ? formatDate(sub.trial_ends_at)
-                        : formatDate(sub.next_billing_at ?? sub.current_period_end)}
-                    </p>
+                    <p className="font-medium">{display.periodSecondaryValue}</p>
                   </div>
                 </div>
               </div>
 
-              {(sub.last_payment_at || sub.last_payment_status) && (
+              {display.footerNote && (
+                <p className="rounded-md border border-green/30 bg-green/5 px-3 py-2 text-xs text-muted-foreground">
+                  {display.footerNote}
+                </p>
+              )}
+
+              {(sub.last_payment_at || display.paymentStatusLabel) && (
                 <div className="border-t pt-3 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
                   {sub.last_payment_at && (
                     <span>
                       Último pagamento: <strong>{formatDate(sub.last_payment_at)}</strong>
                     </span>
                   )}
-                  {sub.last_payment_status && (
+                  {display.paymentStatusLabel && (
                     <span>
-                      Status: <strong>{sub.last_payment_status}</strong>
+                      Pagamento: <strong>{display.paymentStatusLabel}</strong>
                     </span>
                   )}
                 </div>

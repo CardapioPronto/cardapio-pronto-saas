@@ -376,7 +376,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         <CardTitle>Assinar plano {planName}</CardTitle>
         <CardDescription>
           {form.watch("billingType") === "yearly" ? (
-            <>Cobrança anual: <span className="font-semibold">R$ {(planPriceYearly * 12).toFixed(2)}</span></>
+            <>
+              Plano anual:{" "}
+              <span className="font-semibold">
+                R$ {(planPriceYearly * 12).toFixed(2).replace(".", ",")}
+              </span>{" "}
+              por ano (R$ {planPriceYearly.toFixed(2).replace(".", ",")}/mês), à vista ou em até 12x no cartão
+            </>
           ) : (
             <>Cobrança mensal: <span className="font-semibold">R$ {planPriceMonthly.toFixed(2)}</span></>
           )}

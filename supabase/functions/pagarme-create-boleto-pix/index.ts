@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
 
     const { data: priorSub } = await admin
       .from("subscriptions")
-      .select("status, is_trial, current_period_end, trial_ends_at")
+      .select("status, is_trial, trial_start, current_period_start, current_period_end, trial_ends_at")
       .eq("restaurant_id", restaurant.id)
       .in("status", [...SUBSCRIPTION_ENTITLEMENT_STATUSES])
       .order("created_at", { ascending: false })

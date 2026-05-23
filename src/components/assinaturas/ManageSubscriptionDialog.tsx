@@ -36,6 +36,17 @@ import {
   changePagarmeSubscriptionCycle,
 } from "@/services/pagarmeSubscriptionService";
 import { MySubscription } from "@/hooks/useMySubscriptions";
+import {
+  getCustomerSubscriptionDisplay,
+  getSubscriptionCancelCopy,
+  isAwaitingOfflinePayment,
+  isScheduledPaidAfterTrial,
+} from "@/lib/subscriptionCustomerDisplay";
+import {
+  formatCurrentPlanValue,
+  formatCycleChangeDescription,
+  formatCyclePriceHint,
+} from "@/lib/planPricingDisplay";
 import SubscriptionReceiptView from "./SubscriptionReceiptView";
 
 interface ManageSubscriptionDialogProps {
@@ -96,20 +107,27 @@ const ManageSubscriptionDialog = ({
 
   const status = subscription.status;
   const isCanceled = status === "canceled";
-  const meta = STATUS_LABEL[status] ?? { label: status, className: "" };
+  const customerDisplay = getCustomerSubscriptionDisplay(subscription);
+  const isScheduledPlan = isScheduledPaidAfterTrial(subscription);
+  const isOfflinePending = isAwaitingOfflinePayment(subscription);
+  const cancelCopy = getSubscriptionCancelCopy(subscription);
+  const meta = isScheduledPlan
+    ? {
+        label: customerDisplay.statusMeta.label,
+        className: customerDisplay.statusMeta.className,
+      }
+    : STATUS_LABEL[status] ?? { label: status, className: "" };
   const targetCycle = subscription.billing_cycle === "yearly" ? "monthly" : "yearly";
   const targetCycleLabel = targetCycle === "yearly" ? "Anual" : "Mensal";
-  const targetPrice =
-    targetCycle === "yearly"
-      ? subscription.plan?.price_yearly
-      : subscription.plan?.price_monthly;
-  const currentPrice =
-    subscription.billing_cycle === "yearly"
-      ? subscription.plan?.price_yearly
-      : subscription.plan?.price_monthly;
+  const monthlyPrice = subscription.plan?.price_monthly ?? 0;
+  const yearlyPerMonth = subscription.plan?.price_yearly ?? 0;
+  const currentPlanValue = formatCurrentPlanValue(
+    subscription.billing_cycle,
+    monthlyPrice,
+    yearlyPerMonth,
+  );
   const hasPagarmeSubscription = Boolean(subscription.has_pagarme_subscription);
   const canUsePagarmeActions = hasPagarmeSubscription || status === "pending";
-  const isPendingPayment = status === "pending";
   const paymentFailed =
     subscription.last_payment_status === "failed"
     || subscription.last_payment_status === "canceled";
@@ -118,14 +136,9 @@ const ManageSubscriptionDialog = ({
     setActionLoading("cancel");
     try {
       await cancelPagarmeSubscription(subscription.id);
-      toast.success(
-        isPendingPayment ? "Tentativa de pagamento cancelada" : "Assinatura cancelada",
-        {
-          description: isPendingPayment
-            ? "Você pode iniciar um novo checkout quando quiser."
-            : "O status foi atualizado após o cancelamento no Pagar.me.",
-        },
-      );
+      toast.success(cancelCopy.successTitle, {
+        description: cancelCopy.successDescription,
+      });
       onUpdated();
       onClose();
     } catch (err) {
@@ -207,7 +220,14 @@ const ManageSubscriptionDialog = ({
               </div>
             )}
 
-            {isPendingPayment && (
+            {isScheduledPlan && customerDisplay.footerNote && (
+              <div className="rounded-md border border-green/30 bg-green/5 p-4">
+                <p className="font-medium text-green">Pagamento confirmado</p>
+                <p className="mt-1 text-xs text-muted-foreground">{customerDisplay.footerNote}</p>
+              </div>
+            )}
+
+            {isOfflinePending && (
               <div className="flex flex-col gap-3 rounded-md border border-orange/30 bg-orange/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-medium text-orange">
@@ -239,17 +259,13 @@ const ManageSubscriptionDialog = ({
                 <DetailItem label="Plano" value={subscription.plan?.name ?? "Plano"} />
                 <DetailItem
                   label="Valor atual"
-                  value={`${formatCurrency(currentPrice)}${subscription.billing_cycle === "yearly" ? "/ano" : "/mês"}`}
-                  helper={subscription.billing_cycle === "yearly" ? "Ciclo anual" : "Ciclo mensal"}
+                  value={currentPlanValue.value}
+                  helper={currentPlanValue.helper}
                 />
                 <DetailItem label="Início" value={formatDate(subscription.start_date)} />
                 <DetailItem
-                  label={status === "trialing" ? "Fim do teste" : "Próxima cobrança"}
-                  value={
-                    status === "trialing"
-                      ? formatDate(subscription.trial_ends_at)
-                      : formatDate(subscription.next_billing_at ?? subscription.current_period_end)
-                  }
+                  label={customerDisplay.periodSecondaryLabel}
+                  value={customerDisplay.periodSecondaryValue}
                 />
               </div>
             </div>
@@ -261,13 +277,17 @@ const ManageSubscriptionDialog = ({
               </div>
               <div className="grid gap-3 p-4 sm:grid-cols-2">
                 <DetailItem
-                  label="Período atual"
-                  value={`${formatDate(subscription.current_period_start)} até ${formatDate(subscription.current_period_end)}`}
+                  label={customerDisplay.periodPrimaryLabel}
+                  value={customerDisplay.periodPrimaryValue}
                 />
                 <DetailItem
                   label="Último pagamento"
                   value={formatDate(subscription.last_payment_at)}
-                  helper={subscription.last_payment_status ? `Status: ${subscription.last_payment_status}` : undefined}
+                  helper={
+                    customerDisplay.paymentStatusLabel
+                      ? customerDisplay.paymentStatusLabel
+                      : undefined
+                  }
                 />
                 <div className="min-w-0 rounded-md border bg-muted/20 p-3 sm:col-span-2">
                   <p className="text-xs font-medium text-muted-foreground">Integração Pagar.me</p>
@@ -311,14 +331,12 @@ const ManageSubscriptionDialog = ({
                       className="justify-start sm:col-span-2"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      {isPendingPayment ? "Cancelar tentativa de pagamento" : "Cancelar assinatura"}
+                      {cancelCopy.buttonLabel}
                     </Button>
                   </div>
-                  {targetPrice != null && hasPagarmeSubscription && (
+                  {hasPagarmeSubscription && monthlyPrice > 0 && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Ao mudar para {targetCycleLabel.toLowerCase()}, o valor será{" "}
-                      {formatCurrency(targetPrice)}
-                      {targetCycle === "yearly" ? "/ano" : "/mês"}.
+                      {formatCyclePriceHint(targetCycle, monthlyPrice, yearlyPerMonth)}
                     </p>
                   )}
                 </div>
@@ -362,11 +380,8 @@ const ManageSubscriptionDialog = ({
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A cobrança será interrompida no Pagar.me e a assinatura local será
-              marcada como cancelada. Período atual: até {formatDate(subscription.current_period_end)}.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{cancelCopy.dialogTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{cancelCopy.dialogDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={actionLoading === "cancel"}>
@@ -379,7 +394,7 @@ const ManageSubscriptionDialog = ({
             >
               {actionLoading === "cancel" ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelando…</>
-              ) : "Confirmar cancelamento"}
+              ) : cancelCopy.confirmLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -392,12 +407,9 @@ const ManageSubscriptionDialog = ({
               Mudar para cobrança {targetCycleLabel.toLowerCase()}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              A próxima cobrança passará a usar o ciclo {targetCycleLabel.toLowerCase()}
-              {targetPrice != null && (
-                <> no valor de <strong>{formatCurrency(targetPrice)}</strong>{" "}
-                {targetCycle === "yearly" ? "por ano" : "por mês"}</>
-              )}
-              . O Pagar.me ajustará automaticamente o ciclo da assinatura.
+              {monthlyPrice > 0
+                ? formatCycleChangeDescription(targetCycle, monthlyPrice, yearlyPerMonth)
+                : `A próxima cobrança passará a usar o ciclo ${targetCycleLabel.toLowerCase()}. O Pagar.me ajustará o ciclo da assinatura.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

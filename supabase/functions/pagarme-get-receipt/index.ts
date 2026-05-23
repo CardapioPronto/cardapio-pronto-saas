@@ -3,6 +3,11 @@
 // e retorna dados de comprovante (boleto / PIX / cartão).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { isPlatformOrderExternalId } from "../_shared/pagarme-platform-order.ts";
+import {
+  isPaidChargeStatus,
+  resolveReceiptBillingPhase,
+  resolveReceiptChargeDisplayStatus,
+} from "../_shared/pagarme-receipt-display.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +25,8 @@ type PagarmeErrorPayload = {
 };
 
 type PagarmeTransaction = {
+  status?: string | null;
+  success?: boolean | null;
   transaction_type?: string | null;
   due_at?: string | null;
   url?: string | null;
@@ -55,6 +62,9 @@ type PagarmeChargesList = {
 };
 
 type PagarmeSubscription = {
+  status?: string | null;
+  start_at?: string | null;
+  next_billing_at?: string | null;
   current_cycle?: { charges?: PagarmeCharge[] } | null;
   invoices?: Array<{ charges?: PagarmeCharge[] }> | null;
 };
@@ -99,13 +109,38 @@ async function pagarme<T>(path: string): Promise<T> {
   return data as T;
 }
 
-function extractReceipt(charge: PagarmeCharge | null) {
+function extractReceipt(
+  charge: PagarmeCharge | null,
+  context?: {
+    subscriptionStatus?: string | null;
+    subscriptionStartAt?: string | null;
+    nextBillingAt?: string | null;
+    paidChargesCount?: number;
+  },
+) {
   if (!charge) return null;
   const tx = charge.last_transaction ?? null;
   const method = (charge.payment_method ?? tx?.transaction_type ?? "").toLowerCase();
+  const displayStatus = resolveReceiptChargeDisplayStatus({
+    chargeStatus: charge.status,
+    subscriptionStatus: context?.subscriptionStatus,
+    transactionSuccess: tx?.success ?? null,
+    transactionStatus: tx?.status ?? null,
+    hasCardOnFile: Boolean(tx?.card?.last_four_digits),
+  });
+  const billing_phase = resolveReceiptBillingPhase({
+    displayStatus,
+    paidChargesCount: context?.paidChargesCount ?? 0,
+  });
+
   return {
     charge_id: charge.id ?? null,
-    status: charge.status ?? null,
+    status: displayStatus,
+    billing_phase,
+    charge_status: charge.status ?? null,
+    subscription_status: context?.subscriptionStatus ?? null,
+    subscription_start_at: context?.subscriptionStartAt ?? null,
+    next_billing_at: context?.nextBillingAt ?? null,
     amount: typeof charge.amount === "number" ? charge.amount / 100 : null,
     paid_amount: typeof charge.paid_amount === "number" ? charge.paid_amount / 100 : null,
     payment_method: method || null,
@@ -187,6 +222,9 @@ Deno.serve(async (req) => {
 
     const externalId = sub.pagarme_subscription_id;
     let charges: PagarmeCharge[] = [];
+    let subscriptionStatus: string | null = null;
+    let subscriptionStartAt: string | null = null;
+    let nextBillingAt: string | null = null;
 
     if (isPlatformOrderExternalId(externalId)) {
       const order = await pagarme<PagarmeOrder>(
@@ -202,10 +240,14 @@ Deno.serve(async (req) => {
       } catch (_e) { /* fallback abaixo */ }
 
       let fallbackCharge: PagarmeCharge | null = null;
+      const subscription = await pagarme<PagarmeSubscription>(
+        `/subscriptions/${encodeURIComponent(externalId)}`,
+      );
+      subscriptionStatus = subscription?.status ?? null;
+      subscriptionStartAt = subscription?.start_at ?? null;
+      nextBillingAt = subscription?.next_billing_at ?? null;
+
       if (charges.length === 0) {
-        const subscription = await pagarme<PagarmeSubscription>(
-          `/subscriptions/${encodeURIComponent(externalId)}`,
-        );
         fallbackCharge =
           subscription?.current_cycle?.charges?.[0]
           ?? subscription?.invoices?.[0]?.charges?.[0]
@@ -217,14 +259,27 @@ Deno.serve(async (req) => {
     }
 
     const allCharges = charges;
+    const paidChargesCount = allCharges.filter((c) =>
+      isPaidChargeStatus(c?.status)
+    ).length;
+    const receiptContext = {
+      subscriptionStatus,
+      subscriptionStartAt,
+      nextBillingAt,
+      paidChargesCount,
+    };
     const latest = allCharges[0] ?? null;
-    const lastPaid = allCharges.find((c) => c?.status === "paid") ?? null;
+    const lastPaid = allCharges.find((c) => isPaidChargeStatus(c?.status)) ?? null;
 
     return new Response(JSON.stringify({
       success: true,
-      latest: extractReceipt(latest),
-      last_paid: extractReceipt(lastPaid),
-      history: allCharges.map(extractReceipt).filter(Boolean),
+      subscription_status: subscriptionStatus,
+      subscription_start_at: subscriptionStartAt,
+      next_billing_at: nextBillingAt,
+      paid_charges_count: paidChargesCount,
+      latest: extractReceipt(latest, receiptContext),
+      last_paid: extractReceipt(lastPaid, receiptContext),
+      history: allCharges.map((c) => extractReceipt(c, receiptContext)).filter(Boolean),
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

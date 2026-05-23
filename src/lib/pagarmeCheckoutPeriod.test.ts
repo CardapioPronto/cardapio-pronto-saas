@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildLocalSubscriptionFromPagarme,
   computeRemainingCreditMs,
+  pagarmeSubscriptionStartAt,
   pendingSubscriptionInsertRow,
   resolvePaidSubscriptionPeriod,
 } from "../../supabase/functions/_shared/pagarme-checkout-subscription.ts";
@@ -50,14 +51,18 @@ describe("resolvePaidSubscriptionPeriod", () => {
     expect(periodEnd.toISOString()).toBe("2026-06-20T18:20:11.000Z");
   });
 
-  it("registro pending preserva só o fim do entitlement vigente para credito posterior", () => {
+  it("registro pending alinha período ao trial local (sem datas invertidas)", () => {
     const localSub = buildLocalSubscriptionFromPagarme({
-      pagarme: { status: "pending" },
+      pagarme: {
+        status: "future",
+        start_at: "2026-06-04T12:00:00Z",
+      },
       billingCycle: "monthly",
-      paymentMethod: "pix",
+      paymentMethod: "credit_card",
       priorEntitlement: {
         status: "trialing",
         is_trial: true,
+        trial_start: "2026-05-06T10:00:00Z",
         trial_ends_at: "2026-05-20T18:20:11Z",
       },
     });
@@ -65,12 +70,16 @@ describe("resolvePaidSubscriptionPeriod", () => {
     const row = pendingSubscriptionInsertRow(localSub, {
       status: "trialing",
       is_trial: true,
+      trial_start: "2026-05-06T10:00:00Z",
       trial_ends_at: "2026-05-20T18:20:11Z",
     });
 
     expect(row.status).toBe("pending");
+    expect(row.current_period_start).toBe("2026-05-06T10:00:00.000Z");
     expect(row.current_period_end).toBe("2026-05-20T18:20:11.000Z");
-    expect(row.next_billing_at).toBe("2026-05-20T18:20:11.000Z");
+    expect(
+      new Date(row.current_period_end!).getTime(),
+    ).toBeGreaterThanOrEqual(new Date(row.current_period_start!).getTime());
   });
 
   it("não transforma tentativa failed do Pagar.me em entitlement local", () => {
@@ -86,6 +95,16 @@ describe("resolvePaidSubscriptionPeriod", () => {
     });
 
     expect(localSub.status).toBe("canceled");
+  });
+
+  it("agenda start_at no Pagar.me para o fim do trial local", () => {
+    const now = new Date("2026-05-10T12:00:00Z");
+    const startAt = pagarmeSubscriptionStartAt(now, {
+      status: "trialing",
+      is_trial: true,
+      trial_ends_at: "2026-05-23T18:00:00Z",
+    });
+    expect(startAt).toBe("2026-05-23T18:00:00.000Z");
   });
 
   it("não trata trial remoto do Pagar.me como trial local no checkout pago", () => {

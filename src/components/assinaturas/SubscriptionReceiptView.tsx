@@ -7,7 +7,14 @@ import { toast } from "@/components/ui/sonner-toast";
 import {
   getPagarmeReceipt,
   PagarmeReceipt,
+  type ReceiptBillingPhase,
 } from "@/services/pagarmeSubscriptionService";
+import {
+  getReceiptCardCopy,
+  getReceiptStatusBadgeLabel,
+  resolveReceiptBillingPhase,
+  resolveReceiptScheduleDate,
+} from "../../../supabase/functions/_shared/pagarme-receipt-display.ts";
 
 interface Props {
   subscriptionId: string;
@@ -31,6 +38,8 @@ const formatCurrency = (value: number | null | undefined) =>
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   paid: { label: "Pago", className: "bg-green text-white" },
+  scheduled: { label: "Cobrança agendada", className: "bg-green/15 text-green border border-green/30" },
+  authorized: { label: "Cartão validado", className: "bg-green/15 text-green border border-green/30" },
   pending: { label: "Pendente", className: "bg-orange/15 text-orange border border-orange/30" },
   processing: { label: "Processando", className: "bg-muted text-muted-foreground" },
   failed: { label: "Falhou", className: "bg-destructive text-destructive-foreground" },
@@ -55,21 +64,53 @@ const copyToClipboard = async (value: string, label: string) => {
   }
 };
 
-const ReceiptCard = ({ r, title }: { r: PagarmeReceipt; title: string }) => {
+const ReceiptCard = ({ r, title: titleOverride }: { r: PagarmeReceipt; title?: string }) => {
   const status = (r.status ?? "").toLowerCase();
-  const meta = STATUS_LABEL[status] ?? { label: status || "—", className: "bg-muted text-muted-foreground" };
+  const phase: ReceiptBillingPhase = r.billing_phase ??
+    resolveReceiptBillingPhase({ displayStatus: status, paidChargesCount: 0 });
+  const scheduleDate = resolveReceiptScheduleDate({
+    phase,
+    subscriptionStartAt: r.subscription_start_at,
+    nextBillingAt: r.next_billing_at,
+    chargeDueAt: r.due_at,
+  });
+  const { title, note } = getReceiptCardCopy(phase, {
+    amountFormatted: formatCurrency(r.amount),
+    scheduleDate,
+  });
+  const badgeLabel = getReceiptStatusBadgeLabel(status, phase);
+  const badgeClass =
+    phase === "failed"
+      ? STATUS_LABEL.failed.className
+      : phase === "renewal_scheduled" || phase === "first_scheduled"
+        ? STATUS_LABEL.scheduled.className
+        : STATUS_LABEL[status]?.className ?? "bg-muted text-muted-foreground";
   const method = (r.payment_method ?? "").toLowerCase();
   const methodLabel = METHOD_LABEL[method] ?? method ?? "—";
+  const showScheduledStyle =
+    phase === "first_scheduled" || phase === "renewal_scheduled";
+  const showFailedStyle = phase === "failed";
 
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">{title}</p>
+          <p className="text-xs text-muted-foreground">{titleOverride ?? title}</p>
           <p className="font-semibold">{methodLabel}</p>
         </div>
-        <Badge className={meta.className}>{meta.label}</Badge>
+        <Badge className={badgeClass}>{badgeLabel}</Badge>
       </div>
+
+      {note && showScheduledStyle && (
+        <p className="text-sm text-muted-foreground rounded-md border border-green/30 bg-green/5 px-3 py-2">
+          {note}
+        </p>
+      )}
+      {note && showFailedStyle && (
+        <p className="text-sm text-muted-foreground rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+          {note}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
@@ -191,9 +232,9 @@ const ReceiptCard = ({ r, title }: { r: PagarmeReceipt; title: string }) => {
         </>
       )}
 
-      {r.charge_id && (
+      {r.charge_id && !showScheduledStyle && (
         <p className="text-[10px] text-muted-foreground pt-1">
-          Charge: <code>{r.charge_id}</code>
+          ID: <code>{r.charge_id}</code>
         </p>
       )}
     </div>
@@ -251,9 +292,7 @@ const SubscriptionReceiptView = ({ subscriptionId, onBack }: Props) => {
         </div>
       )}
 
-      {!loading && !error && latest && (
-        <ReceiptCard r={latest} title="Última cobrança" />
-      )}
+      {!loading && !error && latest && <ReceiptCard r={latest} />}
       {!loading && !error && lastPaid && lastPaid.charge_id !== latest?.charge_id && (
         <ReceiptCard r={lastPaid} title="Último pagamento confirmado" />
       )}

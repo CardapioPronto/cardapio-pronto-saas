@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
+import { useSubscriptionDisplayContext } from "@/hooks/useSubscriptionDisplayContext";
 
 export const TrialBanner = () => {
   const navigate = useNavigate();
@@ -13,9 +14,13 @@ export const TrialBanner = () => {
     subscriptionStatus,
     isLoading,
   } = useSubscriptionStatus();
+  const { hasScheduledPaidAfterTrial, loading: displayLoading } =
+    useSubscriptionDisplayContext();
 
   if (
     isLoading ||
+    displayLoading ||
+    hasScheduledPaidAfterTrial ||
     subscriptionStatus === "pending" ||
     !isInTrial ||
     !hasActiveSubscription

@@ -17,7 +17,8 @@ export const PlanosList = ({ planos }: PlanosListProps) => {
                 Mensal: R$ {plano.price_monthly.toFixed(2)}
             </p>
             <p className="text-sm text-muted">
-                Anual: R$ {plano.price_yearly.toFixed(2)}
+                Anual: R$ {(plano.price_yearly * 12).toFixed(2).replace(".", ",")}/ano
+                (R$ {plano.price_yearly.toFixed(2).replace(".", ",")}/mês)
             </p>
             <p className="text-sm mt-1">
                 Status: {plano.is_active ? "Ativo" : "Inativo"}

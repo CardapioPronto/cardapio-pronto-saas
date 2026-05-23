@@ -19,6 +19,8 @@ export function effectiveTrialDaysForCheckout(_planTrialDays: number | null | un
 export type PriorEntitlement = {
   status: string;
   is_trial?: boolean | null;
+  trial_start?: string | null;
+  current_period_start?: string | null;
   current_period_end?: string | null;
   trial_ends_at?: string | null;
 };
@@ -46,7 +48,7 @@ export function computeRemainingCreditMs(
   return Math.max(0, creditUntil.getTime() - now.getTime());
 }
 
-function entitlementEndsAt(prior: PriorEntitlement | null | undefined): Date | null {
+export function entitlementEndsAt(prior: PriorEntitlement | null | undefined): Date | null {
   if (!prior) return null;
 
   const raw = (prior.status === "trialing" || prior.is_trial)
@@ -58,6 +60,60 @@ function entitlementEndsAt(prior: PriorEntitlement | null | undefined): Date | n
 
   const end = new Date(raw);
   return Number.isNaN(end.getTime()) ? null : end;
+}
+
+function entitlementStartsAt(prior: PriorEntitlement | null | undefined): Date | null {
+  if (!prior) return null;
+
+  const raw = (prior.status === "trialing" || prior.is_trial)
+    ? prior.trial_start ?? prior.current_period_start
+    : prior.status === "active" || prior.status === "past_due" || prior.status === "pending"
+      ? prior.current_period_start
+      : null;
+  if (!raw) return null;
+
+  const start = new Date(raw);
+  return Number.isNaN(start.getTime()) ? null : start;
+}
+
+/**
+ * Evita período invertido quando o Pagar.me agenda start_at após o fim do trial local
+ * (ex.: plano remoto com trial_period_days > 0).
+ */
+export function resolveCheckoutPeriodStart(
+  now: Date,
+  pagarme: PagarmeSubscriptionPayload,
+  priorEntitlement?: PriorEntitlement | null,
+  options?: { localStatus?: string },
+): Date {
+  const priorEnd = entitlementEndsAt(priorEntitlement);
+  const priorStart = entitlementStartsAt(priorEntitlement);
+  const remoteStart = pagarme.start_at
+    ? new Date(pagarme.start_at)
+    : pagarme.current_period_start
+      ? new Date(pagarme.current_period_start)
+      : null;
+
+  if (options?.localStatus === "pending" && priorEnd) {
+    return priorStart && priorStart.getTime() <= now.getTime() ? priorStart : now;
+  }
+
+  if (remoteStart && !Number.isNaN(remoteStart.getTime())) {
+    if (priorEnd && remoteStart.getTime() > priorEnd.getTime()) {
+      return now;
+    }
+    if (remoteStart.getTime() > now.getTime() + 60_000) {
+      return now;
+    }
+    return remoteStart;
+  }
+
+  if (priorStart && priorStart.getTime() <= now.getTime()) return priorStart;
+  return now;
+}
+
+function ensurePeriodEndNotBeforeStart(periodStart: Date, periodEnd: Date): Date {
+  return periodEnd.getTime() < periodStart.getTime() ? new Date(periodStart) : periodEnd;
 }
 
 export function remainingCreditDays(creditMs: number): number {
@@ -123,11 +179,14 @@ export function buildLocalSubscriptionFromPagarme(input: {
   const trialDays = effectiveTrialDaysForCheckout(input.planTrialDays);
   const remainingCreditMs = computeRemainingCreditMs(now, input.priorEntitlement);
 
-  const periodStart = input.pagarme.start_at
-    ? new Date(input.pagarme.start_at)
-    : input.pagarme.current_period_start
-      ? new Date(input.pagarme.current_period_start)
-      : now;
+  const status = mapPagarmeSubscriptionStatus(input.pagarme.status, {
+    trialDays,
+    paymentMethod: input.paymentMethod,
+  });
+
+  const periodStart = resolveCheckoutPeriodStart(now, input.pagarme, input.priorEntitlement, {
+    localStatus: status,
+  });
 
   const { periodEnd, nextBilling } = resolvePaidSubscriptionPeriod({
     billingCycle: input.billingCycle,
@@ -137,11 +196,8 @@ export function buildLocalSubscriptionFromPagarme(input: {
     remainingCreditMs,
   });
   const periodCreditDays = remainingCreditDays(remainingCreditMs);
-
-  const status = mapPagarmeSubscriptionStatus(input.pagarme.status, {
-    trialDays,
-    paymentMethod: input.paymentMethod,
-  });
+  const safePeriodEnd = ensurePeriodEndNotBeforeStart(periodStart, periodEnd);
+  const safeNextBilling = ensurePeriodEndNotBeforeStart(periodStart, nextBilling);
 
   return {
     status,
@@ -151,8 +207,8 @@ export function buildLocalSubscriptionFromPagarme(input: {
     billing_cycle: input.billingCycle,
     start_date: periodStart.toISOString(),
     current_period_start: periodStart.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-    next_billing_at: nextBilling.toISOString(),
+    current_period_end: safePeriodEnd.toISOString(),
+    next_billing_at: safeNextBilling.toISOString(),
     period_credit_days: periodCreditDays,
   };
 }
@@ -177,10 +233,32 @@ export function pendingSubscriptionInsertRow(
   if (row.status !== "pending") return row;
 
   const carryUntil = entitlementEndsAt(priorEntitlement);
-  const carryUntilIso = carryUntil?.toISOString() ?? null;
+  const carryStart = entitlementStartsAt(priorEntitlement) ??
+    (row.current_period_start ? new Date(row.current_period_start) : new Date());
+
+  if (!carryUntil) {
+    return row;
+  }
+
+  const periodStart = carryStart.getTime() <= carryUntil.getTime()
+    ? carryStart
+    : carryUntil;
+
   return {
     ...row,
-    current_period_end: carryUntilIso,
-    next_billing_at: carryUntilIso,
+    start_date: periodStart.toISOString(),
+    current_period_start: periodStart.toISOString(),
+    current_period_end: carryUntil.toISOString(),
+    next_billing_at: carryUntil.toISOString(),
   };
+}
+
+/** Início da assinatura no Pagar.me: após trial/período vigente, ou imediato (omitido). */
+export function pagarmeSubscriptionStartAt(
+  now: Date,
+  prior?: PriorEntitlement | null,
+): string | undefined {
+  const end = entitlementEndsAt(prior);
+  if (!end || end.getTime() <= now.getTime() + 60_000) return undefined;
+  return end.toISOString();
 }

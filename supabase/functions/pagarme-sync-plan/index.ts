@@ -98,9 +98,13 @@ function buildPlanBase(
     interval_count: 1,
     billing_type: "prepaid",
     payment_methods: normalizePlanPaymentMethodsForPagarme(plan.pagarme_payment_methods),
-    installments: [1],
+    installments: interval === "year"
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      : [1],
     minimum_price: amountCents,
     statement_descriptor: "PUBFY",
+    /** Trial é só local (trigger no restaurante). Evita assinatura "Futura" no Pagar.me. */
+    trial_period_days: 0,
   };
 }
 

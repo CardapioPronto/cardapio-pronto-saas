@@ -5,25 +5,39 @@ async function extractEdgeFunctionError(
   data: unknown,
   error: { message?: string; context?: Response } | null,
 ): Promise<string> {
+  const pickBody = (body: unknown): string | null => {
+    if (!body || typeof body !== "object") return null;
+    const record = body as {
+      error?: string;
+      message?: string;
+      payment_diagnostics?: { acquirer_message?: string | null };
+    };
+    const base = record.error || record.message;
+    const acquirer = record.payment_diagnostics?.acquirer_message?.trim();
+    if (base && acquirer && !base.includes(acquirer)) {
+      return `${base} (${acquirer})`;
+    }
+    return base?.trim() || null;
+  };
+
+  const fromData = pickBody(data);
+  if (fromData) return fromData;
+
   if (data && typeof data === "object" && "error" in data) {
     const message = (data as { error?: unknown }).error;
     if (typeof message === "string" && message.trim()) return message;
   }
 
   if (error instanceof FunctionsHttpError) {
-    const body = await error.context.clone().json().catch(() => null) as
-      | { error?: string; message?: string }
-      | null;
-    if (body?.error) return body.error;
-    if (body?.message) return body.message;
+    const body = await error.context.clone().json().catch(() => null);
+    const message = pickBody(body);
+    if (message) return message;
   }
 
   if (error?.context) {
-    const body = await error.context.clone().json().catch(() => null) as
-      | { error?: string; message?: string }
-      | null;
-    if (body?.error) return body.error;
-    if (body?.message) return body.message;
+    const body = await error.context.clone().json().catch(() => null);
+    const message = pickBody(body);
+    if (message) return message;
   }
 
   return error?.message || "Falha ao criar assinatura";
@@ -126,9 +140,22 @@ export async function changePagarmeSubscriptionCycle(
   return data;
 }
 
+export type ReceiptBillingPhase =
+  | "first_scheduled"
+  | "renewal_scheduled"
+  | "paid"
+  | "failed"
+  | "pending"
+  | "other";
+
 export interface PagarmeReceipt {
   charge_id: string | null;
   status: string | null;
+  billing_phase?: ReceiptBillingPhase | null;
+  charge_status?: string | null;
+  subscription_status?: string | null;
+  subscription_start_at?: string | null;
+  next_billing_at?: string | null;
   amount: number | null;
   paid_amount: number | null;
   payment_method: string | null;
@@ -149,6 +176,8 @@ export interface PagarmeReceipt {
 
 export interface PagarmeReceiptResponse {
   success: boolean;
+  subscription_status?: string | null;
+  subscription_start_at?: string | null;
   latest: PagarmeReceipt | null;
   last_paid: PagarmeReceipt | null;
   history: PagarmeReceipt[];

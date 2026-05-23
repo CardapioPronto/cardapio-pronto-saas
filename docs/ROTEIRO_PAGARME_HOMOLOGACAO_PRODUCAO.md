@@ -21,7 +21,7 @@
 | Segredos | `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET`, `PAGARME_PLATFORM_RECIPIENT_ID` apenas em **Supabase Edge secrets** (nunca no bundle Vite) |
 | Assinatura Pubfy | Edge Functions server-side; front **não** chama API com secret |
 | Planos | Todo plano vendável precisa de `pagarme_plan_id_monthly` / `pagarme_plan_id_yearly` via sync (Super Admin) |
-| Cartão assinatura | `pagarme-create-subscription` → customer + card + subscription |
+| Cartão assinatura | `pagarme-create-subscription` → pedido (`/orders`) + assinatura `sub_*` após pagamento |
 | Boleto assinatura | `pagarme-create-boleto-pix` (nome legado; hoje só `boleto`) |
 | PIX assinatura | **Não implementado** no fluxo atual (ver Pendências) |
 | PIX pedido (cardápio) | `pagarme-create-order-payment` + webhook `charge.paid` / `order.paid` |
@@ -275,7 +275,7 @@ LIMIT 3;
 
 Esperado: `status IN ('active','trialing')`, `pagarme_subscription_id` preenchido.
 
-- [ ] Painel Pagar.me: assinatura criada na loja de teste.
+- [ ] Painel Pagar.me: pedido pago + assinatura `sub_*` em Recorrência (renovação com `start_at` na próxima data).
 - [ ] `pagarme_webhook_events`: eventos `subscription.*` / `charge.paid` com `signature_valid = true`, `processed = true`.
 
 ### C2. Falha (`4000000000000028`)

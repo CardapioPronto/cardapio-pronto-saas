@@ -17,7 +17,7 @@ O restaurante paga o plano Pubfy (mensal/anual).
 | Async | `pagarme-webhook` (`subscription.*`, `charge.*`, `invoice.*`) |
 | Pós-venda | `pagarme-update-subscription`, `pagarme-get-receipt` |
 
-**Métodos hoje:** cartão (`pagarme-create-subscription`), boleto e PIX (`pagarme-create-boleto-pix`). O PIX da assinatura usa **pedido avulso** (`POST /orders`) porque a API de assinaturas do Pagar.me v5 aceita só `credit_card`, `boleto` e `debit_card`; o webhook ativa o plano em `charge.paid`/`order.paid` com `metadata.source = pubfy_platform_subscription`.
+**Métodos hoje:** cartão (`pagarme-create-subscription`), boleto e PIX (`pagarme-create-boleto-pix`). Cartão: primeira cobrança via `POST /orders` (tentativas recusadas não criam `sub_*`); após pagamento aprovado, uma assinatura recorrente `POST /subscriptions` com `start_at` na próxima renovação (evita cobrar o mesmo período duas vezes). PIX da assinatura usa pedido avulso; boleto usa `sub_*` direto. Webhook `charge.paid`/`order.paid` com `metadata.source = pubfy_platform_subscription` ativa o plano e promove `or_*` → `sub_*` quando necessário.
 
 ### 2. Pagamento online do pedido (B2C)
 

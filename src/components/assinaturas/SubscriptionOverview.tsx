@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CreditCard, Settings, ShieldCheck } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
+import { buildScheduledPlanAlertCopy } from "@/lib/subscriptionCustomerDisplay";
+import { formatCurrentPlanValue } from "@/lib/planPricingDisplay";
 import { getSubscriptionStatusMeta } from "@/lib/subscriptionStatusUi";
 
 interface SubscriptionOverviewProps {
   subscription: MySubscription | null;
+  scheduledPaidPlan?: MySubscription | null;
   onManage: (subscription: MySubscription) => void;
   onViewPlans: () => void;
   onActivatePlan?: () => void;
@@ -29,20 +32,9 @@ const formatDate = (value: string | null | undefined) => {
   });
 };
 
-const formatCurrency = (value: number | null | undefined) =>
-  typeof value === "number"
-    ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : "-";
-
-const getPlanPrice = (subscription: MySubscription) => {
-  if (!subscription.plan) return null;
-  return subscription.billing_cycle === "yearly"
-    ? subscription.plan.price_yearly
-    : subscription.plan.price_monthly;
-};
-
 const SubscriptionOverview = ({
   subscription,
+  scheduledPaidPlan,
   onManage,
   onViewPlans,
   onActivatePlan,
@@ -70,12 +62,29 @@ const SubscriptionOverview = ({
     );
   }
 
-  const statusMeta = getSubscriptionStatusMeta(subscription.status);
+  const scheduledCopy = scheduledPaidPlan
+    ? buildScheduledPlanAlertCopy({
+        planName: scheduledPaidPlan.plan?.name ?? subscription.plan?.name,
+        trialEndsAt:
+          subscription.trial_ends_at ?? scheduledPaidPlan.current_period_end,
+        firstChargeAt:
+          scheduledPaidPlan.next_billing_at ?? scheduledPaidPlan.current_period_end,
+      })
+    : null;
+  const statusMeta = scheduledPaidPlan
+    ? { label: "Teste + plano confirmado", className: "bg-green/15 text-green border border-green/30", icon: ShieldCheck }
+    : getSubscriptionStatusMeta(subscription.status);
   const StatusIcon = statusMeta.icon;
   const cycleLabel = subscription.billing_cycle
     ? BILLING_CYCLE_LABEL[subscription.billing_cycle] ?? subscription.billing_cycle
     : "-";
-  const price = getPlanPrice(subscription);
+  const planPricing = subscription.plan
+    ? formatCurrentPlanValue(
+        subscription.billing_cycle,
+        subscription.plan.price_monthly,
+        subscription.plan.price_yearly,
+      )
+    : null;
 
   return (
     <div className="space-y-4">
@@ -95,7 +104,7 @@ const SubscriptionOverview = ({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              {subscription.status === "trialing" && onActivatePlan && (
+              {subscription.status === "trialing" && onActivatePlan && !scheduledPaidPlan && (
                 <Button
                   size="sm"
                   className="bg-green text-white hover:bg-green-dark"
@@ -112,16 +121,26 @@ const SubscriptionOverview = ({
           </div>
         </CardHeader>
 
-        {subscription.status === "trialing" && !subscription.has_pagarme_subscription && (
+        {scheduledCopy && (
           <CardContent className="pt-0">
-            <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
-              Você está no teste gratuito. Use <strong>Ativar plano pago</strong> para contratar com cartão,
-              boleto ou PIX e validar a integração com o Pagar.me em homologação.
+            <p className="rounded-md border border-green/30 bg-green/5 px-4 py-3 text-sm text-muted-foreground">
+              {scheduledCopy.description}
             </p>
           </CardContent>
         )}
 
-        {subscription.status === "pending" && (
+        {subscription.status === "trialing" &&
+          !subscription.has_pagarme_subscription &&
+          !scheduledPaidPlan && (
+          <CardContent className="pt-0">
+            <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
+              Você está no teste gratuito. Use <strong>Ativar plano pago</strong> para contratar com cartão,
+              boleto ou PIX.
+            </p>
+          </CardContent>
+        )}
+
+        {subscription.status === "pending" && !scheduledPaidPlan && (
           <CardContent className="pt-0">
             <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
               Pagamento (boleto ou PIX) em análise. Use <strong>Gerenciar</strong> para ver o QR Code, boleto ou
@@ -138,9 +157,11 @@ const SubscriptionOverview = ({
             </div>
             <p className="font-semibold">{subscription.plan?.name ?? "Plano"}</p>
             <p className="text-sm text-muted-foreground">
-              {formatCurrency(price)}
-              {subscription.billing_cycle === "yearly" ? "/ano" : "/mês"}
+              {planPricing?.value ?? "—"}
             </p>
+            {planPricing?.helper && (
+              <p className="text-xs text-muted-foreground">{planPricing.helper}</p>
+            )}
           </div>
 
           <div className="rounded-md border bg-background p-4">

@@ -2,9 +2,10 @@ import { DISPLAYABLE_SUBSCRIPTION_STATUSES } from "@/lib/subscriptionStatusUi";
 
 const STATUS_PRIORITY: Record<string, number> = {
   active: 0,
-  trialing: 1,
-  past_due: 2,
-  pending: 3,
+  /** Checkout pago aguardando ativação no Pagar.me — prioridade sobre trial legado. */
+  pending: 1,
+  trialing: 2,
+  past_due: 3,
 };
 
 type SubscriptionLike = {

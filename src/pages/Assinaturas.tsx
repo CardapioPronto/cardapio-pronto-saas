@@ -10,6 +10,11 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, AlertTriangle, Clock, FileText } from "lucide-react";
 import { pickCurrentSubscription } from "@/lib/pickCurrentSubscription";
 import { computeRenewalAlert, computeSubscriptionAccess } from "@/lib/subscriptionAccess";
+import {
+  buildScheduledPlanAlertCopy,
+  findScheduledPaidPlan,
+  pickPrimarySubscriptionForDisplay,
+} from "@/lib/subscriptionCustomerDisplay";
 import PaymentForm, { PaymentSuccessData } from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
 import PlansGrid from "@/components/assinaturas/PlansGrid";
@@ -45,11 +50,28 @@ const Assinaturas = () => {
   } = useMySubscriptions();
   const [manageSub, setManageSub] = useState<MySubscription | null>(null);
 
+  const scheduledPaidPlan = useMemo(
+    () => findScheduledPaidPlan(mySubscriptions),
+    [mySubscriptions],
+  );
+  const displaySubscription = useMemo(
+    () => pickPrimarySubscriptionForDisplay(mySubscriptions),
+    [mySubscriptions],
+  );
   const currentSubscription = pickCurrentSubscription(mySubscriptions);
   const pendingPaymentSubscription = useMemo(
     () => mySubscriptions.find((s) => s.status === "pending") ?? null,
     [mySubscriptions],
   );
+  const scheduledPlanAlert = scheduledPaidPlan
+    ? buildScheduledPlanAlertCopy({
+        planName: scheduledPaidPlan.plan?.name,
+        trialEndsAt:
+          scheduledPaidPlan.current_period_end ?? scheduledPaidPlan.trial_ends_at,
+        firstChargeAt:
+          scheduledPaidPlan.next_billing_at ?? scheduledPaidPlan.current_period_end,
+      })
+    : null;
   const renewalAlert = currentSubscription
     ? computeRenewalAlert({
         status: currentSubscription.status,
@@ -68,18 +90,28 @@ const Assinaturas = () => {
       ? "trialing"
       : currentSubscription?.status;
 
-  const subscriptionAccess = currentSubscription
+  const accessSubscription = displaySubscription ?? currentSubscription;
+  const accessStatus =
+    scheduledPaidPlan && accessSubscription?.status === "trialing"
+      ? "trialing"
+      : effectiveStatus ?? accessSubscription?.status;
+  const subscriptionAccess = accessSubscription
     ? computeSubscriptionAccess({
-        status: effectiveStatus ?? currentSubscription.status,
-        is_trial: currentSubscription.is_trial,
-        trial_ends_at: currentSubscription.trial_ends_at,
-        current_period_end: currentSubscription.current_period_end,
-        next_billing_at: currentSubscription.next_billing_at,
+        status: accessStatus ?? accessSubscription.status,
+        is_trial: accessSubscription.is_trial,
+        trial_ends_at:
+          accessSubscription.trial_ends_at ??
+          scheduledPaidPlan?.current_period_end ??
+          null,
+        current_period_end: accessSubscription.current_period_end,
+        next_billing_at: accessSubscription.next_billing_at,
       })
     : null;
-  const trialEndsAt = currentSubscription?.trial_ends_at
-    ? new Date(currentSubscription.trial_ends_at)
-    : null;
+  const trialEndsAt = accessSubscription?.trial_ends_at
+    ? new Date(accessSubscription.trial_ends_at)
+    : scheduledPaidPlan?.current_period_end
+      ? new Date(scheduledPaidPlan.current_period_end)
+      : null;
   const daysLeftInTrial = trialEndsAt
     ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000))
     : 0;
@@ -173,7 +205,24 @@ const Assinaturas = () => {
   return (
     <DashboardLayout title="Assinaturas">
       <div className="space-y-6">
-        {effectiveStatus === "trialing" && (
+        {scheduledPlanAlert && scheduledPaidPlan && (
+          <Alert className="border-green/40 bg-green/5">
+            <CheckCircle className="h-4 w-4 text-green" />
+            <AlertTitle>{scheduledPlanAlert.title}</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{scheduledPlanAlert.description}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                onClick={() => setManageSub(scheduledPaidPlan)}
+              >
+                Ver detalhes
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {!scheduledPaidPlan && effectiveStatus === "trialing" && (
           <Alert className="border-orange/40 bg-orange/5">
             <Clock className="h-4 w-4 text-orange" />
             <AlertTitle>Você está no período de teste gratuito (14 dias)</AlertTitle>
@@ -191,15 +240,14 @@ const Assinaturas = () => {
             </AlertDescription>
           </Alert>
         )}
-        {pendingPaymentSubscription && (
+        {!scheduledPaidPlan && pendingPaymentSubscription && (
           <Alert className="border-orange/40 bg-orange/5">
             <FileText className="h-4 w-4 text-orange" />
             <AlertTitle>Aguardando confirmação do pagamento</AlertTitle>
             <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>
                 Sua assinatura do {pendingPaymentSubscription.plan?.name ?? "Plano Pubfy"} foi registrada.
-                Enquanto o boleto ou PIX aguarda confirmação, o acesso vigente permanece até o fim do
-                período atual.
+                Enquanto o boleto ou PIX aguarda confirmação, o acesso vigente permanece até o fim do período atual.
               </span>
               <Button
                 size="sm"
@@ -286,10 +334,13 @@ const Assinaturas = () => {
               </div>
             ) : (
               <SubscriptionOverview
-                subscription={currentSubscription}
+                subscription={displaySubscription ?? currentSubscription}
+                scheduledPaidPlan={scheduledPaidPlan}
                 onManage={(sub) => setManageSub(sub)}
                 onViewPlans={() => handleTabChange("plans")}
-                onActivatePlan={() => startCheckout("monthly")}
+                onActivatePlan={
+                  scheduledPaidPlan ? undefined : () => startCheckout("monthly")
+                }
               />
             )}
           </TabsContent>

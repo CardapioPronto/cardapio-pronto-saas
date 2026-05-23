@@ -4,12 +4,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendManagedEmail } from "../_shared/email-delivery.ts";
 import { captureEdgeException } from "../_shared/observability.ts";
 import {
+  buildLocalSubscriptionFromPagarme,
   computeRemainingCreditMs,
   resolvePaidSubscriptionPeriod,
+  subscriptionInsertRow,
   type BillingCycle,
   type PriorEntitlement,
 } from "../_shared/pagarme-checkout-subscription.ts";
-import { supersedePriorSubscriptions } from "../_shared/pagarme-subscription-status.ts";
+import { pagarmeErrorMessage } from "../_shared/pagarme-errors.ts";
+import {
+  createRecurringSubscriptionAfterCardOrder,
+  needsRecurringSubscriptionFromOrderId,
+  pagarmePlanIdForCycle,
+  type PagarmeOrderForRecurring,
+} from "../_shared/pagarme-recurring-subscription.ts";
+import {
+  SUBSCRIPTION_ENTITLEMENT_STATUSES,
+  supersedePriorSubscriptions,
+} from "../_shared/pagarme-subscription-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +36,34 @@ const supabase = createClient(
 
 const WEBHOOK_SECRET = Deno.env.get("PAGARME_WEBHOOK_SECRET") ?? "";
 const PAGARME_SECRET_KEY = Deno.env.get("PAGARME_SECRET_KEY") ?? "";
+const PAGARME_API_URL = "https://api.pagar.me/core/v5";
+
+function pagarmeAuthHeader() {
+  if (!PAGARME_SECRET_KEY) throw new Error("PAGARME_SECRET_KEY not configured");
+  return `Basic ${btoa(PAGARME_SECRET_KEY + ":")}`;
+}
+
+async function pagarmeApi<T>(path: string, method: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${PAGARME_API_URL}${path}`, {
+    method,
+    headers: {
+      Authorization: pagarmeAuthHeader(),
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text };
+  }
+  if (!res.ok) {
+    throw new Error(`Pagar.me ${method} ${path}: ${pagarmeErrorMessage(data, res.status)}`);
+  }
+  return data as T;
+}
 
 type PlatformSubscriptionMetadata = {
   source?: string | null;
@@ -149,6 +189,115 @@ function getPlatformSubscriptionMetadata(
   return metadata;
 }
 
+async function promoteOrderCheckoutToRecurringSubscription(input: {
+  pagarmeOrderId: string;
+  restaurantId: string;
+  planId: string;
+  billingCycle: BillingCycle;
+  nextBillingAt: string;
+}): Promise<{ subscriptionId: string; customerId: string | null } | null> {
+  const { data: plan } = await supabase
+    .from("plans")
+    .select("pagarme_plan_id_monthly, pagarme_plan_id_yearly")
+    .eq("id", input.planId)
+    .maybeSingle();
+
+  const pagarmePlanId = plan ? pagarmePlanIdForCycle(plan, input.billingCycle) : null;
+  if (!pagarmePlanId) {
+    console.error(
+      "[pagarme-webhook] plan not synced for recurring promotion",
+      input.planId,
+      input.billingCycle,
+    );
+    return null;
+  }
+
+  const order = await pagarmeApi<PagarmeOrderForRecurring>(
+    `/orders/${encodeURIComponent(input.pagarmeOrderId)}`,
+    "GET",
+  );
+
+  const recurring = await createRecurringSubscriptionAfterCardOrder(pagarmeApi, {
+    order,
+    pagarmePlanId,
+    billingCycle: input.billingCycle,
+    restaurantId: input.restaurantId,
+    planId: input.planId,
+    startAt: input.nextBillingAt,
+  });
+
+  if (!recurring.subscription.id) return null;
+  return {
+    subscriptionId: recurring.subscription.id,
+    customerId: recurring.customerId,
+  };
+}
+
+async function healPaidPlatformOrderWithoutLocalRow(
+  metadata: PlatformSubscriptionMetadata,
+  pagarmeOrderId: string,
+): Promise<void> {
+  const restaurantId = metadata.restaurant_id;
+  const planId = metadata.plan_id;
+  if (!restaurantId || !planId) return;
+
+  const billingCycle: BillingCycle = metadata.billing_cycle === "yearly"
+    ? "yearly"
+    : "monthly";
+
+  const { data: priorSub } = await supabase
+    .from("subscriptions")
+    .select("status, is_trial, current_period_end, trial_ends_at")
+    .eq("restaurant_id", restaurantId)
+    .in("status", [...SUBSCRIPTION_ENTITLEMENT_STATUSES])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const now = new Date();
+  const localSub = buildLocalSubscriptionFromPagarme({
+    pagarme: { status: "active", start_at: now.toISOString() },
+    billingCycle,
+    paymentMethod: "credit_card",
+    priorEntitlement: priorSub,
+  });
+  const insertRow = subscriptionInsertRow(localSub);
+
+  const promoted = await promoteOrderCheckoutToRecurringSubscription({
+    pagarmeOrderId,
+    restaurantId,
+    planId,
+    billingCycle,
+    nextBillingAt: insertRow.next_billing_at,
+  });
+
+  if (!promoted) {
+    throw new Error("Failed to create recurring subscription for paid platform order");
+  }
+
+  const { error: insertErr } = await supabase.rpc("insert_paid_checkout_subscription", {
+    p_restaurant_id: restaurantId,
+    p_plan_id: planId,
+    p_status: insertRow.status,
+    p_is_trial: insertRow.is_trial,
+    p_trial_start: insertRow.trial_start,
+    p_trial_ends_at: insertRow.trial_ends_at,
+    p_billing_cycle: insertRow.billing_cycle,
+    p_start_date: insertRow.start_date,
+    p_current_period_start: insertRow.current_period_start,
+    p_current_period_end: insertRow.current_period_end,
+    p_next_billing_at: insertRow.next_billing_at,
+    p_pagarme_subscription_id: promoted.subscriptionId,
+    p_pagarme_customer_id: promoted.customerId,
+    p_last_payment_status: "paid",
+    p_last_payment_at: now.toISOString(),
+  });
+
+  if (insertErr) {
+    throw new Error(`insert_paid_checkout_subscription: ${insertErr.message}`);
+  }
+}
+
 async function processPlatformSubscriptionOrderPayment(
   type: string,
   data: PagarmeData,
@@ -166,19 +315,21 @@ async function processPlatformSubscriptionOrderPayment(
     subscriptionId = localSub?.id ?? null;
   }
 
+  const newPaymentStatus = mapOrderPaymentStatus(type, data.status);
+
+  if (!subscriptionId && metadata && newPaymentStatus === "paid" && pagarmeOrderId) {
+    await healPaidPlatformOrderWithoutLocalRow(metadata, pagarmeOrderId);
+    return true;
+  }
+
   if (!subscriptionId && !metadata) return false;
   if (!subscriptionId) return true;
 
-  const newPaymentStatus = mapOrderPaymentStatus(type, data.status);
   if (!newPaymentStatus) return true;
   const update: Record<string, unknown> = {
     last_payment_status: data.status ?? type,
     updated_at: new Date().toISOString(),
   };
-
-  if (pagarmeOrderId) {
-    update.pagarme_subscription_id = pagarmeOrderId;
-  }
 
   if (newPaymentStatus === "paid") {
     update.status = "active";
@@ -189,11 +340,58 @@ async function processPlatformSubscriptionOrderPayment(
 
     const { data: localSub } = await supabase
       .from("subscriptions")
-      .select("pagarme_subscription_id, billing_cycle")
+      .select(
+        "pagarme_subscription_id, billing_cycle, restaurant_id, plan_id, status, is_trial, trial_ends_at, current_period_start, current_period_end",
+      )
       .eq("id", subscriptionId)
       .maybeSingle();
 
-    const lookupId = pagarmeOrderId ?? localSub?.pagarme_subscription_id ?? null;
+    const orderRef = pagarmeOrderId ?? localSub?.pagarme_subscription_id ?? null;
+
+    if (
+      orderRef &&
+      needsRecurringSubscriptionFromOrderId(localSub?.pagarme_subscription_id) &&
+      localSub?.restaurant_id &&
+      localSub?.plan_id
+    ) {
+      const billingCycle: BillingCycle = localSub.billing_cycle === "yearly"
+        ? "yearly"
+        : "monthly";
+      const periodStart = localSub.status === "pending"
+        ? new Date()
+        : localSub.current_period_start
+          ? new Date(localSub.current_period_start)
+          : new Date();
+      const prior: PriorEntitlement = {
+        status: localSub.status,
+        is_trial: localSub.is_trial,
+        current_period_end: localSub.current_period_end,
+        trial_ends_at: localSub.trial_ends_at,
+      };
+      const { nextBilling } = resolvePaidSubscriptionPeriod({
+        billingCycle,
+        periodStart,
+        remainingCreditMs: computeRemainingCreditMs(new Date(), prior),
+      });
+
+      const promoted = await promoteOrderCheckoutToRecurringSubscription({
+        pagarmeOrderId: orderRef,
+        restaurantId: localSub.restaurant_id,
+        planId: localSub.plan_id,
+        billingCycle,
+        nextBillingAt: nextBilling.toISOString(),
+      });
+
+      if (promoted) {
+        update.pagarme_subscription_id = promoted.subscriptionId;
+        if (promoted.customerId) update.pagarme_customer_id = promoted.customerId;
+      }
+    }
+
+    const lookupId = (update.pagarme_subscription_id as string | undefined) ??
+      orderRef ??
+      localSub?.pagarme_subscription_id ??
+      null;
     if (lookupId) {
       await applyPaidPeriodToUpdate(lookupId, update);
     }

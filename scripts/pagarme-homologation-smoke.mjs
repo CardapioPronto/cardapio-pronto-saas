@@ -53,6 +53,13 @@ async function checkRepoFiles() {
     "pagarme-create-boleto-pix",
   );
   check(
+    "Cartão cria assinatura recorrente após pedido pago",
+    read("supabase/functions/pagarme-create-subscription/index.ts").includes(
+      "createRecurringSubscriptionAfterCardOrder",
+    ),
+    "pagarme-create-subscription",
+  );
+  check(
     "Migration pending visibility",
     fs.existsSync(new URL("../supabase/migrations/20260519143000_subscription_pending_visibility.sql", import.meta.url)),
     "20260519143000_subscription_pending_visibility.sql",
