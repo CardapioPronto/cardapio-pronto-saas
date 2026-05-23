@@ -263,7 +263,7 @@
 1. **Testar Opção B Completo:**
    - [ ] Testar validação de horas no menu digital
    - [ ] Testar criação/edição/deleção de promoções
-   - [ ] Testar reordenação drag-drop
+   - [x] Testar reordenação drag-drop
    - [ ] Testar seleção de temas por segmento
 
 2. **Documentação:**
@@ -279,9 +279,9 @@
    - [ ] Tests de integração das promoções
 
 2. **Opção D - Futuros:**
-   - [ ] Sistema de cupons/vouchers (P2)
-   - [ ] Análise de performance (P2)
-   - [ ] Limpeza de logs (P2)
+   - [x] Sistema de cupons/vouchers (P2)
+   - [x] Análise de performance (P2)
+   - [x] Limpeza de logs (P2)
 
 ---
 
