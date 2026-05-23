@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
+import { resolveWhatsAppSystemPrompt } from '../_shared/whatsapp-automation-prompt.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,7 +62,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, provider, restaurantId } = await req.json();
+    const { message, provider, restaurantId, instanceId } = await req.json();
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -96,23 +97,10 @@ serve(async (req) => {
       );
     }
 
-    // Get restaurant info and AI settings
-    const { data: integration } = await supabase
-      .from('whatsapp_integration')
-      .select('ai_system_prompt')
-      .eq('restaurant_id', restaurantId)
-      .single();
-
-    const { data: restaurant } = await supabase
-      .from('restaurants')
-      .select('name, address')
-      .eq('id', restaurantId)
-      .single();
-
-    const systemPrompt = integration?.ai_system_prompt || 
-      `Você é um assistente virtual do restaurante ${restaurant?.name || 'nosso restaurante'}. 
-      Seja cordial, útil e responda perguntas sobre o cardápio, horários e pedidos.
-      Endereço: ${restaurant?.address || 'não informado'}`;
+    const { systemPrompt } = await resolveWhatsAppSystemPrompt(supabase, {
+      restaurantId,
+      instanceId: typeof instanceId === 'string' ? instanceId : null,
+    });
 
     let response = '';
 
