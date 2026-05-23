@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Product } from "@/types";
 import {
   DadosClientePedido,
@@ -24,6 +24,7 @@ import {
   toEndOfDayIso,
   toStartOfDayIso,
 } from "../utils/historicoPedidos";
+import { useOrdersRealtimeSubscription } from "./useOrdersRealtimeSubscription";
 
 export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
@@ -94,6 +95,55 @@ export const usePDVHook = (restaurantId: string) => {
       carregarHistoricoPedidos();
     }
   }, [restaurantId, visualizacaoAtiva, carregarHistoricoPedidos]);
+
+  const ordersRealtimeHandlers = useMemo(
+    () => ({
+      onUpdate: (row: Record<string, unknown>) => {
+        const orderId = row.id;
+        if (!orderId) return;
+
+        setPedidosHistorico((current) =>
+          current.map((pedido) =>
+            String(pedido.id) === String(orderId)
+              ? {
+                  ...pedido,
+                  status: (row.status as PedidoStatus) ?? pedido.status,
+                  total: typeof row.total === "number" ? row.total : pedido.total,
+                  payment_status:
+                    typeof row.payment_status === "string"
+                      ? row.payment_status
+                      : pedido.payment_status,
+                  payment_method:
+                    typeof row.payment_method === "string"
+                      ? row.payment_method
+                      : pedido.payment_method,
+                  source: (row.source as Pedido["source"]) ?? pedido.source,
+                }
+              : pedido,
+          ),
+        );
+      },
+      onDelete: (row: Record<string, unknown>) => {
+        const orderId = row.id;
+        if (!orderId) return;
+        setPedidosHistorico((current) =>
+          current.filter((pedido) => String(pedido.id) !== String(orderId)),
+        );
+      },
+      onReload: () => {
+        if (visualizacaoAtiva === "historico") {
+          void carregarHistoricoPedidos();
+        }
+      },
+    }),
+    [visualizacaoAtiva, carregarHistoricoPedidos],
+  );
+
+  useOrdersRealtimeSubscription(
+    restaurantId,
+    ordersRealtimeHandlers,
+    `pdv-orders-${restaurantId || "none"}`,
+  );
 
   const setHistoricoPeriodo = useCallback((periodo: HistoricoPeriodoFiltro) => {
     const range = periodo === "personalizado" ? {} : getDateRangeByPeriod(periodo);
@@ -334,7 +384,7 @@ export const usePDVHook = (restaurantId: string) => {
     if (result.success) {
       setPedidosHistorico(pedidos => 
         pedidos.map(pedido => 
-          pedido.id === pedidoId 
+          String(pedido.id) === String(pedidoId) 
             ? { ...pedido, status: novoStatus } 
             : pedido
         )

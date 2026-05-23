@@ -9,12 +9,6 @@ import {
   Pedido,
   PedidoStatus,
 } from "../types";
-import { WhatsAppService } from "@/services/whatsapp/whatsappService";
-import {
-  mapPedidoStatusToDeliveryStatus,
-  notifyDeliveryOrderStatusWhatsApp,
-} from "@/lib/deliveryOrderStatusWhatsApp";
-import { updateOrderStatusInIfood } from "@/services/ifood/syncService";
 import { toast } from "sonner";
 
 type PedidoQueryRow = {
@@ -191,18 +185,6 @@ export async function salvarPedido(
       notifyMesasChanged(restaurantId);
     }
 
-    if (telefoneCliente && (order as { order_id?: string | number }).order_id) {
-      try {
-        await WhatsAppService.sendOrderConfirmation(
-          restaurantId,
-          telefoneCliente,
-          String((order as { order_id?: string | number }).order_id)
-        );
-      } catch (whatsappError) {
-        console.error('Erro ao enviar notificação WhatsApp:', whatsappError);
-        // Não falhar o pedido por erro do WhatsApp
-      }
-    }
 
     toast.success(
       override?.allowNegative
