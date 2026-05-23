@@ -83,9 +83,12 @@ interface OrderItemRow {
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  awaiting_payment: '💳 Aguardando pagamento',
+  payment_failed: '⚠️ Pagamento não confirmado',
   pending: '🕒 Aguardando confirmação',
   confirmed: '✅ Pedido confirmado',
   preparing: '👨‍🍳 Em preparo',
+  ready: '✅ Pronto para entrega',
   out_for_delivery: '🛵 Saiu para entrega',
   delivered: '🎉 Entregue',
   cancelled: '❌ Cancelado',

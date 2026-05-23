@@ -792,6 +792,87 @@ async function sendSubscriptionReceipt(pagarmeSubId: string, charge: PagarmeData
   });
 }
 
+
+type WebhookLogFields = {
+  event_id: string | null;
+  event_type: string;
+  pagarme_subscription_id: string | null;
+  pagarme_order_id: string | null;
+  order_id: string | null;
+  pagarme_customer_id: string | null;
+  payload: PagarmeEvent;
+};
+
+type WebhookLogAcquire = {
+  shouldProcess: boolean;
+  logId: string | null;
+  duplicate?: boolean;
+};
+
+function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === "23505") return true;
+  return (error.message ?? "").toLowerCase().includes("duplicate");
+}
+
+async function acquireWebhookEventLog(fields: WebhookLogFields): Promise<WebhookLogAcquire> {
+  const { event_id: eventId } = fields;
+
+  if (!eventId) {
+    return { shouldProcess: true, logId: null };
+  }
+
+  const { data: existing } = await supabase
+    .from("pagarme_webhook_events")
+    .select("id, processed, processing_error")
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (existing?.processed) {
+    return { shouldProcess: false, logId: existing.id, duplicate: true };
+  }
+
+  if (existing?.id) {
+    if (!existing.processing_error) {
+      return { shouldProcess: false, logId: existing.id, duplicate: true };
+    }
+    await supabase
+      .from("pagarme_webhook_events")
+      .update({ processing_error: null })
+      .eq("id", existing.id);
+    return { shouldProcess: true, logId: existing.id };
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("pagarme_webhook_events")
+    .insert({
+      ...fields,
+      signature_valid: true,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (!error && inserted?.id) {
+    return { shouldProcess: true, logId: inserted.id };
+  }
+
+  if (!isUniqueViolation(error)) {
+    throw error ?? new Error("Failed to log Pagar.me webhook event");
+  }
+
+  const { data: raced } = await supabase
+    .from("pagarme_webhook_events")
+    .select("id, processed, processing_error")
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (raced?.processed) {
+    return { shouldProcess: false, logId: raced.id, duplicate: true };
+  }
+
+  return { shouldProcess: false, logId: raced?.id ?? null, duplicate: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -858,25 +939,9 @@ Deno.serve(async (req) => {
   const metadataOrderId = data.metadata?.order_id ?? data.order?.metadata?.order_id ?? null;
   const pagarmeCustomerId = data.customer?.id ?? data.customer_id ?? null;
 
-  // Idempotency: skip already-processed events
-  if (eventId) {
-    const { data: existing } = await supabase
-      .from("pagarme_webhook_events")
-      .select("id, processed")
-      .eq("event_id", eventId)
-      .maybeSingle();
-    if (existing?.processed) {
-      return new Response(JSON.stringify({ received: true, duplicate: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-  }
-
-  // Log event (somente após assinatura válida)
-  const { data: logRow } = await supabase
-    .from("pagarme_webhook_events")
-    .insert({
+  let acquire: WebhookLogAcquire;
+  try {
+    acquire = await acquireWebhookEventLog({
       event_id: eventId,
       event_type: eventType,
       pagarme_subscription_id: pagarmeSubId,
@@ -884,18 +949,34 @@ Deno.serve(async (req) => {
       order_id: metadataOrderId,
       pagarme_customer_id: pagarmeCustomerId,
       payload: event,
-      signature_valid: true,
-    })
-    .select("id")
-    .maybeSingle();
+    });
+  } catch (acquireErr) {
+    console.error("[pagarme-webhook] failed to acquire event log:", acquireErr);
+    return new Response(JSON.stringify({ error: "Failed to log event" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (!acquire.shouldProcess) {
+    return new Response(
+      JSON.stringify({ received: true, duplicate: !!acquire.duplicate }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const logId = acquire.logId;
 
   try {
     await processEvent(event);
-    if (logRow?.id) {
+    if (logId) {
       await supabase
         .from("pagarme_webhook_events")
         .update({ processed: true, processed_at: new Date().toISOString() })
-        .eq("id", logRow.id);
+        .eq("id", logId);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -911,11 +992,11 @@ Deno.serve(async (req) => {
         order_id: metadataOrderId,
       },
     });
-    if (logRow?.id) {
+    if (logId) {
       await supabase
         .from("pagarme_webhook_events")
         .update({ processing_error: msg })
-        .eq("id", logRow.id);
+        .eq("id", logId);
     }
     // Return 200 anyway so Pagar.me does not retry indefinitely on processing bugs
   }

@@ -10,6 +10,10 @@ import {
   PedidoStatus,
 } from "../types";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
+import {
+  mapPedidoStatusToDeliveryStatus,
+  notifyDeliveryOrderStatusWhatsApp,
+} from "@/lib/deliveryOrderStatusWhatsApp";
 import { toast } from "sonner";
 
 type PedidoQueryRow = {
