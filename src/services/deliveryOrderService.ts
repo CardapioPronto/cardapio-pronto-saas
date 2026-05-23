@@ -36,6 +36,7 @@ export interface CreateDeliveryOrderInput {
   coupon_code?: string;
   delivery_fee: number;
   estimated_delivery_minutes?: number;
+  client_request_id?: string;
 }
 
 export interface OnlineOrderPayment {

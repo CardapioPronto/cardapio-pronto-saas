@@ -18,14 +18,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { RefreshCw, Copy, Check } from "lucide-react";
+import { RefreshCw, Copy, Check, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { reprocessPagarmeWebhookEvent, syncPagarmeOrderPayment } from "@/services/pagarmeWebhookAdmin";
 
 interface WebhookEvent {
   id: string;
   event_id: string | null;
   event_type: string;
   pagarme_subscription_id: string | null;
+  pagarme_order_id: string | null;
+  order_id: string | null;
   pagarme_customer_id: string | null;
   payload: unknown;
   processed: boolean;
@@ -43,6 +46,7 @@ export const PagarmeWebhooksPanel = () => {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<WebhookEvent | null>(null);
   const [copied, setCopied] = useState(false);
+  const [reprocessingId, setReprocessingId] = useState<string | null>(null);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -69,9 +73,43 @@ export const PagarmeWebhooksPanel = () => {
     return (
       e.event_type.toLowerCase().includes(s) ||
       (e.pagarme_subscription_id ?? "").toLowerCase().includes(s) ||
+      (e.pagarme_order_id ?? "").toLowerCase().includes(s) ||
+      (e.order_id ?? "").toLowerCase().includes(s) ||
       (e.event_id ?? "").toLowerCase().includes(s)
     );
   });
+
+  const handleReprocess = async (eventLogId: string) => {
+    setReprocessingId(eventLogId);
+    try {
+      await reprocessPagarmeWebhookEvent(eventLogId);
+      toast({ title: "Evento reprocessado com sucesso" });
+      await fetchEvents();
+      setSelected(null);
+    } catch (error) {
+      toast({
+        title: "Falha ao reprocessar",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setReprocessingId(null);
+    }
+  };
+
+  const handleSyncOrder = async (orderId: string) => {
+    try {
+      await syncPagarmeOrderPayment(orderId);
+      toast({ title: "Pagamento sincronizado com Pagar.me" });
+      await fetchEvents();
+    } catch (error) {
+      toast({
+        title: "Falha na sincronização",
+        description: error instanceof Error ? error.message : "Erro",
+        variant: "destructive",
+      });
+    }
+  };
 
   const copyUrl = async () => {
     await navigator.clipboard.writeText(WEBHOOK_URL);
@@ -86,6 +124,9 @@ export const PagarmeWebhooksPanel = () => {
     if (e.processed) return <Badge className="bg-green-600">Processado</Badge>;
     return <Badge variant="secondary">Pendente</Badge>;
   };
+
+  const canReprocess = (e: WebhookEvent) =>
+    e.signature_valid !== false && (Boolean(e.processing_error) || !e.processed);
 
   return (
     <>
@@ -107,7 +148,7 @@ export const PagarmeWebhooksPanel = () => {
             <CardTitle className="text-base">Eventos recebidos ({filtered.length})</CardTitle>
             <div className="flex gap-2">
               <Input
-                placeholder="Filtrar por tipo, sub_id, event_id..."
+                placeholder="Filtrar por tipo, order_id, event_id..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-72"
@@ -124,9 +165,9 @@ export const PagarmeWebhooksPanel = () => {
                 <TableRow>
                   <TableHead>Data</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Subscription ID</TableHead>
+                  <TableHead>Order / Sub</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-20"></TableHead>
+                  <TableHead className="w-28"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -151,13 +192,24 @@ export const PagarmeWebhooksPanel = () => {
                     </TableCell>
                     <TableCell className="font-mono text-xs">{e.event_type}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {e.pagarme_subscription_id ?? "—"}
+                      {e.order_id?.slice(0, 8) ?? e.pagarme_subscription_id?.slice(0, 12) ?? "—"}
                     </TableCell>
                     <TableCell>{statusBadge(e)}</TableCell>
-                    <TableCell>
+                    <TableCell className="space-x-1">
                       <Button variant="ghost" size="sm" onClick={() => setSelected(e)}>
                         Ver
                       </Button>
+                      {canReprocess(e) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={reprocessingId === e.id}
+                          onClick={() => handleReprocess(e.id)}
+                          title="Reprocessar evento"
+                        >
+                          <RotateCcw className={`h-4 w-4 ${reprocessingId === e.id ? "animate-spin" : ""}`} />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -175,6 +227,8 @@ export const PagarmeWebhooksPanel = () => {
           {selected && (
             <div className="space-y-3 text-sm">
               <div><span className="text-muted-foreground">Event ID:</span> <span className="font-mono">{selected.event_id ?? "—"}</span></div>
+              <div><span className="text-muted-foreground">Order ID:</span> <span className="font-mono">{selected.order_id ?? "—"}</span></div>
+              <div><span className="text-muted-foreground">Pagar.me Order:</span> <span className="font-mono">{selected.pagarme_order_id ?? "—"}</span></div>
               <div><span className="text-muted-foreground">Subscription:</span> <span className="font-mono">{selected.pagarme_subscription_id ?? "—"}</span></div>
               <div><span className="text-muted-foreground">Customer:</span> <span className="font-mono">{selected.pagarme_customer_id ?? "—"}</span></div>
               <div><span className="text-muted-foreground">Recebido em:</span> {new Date(selected.created_at).toLocaleString("pt-BR")}</div>
@@ -184,6 +238,28 @@ export const PagarmeWebhooksPanel = () => {
               {selected.processing_error && (
                 <div className="text-destructive"><strong>Erro:</strong> {selected.processing_error}</div>
               )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {canReprocess(selected) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reprocessingId === selected.id}
+                    onClick={() => handleReprocess(selected.id)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reprocessar evento
+                  </Button>
+                )}
+                {selected.order_id && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSyncOrder(selected.order_id!)}
+                  >
+                    Sincronizar pedido (Pagar.me)
+                  </Button>
+                )}
+              </div>
               <div>
                 <div className="text-muted-foreground mb-1">Payload:</div>
                 <pre className="bg-muted p-3 rounded text-xs overflow-auto max-h-96">

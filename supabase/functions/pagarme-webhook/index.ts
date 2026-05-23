@@ -625,102 +625,13 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
   }
 }
 
+
 async function processOrderPaymentEvent(type: string, data: PagarmeData) {
   if (await processPlatformSubscriptionOrderPayment(type, data)) {
     return;
   }
 
-  const pagarmeOrderId = extractPagarmeOrderId(type, data);
-  const pagarmeChargeId = data.id && type.startsWith("charge.")
-    ? data.id
-    : data.charge?.id ?? data.charges?.[0]?.id ?? null;
-  const metadataOrderId = data.metadata?.order_id ?? data.order?.metadata?.order_id ?? null;
-  const newPaymentStatus = mapOrderPaymentStatus(type, data.status);
-
-  if (!newPaymentStatus) return;
-
-  let paymentQuery = supabase
-    .from("order_payments")
-    .select("*");
-
-  if (metadataOrderId) {
-    paymentQuery = paymentQuery.eq("order_id", metadataOrderId);
-  } else if (pagarmeOrderId) {
-    paymentQuery = paymentQuery.eq("provider_order_id", pagarmeOrderId);
-  } else if (pagarmeChargeId) {
-    paymentQuery = paymentQuery.eq("provider_charge_id", pagarmeChargeId);
-  } else {
-    return;
-  }
-
-  const { data: payment } = await paymentQuery
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!payment?.order_id) return;
-
-  const paidAt = newPaymentStatus === "paid" ? new Date().toISOString() : payment.paid_at;
-  await supabase
-    .from("order_payments")
-    .update({
-      status: newPaymentStatus,
-      paid_at: paidAt,
-      provider_order_id: pagarmeOrderId ?? payment.provider_order_id,
-      provider_charge_id: pagarmeChargeId ?? payment.provider_charge_id,
-      raw_response: data,
-    })
-    .eq("id", payment.id);
-
-  const orderStatus = newPaymentStatus === "paid"
-    ? "pendente"
-    : newPaymentStatus === "pending"
-      ? "aguardando_pagamento"
-      : "pagamento_falhou";
-
-  await supabase
-    .from("orders")
-    .update({
-      payment_status: newPaymentStatus,
-      payment_provider: "pagarme",
-      payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
-      paid_at: paidAt,
-      status: orderStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", payment.order_id);
-
-  await supabase
-    .from("delivery_orders")
-    .update({
-      payment_status: newPaymentStatus,
-      payment_provider: "pagarme",
-      payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
-      paid_at: paidAt,
-      status: newPaymentStatus === "paid"
-        ? "pending"
-        : newPaymentStatus === "pending"
-          ? "awaiting_payment"
-          : "payment_failed",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("order_id", payment.order_id);
-
-  if (newPaymentStatus === "paid") {
-    const { data: order } = await supabase
-      .from("orders")
-      .select("restaurant_id, order_type, table_id")
-      .eq("id", payment.order_id)
-      .maybeSingle();
-
-    if (order?.order_type === "mesa" && order.table_id) {
-      await supabase
-        .from("mesas")
-        .update({ status: "ocupada", updated_at: new Date().toISOString() })
-        .eq("id", order.table_id)
-        .eq("restaurant_id", order.restaurant_id);
-    }
-  }
+  await reconcileOrderPaymentFromPagarme(supabase, type, data as PagarmeOrderPaymentData);
 }
 
 function mapOrderPaymentStatus(type: string, status?: string): string | null {

@@ -2,6 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
 import { captureEdgeException } from "../_shared/observability.ts";
 import { pollIfoodEvents, type IfoodPollConfig } from "../_shared/ifood-poll-core.ts";
+import {
+  getIfoodAccessToken,
+  loadIfoodCredentialsForRestaurant,
+  pushPubfyStatusToIfood,
+} from "../_shared/ifood-api.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +17,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
-type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll";
+type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "update_notifications" | "test" | "poll" | "update_order_status";
 
 type IfoodConfig = {
   restaurant_id: string;
@@ -24,6 +29,8 @@ type IfoodConfig = {
   polling_enabled: boolean;
   polling_interval: number;
   webhook_url: string | null;
+  notify_new_orders: boolean;
+  notify_status_changes: boolean;
 };
 
 type Profile = {
@@ -119,12 +126,14 @@ const publicConfigFor = (config: Partial<IfoodConfig> | null) => ({
   pollingInterval: config?.polling_interval ?? 60,
   webhookUrl: config?.webhook_url || null,
   hasStoredCredentials: Boolean(config?.client_secret),
+  notifyNewOrders: config?.notify_new_orders ?? true,
+  notifyStatusChanges: config?.notify_status_changes ?? true,
 });
 
 const loadIfoodConfigRow = async (restaurantId: string) => {
   const { data, error } = await admin
     .from("ifood_integration")
-    .select("restaurant_id, client_id, client_secret, merchant_id, restaurant_ifood_id, is_enabled, polling_enabled, polling_interval, webhook_url")
+    .select("restaurant_id, client_id, client_secret, merchant_id, restaurant_ifood_id, is_enabled, polling_enabled, polling_interval, webhook_url, notify_new_orders, notify_status_changes")
     .eq("restaurant_id", restaurantId)
     .maybeSingle();
 
@@ -172,6 +181,12 @@ const saveConfig = async (restaurantId: string, payload: Record<string, unknown>
     is_enabled: typeof payload.isEnabled === "boolean" ? payload.isEnabled : Boolean(existing?.is_enabled),
     polling_enabled: typeof payload.pollingEnabled === "boolean" ? payload.pollingEnabled : (existing?.polling_enabled ?? true),
     polling_interval: pollingInterval,
+    notify_new_orders: typeof payload.notifyNewOrders === "boolean"
+      ? payload.notifyNewOrders
+      : (existing?.notify_new_orders ?? true),
+    notify_status_changes: typeof payload.notifyStatusChanges === "boolean"
+      ? payload.notifyStatusChanges
+      : (existing?.notify_status_changes ?? true),
     updated_at: new Date().toISOString(),
   };
 
@@ -253,6 +268,62 @@ const updatePollingConfig = async (restaurantId: string, payload: Record<string,
   };
 };
 
+
+const updateOrderStatusOnIfood = async (
+  restaurantId: string,
+  orderId: string,
+  pubfyStatus: string,
+) => {
+  const { data: order, error: orderError } = await admin
+    .from("orders")
+    .select("id, ifood_id, source, order_type, status")
+    .eq("id", orderId)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (orderError) throw orderError;
+  if (!order?.id) throw new Error("Pedido não encontrado.");
+  if (!order.ifood_id || order.source !== "ifood") {
+    return { success: true, skipped: true, reason: "not_ifood_order" };
+  }
+
+  const credentials = await loadIfoodCredentialsForRestaurant(admin, restaurantId);
+  const orderTypeHint = order.order_type === "balcao" ? "TAKEOUT" : "DELIVERY";
+  const result = await pushPubfyStatusToIfood(
+    credentials,
+    order.ifood_id,
+    pubfyStatus,
+    orderTypeHint,
+  );
+
+  return { success: true, ifood_order_id: order.ifood_id, pubfy_status: pubfyStatus, ...result };
+};
+
+
+
+const updateNotificationConfig = async (restaurantId: string, payload: Record<string, unknown>) => {
+  const notifyNewOrders = payload.notifyNewOrders;
+  const notifyStatusChanges = payload.notifyStatusChanges;
+  if (typeof notifyNewOrders !== "boolean" && typeof notifyStatusChanges !== "boolean") {
+    throw new Error("Informe ao menos uma preferência de notificação.");
+  }
+
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (typeof notifyNewOrders === "boolean") update.notify_new_orders = notifyNewOrders;
+  if (typeof notifyStatusChanges === "boolean") update.notify_status_changes = notifyStatusChanges;
+
+  const { error } = await admin
+    .from("ifood_integration")
+    .update(update)
+    .eq("restaurant_id", restaurantId);
+
+  if (error) throw error;
+
+  const saved = await loadIfoodConfigRow(restaurantId);
+  return { success: true, config: publicConfigFor(saved) };
+};
+
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -279,14 +350,27 @@ serve(async (req: Request) => {
       return jsonResponse(await toggleConfig(restaurantId, payload.enabled));
     }
 
+    if (action === "update_notifications") {
+      return jsonResponse(await updateNotificationConfig(restaurantId, payload));
+    }
+
     if (action === "update_polling") {
       return jsonResponse(await updatePollingConfig(restaurantId, payload));
+    }
+
+    if (action === "update_order_status") {
+      const orderId = String(payload.orderId || payload.order_id || "").trim();
+      const pubfyStatus = String(payload.pubfyStatus || payload.status || "").trim();
+      if (!orderId || !pubfyStatus) {
+        throw new Error("orderId e pubfyStatus são obrigatórios.");
+      }
+      return jsonResponse(await updateOrderStatusOnIfood(restaurantId, orderId, pubfyStatus));
     }
 
     const config = await loadIfoodConfig(restaurantId);
 
     if (action === "test") {
-      await getIfoodToken(config);
+      await getIfoodAccessToken(config);
       return jsonResponse({
         success: true,
         merchantId: config.merchant_id,

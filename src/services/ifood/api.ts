@@ -1,7 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { IfoodConnectionTestResult, IfoodPollResult } from "./types";
 
-type IfoodFunctionAction = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll";
+type IfoodFunctionAction =
+  | "get_config"
+  | "save_config"
+  | "toggle"
+  | "update_polling"
+  | "update_notifications"
+  | "test"
+  | "poll"
+  | "update_order_status";
 
 export interface IfoodIntegrationConfigResponse {
   success: boolean;
@@ -14,6 +22,8 @@ export interface IfoodIntegrationConfigResponse {
     pollingInterval: number;
     webhookUrl: string | null;
     hasStoredCredentials: boolean;
+    notifyNewOrders: boolean;
+    notifyStatusChanges: boolean;
   };
 }
 
@@ -26,6 +36,8 @@ export interface SaveIfoodIntegrationConfigParams {
   isEnabled: boolean;
   pollingEnabled: boolean;
   pollingInterval: number;
+  notifyNewOrders?: boolean;
+  notifyStatusChanges?: boolean;
 }
 
 const invokeIfoodFunction = async <T>(
@@ -78,6 +90,16 @@ export const updateIfoodPollingSettings = async (
   });
 };
 
+export const updateIfoodNotificationSettings = async (
+  restaurantId: string | undefined,
+  prefs: { notifyNewOrders?: boolean; notifyStatusChanges?: boolean },
+): Promise<IfoodIntegrationConfigResponse> => {
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("update_notifications", {
+    restaurantId,
+    ...prefs,
+  });
+};
+
 export const testIfoodConnection = async (
   restaurantId?: string,
 ): Promise<IfoodConnectionTestResult> => {
@@ -102,10 +124,25 @@ export const getIfoodOrderDetails = async () => {
   );
 };
 
-export const updateIfoodOrderStatus = async () => {
-  throw new Error(
-    "A atualização direta de status iFood ainda precisa ser implementada via Edge Function.",
-  );
+export type IfoodOrderStatusPushResult = {
+  success: boolean;
+  skipped?: boolean;
+  reason?: string;
+  ifood_order_id?: string;
+  pubfy_status?: string;
+  actions?: string[];
+};
+
+export const updateIfoodOrderStatus = async (
+  orderId: string,
+  pubfyStatus: string,
+  restaurantId?: string,
+): Promise<IfoodOrderStatusPushResult> => {
+  return invokeIfoodFunction<IfoodOrderStatusPushResult>("update_order_status", {
+    orderId,
+    pubfyStatus,
+    restaurantId,
+  });
 };
 
 export const processIfoodWebhookEvent = async () => undefined;

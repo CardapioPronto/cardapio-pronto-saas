@@ -14,6 +14,7 @@ import {
   mapPedidoStatusToDeliveryStatus,
   notifyDeliveryOrderStatusWhatsApp,
 } from "@/lib/deliveryOrderStatusWhatsApp";
+import { updateOrderStatusInIfood } from "@/services/ifood/syncService";
 import { toast } from "sonner";
 
 type PedidoQueryRow = {

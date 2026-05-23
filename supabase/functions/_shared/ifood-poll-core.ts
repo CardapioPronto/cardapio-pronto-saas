@@ -29,6 +29,7 @@ export type IfoodPollResult = {
   eventsStored: number;
   eventsAcknowledged: number;
   ordersImported: number;
+  ordersStatusUpdated: number;
 };
 
 const ifoodFetch = async (path: string, init: RequestInit = {}) => {
@@ -115,22 +116,36 @@ const orderTypeFor = (orderType?: string) => {
   return "delivery";
 };
 
+type ImportOrderOutcome = "imported" | "status_updated" | "unchanged";
+
 const importOrder = async (
   admin: SupabaseClient,
   restaurantId: string,
   order: Record<string, unknown>,
-) => {
+): Promise<ImportOrderOutcome> => {
   const ifoodId = String(order.id || "");
-  if (!ifoodId) return false;
+  if (!ifoodId) return "unchanged";
 
   const { data: existing } = await admin
     .from("orders")
-    .select("id")
+    .select("id, status")
     .eq("restaurant_id", restaurantId)
     .eq("ifood_id", ifoodId)
     .maybeSingle();
 
-  if (existing?.id) return false;
+  const mappedStatus = mapStatus(String(order.status || "PLACED"));
+
+  if (existing?.id) {
+    if (existing.status !== mappedStatus) {
+      const { error: statusError } = await admin
+        .from("orders")
+        .update({ status: mappedStatus, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      if (statusError) throw statusError;
+      return "status_updated";
+    }
+    return "unchanged";
+  }
 
   const orderType = String(order.orderType || order.type || "DELIVERY");
   const displayId = String(order.displayId || order.shortReference || ifoodId.slice(0, 8));
@@ -191,7 +206,7 @@ const importOrder = async (
     if (itemsError) throw itemsError;
   }
 
-  return true;
+  return "imported";
 };
 
 /** Consulta eventos iFood, importa pedidos e confirma (ACK) ao marketplace. */
@@ -223,6 +238,7 @@ export async function pollIfoodEvents(
 
   let eventsStored = 0;
   let ordersImported = 0;
+  let ordersStatusUpdated = 0;
   const acknowledgedIds: string[] = [];
 
   for (const event of events.sort((a, b) =>
@@ -254,9 +270,11 @@ export async function pollIfoodEvents(
             "Content-Type": "application/json",
           },
         });
-        if (order && await importOrder(admin, restaurantId, order as Record<string, unknown>)) {
-          ordersImported++;
-        }
+        const outcome = order
+          ? await importOrder(admin, restaurantId, order as Record<string, unknown>)
+          : "unchanged";
+        if (outcome === "imported") ordersImported++;
+        if (outcome === "status_updated") ordersStatusUpdated++;
         acknowledgedIds.push(event.id);
       } catch (error) {
         await admin
@@ -293,5 +311,6 @@ export async function pollIfoodEvents(
     eventsStored,
     eventsAcknowledged: acknowledgedIds.length,
     ordersImported,
+    ordersStatusUpdated,
   };
 }

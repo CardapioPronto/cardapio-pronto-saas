@@ -5,6 +5,8 @@ import DashboardHeader from "./DashboardHeader";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
 import { RenewalBanner } from "@/components/subscription/RenewalBanner";
 import { PastDueGraceBanner } from "@/components/subscription/PastDueGraceBanner";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useIfoodBackgroundSync } from "@/hooks/useIfoodBackgroundSync";
 
 interface DashboardLayoutProps {
   children: ReactNode;
