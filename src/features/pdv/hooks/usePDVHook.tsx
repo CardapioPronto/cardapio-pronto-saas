@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Product } from "@/types";
 import {
   DadosClientePedido,
@@ -383,7 +383,7 @@ export const usePDVHook = (restaurantId: string) => {
     if (result.success) {
       setPedidosHistorico(pedidos => 
         pedidos.map(pedido => 
-          pedido.id === pedidoId 
+          String(pedido.id) === String(pedidoId) 
             ? { ...pedido, status: novoStatus } 
             : pedido
         )
