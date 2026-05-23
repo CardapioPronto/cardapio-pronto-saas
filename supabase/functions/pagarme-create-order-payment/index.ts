@@ -305,7 +305,34 @@ Deno.serve(async (req) => {
     if (itemsError) throw itemsError;
     if (!items?.length) return json({ error: "Order has no items" }, 400);
 
-    const amountInCents = cents(Number(order.total || 0));
+    const { data: deliveryOrder, error: deliveryError } = await supabase
+      .from("delivery_orders")
+      .select("delivery_fee")
+      .eq("order_id", order.id)
+      .maybeSingle();
+
+    if (deliveryError) throw deliveryError;
+
+    let pagarmeLineItems;
+    try {
+      pagarmeLineItems = buildPagarmeOrderLineItems({
+        items: items as OrderItemRow[],
+        orderTotal: Number(order.total || 0),
+        deliveryFee: Number(deliveryOrder?.delivery_fee ?? 0),
+      });
+    } catch (reconcileError) {
+      const msg = reconcileError instanceof Error ? reconcileError.message : String(reconcileError);
+      return json({ error: `Order total does not match billable items: ${msg}` }, 400);
+    }
+
+    const amountInCents = pagarmeLineItems.reduce(
+      (sum, li) => sum + li.amount * li.quantity,
+      0,
+    );
+    if (amountInCents !== toCents(Number(order.total || 0))) {
+      return json({ error: "Order total does not match billable items" }, 400);
+    }
+
     const split = settings.marketplace_mode === "split" ? buildSplit(settings, amountInCents) : undefined;
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const phone = phoneObject(order.customer_phone);
@@ -321,12 +348,7 @@ Deno.serve(async (req) => {
     const pagarmeOrder = await pagarme<PagarmeOrder>("/orders", "POST", {
       code: order.order_number || order.id,
       closed: true,
-      items: (items as OrderItemRow[]).map((item) => ({
-        amount: cents(Number(item.price || 0)),
-        description: item.product_name || "Item",
-        quantity: Number(item.quantity || 1),
-        code: item.id,
-      })),
+      items: pagarmeLineItems,
       customer: {
         name: order.customer_name || "Cliente",
         email: order.customer_email || `pedido-${order.id}@pubfy.local`,

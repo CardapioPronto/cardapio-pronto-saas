@@ -158,7 +158,8 @@ export async function createRecurringSubscriptionAfterCardOrder(
   }
 
   const refreshed = await loadOrderForRecurring(pagarme, input.order);
-  let { customerId, cardId } = extractCustomerAndCardFromOrder(refreshed);
+  const { customerId, cardId: initialCardId } = extractCustomerAndCardFromOrder(refreshed);
+  let cardId = initialCardId;
 
   if (!customerId) {
     throw new Error(
