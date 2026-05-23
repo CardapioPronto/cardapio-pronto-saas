@@ -24,6 +24,7 @@ import {
   toEndOfDayIso,
   toStartOfDayIso,
 } from "../utils/historicoPedidos";
+import { useOrdersRealtimeSubscription } from "./useOrdersRealtimeSubscription";
 
 export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
