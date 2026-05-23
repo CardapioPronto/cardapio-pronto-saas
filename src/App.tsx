@@ -60,7 +60,7 @@ function App() {
     initializeSupabase();
   }, []);
 
-  if (isLoading || !supabaseReady) {
+  if (isLoading) {
     return <AppBootstrapLoader />;
   }
 

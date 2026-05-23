@@ -2,6 +2,7 @@
 import { supabase } from './supabase';
 import { PostgrestError } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
+import { isCiPlaceholderSupabase } from './ci-supabase';
 
 // Interface genérica para respostas do serviço
 interface ServiceResponse<T> {
