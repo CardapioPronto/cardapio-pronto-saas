@@ -17,7 +17,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
-type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll" | "update_order_status";
+type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "update_notifications" | "test" | "poll" | "update_order_status";
 
 type IfoodConfig = {
   restaurant_id: string;
@@ -29,6 +29,8 @@ type IfoodConfig = {
   polling_enabled: boolean;
   polling_interval: number;
   webhook_url: string | null;
+  notify_new_orders: boolean;
+  notify_status_changes: boolean;
 };
 
 type Profile = {
@@ -124,12 +126,14 @@ const publicConfigFor = (config: Partial<IfoodConfig> | null) => ({
   pollingInterval: config?.polling_interval ?? 60,
   webhookUrl: config?.webhook_url || null,
   hasStoredCredentials: Boolean(config?.client_secret),
+  notifyNewOrders: config?.notify_new_orders ?? true,
+  notifyStatusChanges: config?.notify_status_changes ?? true,
 });
 
 const loadIfoodConfigRow = async (restaurantId: string) => {
   const { data, error } = await admin
     .from("ifood_integration")
-    .select("restaurant_id, client_id, client_secret, merchant_id, restaurant_ifood_id, is_enabled, polling_enabled, polling_interval, webhook_url")
+    .select("restaurant_id, client_id, client_secret, merchant_id, restaurant_ifood_id, is_enabled, polling_enabled, polling_interval, webhook_url, notify_new_orders, notify_status_changes")
     .eq("restaurant_id", restaurantId)
     .maybeSingle();
 
@@ -177,6 +181,12 @@ const saveConfig = async (restaurantId: string, payload: Record<string, unknown>
     is_enabled: typeof payload.isEnabled === "boolean" ? payload.isEnabled : Boolean(existing?.is_enabled),
     polling_enabled: typeof payload.pollingEnabled === "boolean" ? payload.pollingEnabled : (existing?.polling_enabled ?? true),
     polling_interval: pollingInterval,
+    notify_new_orders: typeof payload.notifyNewOrders === "boolean"
+      ? payload.notifyNewOrders
+      : (existing?.notify_new_orders ?? true),
+    notify_status_changes: typeof payload.notifyStatusChanges === "boolean"
+      ? payload.notifyStatusChanges
+      : (existing?.notify_status_changes ?? true),
     updated_at: new Date().toISOString(),
   };
 
@@ -290,6 +300,30 @@ const updateOrderStatusOnIfood = async (
 };
 
 
+
+const updateNotificationConfig = async (restaurantId: string, payload: Record<string, unknown>) => {
+  const notifyNewOrders = payload.notifyNewOrders;
+  const notifyStatusChanges = payload.notifyStatusChanges;
+  if (typeof notifyNewOrders !== "boolean" && typeof notifyStatusChanges !== "boolean") {
+    throw new Error("Informe ao menos uma preferência de notificação.");
+  }
+
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (typeof notifyNewOrders === "boolean") update.notify_new_orders = notifyNewOrders;
+  if (typeof notifyStatusChanges === "boolean") update.notify_status_changes = notifyStatusChanges;
+
+  const { error } = await admin
+    .from("ifood_integration")
+    .update(update)
+    .eq("restaurant_id", restaurantId);
+
+  if (error) throw error;
+
+  const saved = await loadIfoodConfigRow(restaurantId);
+  return { success: true, config: publicConfigFor(saved) };
+};
+
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -314,6 +348,10 @@ serve(async (req: Request) => {
 
     if (action === "toggle") {
       return jsonResponse(await toggleConfig(restaurantId, payload.enabled));
+    }
+
+    if (action === "update_notifications") {
+      return jsonResponse(await updateNotificationConfig(restaurantId, payload));
     }
 
     if (action === "update_polling") {

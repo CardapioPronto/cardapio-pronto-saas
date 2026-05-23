@@ -21,6 +21,7 @@ export {
   saveIfoodIntegrationConfig,
   setIfoodIntegrationStatus,
   updateIfoodPollingSettings,
+  updateIfoodNotificationSettings,
   testIfoodConnection,
   pollIfoodEvents,
   getIfoodPendingOrders,

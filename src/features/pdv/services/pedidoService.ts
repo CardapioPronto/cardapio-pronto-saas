@@ -10,6 +10,11 @@ import {
   PedidoStatus,
 } from "../types";
 import { WhatsAppService } from "@/services/whatsapp/whatsappService";
+import {
+  mapPedidoStatusToDeliveryStatus,
+  notifyDeliveryOrderStatusWhatsApp,
+} from "@/lib/deliveryOrderStatusWhatsApp";
+import { updateOrderStatusInIfood } from "@/services/ifood/syncService";
 import { toast } from "sonner";
 
 type PedidoQueryRow = {
@@ -355,30 +360,6 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoSt
     } else {
       toast.success(`Status do pedido atualizado para ${novoStatus}`);
     }
-
-    const { data: orderMeta } = await supabase
-      .from("orders")
-      .select("source, ifood_id, restaurant_id")
-      .eq("id", pedidoId)
-      .maybeSingle();
-
-    if (orderMeta?.source === "ifood" && orderMeta.ifood_id) {
-      void updateOrderStatusInIfood(
-        pedidoId,
-        novoStatus,
-        orderMeta.restaurant_id ?? updatedRow?.restaurant_id,
-      );
-    }
-
-    const deliveryStatus = mapPedidoStatusToDeliveryStatus(novoStatus);
-    if (deliveryStatus) {
-      try {
-        await notifyDeliveryOrderStatusWhatsApp(pedidoId, deliveryStatus);
-      } catch (whatsappError) {
-        console.error("Falha ao notificar cliente via WhatsApp:", whatsappError);
-      }
-    }
-
     return { success: true, data };
   } catch (error) {
     console.error('Erro ao alterar status:', error);
