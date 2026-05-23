@@ -1,6 +1,5 @@
 /**
  * Prompt de IA do Atendimento WhatsApp (automation_settings por instância).
- * whatsapp_integration.ai_system_prompt é fallback legado (Fase 2).
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
@@ -12,7 +11,7 @@ export type ResolveSystemPromptOptions = {
 
 export type ResolveSystemPromptResult = {
   systemPrompt: string;
-  source: "automation_settings" | "whatsapp_integration_legacy" | "default";
+  source: "automation_settings" | "default";
   instanceId: string | null;
 };
 
@@ -125,25 +124,6 @@ export async function resolveWhatsAppSystemPrompt(
         return { systemPrompt: composed, source: "automation_settings", instanceId };
       }
     }
-  }
-
-  const { data: integration, error: integrationError } = await supabase
-    .from("whatsapp_integration")
-    .select("ai_system_prompt")
-    .eq("restaurant_id", restaurantId)
-    .maybeSingle();
-
-  if (integrationError && integrationError.code !== "PGRST116") {
-    throw integrationError;
-  }
-
-  const legacyPrompt = trimOrNull(integration?.ai_system_prompt);
-  if (legacyPrompt) {
-    return {
-      systemPrompt: legacyPrompt,
-      source: "whatsapp_integration_legacy",
-      instanceId,
-    };
   }
 
   return {
