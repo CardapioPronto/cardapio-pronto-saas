@@ -218,6 +218,46 @@ function extractWebhookUrl(result: unknown): string | null {
   return raw ? String(raw) : null;
 }
 
+
+/** Impede operar instância Evolution de outro restaurante (multi-tenant). */
+async function assertInstanceBelongsToRestaurant(
+  supabase: SupabaseAdminClient,
+  instanceName: string,
+  restaurantId: string,
+  action: EvolutionRequest['action'],
+): Promise<void> {
+  const trimmed = String(instanceName || "").trim();
+  if (!trimmed) throw new Error("instanceName é obrigatório.");
+
+  if (action === "create_instance") {
+    const { data: foreign, error } = await supabase
+      .from("whatsapp_instances")
+      .select("restaurant_id")
+      .eq("instance_name", trimmed)
+      .neq("restaurant_id", restaurantId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (foreign) {
+      throw new Error("Este nome de instância já está em uso por outro estabelecimento.");
+    }
+    return;
+  }
+
+  const { data: owned, error: ownedError } = await supabase
+    .from("whatsapp_instances")
+    .select("id")
+    .eq("instance_name", trimmed)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (ownedError) throw ownedError;
+  if (!owned?.id) {
+    throw new Error("Instância WhatsApp não encontrada para este estabelecimento.");
+  }
+}
+
 async function authorizeRequest(req: Request, restaurantId: string, action: EvolutionRequest['action']) {
   const authHeader = req.headers.get('Authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '');
