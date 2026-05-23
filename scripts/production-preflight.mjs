@@ -27,6 +27,8 @@ const cadastro = read("src/pages/Cadastro.tsx");
 const createEmployee = read("supabase/functions/create-employee/index.ts");
 const finalizeOwnerSignup = read("supabase/functions/finalize-owner-signup/index.ts");
 const cleanupOwnerSignups = read("supabase/functions/cleanup-unverified-owner-signups/index.ts");
+const ifoodPollCron = read("supabase/functions/ifood-poll-cron/index.ts");
+const ifoodPollCronMigration = read("supabase/migrations/20260523190000_ifood_poll_cron_foundation.sql");
 const checkoutMigration = read("supabase/migrations/20260507123000_harden_public_menu_order_integrity.sql");
 const trialSubscriptionMigration = read("supabase/migrations/20260509103000_ensure_trial_subscription_on_restaurant_create.sql");
 const subscriptionsPlanIdUuidMigration = read("supabase/migrations/20260511103000_subscriptions_plan_id_uuid_fk.sql");
@@ -113,6 +115,17 @@ check(
 );
 
 check(
+  "iFood poll cron is protected by internal secret",
+  functionBlock(config, "ifood-poll-cron") === "false"
+    && ifoodPollCron.includes("x-cron-secret")
+    && ifoodPollCron.includes("CRON_SECRET")
+    && ifoodPollCron.includes("pollIfoodEvents")
+    && ifoodPollCronMigration.includes("ifood-poll-cron-every-minute")
+    && ifoodPollCronMigration.includes("last_polled_at"),
+  "ifood-poll-cron must run without JWT, require x-cron-secret, and schedule pg_cron with last_polled_at tracking",
+);
+
+check(
   "Expired unverified owner signups can be cleaned safely",
   functionBlock(config, "cleanup-unverified-owner-signups") === "false"
     && cleanupOwnerSignups.includes("OWNER_SIGNUP_CLEANUP_SECRET")
@@ -143,6 +156,7 @@ check(
       "create-trial-subscription",
       "finalize-owner-signup",
       "cleanup-unverified-owner-signups",
+      "ifood-poll-cron",
       "pagarme-create-order-payment",
       "send-delivery-whatsapp",
       "email-dispatch",
