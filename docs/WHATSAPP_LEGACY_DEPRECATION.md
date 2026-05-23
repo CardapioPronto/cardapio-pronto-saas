@@ -63,9 +63,17 @@ Ao achar bug: anotar **fluxo** (atendimento / delivery criado / status PDV / iFo
 - ~~Migrar `ai_system_prompt` (e demais campos ainda úteis) para tabela de automação por instância (`whatsapp_automation_settings` ou equivalente já usada em Atendimento).
 - Deprecar colunas `ultramsg_*`, `twilio_*`, `provider` em migration com comentário; não dropar até `generate-ai-response` e n8n não lerem mais `whatsapp_integration`.
 
-### Fase 3 — Limpeza DB
+### Fase 3 — Limpeza DB ✅ (branch `cursor/whatsapp-phase3-50a9`)
 
-- Dropar colunas/tabela legado só com auditoria de produção (restaurantes ainda com linhas UltraMsg).
+- Migration `20260524140000_whatsapp_legacy_tables_phase3.sql` remove:
+  - `whatsapp_integration`, `whatsapp_messages`, `whatsapp_message_templates`
+  - `whatsapp_ai_config`, `whatsapp_chat_history`
+- Mantido: `whatsapp_instances`, `automation_settings`, `conversation_*`, edges n8n/Evolution.
+- `generate-ai-response` sem fallback em `whatsapp_integration`.
+- `evolutionService.ts` reduzido (só `callEvolutionAPI`).
+- Tipos Supabase atualizados no repo (após deploy, rodar `supabase gen types` no projeto).
+
+**Deploy:** aplicar Fase 2 antes da Fase 3 (`db push` em ordem).
 
 ## Matriz “quem chama o quê”
 

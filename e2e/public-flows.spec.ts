@@ -30,14 +30,12 @@ test("login exibe o formulário", async ({ page }) => {
 });
 
 test("banner de cookies pode ser aceito e permanece oculto após recarregar", async ({ page }) => {
-  await page.addInitScript(() => {
-    try {
-      localStorage.removeItem("pubfy_cookie_consent_v1");
-    } catch {
-      /* ignore */
-    }
-  });
   await page.goto("/");
+  await waitForPublicHeader(page);
+  await page.evaluate(() => {
+    localStorage.removeItem("pubfy_cookie_consent_v1");
+  });
+  await page.reload();
   await waitForPublicHeader(page);
   const bar = page.getByTestId("cookie-consent");
   await expect(bar).toBeVisible({ timeout: 30_000 });

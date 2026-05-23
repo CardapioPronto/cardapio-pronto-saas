@@ -2,11 +2,16 @@
 import { supabase } from './supabase';
 import { checkSupabaseConnection } from './supabase-service';
 import { toast } from '@/components/ui/use-toast';
+import { isCiPlaceholderSupabase } from './ci-supabase';
 
 /**
  * Inicializa a conexão com o Supabase e verifica se está funcionando corretamente
  */
 export async function initSupabase(): Promise<boolean> {
+  if (isCiPlaceholderSupabase()) {
+    return false;
+  }
+
   try {
     // Verifica se a conexão com o Supabase está funcionando
     const { connected, error } = await checkSupabaseConnection();
@@ -22,15 +27,7 @@ export async function initSupabase(): Promise<boolean> {
     }
     
     // Verifica a sessão atual do usuário
-    const { data, error: sessionError } = await supabase.auth.getSession();
-    
-    // if (sessionError) {
-    //   console.error('Erro ao verificar a sessão:', sessionError.message);
-    // } else if (data?.session) {
-    //   console.log('Usuário já autenticado:', data.session.user.email);
-    // } else {
-    //   console.log('Nenhum usuário autenticado.');
-    // }
+    await supabase.auth.getSession();
     
     return true;
   } catch (error) {

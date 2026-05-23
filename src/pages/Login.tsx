@@ -77,7 +77,7 @@ const Login = () => {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center" aria-label="Pubfy página inicial">
               <span className="text-navy text-2xl font-bold">Pubfy</span>
             </Link>
           </div>

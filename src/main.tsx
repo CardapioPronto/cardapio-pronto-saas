@@ -16,17 +16,17 @@ if (!container) {
   throw new Error('Container element not found!')
 }
 
-initSupabase().then((connected) => {
+const root = createRoot(container)
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+
+void initSupabase().then((connected) => {
   if (connected) {
     log.debug('supabase ready')
   } else {
     log.warn('supabase inicializado com avisos')
   }
-
-  const root = createRoot(container)
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  )
 })
