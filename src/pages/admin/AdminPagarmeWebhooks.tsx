@@ -26,6 +26,8 @@ interface WebhookEvent {
   event_id: string | null;
   event_type: string;
   pagarme_subscription_id: string | null;
+  pagarme_order_id: string | null;
+  order_id: string | null;
   pagarme_customer_id: string | null;
   payload: unknown;
   processed: boolean;

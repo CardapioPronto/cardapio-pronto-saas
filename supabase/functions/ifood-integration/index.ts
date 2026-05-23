@@ -2,6 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
 import { captureEdgeException } from "../_shared/observability.ts";
 import { pollIfoodEvents, type IfoodPollConfig } from "../_shared/ifood-poll-core.ts";
+import {
+  getIfoodAccessToken,
+  loadIfoodCredentialsForRestaurant,
+  pushPubfyStatusToIfood,
+} from "../_shared/ifood-api.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +17,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
-type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll";
+type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll" | "update_order_status";
 
 type IfoodConfig = {
   restaurant_id: string;
@@ -253,6 +258,38 @@ const updatePollingConfig = async (restaurantId: string, payload: Record<string,
   };
 };
 
+
+const updateOrderStatusOnIfood = async (
+  restaurantId: string,
+  orderId: string,
+  pubfyStatus: string,
+) => {
+  const { data: order, error: orderError } = await admin
+    .from("orders")
+    .select("id, ifood_id, source, order_type, status")
+    .eq("id", orderId)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (orderError) throw orderError;
+  if (!order?.id) throw new Error("Pedido não encontrado.");
+  if (!order.ifood_id || order.source !== "ifood") {
+    return { success: true, skipped: true, reason: "not_ifood_order" };
+  }
+
+  const credentials = await loadIfoodCredentialsForRestaurant(admin, restaurantId);
+  const orderTypeHint = order.order_type === "balcao" ? "TAKEOUT" : "DELIVERY";
+  const result = await pushPubfyStatusToIfood(
+    credentials,
+    order.ifood_id,
+    pubfyStatus,
+    orderTypeHint,
+  );
+
+  return { success: true, ifood_order_id: order.ifood_id, pubfy_status: pubfyStatus, ...result };
+};
+
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -283,10 +320,19 @@ serve(async (req: Request) => {
       return jsonResponse(await updatePollingConfig(restaurantId, payload));
     }
 
+    if (action === "update_order_status") {
+      const orderId = String(payload.orderId || payload.order_id || "").trim();
+      const pubfyStatus = String(payload.pubfyStatus || payload.status || "").trim();
+      if (!orderId || !pubfyStatus) {
+        throw new Error("orderId e pubfyStatus são obrigatórios.");
+      }
+      return jsonResponse(await updateOrderStatusOnIfood(restaurantId, orderId, pubfyStatus));
+    }
+
     const config = await loadIfoodConfig(restaurantId);
 
     if (action === "test") {
-      await getIfoodToken(config);
+      await getIfoodAccessToken(config);
       return jsonResponse({
         success: true,
         merchantId: config.merchant_id,

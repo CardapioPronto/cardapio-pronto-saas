@@ -102,10 +102,25 @@ export const getIfoodOrderDetails = async () => {
   );
 };
 
-export const updateIfoodOrderStatus = async () => {
-  throw new Error(
-    "A atualização direta de status iFood ainda precisa ser implementada via Edge Function.",
-  );
+export type IfoodOrderStatusPushResult = {
+  success: boolean;
+  skipped?: boolean;
+  reason?: string;
+  ifood_order_id?: string;
+  pubfy_status?: string;
+  actions?: string[];
+};
+
+export const updateIfoodOrderStatus = async (
+  orderId: string,
+  pubfyStatus: string,
+  restaurantId?: string,
+): Promise<IfoodOrderStatusPushResult> => {
+  return invokeIfoodFunction<IfoodOrderStatusPushResult>("update_order_status", {
+    orderId,
+    pubfyStatus,
+    restaurantId,
+  });
 };
 
 export const processIfoodWebhookEvent = async () => undefined;

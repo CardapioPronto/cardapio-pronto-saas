@@ -1,5 +1,6 @@
-import { pollIfoodEvents } from "./api";
+import { pollIfoodEvents, updateIfoodOrderStatus } from "./api";
 import { toast } from "@/components/ui/sonner-toast";
+import type { PedidoStatus } from "@/features/pdv/types";
 
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
