@@ -1,7 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { IfoodConnectionTestResult, IfoodPollResult } from "./types";
 
-type IfoodFunctionAction = "get_config" | "save_config" | "toggle" | "update_polling" | "test" | "poll";
+type IfoodFunctionAction =
+  | "get_config"
+  | "save_config"
+  | "toggle"
+  | "update_polling"
+  | "update_notifications"
+  | "test"
+  | "poll"
+  | "update_order_status";
 
 export interface IfoodIntegrationConfigResponse {
   success: boolean;
@@ -14,6 +22,8 @@ export interface IfoodIntegrationConfigResponse {
     pollingInterval: number;
     webhookUrl: string | null;
     hasStoredCredentials: boolean;
+    notifyNewOrders: boolean;
+    notifyStatusChanges: boolean;
   };
 }
 
@@ -26,6 +36,8 @@ export interface SaveIfoodIntegrationConfigParams {
   isEnabled: boolean;
   pollingEnabled: boolean;
   pollingInterval: number;
+  notifyNewOrders?: boolean;
+  notifyStatusChanges?: boolean;
 }
 
 const invokeIfoodFunction = async <T>(
@@ -75,6 +87,16 @@ export const updateIfoodPollingSettings = async (
     restaurantId,
     pollingEnabled,
     pollingInterval,
+  });
+};
+
+export const updateIfoodNotificationSettings = async (
+  restaurantId: string | undefined,
+  prefs: { notifyNewOrders?: boolean; notifyStatusChanges?: boolean },
+): Promise<IfoodIntegrationConfigResponse> => {
+  return invokeIfoodFunction<IfoodIntegrationConfigResponse>("update_notifications", {
+    restaurantId,
+    ...prefs,
   });
 };
 

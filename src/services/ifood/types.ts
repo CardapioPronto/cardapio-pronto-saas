@@ -29,7 +29,13 @@ export interface IfoodPollResult {
   eventsStored: number;
   eventsAcknowledged: number;
   ordersImported: number;
+  ordersStatusUpdated?: number;
   message?: string;
+}
+
+export interface IfoodNotificationPreferences {
+  notifyNewOrders: boolean;
+  notifyStatusChanges: boolean;
 }
 
 export interface IfoodOrderItem {
