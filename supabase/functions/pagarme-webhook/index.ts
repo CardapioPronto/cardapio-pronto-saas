@@ -625,6 +625,13 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
   }
 }
 
+
+function throwIfDbError(label: string, result: { error: { message?: string } | null }) {
+  if (result.error) {
+    throw new Error(`[pagarme-webhook] ${label}: ${result.error.message ?? "database error"}`);
+  }
+}
+
 async function processOrderPaymentEvent(type: string, data: PagarmeData) {
   if (await processPlatformSubscriptionOrderPayment(type, data)) {
     return;
@@ -661,16 +668,19 @@ async function processOrderPaymentEvent(type: string, data: PagarmeData) {
   if (!payment?.order_id) return;
 
   const paidAt = newPaymentStatus === "paid" ? new Date().toISOString() : payment.paid_at;
-  await supabase
-    .from("order_payments")
-    .update({
-      status: newPaymentStatus,
-      paid_at: paidAt,
-      provider_order_id: pagarmeOrderId ?? payment.provider_order_id,
-      provider_charge_id: pagarmeChargeId ?? payment.provider_charge_id,
-      raw_response: data,
-    })
-    .eq("id", payment.id);
+  throwIfDbError(
+    "order_payments.update",
+    await supabase
+      .from("order_payments")
+      .update({
+        status: newPaymentStatus,
+        paid_at: paidAt,
+        provider_order_id: pagarmeOrderId ?? payment.provider_order_id,
+        provider_charge_id: pagarmeChargeId ?? payment.provider_charge_id,
+        raw_response: data,
+      })
+      .eq("id", payment.id),
+  );
 
   const orderStatus = newPaymentStatus === "paid"
     ? "pendente"
@@ -678,47 +688,60 @@ async function processOrderPaymentEvent(type: string, data: PagarmeData) {
       ? "aguardando_pagamento"
       : "pagamento_falhou";
 
-  await supabase
-    .from("orders")
-    .update({
-      payment_status: newPaymentStatus,
-      payment_provider: "pagarme",
-      payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
-      paid_at: paidAt,
-      status: orderStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", payment.order_id);
+  throwIfDbError(
+    "orders.update",
+    await supabase
+      .from("orders")
+      .update({
+        payment_status: newPaymentStatus,
+        payment_provider: "pagarme",
+        payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
+        paid_at: paidAt,
+        status: orderStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", payment.order_id),
+  );
 
-  await supabase
-    .from("delivery_orders")
-    .update({
-      payment_status: newPaymentStatus,
-      payment_provider: "pagarme",
-      payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
-      paid_at: paidAt,
-      status: newPaymentStatus === "paid"
-        ? "pending"
-        : newPaymentStatus === "pending"
-          ? "awaiting_payment"
-          : "payment_failed",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("order_id", payment.order_id);
+  throwIfDbError(
+    "delivery_orders.update",
+    await supabase
+      .from("delivery_orders")
+      .update({
+        payment_status: newPaymentStatus,
+        payment_provider: "pagarme",
+        payment_reference: pagarmeOrderId ?? pagarmeChargeId ?? payment.provider_order_id,
+        paid_at: paidAt,
+        status: newPaymentStatus === "paid"
+          ? "pending"
+          : newPaymentStatus === "pending"
+            ? "awaiting_payment"
+            : "payment_failed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("order_id", payment.order_id),
+  );
 
   if (newPaymentStatus === "paid") {
-    const { data: order } = await supabase
+    const { data: order, error: orderFetchError } = await supabase
       .from("orders")
       .select("restaurant_id, order_type, table_id")
       .eq("id", payment.order_id)
       .maybeSingle();
 
+    if (orderFetchError) {
+      throw new Error(`[pagarme-webhook] orders.select: ${orderFetchError.message}`);
+    }
+
     if (order?.order_type === "mesa" && order.table_id) {
-      await supabase
-        .from("mesas")
-        .update({ status: "ocupada", updated_at: new Date().toISOString() })
-        .eq("id", order.table_id)
-        .eq("restaurant_id", order.restaurant_id);
+      throwIfDbError(
+        "mesas.update",
+        await supabase
+          .from("mesas")
+          .update({ status: "ocupada", updated_at: new Date().toISOString() })
+          .eq("id", order.table_id)
+          .eq("restaurant_id", order.restaurant_id),
+      );
     }
   }
 }

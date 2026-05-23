@@ -125,12 +125,23 @@ const importOrder = async (
 
   const { data: existing } = await admin
     .from("orders")
-    .select("id")
+    .select("id, status")
     .eq("restaurant_id", restaurantId)
     .eq("ifood_id", ifoodId)
     .maybeSingle();
 
-  if (existing?.id) return false;
+  const mappedStatus = mapStatus(String(order.status || "PLACED"));
+
+  if (existing?.id) {
+    if (existing.status !== mappedStatus) {
+      const { error: statusError } = await admin
+        .from("orders")
+        .update({ status: mappedStatus, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      if (statusError) throw statusError;
+    }
+    return false;
+  }
 
   const orderType = String(order.orderType || order.type || "DELIVERY");
   const displayId = String(order.displayId || order.shortReference || ifoodId.slice(0, 8));

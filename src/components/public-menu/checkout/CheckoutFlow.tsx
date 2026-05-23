@@ -269,34 +269,67 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   };
 
   const submit = async () => {
+    if (submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
     setSubmitting(true);
     try {
       setOnlinePayment(null);
-      const deliveryAddress = needsAddress
-        ? {
-            ...address,
-            customer_name: customer.name || address.customer_name,
-            customer_phone: customer.phone || address.customer_phone,
-          }
-        : undefined;
+      const restaurantId = data.restaurant.id;
+      const pending = readPendingCheckout(restaurantId);
+      const reusePending =
+        pending?.client_request_id === clientRequestIdRef.current && pending.order_id;
 
-      const result = await deliveryOrderService.create({
-        restaurant_id: data.restaurant.id,
-        fulfillment_type: fulfillmentType,
-        table_id: fulfillmentType === 'table' ? context?.tableId : undefined,
-        items,
-        address: deliveryAddress,
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        customer_email: customer.email || undefined,
-        accepts_marketing_email: customer.acceptsEmailMarketing,
-        payment_method: payment,
-        change_for: payment === 'dinheiro' && changeFor ? Number(changeFor) : undefined,
-        notes,
-        coupon_code: appliedCoupon?.code,
-        delivery_fee: deliveryFee,
-        estimated_delivery_minutes: dCfg?.estimated_delivery_minutes,
-      });
+      let result: Awaited<ReturnType<typeof deliveryOrderService.create>>;
+
+      if (reusePending) {
+        result = {
+          id: pending.tracking_id,
+          order_id: pending.order_id,
+          delivery_order_id: pending.delivery_order_id,
+          order_number: pending.order_number,
+          fulfillment_type: fulfillmentType,
+          discount_amount: 0,
+          total: pending.total ?? total,
+        };
+      } else {
+        const deliveryAddress = needsAddress
+          ? {
+              ...address,
+              customer_name: customer.name || address.customer_name,
+              customer_phone: customer.phone || address.customer_phone,
+            }
+          : undefined;
+
+        result = await deliveryOrderService.create({
+          restaurant_id: restaurantId,
+          client_request_id: clientRequestIdRef.current,
+          fulfillment_type: fulfillmentType,
+          table_id: fulfillmentType === 'table' ? context?.tableId : undefined,
+          items,
+          address: deliveryAddress,
+          customer_name: customer.name,
+          customer_phone: customer.phone,
+          customer_email: customer.email || undefined,
+          accepts_marketing_email: customer.acceptsEmailMarketing,
+          payment_method: payment,
+          change_for: payment === 'dinheiro' && changeFor ? Number(changeFor) : undefined,
+          notes,
+          coupon_code: appliedCoupon?.code,
+          delivery_fee: deliveryFee,
+          estimated_delivery_minutes: dCfg?.estimated_delivery_minutes,
+        });
+
+        writePendingCheckout(restaurantId, {
+          client_request_id: clientRequestIdRef.current,
+          order_id: result.order_id,
+          tracking_id: result.id,
+          delivery_order_id: result.delivery_order_id,
+          order_number: result.order_number,
+          fulfillment_type,
+          total: result.total,
+        });
+      }
+
       setCreatedId(result.id);
       if (payment === 'pix_online') {
         const paymentResult = await deliveryOrderService.createOnlinePayment({
@@ -306,11 +339,13 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         });
         setOnlinePayment(paymentResult);
       }
+      clearPendingCheckout(restaurantId);
       setStep('success');
       clear();
     } catch (e: unknown) {
       toast({ title: 'Erro ao enviar pedido', description: getErrorMessage(e, 'Tente novamente'), variant: 'destructive' });
     } finally {
+      submitInFlightRef.current = false;
       setSubmitting(false);
     }
   };

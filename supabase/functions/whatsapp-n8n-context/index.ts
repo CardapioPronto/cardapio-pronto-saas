@@ -382,7 +382,7 @@ async function loadContext(supabase: SupabaseClient, item: IncomingWorkflowItem)
         (order) =>
           `- Pedido ${String(order.id).slice(0, 8)}: ${order.status}, total R$ ${formatMoney(
             order.total,
-          )}, criado em ${order.created_at}`,
+          )}, criado em ${formatBrazilDateTime(order.created_at) ?? order.created_at ?? "—"}`,
       )
       .join("\n") || "Nenhum pedido recente encontrado para este telefone.";
 
