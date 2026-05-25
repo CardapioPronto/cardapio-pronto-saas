@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner-toast';
 import { Edit2, Loader2 } from 'lucide-react';
 import { listAllSubscriptions, updateSubscriptionStatus } from '@/services/adminService';
+import { getSubscriptionStatusMeta, normalizeSubscriptionStatus } from '@/lib/subscriptionStatusUi';
 
 type AdminSubscription = {
   id: string;
@@ -37,6 +38,14 @@ type AdminSubscription = {
   start_date: string;
   end_date: string | null;
 };
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Ativa' },
+  { value: 'trialing', label: 'Em teste' },
+  { value: 'past_due', label: 'Em atraso' },
+  { value: 'pending', label: 'Pendente' },
+  { value: 'canceled', label: 'Cancelada' },
+];
 
 const AdminSubscriptions = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<AdminSubscription | null>(null);
@@ -72,18 +81,8 @@ const AdminSubscriptions = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'ativa':
-        return <Badge className="bg-green">Ativa</Badge>;
-      case 'inativa':
-        return <Badge variant="destructive">Inativa</Badge>;
-      case 'pendente':
-        return <Badge variant="outline" className="border-amber-500 text-amber-500">Pendente</Badge>;
-      case 'cancelada':
-        return <Badge variant="secondary">Cancelada</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    const meta = getSubscriptionStatusMeta(status);
+    return <Badge className={meta.className}>{meta.label}</Badge>;
   };
 
   return (
@@ -125,7 +124,7 @@ const AdminSubscriptions = () => {
                         size="sm"
                         onClick={() => {
                           setSelectedSubscription(subscription);
-                          setNewStatus(subscription.status);
+                          setNewStatus(normalizeSubscriptionStatus(subscription.status));
                           setIsStatusDialogOpen(true);
                         }}
                       >
@@ -179,10 +178,11 @@ const AdminSubscriptions = () => {
                   <SelectValue placeholder="Selecionar novo status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ativa">Ativa</SelectItem>
-                  <SelectItem value="inativa">Inativa</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -199,7 +199,10 @@ const AdminSubscriptions = () => {
             <Button 
               onClick={handleUpdateStatus} 
               className="bg-green hover:bg-green/80"
-              disabled={isSubmitting || newStatus === selectedSubscription?.status}
+              disabled={
+                isSubmitting ||
+                newStatus === normalizeSubscriptionStatus(selectedSubscription?.status)
+              }
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Atualizar Status

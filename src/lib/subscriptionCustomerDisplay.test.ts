@@ -3,6 +3,7 @@ import {
   findScheduledPaidPlan,
   getSubscriptionCancelCopy,
   getVisibleSubscriptionsForCustomer,
+  isScheduledPaidHandoffInGrace,
   isScheduledPaidAfterTrial,
   pickPrimarySubscriptionForDisplay,
 } from "./subscriptionCustomerDisplay";
@@ -57,5 +58,14 @@ describe("subscriptionCustomerDisplay", () => {
     const copy = getSubscriptionCancelCopy(scheduled);
     expect(copy.buttonLabel).toBe("Cancelar renovação automática");
     expect(copy.dialogDescription).toContain("teste gratuito");
+  });
+
+  it("considera plano agendado em tolerância após fim do trial", () => {
+    expect(
+      isScheduledPaidHandoffInGrace(scheduled, new Date("2026-06-06T00:00:00Z")),
+    ).toBe(true);
+    expect(
+      isScheduledPaidHandoffInGrace(scheduled, new Date("2026-06-20T00:00:00Z")),
+    ).toBe(false);
   });
 });

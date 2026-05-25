@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { normalizeSubscriptionStatus } from "@/lib/subscriptionStatusUi";
 
 export interface MySubscription {
   id: string;
@@ -53,6 +54,7 @@ const normalizeSubscription = (
 
   return {
     ...subscription,
+    status: normalizeSubscriptionStatus(subscription.status),
     plan: plan ?? joinedPlan,
   };
 };

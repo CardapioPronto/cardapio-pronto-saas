@@ -13,6 +13,7 @@ import { computeRenewalAlert, computeSubscriptionAccess } from "@/lib/subscripti
 import {
   buildScheduledPlanAlertCopy,
   findScheduledPaidPlan,
+  isScheduledPaidHandoffInGrace,
   pickPrimarySubscriptionForDisplay,
 } from "@/lib/subscriptionCustomerDisplay";
 import PaymentForm, { PaymentSuccessData } from "@/components/payment/PaymentForm";
@@ -72,6 +73,9 @@ const Assinaturas = () => {
           scheduledPaidPlan.next_billing_at ?? scheduledPaidPlan.current_period_end,
       })
     : null;
+  const scheduledPaidPlanInGrace = scheduledPaidPlan
+    ? isScheduledPaidHandoffInGrace(scheduledPaidPlan)
+    : false;
   const renewalAlert = currentSubscription
     ? computeRenewalAlert({
         status: currentSubscription.status,
@@ -282,7 +286,8 @@ const Assinaturas = () => {
         {!mySubsLoading &&
           !hasPendingPayment &&
           !subscriptionAccess?.hasActiveSubscription &&
-          !subscriptionAccess?.showPastDueGraceAlert && (
+          !subscriptionAccess?.showPastDueGraceAlert &&
+          !scheduledPaidPlanInGrace && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Plano expirado ou inativo</AlertTitle>

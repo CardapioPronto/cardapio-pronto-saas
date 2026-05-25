@@ -19,6 +19,29 @@ export type SubscriptionStatusMeta = {
   icon: LucideIcon;
 };
 
+const SUBSCRIPTION_STATUS_ALIASES: Record<string, SubscriptionDisplayStatus> = {
+  ativa: "active",
+  ativo: "active",
+  active: "active",
+  trial: "trialing",
+  trialing: "trialing",
+  teste: "trialing",
+  em_teste: "trialing",
+  "em teste": "trialing",
+  past_due: "past_due",
+  atraso: "past_due",
+  em_atraso: "past_due",
+  "em atraso": "past_due",
+  pendente: "pending",
+  pending: "pending",
+  cancelada: "canceled",
+  cancelado: "canceled",
+  canceled: "canceled",
+  inativa: "canceled",
+  inativo: "canceled",
+  inactive: "canceled",
+};
+
 export const SUBSCRIPTION_STATUS_META: Record<string, SubscriptionStatusMeta> = {
   active: {
     label: "Ativa",
@@ -47,10 +70,18 @@ export const SUBSCRIPTION_STATUS_META: Record<string, SubscriptionStatusMeta> = 
   },
 };
 
+export function normalizeSubscriptionStatus(
+  status: string | null | undefined,
+): string {
+  const normalized = (status ?? "").trim().toLowerCase();
+  return SUBSCRIPTION_STATUS_ALIASES[normalized] ?? normalized;
+}
+
 export function getSubscriptionStatusMeta(status: string): SubscriptionStatusMeta {
+  const normalized = normalizeSubscriptionStatus(status);
   return (
-    SUBSCRIPTION_STATUS_META[status] ?? {
-      label: status,
+    SUBSCRIPTION_STATUS_META[normalized] ?? {
+      label: normalized || status,
       className: "bg-muted text-muted-foreground",
       icon: Clock,
     }
@@ -66,7 +97,9 @@ export const DISPLAYABLE_SUBSCRIPTION_STATUSES = [
 ] as const;
 
 export function isDisplayableSubscriptionStatus(status: string): boolean {
-  return (DISPLAYABLE_SUBSCRIPTION_STATUSES as readonly string[]).includes(status);
+  return (DISPLAYABLE_SUBSCRIPTION_STATUSES as readonly string[]).includes(
+    normalizeSubscriptionStatus(status),
+  );
 }
 
 export function getLocalSubscriptionStatus(
@@ -74,7 +107,7 @@ export function getLocalSubscriptionStatus(
 ): string | null {
   if (!subscription || typeof subscription !== "object") return null;
   const status = (subscription as { status?: string }).status;
-  return typeof status === "string" ? status : null;
+  return typeof status === "string" ? normalizeSubscriptionStatus(status) : null;
 }
 
 export function isPendingPaymentSubscription(

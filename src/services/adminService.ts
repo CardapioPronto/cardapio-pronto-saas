@@ -2,6 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { FunctionsHttpError, PostgrestError } from '@supabase/supabase-js';
 import type { Database, Json } from '@/integrations/supabase/types';
+import { normalizeSubscriptionStatus } from '@/lib/subscriptionStatusUi';
 
 type SystemSetting = Database['public']['Tables']['system_settings']['Row'];
 type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
@@ -171,9 +172,10 @@ export async function listAllSubscriptions(): Promise<{ data: SubscriptionWithCl
 
 // Função para atualizar status de uma assinatura
 export async function updateSubscriptionStatus(id: string, status: string): Promise<{ data: Subscription[] | null; error: PostgrestError | null }> {
+  const canonicalStatus = normalizeSubscriptionStatus(status);
   const result = await supabase
     .from('subscriptions')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status: canonicalStatus, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select();
   
@@ -182,7 +184,7 @@ export async function updateSubscriptionStatus(id: string, status: string): Prom
       'update_subscription',
       'subscriptions',
       id,
-      { status }
+      { status: canonicalStatus }
     );
   }
   

@@ -11,8 +11,33 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const denoEnv = (globalThis as unknown as {
+  Deno?: {
+    env?: {
+      get(key: string): string | null;
+    };
+  };
+}).Deno?.env;
+
+const supabaseUrl = denoEnv?.get("SUPABASE_URL") || (globalThis as unknown as {
+  Deno?: {
+    env?: {
+      get(key: string): string | null;
+    };
+  };
+}).Deno?.env?.get("SUPABASE_URL") || "";
+const serviceRoleKey = denoEnv?.get("SUPABASE_SERVICE_ROLE_KEY") || (globalThis as unknown as {
+  Deno?: {
+    env?: {
+      get(key: string): string | null;
+    };
+  };
+}).Deno?.env?.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured");
+}
+
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
 type IfoodRow = IfoodPollConfig & {
@@ -31,9 +56,27 @@ function bearerToken(req: Request) {
 }
 
 function authorizeCron(req: Request) {
-  const expected = Deno.env.get("IFOOD_POLL_CRON_SECRET")
-    || Deno.env.get("CRON_SECRET")
-    || Deno.env.get("OWNER_SIGNUP_CLEANUP_SECRET");
+  const expected = (globalThis as unknown as {
+    Deno?: {
+      env?: {
+        get(key: string): string | null;
+      };
+    };
+  }).Deno?.env?.get("IFOOD_POLL_CRON_SECRET")
+    || (globalThis as unknown as {
+      Deno?: {
+        env?: {
+          get(key: string): string | null;
+        };
+      };
+    }).Deno?.env?.get("CRON_SECRET")
+    || (globalThis as unknown as {
+      Deno?: {
+        env?: {
+          get(key: string): string | null;
+        };
+      };
+    }).Deno?.env?.get("OWNER_SIGNUP_CLEANUP_SECRET");
 
   if (!expected) {
     return { ok: false as const, status: 500, error: "CRON_SECRET não configurado" };
@@ -47,7 +90,7 @@ function authorizeCron(req: Request) {
   return { ok: true as const, status: 200, error: null };
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
@@ -106,8 +149,8 @@ serve(async (req) => {
 
         results.push({
           restaurant_id: config.restaurant_id,
-          success: true,
           ...pollResult,
+          success: true,
         });
       } catch (pollError) {
         failed++;

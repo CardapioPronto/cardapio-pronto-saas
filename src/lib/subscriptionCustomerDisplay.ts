@@ -3,6 +3,7 @@ import {
   getSubscriptionStatusMeta,
   type SubscriptionStatusMeta,
 } from "@/lib/subscriptionStatusUi";
+import { PAST_DUE_GRACE_DAYS } from "@/lib/subscriptionAccess";
 import { CheckCircle2, Clock } from "lucide-react";
 
 export type SubscriptionDisplaySlice = Pick<
@@ -70,6 +71,27 @@ function isTrialCoveredByScheduledPlan(
   if (!trialEnd || !planStart) return true;
   const diff = Math.abs(new Date(trialEnd).getTime() - new Date(planStart).getTime());
   return diff <= 2 * MS_PER_DAY;
+}
+
+export function scheduledPaidHandoffDate(
+  sub: SubscriptionDisplaySlice | null | undefined,
+): Date | null {
+  if (!isScheduledPaidAfterTrial(sub)) return null;
+  const raw = sub.next_billing_at ?? sub.current_period_end;
+  if (!raw) return null;
+  const handoff = new Date(raw);
+  return Number.isNaN(handoff.getTime()) ? null : handoff;
+}
+
+export function isScheduledPaidHandoffInGrace(
+  sub: SubscriptionDisplaySlice | null | undefined,
+  now: Date = new Date(),
+  graceDays: number = PAST_DUE_GRACE_DAYS,
+): boolean {
+  const handoff = scheduledPaidHandoffDate(sub);
+  if (!handoff) return false;
+  if (handoff.getTime() > now.getTime()) return false;
+  return now.getTime() < handoff.getTime() + graceDays * MS_PER_DAY;
 }
 
 /** Evita dois cards quase iguais (trial + plano agendado). */
