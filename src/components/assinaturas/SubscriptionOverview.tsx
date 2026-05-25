@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CreditCard, Settings, ShieldCheck } from "lucide-react";
 import { MySubscription } from "@/hooks/useMySubscriptions";
-import { buildScheduledPlanAlertCopy } from "@/lib/subscriptionCustomerDisplay";
+import {
+  buildScheduledPlanAlertCopy,
+  getCustomerSubscriptionDisplay,
+  isScheduledPaidHandoffInGrace,
+  scheduledPaidGraceEndsAt,
+  scheduledPaidHandoffDate,
+} from "@/lib/subscriptionCustomerDisplay";
 import { formatCurrentPlanValue } from "@/lib/planPricingDisplay";
 import { getSubscriptionStatusMeta } from "@/lib/subscriptionStatusUi";
 
@@ -62,29 +68,61 @@ const SubscriptionOverview = ({
     );
   }
 
+  const scheduledInGrace = scheduledPaidPlan
+    ? isScheduledPaidHandoffInGrace(scheduledPaidPlan)
+    : false;
+  const overviewSubscription =
+    scheduledInGrace && scheduledPaidPlan ? scheduledPaidPlan : subscription;
+  const graceEndsAt = scheduledInGrace
+    ? scheduledPaidGraceEndsAt(overviewSubscription)
+    : null;
+  const handoffAt = scheduledInGrace
+    ? scheduledPaidHandoffDate(overviewSubscription)
+    : null;
+  const display = getCustomerSubscriptionDisplay(overviewSubscription);
+  const paymentSubscription = scheduledPaidPlan ?? overviewSubscription;
+  const paymentDisplay =
+    paymentSubscription.id === overviewSubscription.id
+      ? display
+      : getCustomerSubscriptionDisplay(paymentSubscription);
+  const periodStart = scheduledInGrace
+    ? handoffAt?.toISOString() ?? overviewSubscription.current_period_start
+    : overviewSubscription.current_period_start;
+  const periodEnd = scheduledInGrace
+    ? graceEndsAt?.toISOString() ?? overviewSubscription.current_period_end
+    : overviewSubscription.current_period_end;
+
   const scheduledCopy = scheduledPaidPlan
     ? buildScheduledPlanAlertCopy({
-        planName: scheduledPaidPlan.plan?.name ?? subscription.plan?.name,
-        trialEndsAt:
-          subscription.trial_ends_at ?? scheduledPaidPlan.current_period_end,
+        planName: scheduledPaidPlan.plan?.name ?? overviewSubscription.plan?.name,
+        trialEndsAt: scheduledPaidPlan.current_period_end,
         firstChargeAt:
           scheduledPaidPlan.next_billing_at ?? scheduledPaidPlan.current_period_end,
+        isHandoffInGrace: scheduledInGrace,
+        graceEndsAt: graceEndsAt?.toISOString(),
       })
     : null;
   const statusMeta = scheduledPaidPlan
-    ? { label: "Teste + plano confirmado", className: "bg-green/15 text-green border border-green/30", icon: ShieldCheck }
-    : getSubscriptionStatusMeta(subscription.status);
+    ? scheduledInGrace
+      ? display.statusMeta
+      : { label: "Teste + plano confirmado", className: "bg-green/15 text-green border border-green/30", icon: ShieldCheck }
+    : getSubscriptionStatusMeta(overviewSubscription.status);
   const StatusIcon = statusMeta.icon;
-  const cycleLabel = subscription.billing_cycle
-    ? BILLING_CYCLE_LABEL[subscription.billing_cycle] ?? subscription.billing_cycle
+  const cycleLabel = overviewSubscription.billing_cycle
+    ? BILLING_CYCLE_LABEL[overviewSubscription.billing_cycle] ?? overviewSubscription.billing_cycle
     : "-";
-  const planPricing = subscription.plan
+  const planPricing = overviewSubscription.plan
     ? formatCurrentPlanValue(
-        subscription.billing_cycle,
-        subscription.plan.price_monthly,
-        subscription.plan.price_yearly,
+        overviewSubscription.billing_cycle,
+        overviewSubscription.plan.price_monthly,
+        overviewSubscription.plan.price_yearly,
       )
     : null;
+  const pagarmeStatusLabel =
+    paymentDisplay.paymentStatusLabel ??
+    (paymentSubscription.last_payment_status
+      ? `Último status: ${paymentSubscription.last_payment_status}`
+      : "Aguardando eventos");
 
   return (
     <div className="space-y-4">
@@ -104,7 +142,7 @@ const SubscriptionOverview = ({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              {subscription.status === "trialing" && onActivatePlan && !scheduledPaidPlan && (
+              {overviewSubscription.status === "trialing" && onActivatePlan && !scheduledPaidPlan && (
                 <Button
                   size="sm"
                   className="bg-green text-white hover:bg-green-dark"
@@ -113,7 +151,7 @@ const SubscriptionOverview = ({
                   Ativar plano pago
                 </Button>
               )}
-              <Button size="sm" variant="outline" onClick={() => onManage(subscription)}>
+              <Button size="sm" variant="outline" onClick={() => onManage(overviewSubscription)}>
                 <Settings className="mr-2 h-4 w-4" />
                 Gerenciar
               </Button>
@@ -129,8 +167,8 @@ const SubscriptionOverview = ({
           </CardContent>
         )}
 
-        {subscription.status === "trialing" &&
-          !subscription.has_pagarme_subscription &&
+        {overviewSubscription.status === "trialing" &&
+          !overviewSubscription.has_pagarme_subscription &&
           !scheduledPaidPlan && (
           <CardContent className="pt-0">
             <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
@@ -140,7 +178,7 @@ const SubscriptionOverview = ({
           </CardContent>
         )}
 
-        {subscription.status === "pending" && !scheduledPaidPlan && (
+        {overviewSubscription.status === "pending" && !scheduledPaidPlan && (
           <CardContent className="pt-0">
             <p className="rounded-md border border-orange/30 bg-orange/5 px-4 py-3 text-sm text-muted-foreground">
               Pagamento (boleto ou PIX) em análise. Use <strong>Gerenciar</strong> para ver o QR Code, boleto ou
@@ -155,7 +193,7 @@ const SubscriptionOverview = ({
               <ShieldCheck className="h-4 w-4" />
               Plano
             </div>
-            <p className="font-semibold">{subscription.plan?.name ?? "Plano"}</p>
+            <p className="font-semibold">{overviewSubscription.plan?.name ?? "Plano"}</p>
             <p className="text-sm text-muted-foreground">
               {planPricing?.value ?? "—"}
             </p>
@@ -171,7 +209,9 @@ const SubscriptionOverview = ({
             </div>
             <p className="font-semibold">{cycleLabel}</p>
             <p className="text-sm text-muted-foreground">
-              Próxima: {formatDate(subscription.next_billing_at ?? subscription.current_period_end)}
+              {scheduledInGrace
+                ? `Sincronizar até: ${formatDate(graceEndsAt?.toISOString())}`
+                : `Próxima: ${formatDate(overviewSubscription.next_billing_at ?? overviewSubscription.current_period_end)}`}
             </p>
           </div>
 
@@ -180,9 +220,9 @@ const SubscriptionOverview = ({
               <Calendar className="h-4 w-4" />
               Período atual
             </div>
-            <p className="font-semibold">{formatDate(subscription.current_period_start)}</p>
+            <p className="font-semibold">{formatDate(periodStart)}</p>
             <p className="text-sm text-muted-foreground">
-              até {formatDate(subscription.current_period_end)}
+              até {formatDate(periodEnd)}
             </p>
           </div>
 
@@ -192,12 +232,16 @@ const SubscriptionOverview = ({
               Pagar.me
             </div>
             <p className="text-sm font-medium">
-              {subscription.has_pagarme_subscription ? "Sincronizada" : "Sem vínculo de checkout"}
+              {scheduledInGrace
+                ? "Primeira cobrança em sincronização"
+                : scheduledPaidPlan
+                  ? "Plano pago confirmado"
+                  : overviewSubscription.has_pagarme_subscription
+                  ? "Sincronizada"
+                  : "Sem vínculo de checkout"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {subscription.last_payment_status
-                ? `Último status: ${subscription.last_payment_status}`
-                : "Aguardando eventos"}
+              {scheduledInGrace ? "Aguardando evento de cobrança recorrente" : pagarmeStatusLabel}
             </p>
           </div>
         </CardContent>

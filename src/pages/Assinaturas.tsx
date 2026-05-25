@@ -15,6 +15,7 @@ import {
   findScheduledPaidPlan,
   isScheduledPaidHandoffInGrace,
   pickPrimarySubscriptionForDisplay,
+  scheduledPaidGraceEndsAt,
 } from "@/lib/subscriptionCustomerDisplay";
 import PaymentForm, { PaymentSuccessData } from "@/components/payment/PaymentForm";
 import SubscriptionOverview from "@/components/assinaturas/SubscriptionOverview";
@@ -64,6 +65,12 @@ const Assinaturas = () => {
     () => mySubscriptions.find((s) => s.status === "pending") ?? null,
     [mySubscriptions],
   );
+  const scheduledPaidPlanInGrace = scheduledPaidPlan
+    ? isScheduledPaidHandoffInGrace(scheduledPaidPlan)
+    : false;
+  const scheduledPaidPlanGraceEndsAt = scheduledPaidPlan
+    ? scheduledPaidGraceEndsAt(scheduledPaidPlan)
+    : null;
   const scheduledPlanAlert = scheduledPaidPlan
     ? buildScheduledPlanAlertCopy({
         planName: scheduledPaidPlan.plan?.name,
@@ -71,11 +78,10 @@ const Assinaturas = () => {
           scheduledPaidPlan.current_period_end ?? scheduledPaidPlan.trial_ends_at,
         firstChargeAt:
           scheduledPaidPlan.next_billing_at ?? scheduledPaidPlan.current_period_end,
+        isHandoffInGrace: scheduledPaidPlanInGrace,
+        graceEndsAt: scheduledPaidPlanGraceEndsAt?.toISOString(),
       })
     : null;
-  const scheduledPaidPlanInGrace = scheduledPaidPlan
-    ? isScheduledPaidHandoffInGrace(scheduledPaidPlan)
-    : false;
   const renewalAlert = currentSubscription
     ? computeRenewalAlert({
         status: currentSubscription.status,

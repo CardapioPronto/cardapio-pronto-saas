@@ -16,6 +16,7 @@ import {
   buildLocalSubscriptionFromPagarme,
   pagarmeSubscriptionStartAt,
   pendingSubscriptionInsertRow,
+  remoteStartAtExceedsExpected,
   subscriptionInsertRow,
 } from "../_shared/pagarme-checkout-subscription.ts";
 import {
@@ -388,7 +389,8 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const subscriptionStartAt = pagarmeSubscriptionStartAt(new Date(), priorSub);
+    const checkoutStartedAt = new Date();
+    const subscriptionStartAt = pagarmeSubscriptionStartAt(checkoutStartedAt, priorSub);
 
     const checkout = await createCardPlatformSubscription(pagarme, {
       pagarmePlanId,
@@ -406,6 +408,42 @@ Deno.serve(async (req) => {
       }),
       card: buildCardPayload(card, billingAddress),
     });
+
+    if (
+      remoteStartAtExceedsExpected({
+        remoteStartAt: checkout.subscription.start_at,
+        expectedStartAt: subscriptionStartAt,
+        now: checkoutStartedAt,
+      })
+    ) {
+      try {
+        if (checkout.subscription.id) {
+          await pagarme(
+            `/subscriptions/${encodeURIComponent(checkout.subscription.id)}`,
+            "DELETE",
+          );
+        }
+      } catch (cancelErr) {
+        console.warn(
+          "[pagarme-create-subscription] failed to cancel mismatched future sub:",
+          cancelErr,
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            "O plano no Pagar.me retornou uma data de início incompatível com o período vigente local. " +
+            "Sincronize novamente o plano no Super Admin e tente o checkout outra vez.",
+          expected_start_at: subscriptionStartAt ?? checkoutStartedAt.toISOString(),
+          pagarme_start_at: checkout.subscription.start_at ?? null,
+          pagarme_subscription_id: checkout.subscription.id ?? null,
+          pagarme_customer_id: checkout.customerId,
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const remoteStatus = checkout.subscription.status ?? "failed";
     const mappedStatus = resolveCardCheckoutPaymentStatus(checkout.subscription);

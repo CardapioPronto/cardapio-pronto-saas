@@ -4,6 +4,7 @@ import {
   computeRemainingCreditMs,
   pagarmeSubscriptionStartAt,
   pendingSubscriptionInsertRow,
+  remoteStartAtExceedsExpected,
   resolvePaidSubscriptionPeriod,
 } from "../../supabase/functions/_shared/pagarme-checkout-subscription.ts";
 
@@ -116,5 +117,21 @@ describe("resolvePaidSubscriptionPeriod", () => {
     });
 
     expect(localSub.status).toBe("pending");
+  });
+
+  it("detecta start_at remoto muito depois do fim do trial local", () => {
+    expect(
+      remoteStartAtExceedsExpected({
+        expectedStartAt: "2026-05-23T15:37:07Z",
+        remoteStartAt: "2026-06-04T00:00:00Z",
+      }),
+    ).toBe(true);
+
+    expect(
+      remoteStartAtExceedsExpected({
+        expectedStartAt: "2026-05-23T15:37:07Z",
+        remoteStartAt: "2026-05-24T00:00:00Z",
+      }),
+    ).toBe(false);
   });
 });

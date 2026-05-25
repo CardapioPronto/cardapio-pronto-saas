@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   findScheduledPaidPlan,
+  getCustomerSubscriptionDisplay,
   getSubscriptionCancelCopy,
   getVisibleSubscriptionsForCustomer,
+  isTrialCurrentlyActive,
+  scheduledPaidGraceEndsAt,
   isScheduledPaidHandoffInGrace,
   isScheduledPaidAfterTrial,
   pickPrimarySubscriptionForDisplay,
@@ -46,8 +49,34 @@ describe("subscriptionCustomerDisplay", () => {
   });
 
   it("overview prioriza trial quando plano está agendado", () => {
-    const primary = pickPrimarySubscriptionForDisplay([trial, scheduled]);
+    const primary = pickPrimarySubscriptionForDisplay(
+      [trial, scheduled],
+      new Date("2026-05-25T00:00:00Z"),
+    );
     expect(primary?.id).toBe("trial-1");
+  });
+
+  it("overview usa plano agendado quando trial já terminou", () => {
+    const expiredTrial = {
+      ...trial,
+      id: "trial-expired",
+      trial_ends_at: "2026-05-23T00:00:00Z",
+      current_period_end: "2026-05-23T00:00:00Z",
+    };
+    const scheduledAfterExpiredTrial = {
+      ...scheduled,
+      current_period_start: "2026-05-09T00:00:00Z",
+      current_period_end: "2026-05-23T00:00:00Z",
+      next_billing_at: "2026-05-23T00:00:00Z",
+    };
+
+    const now = new Date("2026-05-25T00:00:00Z");
+    expect(isTrialCurrentlyActive(expiredTrial, now)).toBe(false);
+    const primary = pickPrimarySubscriptionForDisplay(
+      [expiredTrial, scheduledAfterExpiredTrial],
+      now,
+    );
+    expect(primary?.id).toBe("pending-1");
   });
 
   it("encontra plano agendado na lista", () => {
@@ -65,7 +94,29 @@ describe("subscriptionCustomerDisplay", () => {
       isScheduledPaidHandoffInGrace(scheduled, new Date("2026-06-06T00:00:00Z")),
     ).toBe(true);
     expect(
+      scheduledPaidGraceEndsAt(scheduled, new Date("2026-06-06T00:00:00Z"))?.toISOString(),
+    ).toBe("2026-06-11T00:00:00.000Z");
+    expect(
       isScheduledPaidHandoffInGrace(scheduled, new Date("2026-06-20T00:00:00Z")),
     ).toBe(false);
+  });
+
+  it("mostra período liberado quando handoff já passou e está em tolerância", () => {
+    const display = getCustomerSubscriptionDisplay(
+      scheduled,
+      new Date("2026-05-25T00:00:00Z"),
+    );
+    expect(display.mode).toBe("scheduled_after_trial");
+
+    const displayDuringGrace = getCustomerSubscriptionDisplay(
+      {
+        ...scheduled,
+        current_period_end: "2026-05-23T00:00:00Z",
+        next_billing_at: "2026-05-23T00:00:00Z",
+      },
+      new Date("2026-05-25T00:00:00Z"),
+    );
+    expect(displayDuringGrace.mode).toBe("scheduled_handoff_grace");
+    expect(displayDuringGrace.periodPrimaryLabel).toBe("Período liberado");
   });
 });

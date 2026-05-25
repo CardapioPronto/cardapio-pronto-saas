@@ -103,8 +103,8 @@ function buildPlanBase(
       : [1],
     minimum_price: amountCents,
     statement_descriptor: "PUBFY",
-    /** Trial é só local (trigger no restaurante). Evita assinatura "Futura" no Pagar.me. */
-    trial_period_days: 0,
+    // Trial é só local. O Pagar.me rejeita trial_period_days=0; omitir o campo
+    // evita que novas assinaturas nasçam como "Futura" por trial remoto.
   };
 }
 

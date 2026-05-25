@@ -262,3 +262,29 @@ export function pagarmeSubscriptionStartAt(
   if (!end || end.getTime() <= now.getTime() + 60_000) return undefined;
   return end.toISOString();
 }
+
+function parseDateOrNull(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Detecta plano remoto contaminado por trial no Pagar.me.
+ * Quando enviamos `start_at` para o fim do trial local, a API deve respeitar
+ * essa data; quando omitimos, a assinatura deve iniciar imediatamente. Se ela
+ * volta muitos dias no futuro, o plano remoto ainda carrega trial próprio.
+ */
+export function remoteStartAtExceedsExpected(input: {
+  remoteStartAt?: string | null;
+  expectedStartAt?: string | null;
+  now?: Date;
+  toleranceMs?: number;
+}): boolean {
+  const remoteStart = parseDateOrNull(input.remoteStartAt);
+  if (!remoteStart) return false;
+
+  const expectedStart = parseDateOrNull(input.expectedStartAt) ?? input.now ?? new Date();
+  const toleranceMs = input.toleranceMs ?? 2 * 86400000;
+  return remoteStart.getTime() > expectedStart.getTime() + toleranceMs;
+}

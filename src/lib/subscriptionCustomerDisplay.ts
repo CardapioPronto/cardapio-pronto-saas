@@ -94,6 +94,27 @@ export function isScheduledPaidHandoffInGrace(
   return now.getTime() < handoff.getTime() + graceDays * MS_PER_DAY;
 }
 
+export function scheduledPaidGraceEndsAt(
+  sub: SubscriptionDisplaySlice | null | undefined,
+  now: Date = new Date(),
+  graceDays: number = PAST_DUE_GRACE_DAYS,
+): Date | null {
+  if (!isScheduledPaidHandoffInGrace(sub, now, graceDays)) return null;
+  const handoff = scheduledPaidHandoffDate(sub);
+  return handoff ? new Date(handoff.getTime() + graceDays * MS_PER_DAY) : null;
+}
+
+export function isTrialCurrentlyActive(
+  sub: SubscriptionDisplaySlice | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!sub || (sub.status !== "trialing" && !sub.is_trial)) return false;
+  const rawEnd = sub.trial_ends_at ?? sub.current_period_end;
+  if (!rawEnd) return true;
+  const end = new Date(rawEnd);
+  return Number.isNaN(end.getTime()) || end.getTime() >= now.getTime();
+}
+
 /** Evita dois cards quase iguais (trial + plano agendado). */
 export function getVisibleSubscriptionsForCustomer<T extends SubscriptionDisplaySlice>(
   subscriptions: T[],
@@ -113,10 +134,16 @@ export function getVisibleSubscriptionsForCustomer<T extends SubscriptionDisplay
 /** Visão geral: mostra o trial em curso, não o registro técnico pending. */
 export function pickPrimarySubscriptionForDisplay<T extends SubscriptionDisplaySlice>(
   subscriptions: T[],
+  now: Date = new Date(),
 ): T | null {
   const scheduled = findScheduledPaidPlan(subscriptions);
   const trialing = findTrialingSubscription(subscriptions);
-  if (scheduled && trialing && isTrialCoveredByScheduledPlan(trialing, scheduled)) {
+  if (
+    scheduled &&
+    trialing &&
+    isTrialCurrentlyActive(trialing, now) &&
+    isTrialCoveredByScheduledPlan(trialing, scheduled)
+  ) {
     return trialing;
   }
 
@@ -168,7 +195,7 @@ export function formatPagarmePaymentStatusLabel(
 }
 
 export type CustomerSubscriptionDisplay = {
-  mode: "default" | "scheduled_after_trial" | "awaiting_offline";
+  mode: "default" | "scheduled_after_trial" | "scheduled_handoff_grace" | "awaiting_offline";
   statusMeta: SubscriptionStatusMeta;
   periodPrimaryLabel: string;
   periodPrimaryValue: string;
@@ -181,8 +208,31 @@ export type CustomerSubscriptionDisplay = {
 
 export function getCustomerSubscriptionDisplay(
   sub: SubscriptionDisplaySlice,
+  now: Date = new Date(),
 ): CustomerSubscriptionDisplay {
   if (isScheduledPaidAfterTrial(sub)) {
+    const graceEndsAt = scheduledPaidGraceEndsAt(sub, now);
+    if (graceEndsAt) {
+      const handoff = scheduledPaidHandoffDate(sub);
+
+      return {
+        mode: "scheduled_handoff_grace",
+        statusMeta: {
+          label: "Acesso liberado",
+          className: "bg-green/15 text-green border border-green/30",
+          icon: CheckCircle2,
+        },
+        periodPrimaryLabel: "Período liberado",
+        periodPrimaryValue: `${formatSubscriptionDate(handoff?.toISOString())} → ${formatSubscriptionDate(graceEndsAt.toISOString())}`,
+        periodSecondaryLabel: "Sincronização Pagar.me",
+        periodSecondaryValue: `até ${formatSubscriptionDate(graceEndsAt.toISOString())}`,
+        footerNote:
+          "O teste gratuito terminou. O acesso foi mantido enquanto a primeira cobrança recorrente é sincronizada com o Pagar.me.",
+        showRawPaymentStatus: false,
+        paymentStatusLabel: "Primeira cobrança em sincronização",
+      };
+    }
+
     const trialEnd = sub.current_period_end ?? sub.next_billing_at ?? sub.trial_ends_at;
     const paidStarts = sub.next_billing_at ?? sub.current_period_end ?? trialEnd;
     const trialStart = sub.current_period_start ?? sub.trial_start;
@@ -341,10 +391,20 @@ export function buildScheduledPlanAlertCopy(input: {
   planName?: string | null;
   trialEndsAt?: string | null;
   firstChargeAt?: string | null;
+  isHandoffInGrace?: boolean;
+  graceEndsAt?: string | null;
 }): { title: string; description: string } {
   const plan = input.planName ?? "Plano Pubfy";
   const trialEnd = formatSubscriptionDate(input.trialEndsAt);
   const charge = formatSubscriptionDate(input.firstChargeAt);
+
+  if (input.isHandoffInGrace) {
+    const graceEnd = formatSubscriptionDate(input.graceEndsAt);
+    return {
+      title: "Plano pago confirmado — primeira cobrança em sincronização",
+      description: `Seu teste gratuito terminou em ${trialEnd}. Mantivemos o acesso ao ${plan} até ${graceEnd} enquanto aguardamos a confirmação automática da primeira cobrança no Pagar.me.`,
+    };
+  }
 
   return {
     title: "Plano pago confirmado — teste gratuito em andamento",
