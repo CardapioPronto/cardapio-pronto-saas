@@ -41,10 +41,21 @@ interface SubscriptionWithClient {
     name: string;
     owner_id: string;
   };
+  plan?: {
+    name: string | null;
+  } | null;
   plan_id: string;
   status: string;
   start_date: string;
   end_date: string | null;
+  billing_cycle: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  next_billing_at: string | null;
+  pagarme_subscription_id: string | null;
+  pagarme_customer_id: string | null;
+  last_payment_status: string | null;
+  updated_at: string;
 }
 
 // Função para verificar se um usuário atual é super admin
@@ -162,10 +173,19 @@ export async function listAllSubscriptions(): Promise<{ data: SubscriptionWithCl
       id,
       restaurant_id,
       restaurant:restaurants (name, owner_id),
+      plan:plans (name),
       plan_id,
       status,
       start_date,
-      end_date
+      end_date,
+      billing_cycle,
+      current_period_start,
+      current_period_end,
+      next_billing_at,
+      pagarme_subscription_id,
+      pagarme_customer_id,
+      last_payment_status,
+      updated_at
     `)
     .order('created_at', { ascending: false });
 }

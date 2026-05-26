@@ -21,7 +21,12 @@ const supabase = createClient(
 const PAGARME_API_URL = "https://api.pagar.me/core/v5";
 const PAGARME_SECRET_KEY = Deno.env.get("PAGARME_SECRET_KEY") ?? "";
 
-type Action = "reprocess_event" | "sync_order_payment";
+type Action =
+  | "reprocess_event"
+  | "sync_order_payment"
+  | "update_subscription_start_at"
+  | "cancel_subscription"
+  | "sync_subscription";
 
 type PagarmeEvent = {
   id?: string | null;
@@ -29,7 +34,18 @@ type PagarmeEvent = {
   data?: PagarmeOrderPaymentData;
 };
 
-async function pagarmeApi<T>(path: string, method: string): Promise<T> {
+type PagarmeSubscriptionData = {
+  id?: string | null;
+  status?: string | null;
+  start_at?: string | null;
+  next_billing_at?: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  interval?: string | null;
+  customer?: { id?: string | null } | null;
+};
+
+async function pagarmeApi<T>(path: string, method: string, body?: unknown): Promise<T> {
   if (!PAGARME_SECRET_KEY) throw new Error("PAGARME_SECRET_KEY not configured");
   const res = await fetch(`${PAGARME_API_URL}${path}`, {
     method,
@@ -37,6 +53,7 @@ async function pagarmeApi<T>(path: string, method: string): Promise<T> {
       Authorization: `Basic ${btoa(PAGARME_SECRET_KEY + ":")}`,
       "Content-Type": "application/json",
     },
+    body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
   let data: unknown = null;
@@ -66,6 +83,92 @@ async function requireSuperAdmin(req: Request) {
   if (!isAdmin) throw new Error("Apenas super admin pode executar esta ação.");
 
   return userData.user.id;
+}
+
+function mapSubscriptionStatus(status: string | null | undefined) {
+  switch ((status ?? "").toLowerCase()) {
+    case "active":
+    case "paid":
+      return "active";
+    case "past_due":
+    case "unpaid":
+      return "past_due";
+    case "canceled":
+    case "ended":
+    case "failed":
+      return "canceled";
+    case "future":
+    case "scheduled":
+    case "pending":
+      return "pending";
+    case "trialing":
+      return "trialing";
+    default:
+      return "pending";
+  }
+}
+
+async function logAdminAction(
+  userId: string,
+  action: string,
+  entityId: string,
+  details: Record<string, unknown>,
+) {
+  const { error } = await supabase.rpc("log_admin_activity", {
+    admin_id: userId,
+    action,
+    entity_type: "subscriptions",
+    entity_id: entityId,
+    details,
+  });
+  if (error) console.warn("[pagarme-webhook-admin] log_admin_activity:", error.message);
+}
+
+async function updateLocalSubscriptionFromRemote(
+  pagarmeSubscriptionId: string,
+  remote: PagarmeSubscriptionData,
+) {
+  const remoteStatus = remote.status ?? null;
+  const localStatus = mapSubscriptionStatus(remoteStatus);
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = {
+    status: localStatus,
+    last_payment_status: remoteStatus,
+    updated_at: now,
+  };
+
+  if (remote.customer?.id) update.pagarme_customer_id = remote.customer.id;
+  if (remote.interval === "month") update.billing_cycle = "monthly";
+  if (remote.interval === "year") update.billing_cycle = "yearly";
+
+  if (localStatus === "active") {
+    update.is_trial = false;
+    update.trial_start = null;
+    update.trial_ends_at = null;
+    if (remote.current_period_start) update.current_period_start = remote.current_period_start;
+    if (remote.current_period_end) update.current_period_end = remote.current_period_end;
+    if (remote.next_billing_at) update.next_billing_at = remote.next_billing_at;
+  } else if (localStatus === "pending") {
+    const startAt = remote.start_at ?? remote.next_billing_at ?? null;
+    if (startAt) {
+      update.current_period_end = startAt;
+      update.next_billing_at = startAt;
+    }
+    if (remote.current_period_start) update.current_period_start = remote.current_period_start;
+    if (remote.current_period_end) update.current_period_end = remote.current_period_end;
+  } else if (localStatus === "canceled") {
+    update.end_date = now;
+  }
+
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .update(update)
+    .eq("pagarme_subscription_id", pagarmeSubscriptionId)
+    .select("id, status, current_period_end, next_billing_at")
+    .maybeSingle();
+
+  if (error) throw error;
+  return { local: data, update };
 }
 
 async function reprocessWebhookEvent(eventLogId: string) {
@@ -143,6 +246,79 @@ async function syncOrderPayment(orderId: string) {
   return { success: true, order_id: orderId, remote_status: chargeStatus, reconcile: result };
 }
 
+function validateStartAt(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("Data de início inválida.");
+  }
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  if (parsed.getTime() < todayStart.getTime()) {
+    throw new Error("O Pagar.me não permite alterar start_at para uma data anterior ao dia atual.");
+  }
+  return parsed.toISOString();
+}
+
+async function updateSubscriptionStartAt(userId: string, subscriptionId: string, startAt: string) {
+  const safeStartAt = validateStartAt(startAt);
+  const remote = await pagarmeApi<PagarmeSubscriptionData>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/start-at`,
+    "PATCH",
+    { start_at: safeStartAt },
+  );
+  const synced = await updateLocalSubscriptionFromRemote(subscriptionId, {
+    ...remote,
+    id: remote.id ?? subscriptionId,
+    start_at: remote.start_at ?? safeStartAt,
+    status: remote.status ?? "future",
+  });
+  await logAdminAction(userId, "pagarme_update_subscription_start_at", synced.local?.id ?? subscriptionId, {
+    pagarme_subscription_id: subscriptionId,
+    start_at: safeStartAt,
+    remote_status: remote.status ?? null,
+  });
+  return { success: true, subscription_id: subscriptionId, start_at: safeStartAt, remote, synced };
+}
+
+async function cancelSubscription(userId: string, subscriptionId: string) {
+  const remote = await pagarmeApi<PagarmeSubscriptionData>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    "DELETE",
+  );
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .update({
+      status: "canceled",
+      end_date: now,
+      last_payment_status: remote.status ?? "canceled",
+      updated_at: now,
+    })
+    .eq("pagarme_subscription_id", subscriptionId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  await logAdminAction(userId, "pagarme_cancel_subscription", data?.id ?? subscriptionId, {
+    pagarme_subscription_id: subscriptionId,
+    remote_status: remote.status ?? null,
+  });
+  return { success: true, subscription_id: subscriptionId, remote };
+}
+
+async function syncSubscription(userId: string, subscriptionId: string) {
+  const remote = await pagarmeApi<PagarmeSubscriptionData>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    "GET",
+  );
+  const synced = await updateLocalSubscriptionFromRemote(subscriptionId, remote);
+  await logAdminAction(userId, "pagarme_sync_subscription", synced.local?.id ?? subscriptionId, {
+    pagarme_subscription_id: subscriptionId,
+    remote_status: remote.status ?? null,
+    start_at: remote.start_at ?? null,
+  });
+  return { success: true, subscription_id: subscriptionId, remote, synced };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -156,8 +332,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    await requireSuperAdmin(req);
-    const body = await req.json() as { action?: Action; eventLogId?: string; orderId?: string };
+    const userId = await requireSuperAdmin(req);
+    const body = await req.json() as {
+      action?: Action;
+      eventLogId?: string;
+      orderId?: string;
+      subscriptionId?: string;
+      startAt?: string;
+    };
 
     if (body.action === "reprocess_event") {
       const eventLogId = String(body.eventLogId || "").trim();
@@ -173,6 +355,38 @@ Deno.serve(async (req) => {
       const orderId = String(body.orderId || "").trim();
       if (!orderId) throw new Error("orderId é obrigatório.");
       const result = await syncOrderPayment(orderId);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (body.action === "update_subscription_start_at") {
+      const subscriptionId = String(body.subscriptionId || "").trim();
+      const startAt = String(body.startAt || "").trim();
+      if (!subscriptionId) throw new Error("subscriptionId é obrigatório.");
+      if (!startAt) throw new Error("startAt é obrigatório.");
+      const result = await updateSubscriptionStartAt(userId, subscriptionId, startAt);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (body.action === "cancel_subscription") {
+      const subscriptionId = String(body.subscriptionId || "").trim();
+      if (!subscriptionId) throw new Error("subscriptionId é obrigatório.");
+      const result = await cancelSubscription(userId, subscriptionId);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (body.action === "sync_subscription") {
+      const subscriptionId = String(body.subscriptionId || "").trim();
+      if (!subscriptionId) throw new Error("subscriptionId é obrigatório.");
+      const result = await syncSubscription(userId, subscriptionId);
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
