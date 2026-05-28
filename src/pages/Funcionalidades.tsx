@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { PublicSeo } from "@/components/seo/PublicSeo";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS, formatTrialDurationText } from "@/lib/trialDays";
 
 const features = [
   {
@@ -133,6 +135,9 @@ const features = [
 ];
 
 const Funcionalidades = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+
   return (
     <>
     <PublicSeo
@@ -161,7 +166,7 @@ const Funcionalidades = () => {
                 </Link>
                 <Link to="/teste-gratis">
                   <Button size="lg" className="bg-green hover:bg-green-dark text-white w-full sm:w-auto">
-                    Começar teste grátis
+                    {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
                   </Button>
                 </Link>
               </div>
@@ -201,22 +206,30 @@ const Funcionalidades = () => {
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>
                   <h2 className="text-2xl md:text-3xl font-bold text-navy mb-4">
-                    Experimente todas as funcionalidades gratuitamente
+                    {trialDays > 0
+                      ? "Experimente todas as funcionalidades gratuitamente"
+                      : "Ative todas as funcionalidades em um só painel"}
                   </h2>
                   <p className="text-navy/70 mb-6">
-                    Acesso completo a todas as ferramentas por 14 dias, sem necessidade de cartão de crédito.
-                    Veja como o Pubfy pode transformar seu negócio.
+                    {trialDays > 0
+                      ? `Acesso completo a todas as ferramentas por ${formatTrialDurationText(trialDays)}, sem necessidade de cartão de crédito.`
+                      : "Crie sua conta e ative o plano ideal para acessar todas as ferramentas."}
+                    {" "}Veja como o Pubfy pode transformar seu negócio.
                   </p>
                   <Link to="/teste-gratis">
                     <Button size="lg" className="bg-orange hover:bg-orange/90 text-white px-8">
-                      Iniciar teste grátis
+                      {trialDays > 0 ? "Iniciar teste grátis" : "Criar conta"}
                     </Button>
                   </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-offwhite rounded-lg p-4 text-center">
-                    <h3 className="font-semibold text-navy mb-1">14 dias</h3>
-                    <p className="text-sm text-navy/70">de teste grátis</p>
+                    <h3 className="font-semibold text-navy mb-1">
+                      {trialDays > 0 ? formatTrialDurationText(trialDays) : "Sem trial"}
+                    </h3>
+                    <p className="text-sm text-navy/70">
+                      {trialDays > 0 ? "de teste grátis" : "ativação pelo painel"}
+                    </p>
                   </div>
                   <div className="bg-offwhite rounded-lg p-4 text-center">
                     <h3 className="font-semibold text-navy mb-1">Completo</h3>

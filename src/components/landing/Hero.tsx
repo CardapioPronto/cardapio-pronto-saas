@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Clock, QrCode, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS, formatTrialDurationText } from "@/lib/trialDays";
 
 const Hero = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+
   return (
     <section className="relative min-h-[720px] overflow-hidden bg-navy pt-24 text-white md:pt-28">
       <div
@@ -31,7 +36,7 @@ const Hero = () => {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link to="/teste-gratis">
               <Button size="lg" className="h-14 w-full bg-orange px-7 text-base font-semibold text-white hover:bg-orange/90 sm:w-auto">
-                Começar teste grátis
+                {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
                 <ArrowRight size={18} className="ml-2" />
               </Button>
             </Link>
@@ -118,8 +123,10 @@ const Hero = () => {
 
           <div className="grid grid-cols-2 gap-4 lg:pb-10">
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
-              <p className="text-3xl font-bold">14 dias</p>
-              <p className="mt-1 text-sm text-white/72">para testar sem cartão</p>
+              <p className="text-3xl font-bold">{formatTrialDurationText(trialDays)}</p>
+              <p className="mt-1 text-sm text-white/72">
+                {trialDays > 0 ? "para testar sem cartão" : "cadastro direto para ativação"}
+              </p>
             </div>
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
               <p className="text-3xl font-bold">QR Code</p>

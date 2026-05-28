@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown, BarChart3, QrCode, ShoppingCart } from "lucide-react";
 import { PubfyWordmark } from "@/components/brand/PubfyWordmark";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trialDays";
 
 const solutionLinks = [
   {
@@ -28,6 +30,9 @@ const solutionLinks = [
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+  const signupLabel = trialDays > 0 ? "Teste grátis" : "Criar conta";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -95,7 +100,7 @@ const Navbar = () => {
             </Button>
           </Link>
           <Link to="/teste-gratis">
-            <Button className="bg-green hover:bg-green-dark text-white">Teste Grátis</Button>
+            <Button className="bg-green hover:bg-green-dark text-white">{signupLabel}</Button>
           </Link>
         </div>
 
@@ -133,7 +138,7 @@ const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/teste-gratis">
-                <Button className="w-full bg-green hover:bg-green-dark text-white">Teste Grátis</Button>
+                <Button className="w-full bg-green hover:bg-green-dark text-white">{signupLabel}</Button>
               </Link>
             </div>
           </div>

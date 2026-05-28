@@ -1,4 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
 import type { PedidoStatus } from "@/features/pdv/types";
 
 /** Alinhado ao trigger `sync_delivery_order_status_from_order`. */
@@ -22,6 +21,8 @@ export async function notifyDeliveryOrderStatusWhatsApp(
   orderId: string,
   newStatus: string,
 ): Promise<void> {
+  const { supabase } = await import("@/integrations/supabase/client");
+
   const { data: deliveryOrder, error } = await supabase
     .from("delivery_orders")
     .select("id, customer_phone")

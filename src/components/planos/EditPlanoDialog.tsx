@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { PagarmePaymentMethod, Plano } from "@/types/plano";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner-toast";
+import { DEFAULT_TRIAL_DAYS, MAX_TRIAL_DAYS, normalizeTrialDays } from "@/lib/trialDays";
 
 const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string }> = [
   { value: "credit_card", label: "Cartão de crédito" },
@@ -44,7 +45,7 @@ export const EditPlanoDialog = ({
   const [description, setDescription] = useState("");
   const [monthly, setMonthly] = useState("");
   const [yearly, setYearly] = useState("");
-  const [trialDays, setTrialDays] = useState("14");
+  const [trialDays, setTrialDays] = useState(String(DEFAULT_TRIAL_DAYS));
   const [isActive, setIsActive] = useState(true);
   const [paymentMethods, setPaymentMethods] = useState<PagarmePaymentMethod[]>([
     "credit_card",
@@ -62,7 +63,7 @@ export const EditPlanoDialog = ({
       setDescription(plano.description || "");
       setMonthly(String(plano.price_monthly));
       setYearly(String(plano.price_yearly));
-      setTrialDays(String(plano.trial_days ?? 14));
+      setTrialDays(String(normalizeTrialDays(plano.trial_days, DEFAULT_TRIAL_DAYS)));
       setIsActive(plano.is_active);
       setPaymentMethods(plano.pagarme_payment_methods?.length ? plano.pagarme_payment_methods : ["credit_card", "boleto"]);
       setEmailCampaignsEnabled(plano.email_campaigns_enabled ?? false);
@@ -86,6 +87,16 @@ export const EditPlanoDialog = ({
       toast.error("Selecione pelo menos um método de pagamento");
       return;
     }
+    const parsedTrialDays = Number(trialDays);
+    if (
+      !trialDays.trim() ||
+      !Number.isInteger(parsedTrialDays) ||
+      parsedTrialDays < 0 ||
+      parsedTrialDays > MAX_TRIAL_DAYS
+    ) {
+      toast.error(`Informe dias de teste entre 0 e ${MAX_TRIAL_DAYS}.`);
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("plans")
@@ -94,7 +105,7 @@ export const EditPlanoDialog = ({
         description: description || null,
         price_monthly: Number(monthly),
         price_yearly: Number(yearly),
-        trial_days: Number(trialDays) || 0,
+        trial_days: normalizeTrialDays(parsedTrialDays, DEFAULT_TRIAL_DAYS),
         pagarme_payment_methods: paymentMethods,
         email_campaigns_enabled: emailCampaignsEnabled,
         email_campaign_monthly_limit: Number(emailCampaignMonthlyLimit) || 0,
@@ -166,6 +177,9 @@ export const EditPlanoDialog = ({
             <Label>Dias de teste grátis</Label>
             <Input
               type="number"
+              min="0"
+              max={MAX_TRIAL_DAYS}
+              step="1"
               value={trialDays}
               onChange={(e) => setTrialDays(e.target.value)}
             />

@@ -5,6 +5,7 @@ import { Sparkles, ShoppingBag, MessageCircle, LayoutGrid, Zap } from "lucide-re
 import { Link } from "react-router-dom";
 import { useActivePlan } from "@/hooks/useActivePlan";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DEFAULT_TRIAL_DAYS, formatTrialDaysBadge } from "@/lib/trialDays";
 
 const benefits = [
   { icon: ShoppingBag, text: "Cardápio digital, produtos, cupons e promoções" },
@@ -20,7 +21,7 @@ const Pricing = () => {
   const monthlyPrice = plan?.price_monthly ?? 59.9;
   const yearlyPerMonth = plan?.price_yearly ?? 49.0;
   const yearlyTotal = yearlyPerMonth * 12;
-  const trialDays = plan?.trial_days ?? 14;
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
   const planName = plan?.name ?? "Plano Pubfy";
   const discountPct = monthlyPrice > 0
     ? Math.round((1 - yearlyPerMonth / monthlyPrice) * 100)
@@ -36,7 +37,9 @@ const Pricing = () => {
             Comece com tudo liberado e prove valor antes de pagar.
           </h2>
           <p className="text-lg text-navy/70">
-            Comece grátis por {trialDays} dias. Sem cartão. Sem complicação.
+            {trialDays > 0
+              ? `Comece grátis por ${trialDays} ${trialDays === 1 ? "dia" : "dias"}. Sem cartão. Sem complicação.`
+              : "Crie sua conta e ative o plano ideal para sua operação. Sem complicação."}
           </p>
 
           <div className="mt-8 inline-flex items-center bg-white border border-gray-200 p-1 rounded-lg shadow-sm">
@@ -102,16 +105,18 @@ const Pricing = () => {
 
               <div className="mt-6 inline-flex items-center gap-2 bg-orange/10 text-orange px-4 py-2 rounded-lg">
                 <Sparkles size={14} />
-                <span className="text-sm font-semibold">{trialDays} dias grátis</span>
+                <span className="text-sm font-semibold">{formatTrialDaysBadge(trialDays)}</span>
               </div>
               <p className="mt-2 text-xs text-navy/60">
-                Teste completo, sem compromisso. Não pedimos cartão.
+                {trialDays > 0
+                  ? "Teste completo, sem compromisso. Não pedimos cartão."
+                  : "Contratação simples, com pagamento pelo painel de assinaturas."}
               </p>
 
               <div className="mt-8 space-y-3">
                 <Link to="/teste-gratis" className="block">
                   <Button className="w-full h-12 bg-green hover:bg-green-dark text-white text-base font-semibold rounded-lg">
-                    Começar teste grátis
+                    {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
                   </Button>
                 </Link>
                 <Link to="/contato" className="block">

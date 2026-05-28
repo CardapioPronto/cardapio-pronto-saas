@@ -14,6 +14,8 @@ import {
   ShoppingCart,
   Utensils,
 } from "lucide-react";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trialDays";
 
 const advantages = [
   {
@@ -48,6 +50,9 @@ const included = [
 ];
 
 const PDVOnline = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+
   return (
     <>
     <PublicSeo
@@ -176,7 +181,9 @@ const PDVOnline = () => {
                   O objetivo é deixar o pedido claro desde o atendimento até a entrega.
                 </p>
                 <Link to="/teste-gratis" className="mt-6 inline-flex">
-                  <Button className="bg-green text-white hover:bg-green-dark">Começar teste grátis</Button>
+                  <Button className="bg-green text-white hover:bg-green-dark">
+                    {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
+                  </Button>
                 </Link>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

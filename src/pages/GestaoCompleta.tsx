@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trialDays";
 
 const pillars = [
   {
@@ -51,6 +53,9 @@ const modules = [
 ];
 
 const GestaoCompleta = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+
   return (
     <>
     <PublicSeo
@@ -190,7 +195,9 @@ const GestaoCompleta = () => {
                   Em vez de vender telas isoladas, a gestão completa mostra como a operação se conecta: produto vendido, pedido atendido, equipe com acesso correto e indicador atualizado.
                 </p>
                 <Link to="/teste-gratis" className="mt-7 inline-flex">
-                  <Button className="bg-orange text-white hover:bg-orange/90">Começar teste grátis</Button>
+                  <Button className="bg-orange text-white hover:bg-orange/90">
+                    {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
+                  </Button>
                 </Link>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">

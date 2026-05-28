@@ -6,11 +6,15 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { PublicSeo } from "@/components/seo/PublicSeo";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS, formatTrialDurationText } from "@/lib/trialDays";
 
-const faqs = [
+const buildFaqs = (trialDays: number) => [
   {
     question: "Quanto tempo dura o período de teste grátis?",
-    answer: "O período de teste grátis do Pubfy dura 14 dias, sem necessidade de cartão de crédito. Durante este período, você tem acesso completo a todas as funcionalidades da plataforma."
+    answer: trialDays > 0
+      ? `O período de teste grátis do Pubfy dura ${formatTrialDurationText(trialDays)}, sem necessidade de cartão de crédito. Durante este período, você tem acesso completo a todas as funcionalidades da plataforma.`
+      : "No momento, o período de teste grátis está desativado. Você pode criar a conta e ativar o plano pelo painel de assinaturas."
   },
   {
     question: "Preciso instalar algum software no meu computador?",
@@ -55,6 +59,10 @@ const faqs = [
 ];
 
 const FaqPage = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+  const faqs = buildFaqs(trialDays);
+
   return (
     <>
     <PublicSeo
@@ -106,7 +114,7 @@ const FaqPage = () => {
                 </Button>
                 <Button className="bg-green hover:bg-green-dark text-white flex-1">
                   <Link to="/teste-gratis" className="w-full h-full flex items-center justify-center">
-                    Começar teste grátis
+                    {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
                   </Link>
                 </Button>
               </div>

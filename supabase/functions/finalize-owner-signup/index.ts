@@ -92,7 +92,7 @@ function trialWindow(anchor: string | null | undefined, trialDays: number) {
   return {
     trialStart,
     trialEndsAt,
-    status: trialEndsAt.getTime() >= Date.now() ? "trialing" : "canceled",
+    status: trialDays > 0 && trialEndsAt.getTime() > Date.now() ? "trialing" : "canceled",
   };
 }
 
@@ -170,7 +170,7 @@ async function ensureTrialSubscription(supabase: SupabaseAdmin, restaurantId: st
   const plan = chooseTrialPlan((plans ?? []) as Plan[]);
   if (!plan) throw new Error("Nenhum plano ativo encontrado");
 
-  const trialDays = Math.max(1, Number(plan.trial_days || 14));
+  const trialDays = Math.min(365, Math.max(0, Number(plan.trial_days ?? 14)));
   const { trialStart, trialEndsAt, status } = trialWindow(
     typeof restaurant?.created_at === "string" ? restaurant.created_at : null,
     trialDays,

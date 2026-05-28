@@ -19,8 +19,12 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { PublicSeo } from "@/components/seo/PublicSeo";
 import { supabase } from "@/lib/supabase";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trialDays";
 
 const Demonstracao = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -230,7 +234,7 @@ const Demonstracao = () => {
                       </Link>
                       <Link to="/teste-gratis">
                         <Button className="bg-green hover:bg-green-dark text-white">
-                          Iniciar teste grátis agora
+                          {trialDays > 0 ? "Iniciar teste grátis agora" : "Criar conta agora"}
                         </Button>
                       </Link>
                     </div>

@@ -13,6 +13,8 @@ import {
   Smartphone,
   Tags,
 } from "lucide-react";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS, formatTrialDurationText } from "@/lib/trialDays";
 
 const highlights = [
   {
@@ -47,6 +49,9 @@ const checklist = [
 ];
 
 const CardapioDigital = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+
   return (
     <>
     <PublicSeo
@@ -171,7 +176,11 @@ const CardapioDigital = () => {
                   Ideal para restaurantes que querem reduzir atrito no atendimento e vender melhor os produtos do menu.
                 </p>
                 <Link to="/teste-gratis" className="mt-6 inline-flex">
-                  <Button className="bg-orange text-white hover:bg-orange/90">Testar por 14 dias</Button>
+                  <Button className="bg-orange text-white hover:bg-orange/90">
+                    {trialDays > 0
+                      ? `Testar por ${formatTrialDurationText(trialDays)}`
+                      : "Criar conta"}
+                  </Button>
                 </Link>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

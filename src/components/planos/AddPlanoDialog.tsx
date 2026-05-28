@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner-toast";
 import { PagarmePaymentMethod } from "@/types/plano";
+import { DEFAULT_TRIAL_DAYS, MAX_TRIAL_DAYS, normalizeTrialDays } from "@/lib/trialDays";
 
 const PAYMENT_METHOD_OPTIONS: Array<{ value: PagarmePaymentMethod; label: string }> = [
   { value: "credit_card", label: "Cartão de crédito" },
@@ -39,7 +40,7 @@ export function AddPlanoDialog({
   const [description, setDescription] = useState("");
   const [monthly, setMonthly] = useState("");
   const [yearly, setYearly] = useState("");
-  const [trialDays, setTrialDays] = useState("14");
+  const [trialDays, setTrialDays] = useState(String(DEFAULT_TRIAL_DAYS));
   const [paymentMethods, setPaymentMethods] = useState<PagarmePaymentMethod[]>([
     "credit_card",
     "boleto",
@@ -67,13 +68,23 @@ export function AddPlanoDialog({
       toast.error("Selecione pelo menos um método de pagamento");
       return;
     }
+    const parsedTrialDays = Number(trialDays);
+    if (
+      !trialDays.trim() ||
+      !Number.isInteger(parsedTrialDays) ||
+      parsedTrialDays < 0 ||
+      parsedTrialDays > MAX_TRIAL_DAYS
+    ) {
+      toast.error(`Informe dias de teste entre 0 e ${MAX_TRIAL_DAYS}.`);
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("plans").insert({
       name,
       description: description || null,
       price_monthly: Number(monthly),
       price_yearly: Number(yearly),
-      trial_days: Number(trialDays) || 0,
+      trial_days: normalizeTrialDays(parsedTrialDays, DEFAULT_TRIAL_DAYS),
       pagarme_payment_methods: paymentMethods,
       email_campaigns_enabled: emailCampaignsEnabled,
       email_campaign_monthly_limit: Number(emailCampaignMonthlyLimit) || 0,
@@ -92,7 +103,7 @@ export function AddPlanoDialog({
       setDescription("");
       setMonthly("");
       setYearly("");
-      setTrialDays("14");
+      setTrialDays(String(DEFAULT_TRIAL_DAYS));
       setPaymentMethods(["credit_card", "boleto"]);
       setEmailCampaignsEnabled(false);
       setEmailCampaignMonthlyLimit("0");
@@ -149,6 +160,9 @@ export function AddPlanoDialog({
             <Label>Dias de teste grátis</Label>
             <Input
               type="number"
+              min="0"
+              max={MAX_TRIAL_DAYS}
+              step="1"
               value={trialDays}
               onChange={(e) => setTrialDays(e.target.value)}
             />

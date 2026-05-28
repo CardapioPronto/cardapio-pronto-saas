@@ -26,6 +26,7 @@ import { fetchCheckoutPlanos } from "@/services/planosService";
 import { useMySubscriptions, MySubscription } from "@/hooks/useMySubscriptions";
 import { usePendingSubscriptionPoll } from "@/hooks/usePendingSubscriptionPoll";
 import { Plano } from "@/types/plano";
+import { DEFAULT_TRIAL_DAYS, formatTrialDurationText, normalizeTrialDays } from "@/lib/trialDays";
 
 const VALID_TABS = ["overview", "my-subscriptions", "plans"] as const;
 
@@ -125,6 +126,20 @@ const Assinaturas = () => {
   const daysLeftInTrial = trialEndsAt
     ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000))
     : 0;
+  const trialStartAt = accessSubscription?.trial_start
+    ? new Date(accessSubscription.trial_start)
+    : null;
+  const configuredTrialDays = normalizeTrialDays(
+    accessSubscription?.plan?.trial_days,
+    DEFAULT_TRIAL_DAYS,
+  );
+  const trialDurationDays =
+    trialStartAt &&
+    trialEndsAt &&
+    Number.isFinite(trialStartAt.getTime()) &&
+    Number.isFinite(trialEndsAt.getTime())
+      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - trialStartAt.getTime()) / 86400000))
+      : configuredTrialDays;
 
   const pendingSubscriptionIds = useMemo(
     () => mySubscriptions.filter((s) => s.status === "pending").map((s) => s.id),
@@ -235,7 +250,9 @@ const Assinaturas = () => {
         {!scheduledPaidPlan && effectiveStatus === "trialing" && (
           <Alert className="border-orange/40 bg-orange/5">
             <Clock className="h-4 w-4 text-orange" />
-            <AlertTitle>Você está no período de teste gratuito (14 dias)</AlertTitle>
+            <AlertTitle>
+              Você está no período de teste gratuito ({formatTrialDurationText(trialDurationDays)})
+            </AlertTitle>
             <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>
                 Restam <strong>{daysLeftInTrial} dia(s)</strong> de teste. Ative seu plano para continuar usando o Pubfy sem interrupção.

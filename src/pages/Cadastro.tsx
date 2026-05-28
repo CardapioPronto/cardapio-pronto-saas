@@ -16,12 +16,16 @@ import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
 import { RestaurantInfoForm } from "@/components/cadastro/RestaurantInfoForm";
 import { FormFooter } from "@/components/cadastro/FormFooter";
 import { PublicSeo } from "@/components/seo/PublicSeo";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS, formatTrialPeriodText } from "@/lib/trialDays";
 
 const OWNER_EMAIL_VERIFICATION_TTL_HOURS = 24;
 
 export default function Cadastro() {
   const location = useLocation();
   const { signUp } = useAuth();
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -109,7 +113,9 @@ export default function Cadastro() {
               </CardTitle>
               <CardDescription>
                 Enviamos um link para {email.trim().toLowerCase()}. O estabelecimento
-                e o teste grátis serão criados somente após a confirmação.
+                {trialDays > 0
+                  ? " e o teste grátis serão criados somente após a confirmação."
+                  : " será criado somente após a confirmação."}
               </CardDescription>
             </div>
           </CardHeader>
@@ -158,10 +164,12 @@ export default function Cadastro() {
             </Link>
           </div>
           <CardTitle className="text-2xl font-bold text-center">
-            Começar teste grátis
+            {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
           </CardTitle>
           <CardDescription className="text-center">
-            14 dias grátis, sem necessidade de cartão de crédito
+            {trialDays > 0
+              ? `${formatTrialPeriodText(trialDays)}, sem necessidade de cartão de crédito`
+              : "Crie sua conta para ativar o plano pelo painel de assinaturas"}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

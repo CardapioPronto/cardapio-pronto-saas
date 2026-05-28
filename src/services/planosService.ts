@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { PagarmePaymentMethod, Plano } from "@/types/plano";
 import { fetchPublicPlanSummaries, type PublicPlanSummary } from "./publicPlansService";
+import { DEFAULT_TRIAL_DAYS, normalizeTrialDays } from "@/lib/trialDays";
 
 const PUBFY_SINGLE_PLAN_ID = "4953d3fc-4945-4d80-bc84-58e4f6f26698";
 
@@ -38,7 +39,7 @@ const mapPlano = (item: PublicPlanSummary): Plano => ({
   price_monthly: item.price_monthly,
   price_yearly: item.price_yearly,
   is_active: item.is_active || false,
-  trial_days: item.trial_days ?? 14,
+  trial_days: normalizeTrialDays(item.trial_days, DEFAULT_TRIAL_DAYS),
   pagarme_plan_id_monthly: null,
   pagarme_plan_id_yearly: null,
   pagarme_synced_at: null,
@@ -110,7 +111,7 @@ export const fetchCheckoutPlanos = async (): Promise<Plano[]> => {
       price_monthly: Number(item.price_monthly),
       price_yearly: Number(item.price_yearly),
       is_active: Boolean(item.is_active),
-      trial_days: item.trial_days ?? 14,
+      trial_days: normalizeTrialDays(item.trial_days, DEFAULT_TRIAL_DAYS),
       pagarme_plan_id_monthly: item.pagarme_plan_id_monthly ?? null,
       pagarme_plan_id_yearly: item.pagarme_plan_id_yearly ?? null,
       pagarme_synced_at: null,

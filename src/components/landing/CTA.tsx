@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trialDays";
 
 const LandingCTA = () => {
+  const { plan } = useActivePlan();
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
+
   return (
     <section className="bg-navy py-16">
       <div className="container mx-auto px-6">
@@ -16,12 +21,14 @@ const LandingCTA = () => {
               Veja o Pubfy funcionando na rotina do seu restaurante.
             </h2>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/75">
-              Crie sua conta, cadastre seu estabelecimento e teste o fluxo completo com cardápio, produtos, mesas, pedidos e atendimento em um só lugar.
+              {trialDays > 0
+                ? "Crie sua conta, cadastre seu estabelecimento e teste o fluxo completo com cardápio, produtos, mesas, pedidos e atendimento em um só lugar."
+                : "Crie sua conta, cadastre seu estabelecimento e ative o plano para operar cardápio, produtos, mesas, pedidos e atendimento em um só lugar."}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link to="/teste-gratis">
                 <Button size="lg" className="h-12 w-full bg-orange px-7 font-semibold text-white hover:bg-orange/90 sm:w-auto">
-                  Começar teste grátis
+                  {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -51,7 +58,9 @@ const LandingCTA = () => {
             <div className="mt-6 rounded-md bg-offwhite p-4">
               <p className="text-sm font-semibold text-navy">Sem compromisso</p>
               <p className="mt-1 text-sm text-navy/60">
-                Teste gratuito, sem cartão, com caminho claro para ativar a operação.
+                {trialDays > 0
+                  ? "Teste gratuito, sem cartão, com caminho claro para ativar a operação."
+                  : "Conta criada em minutos, com caminho claro para ativar a operação."}
               </p>
             </div>
           </div>

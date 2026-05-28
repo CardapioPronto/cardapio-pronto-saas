@@ -2,6 +2,7 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { PagarmePaymentMethod, Plano } from "@/types/plano";
+import { DEFAULT_TRIAL_DAYS, normalizeTrialDays } from "@/lib/trialDays";
 
 const PAGARME_METHODS = new Set<PagarmePaymentMethod>([
     "credit_card",
@@ -43,7 +44,7 @@ export const usePlanos = () => {
                 created_at: item.created_at || undefined,
                 updated_at: item.updated_at || undefined,
                 description: item.description ?? null,
-                trial_days: item.trial_days ?? 14,
+                trial_days: normalizeTrialDays(item.trial_days, DEFAULT_TRIAL_DAYS),
                 pagarme_plan_id_monthly: item.pagarme_plan_id_monthly ?? null,
                 pagarme_plan_id_yearly: item.pagarme_plan_id_yearly ?? null,
                 pagarme_synced_at: item.pagarme_synced_at ?? null,

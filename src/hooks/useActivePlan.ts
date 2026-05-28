@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchPublicPlanSummaries } from "@/services/publicPlansService";
+import { selectMarketingPlan } from "@/lib/marketingPlan";
+import { DEFAULT_TRIAL_DAYS, normalizeTrialDays } from "@/lib/trialDays";
 
 export interface ActivePlan {
   id: string;
@@ -17,7 +19,7 @@ export function useActivePlan() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [data] = await fetchPublicPlanSummaries();
+      const data = selectMarketingPlan(await fetchPublicPlanSummaries());
       if (!mounted) return;
       if (data) {
         setPlan({
@@ -26,7 +28,7 @@ export function useActivePlan() {
           description: data.description ?? null,
           price_monthly: Number(data.price_monthly),
           price_yearly: Number(data.price_yearly),
-          trial_days: data.trial_days ?? 14,
+          trial_days: normalizeTrialDays(data.trial_days, DEFAULT_TRIAL_DAYS),
         });
       }
       setLoading(false);

@@ -6,10 +6,11 @@ import { PublicSeo } from "@/components/seo/PublicSeo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useActivePlan } from "@/hooks/useActivePlan";
+import { DEFAULT_TRIAL_DAYS, formatTrialPeriodText } from "@/lib/trialDays";
 
 const Precos = () => {
   const { plan } = useActivePlan();
-  const trialDays = plan?.trial_days ?? 14;
+  const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
   const yearlyPerMonth = plan?.price_yearly ?? 49.0;
   const yearlyTotal = (yearlyPerMonth * 12).toFixed(2).replace(".", ",");
   const monthly = plan?.price_monthly ?? 59.9;
@@ -46,7 +47,11 @@ const Precos = () => {
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-navy mb-2">Preciso de cartão para testar?</h3>
-                <p className="text-navy/70">Não. Você experimenta o Pubfy por {trialDays} dias grátis sem informar dados de pagamento.</p>
+                <p className="text-navy/70">
+                  {trialDays > 0
+                    ? `Não. Você experimenta o Pubfy por ${formatTrialPeriodText(trialDays)} sem informar dados de pagamento.`
+                    : "No momento, o período de teste grátis está desativado. A ativação do plano é feita pelo painel de assinaturas."}
+                </p>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-navy mb-2">Existe período de fidelidade?</h3>

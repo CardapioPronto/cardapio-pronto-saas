@@ -6,6 +6,7 @@ import { Pencil, ListPlus, RefreshCw, CheckCircle2, AlertCircle, Clock } from "l
 import { formatCurrency } from "@/lib/utils";
 import { Plano } from "@/types/plano";
 import { DeletePlanoDialog } from "./DeletePlanoDialog";
+import { DEFAULT_TRIAL_DAYS, formatTrialDurationText } from "@/lib/trialDays";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   credit_card: "Crédito",
@@ -64,7 +65,7 @@ export const PlanosTable = ({
     },
     {
       header: "Trial",
-      accessorKey: (row: Plano) => `${row.trial_days ?? 14} dias`,
+      accessorKey: (row: Plano) => formatTrialDurationText(row.trial_days ?? DEFAULT_TRIAL_DAYS),
     },
     {
       header: "Pagamento",
