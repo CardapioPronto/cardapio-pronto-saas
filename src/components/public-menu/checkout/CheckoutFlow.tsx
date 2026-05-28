@@ -407,7 +407,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                   onChange={e => setCustomer(c => ({ ...c, acceptsEmailMarketing: e.target.checked }))}
                   className="mt-0.5"
                 />
-                Quero receber novidades e cupons por e-mail.
+                Aceito receber novidades e cupons deste restaurante por e-mail.
               </label>
               {fulfillmentType === 'table' && (
                 <p className="text-xs text-muted-foreground">
@@ -429,7 +429,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                   onChange={e => setCustomer(c => ({ ...c, acceptsEmailMarketing: e.target.checked }))}
                   className="mt-0.5"
                 />
-                Quero receber novidades e cupons por e-mail.
+                Aceito receber novidades e cupons deste restaurante por e-mail.
               </label>
               <div className="relative">
                 <Field label="CEP *" value={address.zip_code} onChange={v => setAddress(a => ({ ...a, zip_code: v }))} onBlur={handleCepBlur} placeholder="00000-000" />

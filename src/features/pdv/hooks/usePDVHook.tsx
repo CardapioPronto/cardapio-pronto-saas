@@ -25,6 +25,18 @@ import {
   toStartOfDayIso,
 } from "../utils/historicoPedidos";
 import { useOrdersRealtimeSubscription } from "./useOrdersRealtimeSubscription";
+import { captureCrmLeadFromOrder } from "@/services/crmService";
+
+const getCreatedOrderId = (pedido: unknown) => {
+  if (!pedido || typeof pedido !== "object") return null;
+  const value = pedido as { id?: unknown; order_id?: unknown };
+  const id = typeof value.order_id === "string"
+    ? value.order_id
+    : typeof value.id === "string"
+      ? value.id
+      : null;
+  return id;
+};
 
 export const usePDVHook = (restaurantId: string) => {
   // Estados do PDV
@@ -333,6 +345,16 @@ export const usePDVHook = (restaurantId: string) => {
       }
 
       if (result.success) {
+        const orderId = getCreatedOrderId(result.pedido);
+        if (orderId) {
+          captureCrmLeadFromOrder(orderId, {
+            acceptsMarketing: dadosCliente.aceitaMarketing ?? null,
+            source: "pdv",
+          }).catch((error) => {
+            console.warn("Falha opcional ao capturar lead do PDV:", error);
+          });
+        }
+
         setItensPedido([]);
         setNomeCliente("");
         setMesaSelecionada("");
@@ -358,6 +380,16 @@ export const usePDVHook = (restaurantId: string) => {
         reason,
       });
       if (result.success) {
+        const orderId = getCreatedOrderId(result.pedido);
+        if (orderId) {
+          captureCrmLeadFromOrder(orderId, {
+            acceptsMarketing: stockOverride.pendingClient.aceitaMarketing ?? null,
+            source: "pdv",
+          }).catch((error) => {
+            console.warn("Falha opcional ao capturar lead do PDV:", error);
+          });
+        }
+
         setStockOverride({ open: false, errorMessage: "", pendingClient: {} });
         setItensPedido([]);
         setNomeCliente("");

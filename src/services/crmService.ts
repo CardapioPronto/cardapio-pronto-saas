@@ -1,6 +1,7 @@
 import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
 import {
   CrmCustomerDetail,
+  CrmLeadCaptureResult,
   CrmCustomerProfilePatch,
   CrmCustomersResponse,
   CrmSegment,
@@ -94,3 +95,16 @@ export async function updateCrmCustomerProfile(
   return data;
 }
 
+export async function captureCrmLeadFromOrder(
+  orderId: string,
+  options: { acceptsMarketing?: boolean | null; source?: string | null } = {},
+): Promise<CrmLeadCaptureResult> {
+  const { data, error } = await supabase.rpc("capture_crm_lead_from_order", {
+    p_order_id: orderId,
+    p_accepts_marketing: options.acceptsMarketing ?? null,
+    p_source: options.source ?? null,
+  });
+
+  if (error) throw error;
+  return data as CrmLeadCaptureResult;
+}

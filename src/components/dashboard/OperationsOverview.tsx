@@ -159,7 +159,7 @@ export const OperationsOverview = ({ overview }: OperationsOverviewProps) => {
             <OperationTile
               icon={ShoppingBasket}
               label="Pedidos"
-              value={String(overview.openOrdersToday)}
+              value={String(overview.ordersToday)}
               detail={ordersDetail}
               tone={overview.overdueOpenOrders > 0 ? "danger" : overview.openOrdersToday > 0 ? "warning" : "success"}
               href="/pedidos"

@@ -4,9 +4,11 @@ import { DashboardOverview } from './types';
 const db = supabase;
 const OPEN_ORDER_STATUSES = ['pendente', 'preparo', 'em-andamento', 'pending', 'preparing'];
 const PREPARING_STATUSES = ['preparo', 'em-andamento', 'preparing'];
+const CANCELED_STATUSES = ['cancelado', 'cancelled', 'canceled'];
 
 type ProductAvailabilityRow = { available: boolean | null };
 type OpenOrderRow = { status: string | null; created_at: string | null };
+type OrderTodayRow = { status: string | null };
 type TableStatusRow = { status: string | null };
 type ThreadSummaryRow = { status: string | null; unread_count: number | null };
 type WhatsAppInstanceSummaryRow = { status: string | null; webhook_url: string | null };
@@ -19,6 +21,7 @@ const emptyOverview: DashboardOverview = {
   availableProducts: 0,
   unavailableProducts: 0,
   totalCategories: 0,
+  ordersToday: 0,
   openOrders: 0,
   openOrdersToday: 0,
   overdueOpenOrders: 0,
@@ -52,6 +55,7 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       productsResult,
       categoriesResult,
       ordersResult,
+      ordersTodayResult,
       tablesResult,
       threadsResult,
       instancesResult,
@@ -75,6 +79,11 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
         .select('id, status, created_at')
         .eq('restaurant_id', restaurantId)
         .in('status', OPEN_ORDER_STATUSES),
+      db
+        .from('orders')
+        .select('id, status')
+        .eq('restaurant_id', restaurantId)
+        .gte('created_at', startOfToday.toISOString()),
       db
         .from('mesas')
         .select('id, status')
@@ -101,6 +110,7 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       productsResult.error,
       categoriesResult.error,
       ordersResult.error,
+      ordersTodayResult.error,
       tablesResult.error,
       threadsResult.error,
       instancesResult.error,
@@ -111,11 +121,13 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
 
     const products = (productsResult.error ? [] : productsResult.data || []) as ProductAvailabilityRow[];
     const orders = (ordersResult.error ? [] : ordersResult.data || []) as OpenOrderRow[];
+    const ordersTodayRows = (ordersTodayResult.error ? [] : ordersTodayResult.data || []) as OrderTodayRow[];
     const tables = (tablesResult.error ? [] : tablesResult.data || []) as TableStatusRow[];
     const threads = (threadsResult.error ? [] : threadsResult.data || []) as ThreadSummaryRow[];
     const instances = (instancesResult.error ? [] : instancesResult.data || []) as WhatsAppInstanceSummaryRow[];
 
     const availableProducts = products.filter((product) => product.available !== false).length;
+    const ordersToday = ordersTodayRows.filter((order) => !CANCELED_STATUSES.includes(order.status || '')).length;
     const openOrdersToday = orders.filter((order) => new Date(order.created_at || 0) >= startOfToday).length;
     const overdueOpenOrders = Math.max(0, orders.length - openOrdersToday);
     const whatsappConnectedInstances = instances.filter((instance) => instance.status === 'CONNECTED').length;
@@ -128,6 +140,7 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       availableProducts,
       unavailableProducts: Math.max(0, products.length - availableProducts),
       totalCategories: categoriesResult.error ? 0 : categoriesResult.count || 0,
+      ordersToday,
       openOrders: orders.length,
       openOrdersToday,
       overdueOpenOrders,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   Mail,
   RefreshCw,
   Search,
+  Send,
   Tags,
   TrendingUp,
   UserRound,
@@ -51,6 +53,19 @@ const SEGMENT_LABELS: Record<CrmSegment, string> = {
   high_ticket: "Alto ticket",
   marketing: "Opt-in",
   no_orders: "Sem pedidos",
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  app: "PDV",
+  pdv: "PDV",
+  cardapio: "Cardápio",
+  ifood: "iFood",
+  whatsapp: "WhatsApp",
+  mesa: "Mesa",
+  balcao: "Balcão",
+  delivery: "Delivery",
+  manual: "Manual",
+  pedido: "Pedido",
 };
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -75,6 +90,21 @@ function normalizeTags(value: string) {
     .filter(Boolean);
 }
 
+function displaySource(value?: string | null) {
+  if (!value) return "Pedido";
+  return SOURCE_LABELS[value] || value;
+}
+
+function getCustomerSourceLabels(customer: CrmCustomer) {
+  const values = [
+    customer.source,
+    customer.last_source,
+    ...(Array.isArray(customer.sources) ? customer.sources : []),
+  ].filter(Boolean) as string[];
+
+  return Array.from(new Set(values.map(displaySource))).slice(0, 3);
+}
+
 const emptyResponse: CrmCustomersResponse = {
   total: 0,
   customers: [],
@@ -89,6 +119,7 @@ const emptyResponse: CrmCustomersResponse = {
 };
 
 const Clientes = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<CrmCustomersResponse>(emptyResponse);
   const [segment, setSegment] = useState<CrmSegment>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -196,6 +227,11 @@ const Clientes = () => {
     }
   };
 
+  const openCampaigns = () => {
+    const audience = segment === "marketing" ? "marketing_opt_in" : "recent_customers";
+    navigate(`/email-integracao?tab=campaigns&audience=${audience}&create=1`);
+  };
+
   return (
     <DashboardLayout title="Clientes">
       <div className="space-y-6">
@@ -222,13 +258,19 @@ const Clientes = () => {
               <div>
                 <CardTitle>Base de clientes</CardTitle>
                 <CardDescription>
-                  Clientes consolidados por telefone a partir de pedidos, contatos e enriquecimento manual.
+                  Leads e clientes consolidados por telefone a partir de pedidos, contatos e enriquecimento manual.
                 </CardDescription>
               </div>
-              <Button variant="outline" onClick={load} disabled={loading} className="w-full lg:w-auto">
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                Atualizar
-              </Button>
+              <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+                <Button variant="outline" onClick={openCampaigns} className="w-full lg:w-auto">
+                  <Send className="mr-2 h-4 w-4" />
+                  Criar campanha
+                </Button>
+                <Button variant="outline" onClick={load} disabled={loading} className="w-full lg:w-auto">
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  Atualizar
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -287,12 +329,19 @@ const Clientes = () => {
                         </TableCell>
                         <TableCell>
                           <div>{displayDate(customer.last_order_at)}</div>
-                          <div className="text-xs text-muted-foreground">{customer.last_source || customer.source || "pedido"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {displaySource(customer.last_source || customer.source)}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">{customer.orders_count}</TableCell>
                         <TableCell className="text-right">{money.format(customer.total_spent || 0)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
+                            {getCustomerSourceLabels(customer).map((source) => (
+                              <Badge key={source} variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
+                                {source}
+                              </Badge>
+                            ))}
                             {customer.accepts_marketing && (
                               <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
                                 Opt-in
@@ -472,4 +521,3 @@ const Clientes = () => {
 };
 
 export default Clientes;
-

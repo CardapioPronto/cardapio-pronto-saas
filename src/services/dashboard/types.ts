@@ -34,6 +34,7 @@ export interface DashboardOverview {
   availableProducts: number;
   unavailableProducts: number;
   totalCategories: number;
+  ordersToday: number;
   openOrders: number;
   openOrdersToday: number;
   overdueOpenOrders: number;

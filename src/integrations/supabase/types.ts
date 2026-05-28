@@ -2887,6 +2887,14 @@ export type Database = {
         Returns: undefined
       }
       create_pos_order: { Args: { payload: Json }; Returns: Json }
+      capture_crm_lead_from_order: {
+        Args: {
+          p_accepts_marketing?: boolean | null
+          p_order_id: string
+          p_source?: string | null
+        }
+        Returns: Json
+      }
       create_public_menu_order: { Args: { payload: Json }; Returns: Json }
       get_public_order_tracking: {
         Args: { p_tracking_id: string }

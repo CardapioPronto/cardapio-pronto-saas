@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { CartItem } from '@/components/public-menu/cart/cartContextCore';
 import { createLogger } from '@/lib/log';
+import { captureCrmLeadFromOrder } from '@/services/crmService';
 
 const log = createLogger('deliveryOrderService');
 
@@ -186,6 +187,20 @@ export const deliveryOrderService = {
     if (error) throw error;
 
     const result = parseCreateOrderResult(data);
+
+    try {
+      await captureCrmLeadFromOrder(result.order_id, {
+        acceptsMarketing: input.accepts_marketing_email ?? null,
+        source: 'cardapio',
+      });
+    } catch (e) {
+      log.capture(e, {
+        action: 'capture_public_order_crm_lead_optional',
+        restaurantId: input.restaurant_id,
+        orderId: result.order_id,
+        trackingId: result.tracking_id,
+      });
+    }
 
     if (input.fulfillment_type === 'delivery' && result.delivery_order_id) {
       try {

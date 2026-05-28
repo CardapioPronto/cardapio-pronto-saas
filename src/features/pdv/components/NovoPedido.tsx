@@ -78,6 +78,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
   const produtosListaTruncada = totalProdutos > PDV_PRODUCTS_LIMIT;
 
   const [telefoneCliente, setTelefoneCliente] = useState("");
+  const [aceitaMarketing, setAceitaMarketing] = useState(false);
   const [telefoneError, setTelefoneError] = useState("");
   const [mesaError, setMesaError] = useState("");
 
@@ -138,6 +139,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
       const pedidoFinalizado = await finalizarPedidoOriginal({
         nomeCliente,
         telefoneCliente: telefoneCliente || undefined,
+        aceitaMarketing,
       });
 
       if (pedidoFinalizado === false) {
@@ -148,6 +150,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
 
       // Limpar campos após sucesso
       setTelefoneCliente("");
+      setAceitaMarketing(false);
       setTelefoneError("");
       
     } catch (error) {
@@ -232,6 +235,18 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
                 <p className="text-xs text-red-500">{telefoneError}</p>
               )}
             </div>
+
+            <label className="flex items-start gap-2 text-xs text-muted-foreground sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+              <input
+                type="checkbox"
+                checked={aceitaMarketing}
+                onChange={(event) => setAceitaMarketing(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-muted"
+              />
+              <span>
+                Cliente autorizou receber campanhas. O telefone informado entra na base de clientes.
+              </span>
+            </label>
           </CardContent>
         </Card>
 

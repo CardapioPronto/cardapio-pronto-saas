@@ -20,6 +20,7 @@ export const DashboardExecutiveSummary = ({ overview }: DashboardExecutiveSummar
   const restaurantName = overview?.restaurantName || "Restaurante";
   const hasDelayedOrders = (overview?.overdueOpenOrders || 0) > 0;
   const hasOpenOrdersToday = (overview?.openOrdersToday || 0) > 0;
+  const ordersToday = overview?.ordersToday || 0;
   const menuReady = !!overview?.menuThemeConfigured && (overview?.availableProducts || 0) > 0;
 
   const statusText = hasDelayedOrders
@@ -52,7 +53,7 @@ export const DashboardExecutiveSummary = ({ overview }: DashboardExecutiveSummar
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <div className="rounded-md border bg-muted/25 p-3">
                 <ShoppingCart className="mb-2 h-4 w-4 text-orange" />
-                <p className="text-xl font-semibold">{overview?.openOrdersToday || 0}</p>
+                <p className="text-xl font-semibold">{ordersToday}</p>
                 <p className="text-xs text-muted-foreground">Pedidos hoje</p>
               </div>
               <div className="rounded-md border bg-muted/25 p-3">

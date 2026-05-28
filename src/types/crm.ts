@@ -76,3 +76,9 @@ export interface CrmCustomerProfilePatch {
   source?: string;
 }
 
+export interface CrmLeadCaptureResult {
+  captured: boolean;
+  reason?: string;
+  order_id?: string;
+  source?: string;
+}

@@ -143,6 +143,15 @@ Objetivo: transformar pedidos em base propria de clientes.
 - [x] Permitir tags manuais.
 - [x] Permitir filtros: novos, recorrentes, inativos, alto ticket.
 
+### Mini bloco 1.1 — Captura de leads e ponte para campanhas
+
+- [x] Capturar/enriquecer lead do CRM a partir de pedidos reais do cardapio publico.
+- [x] Capturar/enriquecer lead do CRM a partir de pedidos do PDV.
+- [x] Registrar opt-in de campanhas no checkout publico.
+- [x] Permitir opt-in simples no PDV quando o cliente autorizar campanhas.
+- [x] Mostrar origem amigavel na base de clientes: PDV, Cardapio, iFood, WhatsApp, mesa/balcao.
+- [x] Adicionar atalho da base de clientes para criacao de campanha segmentada.
+
 ### Criterio de aceite
 
 - Dono consegue abrir uma tela de clientes e identificar quem comprou, quando comprou e quanto vale.
@@ -154,6 +163,7 @@ Evidencia:
 
 - 2026-05-28: MVP implementado tecnicamente em `supabase/migrations/20260528130000_create_crm_customer_mvp.sql`, `src/pages/Clientes.tsx`, `src/services/crmService.ts` e `src/types/crm.ts`.
 - 2026-05-28: Rota `/clientes` adicionada ao app e ao menu lateral, protegida por `orders_view`, `reports_view` ou `orders_metrics_view`.
+- 2026-05-28: Mini bloco 1.1 implementado com `supabase/migrations/20260528152000_capture_crm_leads_from_orders.sql`, captura no checkout/PDV, origem amigavel e atalho para campanhas.
 - 2026-05-28: `npm run typecheck` e lint focado nos arquivos tocados passaram.
 - Pendente: aplicar migration no banco remoto/local de teste e executar QA com dados reais do piloto.
 

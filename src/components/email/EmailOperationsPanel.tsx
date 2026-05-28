@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, FileText, Inbox, Mail, Plus, RefreshCw, Save, Send, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/sonner-toast";
@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useSearchParams } from "react-router-dom";
 import { EmailIntegrationScope } from "@/services/emailIntegrationService";
 import {
   copyAllowedEmailTemplate,
@@ -50,6 +51,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function EmailOperationsPanel({ scope }: Props) {
+  const [searchParams] = useSearchParams();
+  const autoCreatedCampaignRef = useRef(false);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [logs, setLogs] = useState<EmailSendLog[]>([]);
   const [contacts, setContacts] = useState<EmailContact[]>([]);
@@ -59,6 +62,7 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copyingTemplate, setCopyingTemplate] = useState<string | null>(null);
   const [savingCampaign, setSavingCampaign] = useState(false);
@@ -68,6 +72,13 @@ export function EmailOperationsPanel({ scope }: Props) {
   const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) || campaigns[0];
   const isSystemScope = scope === "system";
   const isRestaurantScope = scope === "restaurant";
+  const queryTab = searchParams.get("tab");
+  const initialTab = queryTab === "campaigns" || queryTab === "templates" || queryTab === "logs"
+    ? queryTab
+    : "settings";
+  const queryAudience = searchParams.get("audience");
+  const initialAudience: "marketing_opt_in" | "recent_customers" =
+    queryAudience === "recent_customers" ? "recent_customers" : "marketing_opt_in";
   const canEditSelected = Boolean(selectedTemplate && (isSystemScope || selectedTemplate.restaurant_id));
   const campaignTemplates = templates.filter((template) => template.category === "marketing" || template.template_key === "campaign_basic");
   const campaignUsagePercent = campaignEntitlement?.monthlyLimit
@@ -83,6 +94,7 @@ export function EmailOperationsPanel({ scope }: Props) {
 
   const load = async () => {
     setLoading(true);
+    setLoaded(false);
     try {
       const [templateData, logData, contactData, campaignData] = await Promise.all([
         listEmailTemplates(scope),
@@ -96,6 +108,7 @@ export function EmailOperationsPanel({ scope }: Props) {
       setContacts(contactData);
       setCampaigns(campaignData);
       setCampaignEntitlement(entitlementData);
+      setLoaded(true);
       setSelectedTemplateId((currentId) => {
         if (currentId && templateData.some((template) => template.id === currentId)) return currentId;
         return templateData[0]?.id ?? null;
@@ -201,7 +214,7 @@ export function EmailOperationsPanel({ scope }: Props) {
       html_content: baseTemplate?.html_content || "<h2>{{title}}</h2><p>{{message}}</p>",
       text_content: baseTemplate?.text_content || "{{title}} - {{message}}",
       status: "draft",
-      audience_filter: { type: "marketing_opt_in" as const },
+      audience_filter: { type: initialAudience },
       recipient_count: 0,
       sent_count: 0,
       failed_count: 0,
@@ -212,6 +225,22 @@ export function EmailOperationsPanel({ scope }: Props) {
     setCampaigns((current) => [campaign, ...current]);
     setSelectedCampaignId(tempId);
   };
+
+  useEffect(() => {
+    if (
+      !isRestaurantScope ||
+      !loaded ||
+      autoCreatedCampaignRef.current ||
+      searchParams.get("tab") !== "campaigns" ||
+      searchParams.get("create") !== "1"
+    ) {
+      return;
+    }
+
+    autoCreatedCampaignRef.current = true;
+    handleCreateCampaign();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignTemplates.length, isRestaurantScope, loaded, searchParams]);
 
   const handleApplyCampaignTemplate = (templateId: string) => {
     const template = templates.find((item) => item.id === templateId);
@@ -270,7 +299,7 @@ export function EmailOperationsPanel({ scope }: Props) {
   };
 
   return (
-    <Tabs defaultValue="settings" className="space-y-6">
+    <Tabs defaultValue={initialTab} className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="settings">Configuração</TabsTrigger>

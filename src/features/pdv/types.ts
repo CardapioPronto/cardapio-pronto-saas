@@ -47,6 +47,7 @@ export interface ItemPedido {
 export interface DadosClientePedido {
   nomeCliente?: string;
   telefoneCliente?: string;
+  aceitaMarketing?: boolean;
 }
 
 export interface Pedido {

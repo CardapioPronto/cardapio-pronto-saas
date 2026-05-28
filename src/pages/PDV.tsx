@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Expand,
+  Eye,
+  EyeOff,
   Minimize,
   MonitorCog,
   ReceiptText,
@@ -30,6 +32,7 @@ export default function PDV() {
   const restaurantId = user?.restaurant_id || "";
   const [restaurantName, setRestaurantName] = useState("Pubfy");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mostrarValorVendido, setMostrarValorVendido] = useState(true);
   const canViewDashboard = hasPermission("dashboard_view");
   const canViewOrderHistory = hasPermission("orders_view");
   const canViewFinancials = hasPermission("orders_metrics_view");
@@ -139,6 +142,18 @@ export default function PDV() {
 
   const totalItensPedido = itensPedido.reduce((total, item) => total + item.quantidade, 0);
   const pedidoTipoLabel = tipoPedido === "mesa" ? "Mesa" : "Balcão";
+  const mostrandoVendido = visualizacaoAtiva === "historico" && canViewFinancials;
+  const valorTopo = mostrandoVendido
+    ? historicoResumo.totalVendido
+    : totalPedido;
+  const valorTopoLabel = mostrandoVendido
+    ? "Vendido"
+    : "Pedido atual";
+  const valorTopoFormatado = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valorTopo);
+  const valorTopoVisivel = !mostrandoVendido || mostrarValorVendido;
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-zinc-50">
@@ -187,11 +202,26 @@ export default function PDV() {
               <ReceiptText className="h-3.5 w-3.5" />
               {totalItensPedido} {totalItensPedido === 1 ? "item" : "itens"}
             </Badge>
-            <div className="rounded-md border bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
-              {new Intl.NumberFormat("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              }).format(totalPedido)}
+            <div className="inline-flex items-center overflow-hidden rounded-md border bg-emerald-50 text-sm font-semibold text-emerald-800">
+              <div
+                className="px-3 py-1"
+                title={valorTopoLabel}
+                aria-label={`${valorTopoLabel}: ${valorTopoVisivel ? valorTopoFormatado : "oculto"}`}
+              >
+                <span className="mr-1 hidden text-emerald-700/75 sm:inline">{valorTopoLabel}:</span>
+                {valorTopoVisivel ? valorTopoFormatado : "••••••"}
+              </div>
+              {mostrandoVendido && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarValorVendido((visible) => !visible)}
+                  className="flex h-8 w-8 items-center justify-center border-l border-emerald-200 text-emerald-700 transition-colors hover:bg-emerald-100"
+                  aria-label={mostrarValorVendido ? "Ocultar valor vendido" : "Mostrar valor vendido"}
+                  title={mostrarValorVendido ? "Ocultar valor vendido" : "Mostrar valor vendido"}
+                >
+                  {mostrarValorVendido ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              )}
             </div>
             <Button
               type="button"
