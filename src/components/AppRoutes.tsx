@@ -12,6 +12,7 @@ const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Produtos = lazy(() => import('@/pages/Produtos'));
 const Pedidos = lazy(() => import('@/pages/Pedidos'));
 const Cozinha = lazy(() => import('@/pages/Cozinha'));
+const Clientes = lazy(() => import('@/pages/Clientes'));
 const FuncionariosV2 = lazy(() => import('@/pages/FuncionariosV2'));
 const Categorias = lazy(() => import('@/pages/Categorias'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
@@ -159,6 +160,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['orders_view']}>
           <MainLayout>
             <Cozinha />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/clientes" element={
+        <ProtectedRoute requiredPermissions={['orders_view', 'reports_view', 'orders_metrics_view']} requireAny>
+          <MainLayout>
+            <Clientes />
           </MainLayout>
         </ProtectedRoute>
       } />

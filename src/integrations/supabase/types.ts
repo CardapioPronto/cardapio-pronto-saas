@@ -2913,6 +2913,24 @@ export type Database = {
         }
         Returns: Json
       }
+      get_restaurant_crm_customer_detail: {
+        Args: {
+          p_limit?: number
+          p_phone_normalized: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      get_restaurant_crm_customers: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_restaurant_id: string
+          p_search?: string | null
+          p_segment?: string
+        }
+        Returns: Json
+      }
       get_my_subscription_summaries: {
         Args: { p_restaurant_id: string }
         Returns: Json
@@ -3010,6 +3028,14 @@ export type Database = {
       }
       repair_missing_restaurant_subscriptions: { Args: never; Returns: number }
       revert_stock_for_order: { Args: { p_order_id: string }; Returns: Json }
+      update_crm_customer_profile: {
+        Args: {
+          p_patch: Json
+          p_phone_normalized: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
       update_order_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: Json
