@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, FileText, Inbox, Mail, Plus, RefreshCw, Save, Send, Users } from "lucide-react";
+import { Copy, FileText, Inbox, Mail, Plus, RefreshCw, Save, Send, TicketPercent, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/sonner-toast";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,9 @@ import {
   listEmailTemplates,
   saveEmailCampaign,
   saveEmailTemplate,
+  EmailCampaignCouponConfig,
   EmailCampaign,
+  generateEmailCampaignCoupon,
   sendEmailCampaign,
 } from "@/services/emailOperationsService";
 import { EmailIntegrationForm } from "./EmailIntegrationForm";
@@ -50,7 +52,13 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Falhou",
 };
 
-type CampaignAudienceType = "marketing_opt_in" | "recent_customers" | "inactive_customers";
+type CampaignAudienceType =
+  | "marketing_opt_in"
+  | "recent_customers"
+  | "inactive_customers"
+  | "first_order_no_repurchase"
+  | "high_ticket"
+  | "loyalty_balance";
 
 type CampaignPreset = {
   name: string;
@@ -72,25 +80,62 @@ const CAMPAIGN_PRESETS: Record<string, CampaignPreset> = {
     name: "Segunda compra",
     subject: "Seu proximo pedido pode ser ainda melhor",
     message: "Obrigado pelo primeiro pedido. Volte hoje e aproveite uma condicao especial.",
-    audience: "recent_customers",
+    audience: "first_order_no_repurchase",
     days: 30,
   },
   high_ticket: {
     name: "Clientes VIP",
     subject: "Um mimo para clientes especiais",
     message: "Voce esta entre nossos clientes especiais. Temos uma oferta pensada para voce.",
-    audience: "marketing_opt_in",
+    audience: "high_ticket",
   },
   loyalty_balance: {
     name: "Saldo de fidelidade",
     subject: "Voce tem beneficio esperando",
     message: "Seu saldo de fidelidade pode deixar o proximo pedido ainda melhor.",
-    audience: "marketing_opt_in",
+    audience: "loyalty_balance",
   },
 };
 
 const makeCampaignHtml = (title: string, message: string) =>
   `<h2>${title}</h2><p>${message}</p>`;
+
+const money = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+type CouponFormState = {
+  discountType: EmailCampaignCouponConfig["discountType"];
+  discountValue: string;
+  validDays: string;
+  minimumOrderValue: string;
+};
+
+const DEFAULT_COUPON_CONFIG: CouponFormState = {
+  discountType: "percentage",
+  discountValue: "10",
+  validDays: "30",
+  minimumOrderValue: "0",
+};
+
+const formatCouponDiscount = (campaign: EmailCampaign) => {
+  const coupon = campaign.coupon;
+  if (!coupon) return "";
+  if (coupon.discount_type === "percentage") return `${coupon.discount_value}%`;
+  return money.format(coupon.discount_value);
+};
+
+const normalizeNumber = (value: string, fallback: number) => {
+  const parsed = Number(String(value).replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const couponValidDaysFromNow = (validUntil?: string | null) => {
+  if (!validUntil) return DEFAULT_COUPON_CONFIG.validDays;
+  const diff = new Date(validUntil).getTime() - Date.now();
+  return String(Math.max(1, Math.ceil(diff / 86_400_000)));
+};
 
 export function EmailOperationsPanel({ scope }: Props) {
   const [searchParams] = useSearchParams();
@@ -109,9 +154,12 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [copyingTemplate, setCopyingTemplate] = useState<string | null>(null);
   const [savingCampaign, setSavingCampaign] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [generatingCoupon, setGeneratingCoupon] = useState(false);
+  const [couponConfig, setCouponConfig] = useState<CouponFormState>(DEFAULT_COUPON_CONFIG);
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || templates[0];
   const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) || campaigns[0];
+  const selectedCampaignCoupon = selectedCampaign?.coupon;
   const isSystemScope = scope === "system";
   const isRestaurantScope = scope === "restaurant";
   const queryTab = searchParams.get("tab");
@@ -121,9 +169,17 @@ export function EmailOperationsPanel({ scope }: Props) {
   const queryAudience = searchParams.get("audience");
   const queryPreset = searchParams.get("preset");
   const selectedPreset = queryPreset ? CAMPAIGN_PRESETS[queryPreset] : undefined;
+  const supportedAudienceTypes: CampaignAudienceType[] = [
+    "marketing_opt_in",
+    "recent_customers",
+    "inactive_customers",
+    "first_order_no_repurchase",
+    "high_ticket",
+    "loyalty_balance",
+  ];
   const initialAudience: CampaignAudienceType =
-    queryAudience === "recent_customers" || queryAudience === "inactive_customers"
-      ? queryAudience
+    supportedAudienceTypes.includes(queryAudience as CampaignAudienceType)
+      ? queryAudience as CampaignAudienceType
       : "marketing_opt_in";
   const canEditSelected = Boolean(selectedTemplate && (isSystemScope || selectedTemplate.restaurant_id));
   const campaignTemplates = templates.filter((template) => template.category === "marketing" || template.template_key === "campaign_basic");
@@ -188,6 +244,20 @@ export function EmailOperationsPanel({ scope }: Props) {
         setCampaignMetrics(null);
       });
   }, [selectedCampaign?.id]);
+
+  useEffect(() => {
+    if (!selectedCampaignCoupon) {
+      setCouponConfig(DEFAULT_COUPON_CONFIG);
+      return;
+    }
+
+    setCouponConfig({
+      discountType: selectedCampaignCoupon.discount_type === "fixed" ? "fixed" : "percentage",
+      discountValue: String(selectedCampaignCoupon.discount_value || 10),
+      validDays: couponValidDaysFromNow(selectedCampaignCoupon.valid_until),
+      minimumOrderValue: String(selectedCampaignCoupon.minimum_order_value ?? 0),
+    });
+  }, [selectedCampaignCoupon]);
 
   const updateSelected = (patch: Partial<EmailTemplate>) => {
     if (!selectedTemplate) return;
@@ -270,6 +340,8 @@ export function EmailOperationsPanel({ scope }: Props) {
       sent_count: 0,
       failed_count: 0,
       last_error: null,
+      coupon_id: null,
+      coupon: null,
       created_at: new Date().toISOString(),
       sent_at: null,
     };
@@ -326,6 +398,78 @@ export function EmailOperationsPanel({ scope }: Props) {
       toast.error(error instanceof Error ? error.message : "Erro ao salvar campanha");
     } finally {
       setSavingCampaign(false);
+    }
+  };
+
+  const handleGenerateCampaignCoupon = async () => {
+    if (!selectedCampaign) return;
+    if (selectedCampaign.status === "sent") {
+      toast.error("Campanhas enviadas não podem receber novo cupom");
+      return;
+    }
+
+    const discountValue = normalizeNumber(couponConfig.discountValue, 0);
+    const validDays = Math.trunc(normalizeNumber(couponConfig.validDays, 30));
+    const minimumOrderValue = normalizeNumber(couponConfig.minimumOrderValue, 0);
+
+    if (couponConfig.discountType === "percentage" && (discountValue <= 0 || discountValue > 80)) {
+      toast.error("Percentual de desconto deve ficar entre 0,01 e 80");
+      return;
+    }
+    if (couponConfig.discountType === "fixed" && discountValue <= 0) {
+      toast.error("Valor de desconto deve ser maior que zero");
+      return;
+    }
+    if (validDays < 1 || validDays > 365) {
+      toast.error("Validade deve ficar entre 1 e 365 dias");
+      return;
+    }
+    if (minimumOrderValue < 0) {
+      toast.error("Pedido mínimo não pode ser negativo");
+      return;
+    }
+
+    setGeneratingCoupon(true);
+    try {
+      let campaign = selectedCampaign;
+      if (campaign.id.startsWith("new-")) {
+        const saved = await saveEmailCampaign({ ...campaign, id: undefined });
+        setCampaigns((current) =>
+          current.map((item) => (item.id === campaign.id ? saved : item)),
+        );
+        setSelectedCampaignId(saved.id);
+        campaign = saved;
+      }
+
+      const coupon = await generateEmailCampaignCoupon(campaign.id, {
+        discountType: couponConfig.discountType,
+        discountValue,
+        validDays,
+        minimumOrderValue,
+      });
+      setCampaigns((current) =>
+        current.map((item) =>
+          item.id === campaign.id
+            ? {
+                ...item,
+                coupon_id: coupon.id,
+                coupon,
+                html_content: item.html_content.includes("{{coupon}}")
+                  ? item.html_content
+                  : `${item.html_content}<p><strong>Cupom: {{coupon}}</strong></p>`,
+                text_content: item.text_content?.includes("{{coupon}}")
+                  ? item.text_content
+                  : `${item.text_content || ""}\nCupom: {{coupon}}`,
+              }
+            : item,
+        ),
+      );
+      toast.success(`Cupom ${coupon.code} vinculado à campanha`);
+    } catch (error) {
+      console.error("Erro ao gerar cupom da campanha:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao gerar cupom");
+    } finally {
+      setGeneratingCoupon(false);
     }
   };
 
@@ -529,7 +673,7 @@ export function EmailOperationsPanel({ scope }: Props) {
           </Card>
         ) : (
           <div className="space-y-6">
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-4">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Plano</CardTitle>
@@ -588,6 +732,27 @@ export function EmailOperationsPanel({ scope }: Props) {
                   <div><span className="font-semibold">{campaignMetrics?.clicked || 0}</span> cliques</div>
                   <div><span className="font-semibold">{campaignMetrics?.bounced || 0}</span> rejeitados</div>
                   <div><span className="font-semibold">{campaignMetrics?.failed || selectedCampaign?.failed_count || 0}</span> falhas</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Resultado</CardTitle>
+                  <CardDescription>{selectedCampaign?.coupon?.code || "Sem cupom vinculado"}</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="font-semibold">{campaignMetrics?.ordersCount || 0}</span> pedidos
+                  </div>
+                  <div>
+                    <span className="font-semibold">{campaignMetrics?.finalizedOrdersCount || 0}</span> finalizados
+                  </div>
+                  <div className="col-span-2">
+                    <span className="font-semibold">{money.format(campaignMetrics?.attributedRevenue || 0)}</span> receita atribuida
+                  </div>
+                  <div className="col-span-2 text-xs text-muted-foreground">
+                    {money.format(campaignMetrics?.discountAmount || 0)} em descontos concedidos
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -707,11 +872,14 @@ export function EmailOperationsPanel({ scope }: Props) {
                               <SelectItem value="marketing_opt_in">Todos com opt-in</SelectItem>
                               <SelectItem value="recent_customers">Clientes recentes</SelectItem>
                               <SelectItem value="inactive_customers">Clientes inativos</SelectItem>
+                              <SelectItem value="first_order_no_repurchase">Primeira compra sem recompra</SelectItem>
+                              <SelectItem value="high_ticket">Alto ticket</SelectItem>
+                              <SelectItem value="loyalty_balance">Saldo de fidelidade</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Dias para clientes recentes</Label>
+                          <Label>Janela em dias</Label>
                           <Input
                             type="number"
                             min={1}
@@ -726,6 +894,129 @@ export function EmailOperationsPanel({ scope }: Props) {
                             }
                             disabled={selectedCampaign.status === "sent"}
                           />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 rounded-md border bg-muted/20 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <TicketPercent className="h-4 w-4 text-primary" />
+                              Cupom rastreável
+                            </div>
+                            {selectedCampaign.coupon ? (
+                              <>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <code className="rounded bg-background px-2 py-1 text-sm font-semibold">
+                                    {selectedCampaign.coupon.code}
+                                  </code>
+                                  <Badge variant="outline">
+                                    {formatCouponDiscount(selectedCampaign)}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Valido ate{" "}
+                                  {selectedCampaign.coupon.valid_until
+                                    ? new Date(selectedCampaign.coupon.valid_until).toLocaleDateString("pt-BR")
+                                    : "sem data final"}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                Gere um cupom para identificar pedidos vindos desta campanha.
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            {selectedCampaign.coupon && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigator.clipboard.writeText(selectedCampaign.coupon?.code || "")}
+                              >
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copiar
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleGenerateCampaignCoupon}
+                              disabled={generatingCoupon || selectedCampaign.status === "sent"}
+                            >
+                              <TicketPercent className="mr-2 h-4 w-4" />
+                              {selectedCampaign.coupon ? "Atualizar cupom" : "Gerar cupom"}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-[1fr,1fr,1fr,1fr]">
+                          <div className="space-y-2">
+                            <Label>Tipo</Label>
+                            <Select
+                              value={couponConfig.discountType}
+                              onValueChange={(value) =>
+                                setCouponConfig((current) => ({
+                                  ...current,
+                                  discountType: value as EmailCampaignCouponConfig["discountType"],
+                                }))
+                              }
+                              disabled={selectedCampaign.status === "sent"}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="percentage">Percentual</SelectItem>
+                                <SelectItem value="fixed">Valor fixo</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{couponConfig.discountType === "percentage" ? "Desconto %" : "Desconto R$"}</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={couponConfig.discountType === "percentage" ? "1" : "0.01"}
+                              max={couponConfig.discountType === "percentage" ? 80 : undefined}
+                              value={couponConfig.discountValue}
+                              onChange={(event) =>
+                                setCouponConfig((current) => ({ ...current, discountValue: event.target.value }))
+                              }
+                              disabled={selectedCampaign.status === "sent"}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Validade</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={365}
+                              value={couponConfig.validDays}
+                              onChange={(event) =>
+                                setCouponConfig((current) => ({ ...current, validDays: event.target.value }))
+                              }
+                              disabled={selectedCampaign.status === "sent"}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Pedido mínimo</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={couponConfig.minimumOrderValue}
+                              onChange={(event) =>
+                                setCouponConfig((current) => ({
+                                  ...current,
+                                  minimumOrderValue: event.target.value,
+                                }))
+                              }
+                              disabled={selectedCampaign.status === "sent"}
+                            />
+                          </div>
                         </div>
                       </div>
 

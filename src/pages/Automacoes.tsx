@@ -38,7 +38,7 @@ type CampaignAutomationCard = {
   description: string;
   href: string;
   icon: ComponentType<{ className?: string }>;
-  status: "ready" | "guided";
+  status: "ready";
   audience: string;
 };
 
@@ -113,27 +113,27 @@ const Automacoes = () => {
     },
     {
       title: "Primeira recompra",
-      description: "Comece por clientes recentes e transforme o primeiro pedido em hábito.",
+      description: "Transforme quem fez só um pedido em cliente recorrente.",
       href: "/email-integracao?tab=campaigns&create=1&preset=first_repurchase",
       icon: Target,
-      status: "guided",
-      audience: "Clientes recentes",
+      status: "ready",
+      audience: "Primeira compra sem recompra",
     },
     {
       title: "Cliente VIP",
-      description: "Monte uma campanha especial para clientes de maior valor.",
+      description: "Aborde clientes de maior valor com uma campanha especial.",
       href: "/email-integracao?tab=campaigns&create=1&preset=high_ticket",
       icon: TrendingUp,
-      status: "guided",
-      audience: "Opt-in marketing",
+      status: "ready",
+      audience: "Alto ticket",
     },
     {
       title: "Saldo de fidelidade",
-      description: "Crie um rascunho para convidar clientes a usar beneficios.",
+      description: "Convide clientes com beneficio acumulado a voltar ao cardapio.",
       href: "/email-integracao?tab=campaigns&create=1&preset=loyalty_balance",
       icon: Gift,
-      status: "guided",
-      audience: "Opt-in marketing",
+      status: "ready",
+      audience: "Saldo positivo",
     },
   ];
 
@@ -187,15 +187,8 @@ const Automacoes = () => {
                       <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
                         <Icon className="h-5 w-5" />
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          automation.status === "ready"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-sky-200 bg-sky-50 text-sky-700"
-                        }
-                      >
-                        {automation.status === "ready" ? "Pronto" : "Rascunho guiado"}
+                      <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                        Pronto
                       </Badge>
                     </div>
                     <div>

@@ -213,7 +213,7 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
   - primeiro pedido sem recompra;
   - cliente alto ticket;
   - comprou categoria especifica.
-- [ ] Gerar cupom automatico vinculado a campanha.
+- [~] Gerar cupom automatico vinculado a campanha.
 - [~] Enviar por e-mail no MVP, WhatsApp quando a base operacional estiver validada.
 - [~] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
 
@@ -225,7 +225,11 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
 
 Evidencia:
 
-- 2026-06-01: Bloco 3 iniciado com gatilhos guiados em `/automacoes` para criar campanhas por e-mail pre-preenchidas. O publico `inactive_customers` foi adicionado ao envio por e-mail para campanha real de cliente inativo; primeira recompra, cliente VIP e saldo de fidelidade entram como rascunhos guiados enquanto os filtros comportamentais completos sao evoluidos.
+- 2026-06-01: Bloco 3 iniciado com gatilhos guiados em `/automacoes` para criar campanhas por e-mail pre-preenchidas. O publico `inactive_customers` foi adicionado ao envio por e-mail para campanha real de cliente inativo.
+- 2026-06-01: Segmentacao comportamental evoluida com RPC `get_email_campaign_recipients`: primeira compra sem recompra, alto ticket e saldo de fidelidade agora selecionam destinatarios reais no envio, respeitando opt-in, descadastro e limite do plano.
+- 2026-06-01: Cupom rastreavel por campanha iniciado com `generate_email_campaign_coupon`, relacionamento `email_campaigns.coupon_id`, exibicao no editor e renderizacao da variavel `{{coupon}}` no envio.
+- 2026-06-01: Metricas de atribuicao iniciadas com `get_email_campaign_attribution_metrics`, exibindo pedidos, pedidos finalizados, receita atribuida e descontos a partir do cupom vinculado.
+- 2026-06-01: Configuracao operacional do cupom da campanha adicionada ao painel: tipo de desconto, valor, validade e pedido minimo podem ser definidos antes do envio; campanhas em rascunho atualizam o mesmo cupom vinculado para manter a atribuicao limpa.
 
 ---
 

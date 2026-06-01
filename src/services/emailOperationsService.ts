@@ -54,13 +54,14 @@ export interface EmailCampaign {
   id: string;
   restaurant_id: string;
   template_id: string | null;
+  coupon_id: string | null;
   name: string;
   subject: string;
   html_content: string;
   text_content: string | null;
   status: string;
   audience_filter: {
-    type?: "marketing_opt_in" | "recent_customers" | "inactive_customers";
+    type?: "marketing_opt_in" | "recent_customers" | "inactive_customers" | "first_order_no_repurchase" | "high_ticket" | "loyalty_balance";
     days?: number;
   };
   recipient_count: number;
@@ -69,7 +70,37 @@ export interface EmailCampaign {
   last_error: string | null;
   created_at: string;
   sent_at: string | null;
+  coupon?: EmailCampaignCoupon | null;
 }
+
+export interface EmailCampaignCoupon {
+  id: string;
+  code: string;
+  title: string;
+  discount_type: string;
+  discount_value: number;
+  valid_until: string | null;
+  minimum_order_value: number | null;
+}
+
+export interface EmailCampaignCouponConfig {
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  validDays: number;
+  minimumOrderValue: number;
+}
+
+type EmailCampaignRowWithCoupon = EmailCampaign & {
+  coupons?: {
+    id: string;
+    code: string;
+    title: string;
+    discount_type: string;
+    discount_value: number;
+    valid_until: string | null;
+    minimum_order_value: number | null;
+  } | null;
+};
 
 export interface EmailCampaignEntitlement {
   planName: string;
@@ -90,6 +121,10 @@ export interface EmailCampaignMetrics {
   bounced: number;
   complained: number;
   failed: number;
+  ordersCount: number;
+  finalizedOrdersCount: number;
+  attributedRevenue: number;
+  discountAmount: number;
 }
 
 async function getCurrentRestaurantId() {
@@ -197,12 +232,26 @@ export async function listEmailCampaigns(scope: EmailIntegrationScope, limit = 5
   const restaurantId = await getCurrentRestaurantId();
   const { data, error } = await supabase
     .from("email_campaigns")
-    .select("*")
+    .select("*, coupons(id, code, title, discount_type, discount_value, valid_until, minimum_order_value)")
     .eq("restaurant_id", restaurantId)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data || []) as EmailCampaign[];
+  const rows = (data || []) as unknown as EmailCampaignRowWithCoupon[];
+  return rows.map((campaign) => ({
+    ...campaign,
+    coupon: campaign.coupons
+      ? {
+          id: campaign.coupons.id,
+          code: campaign.coupons.code,
+          title: campaign.coupons.title,
+          discount_type: campaign.coupons.discount_type,
+          discount_value: Number(campaign.coupons.discount_value || 0),
+          valid_until: campaign.coupons.valid_until,
+          minimum_order_value: campaign.coupons.minimum_order_value,
+        }
+      : null,
+  })) as EmailCampaign[];
 }
 
 export async function saveEmailCampaign(campaign: Partial<EmailCampaign>) {
@@ -213,6 +262,7 @@ export async function saveEmailCampaign(campaign: Partial<EmailCampaign>) {
     id: campaign.id,
     restaurant_id: restaurantId,
     template_id: campaign.template_id || null,
+    coupon_id: campaign.coupon_id || null,
     name: campaign.name || "Nova campanha",
     subject: campaign.subject || "",
     html_content: campaign.html_content || "",
@@ -229,7 +279,53 @@ export async function saveEmailCampaign(campaign: Partial<EmailCampaign>) {
     .single();
 
   if (error) throw error;
-  return data as EmailCampaign;
+  return {
+    ...(data as EmailCampaign),
+    coupon: campaign.coupon ?? null,
+  };
+}
+
+export async function generateEmailCampaignCoupon(
+  campaignId: string,
+  config: EmailCampaignCouponConfig = {
+    discountType: "percentage",
+    discountValue: 10,
+    validDays: 30,
+    minimumOrderValue: 0,
+  },
+): Promise<EmailCampaignCoupon> {
+  const { data, error } = await supabase.rpc("generate_email_campaign_coupon", {
+    p_campaign_id: campaignId,
+    p_discount_type: config.discountType,
+    p_discount_value: config.discountValue,
+    p_valid_days: config.validDays,
+    p_minimum_order_value: config.minimumOrderValue,
+  });
+
+  if (error) throw error;
+  const value = (data ?? {}) as {
+    coupon_id?: string;
+    code?: string;
+    title?: string;
+    discount_type?: string;
+    discount_value?: number;
+    valid_until?: string | null;
+    minimum_order_value?: number | null;
+  };
+
+  if (!value.coupon_id || !value.code) {
+    throw new Error("Resposta invalida ao gerar cupom.");
+  }
+
+  return {
+    id: value.coupon_id,
+    code: value.code,
+    title: value.title || "Cupom da campanha",
+    discount_type: value.discount_type || "percentage",
+    discount_value: Number(value.discount_value || 0),
+    valid_until: value.valid_until ?? null,
+    minimum_order_value: value.minimum_order_value ?? null,
+  };
 }
 
 export async function sendEmailCampaign(campaignId: string) {
@@ -268,7 +364,7 @@ export async function getEmailCampaignMetrics(campaignId: string): Promise<Email
 
   if (error) throw error;
 
-  return (data || []).reduce<EmailCampaignMetrics>(
+  const deliveryMetrics = (data || []).reduce<EmailCampaignMetrics>(
     (metrics, row: { status: string }) => {
       metrics.total += 1;
       if (row.status in metrics) {
@@ -285,8 +381,33 @@ export async function getEmailCampaignMetrics(campaignId: string): Promise<Email
       bounced: 0,
       complained: 0,
       failed: 0,
+      ordersCount: 0,
+      finalizedOrdersCount: 0,
+      attributedRevenue: 0,
+      discountAmount: 0,
     },
   );
+
+  const { data: attributionData, error: attributionError } = await supabase.rpc(
+    "get_email_campaign_attribution_metrics",
+    { p_campaign_id: campaignId },
+  );
+
+  if (attributionError) throw attributionError;
+  const attribution = (attributionData ?? {}) as {
+    orders_count?: number;
+    finalized_orders_count?: number;
+    attributed_revenue?: number;
+    discount_amount?: number;
+  };
+
+  return {
+    ...deliveryMetrics,
+    ordersCount: Number(attribution.orders_count || 0),
+    finalizedOrdersCount: Number(attribution.finalized_orders_count || 0),
+    attributedRevenue: Number(attribution.attributed_revenue || 0),
+    discountAmount: Number(attribution.discount_amount || 0),
+  };
 }
 
 export async function getEmailCampaignEntitlement(): Promise<EmailCampaignEntitlement> {

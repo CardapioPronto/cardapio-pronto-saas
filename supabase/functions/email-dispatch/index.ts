@@ -46,6 +46,19 @@ type EmailDispatchBody = JsonRecord & {
   origin?: string;
 };
 
+type CampaignRecipient = {
+  id: string;
+  email: string;
+  name: string | null;
+  unsubscribe_token: string | null;
+  last_order_at: string | null;
+};
+
+type CampaignCoupon = {
+  id: string;
+  code: string;
+};
+
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null;
 
@@ -255,7 +268,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
 
   const { data: campaign, error: campaignError } = await admin
     .from("email_campaigns")
-    .select("id, restaurant_id, name, subject, html_content, text_content, status, audience_filter")
+    .select("id, restaurant_id, name, subject, html_content, text_content, status, audience_filter, coupon_id")
     .eq("id", body.campaign_id)
     .eq("restaurant_id", body.restaurant_id)
     .maybeSingle();
@@ -264,6 +277,20 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
   if (!campaign) throw new Error("Campanha não encontrada.");
   if (!["draft", "failed"].includes(campaign.status)) {
     throw new Error("Somente campanhas em rascunho ou falhadas podem ser enviadas.");
+  }
+
+  let coupon: CampaignCoupon | null = null;
+  if (campaign.coupon_id) {
+    const { data: couponData, error: couponError } = await admin
+      .from("coupons")
+      .select("id, code")
+      .eq("id", campaign.coupon_id)
+      .eq("restaurant_id", body.restaurant_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (couponError) throw couponError;
+    coupon = couponData as CampaignCoupon | null;
   }
 
   const audience = campaign.audience_filter || {};
@@ -275,25 +302,17 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
     MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
   );
 
-  let contactQuery = admin
-    .from("restaurant_email_contacts")
-    .select("id, email, name, unsubscribe_token, last_order_at")
-    .eq("restaurant_id", body.restaurant_id)
-    .eq("accepts_marketing", true)
-    .is("unsubscribed_at", null)
-    .order("last_order_at", { ascending: false, nullsFirst: false })
-    .limit(maxRecipients);
-
-  if (audienceType === "recent_customers") {
-    const since = new Date(Date.now() - days * 86400000).toISOString();
-    contactQuery = contactQuery.gte("last_order_at", since);
-  } else if (audienceType === "inactive_customers") {
-    const since = new Date(Date.now() - days * 86400000).toISOString();
-    contactQuery = contactQuery.lte("last_order_at", since);
-  }
-
-  const { data: contacts, error: contactsError } = await contactQuery;
+  const { data: contactsData, error: contactsError } = await admin.rpc("get_email_campaign_recipients", {
+    p_restaurant_id: body.restaurant_id,
+    p_audience_filter: {
+      ...audience,
+      type: audienceType,
+      days,
+    },
+    p_limit: maxRecipients,
+  });
   if (contactsError) throw contactsError;
+  const contacts = Array.isArray(contactsData) ? contactsData as CampaignRecipient[] : [];
   if (!contacts?.length) throw new Error("Nenhum contato com opt-in encontrado para este público.");
 
   const { data: restaurant } = await admin
@@ -343,6 +362,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
           restaurant_name: restaurant?.name || "Restaurante",
           contact_name: contact.name || "Cliente",
           email: contact.email,
+          coupon: coupon?.code || "",
           unsubscribe_url: unsubscribeUrl,
         };
         const html = `${renderCampaignContent(campaign.html_content, variables)}
@@ -368,7 +388,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
             text,
             contextType: "campaign",
             contextId: campaign.id,
-            metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id },
+            metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id, coupon_id: coupon?.id || null },
           });
           sent += 1;
         } catch (error) {

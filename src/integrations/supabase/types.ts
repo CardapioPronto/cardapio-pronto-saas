@@ -918,6 +918,7 @@ export type Database = {
       email_campaigns: {
         Row: {
           audience_filter: Json
+          coupon_id: string | null
           created_at: string
           created_by: string | null
           failed_count: number
@@ -938,6 +939,7 @@ export type Database = {
         }
         Insert: {
           audience_filter?: Json
+          coupon_id?: string | null
           created_at?: string
           created_by?: string | null
           failed_count?: number
@@ -958,6 +960,7 @@ export type Database = {
         }
         Update: {
           audience_filter?: Json
+          coupon_id?: string | null
           created_at?: string
           created_by?: string | null
           failed_count?: number
@@ -977,6 +980,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_campaigns_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_campaigns_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -2921,6 +2931,28 @@ export type Database = {
           p_order_subtotal?: number
           p_phone: string
           p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      get_email_campaign_recipients: {
+        Args: {
+          p_audience_filter?: Json
+          p_limit?: number
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      get_email_campaign_attribution_metrics: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
+      generate_email_campaign_coupon: {
+        Args: {
+          p_campaign_id: string
+          p_discount_type?: string
+          p_discount_value?: number
+          p_minimum_order_value?: number
+          p_valid_days?: number
         }
         Returns: Json
       }
