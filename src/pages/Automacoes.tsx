@@ -13,6 +13,7 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  Tags,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -135,6 +136,14 @@ const Automacoes = () => {
       status: "ready",
       audience: "Saldo positivo",
     },
+    {
+      title: "Comprou categoria",
+      description: "Crie uma campanha para quem comprou produtos de uma categoria.",
+      href: "/email-integracao?tab=campaigns&create=1&preset=purchased_category",
+      icon: Tags,
+      status: "ready",
+      audience: "Categoria específica",
+    },
   ];
 
   return (
@@ -177,7 +186,7 @@ const Automacoes = () => {
             </Button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {campaignAutomations.map((automation) => {
               const Icon = automation.icon;
               return (

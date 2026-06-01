@@ -212,7 +212,7 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
   - aniversariante;
   - primeiro pedido sem recompra;
   - cliente alto ticket;
-  - comprou categoria especifica.
+  - [~] comprou categoria especifica.
 - [~] Gerar cupom automatico vinculado a campanha.
 - [~] Enviar por e-mail no MVP, WhatsApp quando a base operacional estiver validada.
 - [~] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
@@ -230,6 +230,8 @@ Evidencia:
 - 2026-06-01: Cupom rastreavel por campanha iniciado com `generate_email_campaign_coupon`, relacionamento `email_campaigns.coupon_id`, exibicao no editor e renderizacao da variavel `{{coupon}}` no envio.
 - 2026-06-01: Metricas de atribuicao iniciadas com `get_email_campaign_attribution_metrics`, exibindo pedidos, pedidos finalizados, receita atribuida e descontos a partir do cupom vinculado.
 - 2026-06-01: Configuracao operacional do cupom da campanha adicionada ao painel: tipo de desconto, valor, validade e pedido minimo podem ser definidos antes do envio; campanhas em rascunho atualizam o mesmo cupom vinculado para manter a atribuicao limpa.
+- 2026-06-01: Segmentacao por categoria comprada iniciada com o publico `purchased_category`: automacao guiada em `/automacoes`, seletor de categoria no editor de campanhas e RPC filtrando clientes que compraram produtos daquela categoria em pedidos finalizados dentro da janela configurada.
+- 2026-06-01: Previa operacional de publico adicionada ao editor de campanhas via `preview_campaign_audience`, retornando quantidade alcançada, limites do plano e amostra de contatos antes do envio.
 
 ---
 

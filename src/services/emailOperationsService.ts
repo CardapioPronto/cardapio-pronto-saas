@@ -50,6 +50,11 @@ export interface EmailContact {
   created_at: string;
 }
 
+export interface EmailCampaignCategory {
+  id: string;
+  name: string;
+}
+
 export interface EmailCampaign {
   id: string;
   restaurant_id: string;
@@ -61,8 +66,16 @@ export interface EmailCampaign {
   text_content: string | null;
   status: string;
   audience_filter: {
-    type?: "marketing_opt_in" | "recent_customers" | "inactive_customers" | "first_order_no_repurchase" | "high_ticket" | "loyalty_balance";
+    type?:
+      | "marketing_opt_in"
+      | "recent_customers"
+      | "inactive_customers"
+      | "first_order_no_repurchase"
+      | "high_ticket"
+      | "loyalty_balance"
+      | "purchased_category";
     days?: number;
+    categoryId?: string;
   };
   recipient_count: number;
   sent_count: number;
@@ -125,6 +138,23 @@ export interface EmailCampaignMetrics {
   finalizedOrdersCount: number;
   attributedRevenue: number;
   discountAmount: number;
+}
+
+export interface EmailCampaignAudiencePreviewContact {
+  id: string;
+  email: string;
+  name: string | null;
+  last_order_at: string | null;
+}
+
+export interface EmailCampaignAudiencePreview {
+  recipientCount: number;
+  sample: EmailCampaignAudiencePreviewContact[];
+  monthlyLimit: number;
+  usedThisMonth: number;
+  remainingThisMonth: number;
+  cappedAt: number;
+  contactLimit: number;
 }
 
 async function getCurrentRestaurantId() {
@@ -225,6 +255,22 @@ export async function listEmailContacts(scope: EmailIntegrationScope, limit = 50
     .limit(limit);
   if (error) throw error;
   return (data || []) as EmailContact[];
+}
+
+export async function listEmailCampaignCategories(scope: EmailIntegrationScope) {
+  if (scope !== "restaurant") return [];
+  const restaurantId = await getCurrentRestaurantId();
+  if (!restaurantId) return [];
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name")
+    .eq("restaurant_id", restaurantId)
+    .order("order_position", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as EmailCampaignCategory[];
 }
 
 export async function listEmailCampaigns(scope: EmailIntegrationScope, limit = 50) {
@@ -351,6 +397,33 @@ export async function sendEmailCampaign(campaignId: string) {
     used_this_month: number;
     remaining_after: number;
     capped_at: number;
+  };
+}
+
+export async function previewEmailCampaignAudience(campaign: Partial<EmailCampaign>): Promise<EmailCampaignAudiencePreview> {
+  const restaurantId = await getCurrentRestaurantId();
+  if (!restaurantId) throw new Error("Restaurante nao encontrado.");
+
+  const { data, error } = await supabase.functions.invoke("email-dispatch", {
+    body: {
+      action: "preview_campaign_audience",
+      restaurant_id: restaurantId,
+      campaign_id: campaign.id?.startsWith("new-") ? undefined : campaign.id,
+      audience_filter: campaign.audience_filter || { type: "marketing_opt_in" },
+    },
+  });
+
+  if (error) throw error;
+  if (data?.success === false) throw new Error(data.error || "Erro ao calcular publico");
+
+  return {
+    recipientCount: Number(data?.recipient_count || 0),
+    sample: Array.isArray(data?.sample) ? data.sample as EmailCampaignAudiencePreviewContact[] : [],
+    monthlyLimit: Number(data?.monthly_limit || 0),
+    usedThisMonth: Number(data?.used_this_month || 0),
+    remainingThisMonth: Number(data?.remaining_this_month || 0),
+    cappedAt: Number(data?.capped_at || 0),
+    contactLimit: Number(data?.contact_limit || 0),
   };
 }
 

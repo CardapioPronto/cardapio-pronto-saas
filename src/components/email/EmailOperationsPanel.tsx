@@ -18,15 +18,19 @@ import {
   copyAllowedEmailTemplate,
   EmailContact,
   EmailCampaignEntitlement,
+  EmailCampaignCategory,
   EmailCampaignMetrics,
+  EmailCampaignAudiencePreview,
   EmailSendLog,
   EmailTemplate,
   getEmailCampaignEntitlement,
   getEmailCampaignMetrics,
+  listEmailCampaignCategories,
   listEmailCampaigns,
   listEmailContacts,
   listEmailLogs,
   listEmailTemplates,
+  previewEmailCampaignAudience,
   saveEmailCampaign,
   saveEmailTemplate,
   EmailCampaignCouponConfig,
@@ -58,7 +62,8 @@ type CampaignAudienceType =
   | "inactive_customers"
   | "first_order_no_repurchase"
   | "high_ticket"
-  | "loyalty_balance";
+  | "loyalty_balance"
+  | "purchased_category";
 
 type CampaignPreset = {
   name: string;
@@ -94,6 +99,13 @@ const CAMPAIGN_PRESETS: Record<string, CampaignPreset> = {
     subject: "Voce tem beneficio esperando",
     message: "Seu saldo de fidelidade pode deixar o proximo pedido ainda melhor.",
     audience: "loyalty_balance",
+  },
+  purchased_category: {
+    name: "Recompra por categoria",
+    subject: "Uma sugestao especial para seu proximo pedido",
+    message: "Selecionamos uma oferta especial baseada nos produtos que voce costuma pedir.",
+    audience: "purchased_category",
+    days: 180,
   },
 };
 
@@ -143,9 +155,11 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [logs, setLogs] = useState<EmailSendLog[]>([]);
   const [contacts, setContacts] = useState<EmailContact[]>([]);
+  const [campaignCategories, setCampaignCategories] = useState<EmailCampaignCategory[]>([]);
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
   const [campaignEntitlement, setCampaignEntitlement] = useState<EmailCampaignEntitlement | null>(null);
   const [campaignMetrics, setCampaignMetrics] = useState<EmailCampaignMetrics | null>(null);
+  const [audiencePreview, setAudiencePreview] = useState<EmailCampaignAudiencePreview | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -154,6 +168,7 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [copyingTemplate, setCopyingTemplate] = useState<string | null>(null);
   const [savingCampaign, setSavingCampaign] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [previewingAudience, setPreviewingAudience] = useState(false);
   const [generatingCoupon, setGeneratingCoupon] = useState(false);
   const [couponConfig, setCouponConfig] = useState<CouponFormState>(DEFAULT_COUPON_CONFIG);
 
@@ -176,6 +191,7 @@ export function EmailOperationsPanel({ scope }: Props) {
     "first_order_no_repurchase",
     "high_ticket",
     "loyalty_balance",
+    "purchased_category",
   ];
   const initialAudience: CampaignAudienceType =
     supportedAudienceTypes.includes(queryAudience as CampaignAudienceType)
@@ -204,10 +220,12 @@ export function EmailOperationsPanel({ scope }: Props) {
         listEmailContacts(scope),
         listEmailCampaigns(scope),
       ]);
+      const categoryData = scope === "restaurant" ? await listEmailCampaignCategories(scope) : [];
       const entitlementData = scope === "restaurant" ? await getEmailCampaignEntitlement() : null;
       setTemplates(templateData);
       setLogs(logData);
       setContacts(contactData);
+      setCampaignCategories(categoryData);
       setCampaigns(campaignData);
       setCampaignEntitlement(entitlementData);
       setLoaded(true);
@@ -246,6 +264,10 @@ export function EmailOperationsPanel({ scope }: Props) {
   }, [selectedCampaign?.id]);
 
   useEffect(() => {
+    setAudiencePreview(null);
+  }, [selectedCampaign?.id]);
+
+  useEffect(() => {
     if (!selectedCampaignCoupon) {
       setCouponConfig(DEFAULT_COUPON_CONFIG);
       return;
@@ -270,11 +292,20 @@ export function EmailOperationsPanel({ scope }: Props) {
 
   const updateSelectedCampaign = (patch: Partial<EmailCampaign>) => {
     if (!selectedCampaign) return;
+    setAudiencePreview(null);
     setCampaigns((current) =>
       current.map((campaign) =>
         campaign.id === selectedCampaign.id ? { ...campaign, ...patch } : campaign,
       ),
     );
+  };
+
+  const validateCampaignAudience = (campaign: EmailCampaign) => {
+    if (campaign.audience_filter?.type === "purchased_category" && !campaign.audience_filter?.categoryId) {
+      toast.error("Selecione uma categoria para esta campanha");
+      return false;
+    }
+    return true;
   };
 
   const handleCopyTemplate = async (templateKey: "order_confirmation" | "campaign_basic") => {
@@ -335,6 +366,9 @@ export function EmailOperationsPanel({ scope }: Props) {
       audience_filter: {
         type: selectedPreset?.audience || initialAudience,
         ...(selectedPreset?.days ? { days: selectedPreset.days } : {}),
+        ...(selectedPreset?.audience === "purchased_category" && campaignCategories[0]?.id
+          ? { categoryId: campaignCategories[0].id }
+          : {}),
       },
       recipient_count: 0,
       sent_count: 0,
@@ -382,6 +416,7 @@ export function EmailOperationsPanel({ scope }: Props) {
       toast.error("Informe nome, assunto e conteúdo da campanha");
       return;
     }
+    if (!validateCampaignAudience(selectedCampaign)) return;
     setSavingCampaign(true);
     try {
       const campaignToSave = selectedCampaign.id.startsWith("new-")
@@ -473,12 +508,30 @@ export function EmailOperationsPanel({ scope }: Props) {
     }
   };
 
+  const handlePreviewCampaignAudience = async () => {
+    if (!selectedCampaign) return;
+    if (!validateCampaignAudience(selectedCampaign)) return;
+
+    setPreviewingAudience(true);
+    try {
+      const preview = await previewEmailCampaignAudience(selectedCampaign);
+      setAudiencePreview(preview);
+      toast.success(`${preview.recipientCount} contato(s) encontrados para este público`);
+    } catch (error) {
+      console.error("Erro ao calcular prévia do público:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao calcular público");
+    } finally {
+      setPreviewingAudience(false);
+    }
+  };
+
   const handleSendCampaign = async () => {
     if (!selectedCampaign) return;
     if (selectedCampaign.id.startsWith("new-")) {
       toast.error("Salve a campanha antes de enviar");
       return;
     }
+    if (!validateCampaignAudience(selectedCampaign)) return;
     setSendingCampaign(true);
     try {
       const result = await sendEmailCampaign(selectedCampaign.id);
@@ -875,6 +928,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                               <SelectItem value="first_order_no_repurchase">Primeira compra sem recompra</SelectItem>
                               <SelectItem value="high_ticket">Alto ticket</SelectItem>
                               <SelectItem value="loyalty_balance">Saldo de fidelidade</SelectItem>
+                              <SelectItem value="purchased_category">Comprou categoria</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -895,6 +949,100 @@ export function EmailOperationsPanel({ scope }: Props) {
                             disabled={selectedCampaign.status === "sent"}
                           />
                         </div>
+                      </div>
+
+                      {selectedCampaign.audience_filter?.type === "purchased_category" && (
+                        <div className="space-y-2">
+                          <Label>Categoria comprada</Label>
+                          <Select
+                            value={selectedCampaign.audience_filter?.categoryId || ""}
+                            onValueChange={(value) =>
+                              updateSelectedCampaign({
+                                audience_filter: {
+                                  ...selectedCampaign.audience_filter,
+                                  categoryId: value,
+                                },
+                              })
+                            }
+                            disabled={selectedCampaign.status === "sent" || campaignCategories.length === 0}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecionar categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {campaignCategories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {campaignCategories.length === 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Cadastre categorias de produtos antes de usar este público.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="rounded-md border bg-muted/20 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <Users className="h-4 w-4 text-primary" />
+                              Prévia do público
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {audiencePreview
+                                ? `${audiencePreview.recipientCount} contato(s) dentro do limite de ${audiencePreview.cappedAt}.`
+                                : "Calcule os contatos antes do envio."}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handlePreviewCampaignAudience}
+                            disabled={previewingAudience || !campaignEntitlement?.campaignsEnabled}
+                          >
+                            <RefreshCw className={`mr-2 h-4 w-4 ${previewingAudience ? "animate-spin" : ""}`} />
+                            Atualizar prévia
+                          </Button>
+                        </div>
+
+                        {audiencePreview && (
+                          <div className="mt-4 space-y-3">
+                            <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                              <div className="rounded-md border bg-background px-3 py-2">
+                                <span className="block font-medium text-foreground">{audiencePreview.recipientCount}</span>
+                                encontrados
+                              </div>
+                              <div className="rounded-md border bg-background px-3 py-2">
+                                <span className="block font-medium text-foreground">{audiencePreview.remainingThisMonth}</span>
+                                saldo mensal
+                              </div>
+                              <div className="rounded-md border bg-background px-3 py-2">
+                                <span className="block font-medium text-foreground">{audiencePreview.contactLimit}</span>
+                                limite por campanha
+                              </div>
+                            </div>
+
+                            {audiencePreview.sample.length > 0 ? (
+                              <div className="grid gap-2 md:grid-cols-2">
+                                {audiencePreview.sample.map((contact) => (
+                                  <div key={contact.id} className="rounded-md border bg-background px-3 py-2 text-xs">
+                                    <div className="font-medium text-foreground">{contact.name || contact.email}</div>
+                                    <div className="text-muted-foreground">{contact.email}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                Nenhum contato encontrado para este recorte.
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-4 rounded-md border bg-muted/20 p-4">

@@ -28,6 +28,7 @@ type EmailDispatchBody = JsonRecord & {
   restaurant_id?: string;
   template_key?: string;
   campaign_id?: string;
+  audience_filter?: JsonRecord;
   order_id?: string;
   tracking_id?: string;
   delivery_order_id?: string;
@@ -247,6 +248,81 @@ const copyAllowedTemplate = async (req: Request, body: EmailDispatchBody) => {
 
   if (error) throw error;
   return { template: copied };
+};
+
+const previewCampaignAudience = async (req: Request, body: EmailDispatchBody) => {
+  const user = await getUser(req);
+  if (!user) throw new Error("Usuário não autenticado");
+  if (!body.restaurant_id) throw new Error("Restaurante obrigatório");
+  if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
+
+  const entitlement = await getRestaurantEntitlement(body.restaurant_id);
+  if (!entitlement.campaignsEnabled) {
+    throw new Error(`O plano ${entitlement.planName} não inclui campanhas por e-mail.`);
+  }
+
+  let audience = asRecord(body.audience_filter);
+  if (!Object.keys(audience).length && body.campaign_id) {
+    const { data: campaign, error: campaignError } = await admin
+      .from("email_campaigns")
+      .select("audience_filter")
+      .eq("id", body.campaign_id)
+      .eq("restaurant_id", body.restaurant_id)
+      .maybeSingle();
+
+    if (campaignError) throw campaignError;
+    audience = asRecord(campaign?.audience_filter);
+  }
+
+  const audienceType = String(audience.type || "marketing_opt_in");
+  const days = Number(audience.days || 90);
+  const usedThisMonth = await getCampaignUsage(body.restaurant_id);
+  const remaining = Math.max(0, entitlement.monthlyLimit - usedThisMonth);
+  const maxRecipients = Math.min(
+    remaining,
+    entitlement.contactLimit || remaining,
+    MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+  );
+
+  if (maxRecipients <= 0) {
+    return {
+      recipient_count: 0,
+      sample: [],
+      monthly_limit: entitlement.monthlyLimit,
+      used_this_month: usedThisMonth,
+      remaining_this_month: remaining,
+      capped_at: MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+      contact_limit: entitlement.contactLimit,
+    };
+  }
+
+  const { data: contactsData, error: contactsError } = await admin.rpc("get_email_campaign_recipients", {
+    p_restaurant_id: body.restaurant_id,
+    p_audience_filter: {
+      ...audience,
+      type: audienceType,
+      days,
+    },
+    p_limit: maxRecipients,
+  });
+
+  if (contactsError) throw contactsError;
+  const contacts = Array.isArray(contactsData) ? contactsData as CampaignRecipient[] : [];
+
+  return {
+    recipient_count: contacts.length,
+    sample: contacts.slice(0, 5).map((contact) => ({
+      id: contact.id,
+      email: contact.email,
+      name: contact.name,
+      last_order_at: contact.last_order_at,
+    })),
+    monthly_limit: entitlement.monthlyLimit,
+    used_this_month: usedThisMonth,
+    remaining_this_month: remaining,
+    capped_at: maxRecipients,
+    contact_limit: entitlement.contactLimit,
+  };
 };
 
 const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
@@ -564,6 +640,10 @@ Deno.serve(async (req) => {
 
     if (action === "copy_allowed_template") {
       return json({ success: true, ...(await copyAllowedTemplate(req, body)) });
+    }
+
+    if (action === "preview_campaign_audience") {
+      return json({ success: true, ...(await previewCampaignAudience(req, body)) });
     }
 
     if (action === "send_campaign") {
