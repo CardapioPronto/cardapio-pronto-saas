@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import type { ComponentType } from "react";
 import {
   ArrowRight,
+  CalendarClock,
   CreditCard,
+  Gift,
   HelpCircle,
   LifeBuoy,
   Lock,
@@ -11,6 +13,8 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +31,15 @@ type AutomationCard = {
   highlights: string[];
   canAccess: boolean;
   restrictedHint: string;
+};
+
+type CampaignAutomationCard = {
+  title: string;
+  description: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  status: "ready" | "guided";
+  audience: string;
 };
 
 const Automacoes = () => {
@@ -89,6 +102,40 @@ const Automacoes = () => {
   ];
 
   const accessibleCount = cards.filter((card) => card.canAccess).length;
+  const campaignAutomations: CampaignAutomationCard[] = [
+    {
+      title: "Cliente inativo",
+      description: "Recupere clientes que ficaram tempo demais sem pedir.",
+      href: "/email-integracao?tab=campaigns&create=1&preset=inactive_30",
+      icon: CalendarClock,
+      status: "ready",
+      audience: "Opt-in marketing",
+    },
+    {
+      title: "Primeira recompra",
+      description: "Comece por clientes recentes e transforme o primeiro pedido em hábito.",
+      href: "/email-integracao?tab=campaigns&create=1&preset=first_repurchase",
+      icon: Target,
+      status: "guided",
+      audience: "Clientes recentes",
+    },
+    {
+      title: "Cliente VIP",
+      description: "Monte uma campanha especial para clientes de maior valor.",
+      href: "/email-integracao?tab=campaigns&create=1&preset=high_ticket",
+      icon: TrendingUp,
+      status: "guided",
+      audience: "Opt-in marketing",
+    },
+    {
+      title: "Saldo de fidelidade",
+      description: "Crie um rascunho para convidar clientes a usar beneficios.",
+      href: "/email-integracao?tab=campaigns&create=1&preset=loyalty_balance",
+      icon: Gift,
+      status: "guided",
+      audience: "Opt-in marketing",
+    },
+  ];
 
   return (
     <DashboardLayout title="Automações">
@@ -114,7 +161,72 @@ const Automacoes = () => {
           </div>
         </header>
 
+        <section aria-label="Campanhas automáticas" className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Campanhas automáticas</h2>
+              <p className="text-sm text-muted-foreground">
+                Gatilhos comerciais prontos para criar campanhas de recompra usando a base capturada no Pubfy.
+              </p>
+            </div>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/clientes">
+                Ver clientes
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {campaignAutomations.map((automation) => {
+              const Icon = automation.icon;
+              return (
+                <Card key={automation.title} className="flex h-full flex-col">
+                  <CardHeader className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          automation.status === "ready"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-sky-200 bg-sky-50 text-sky-700"
+                        }
+                      >
+                        {automation.status === "ready" ? "Pronto" : "Rascunho guiado"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{automation.title}</CardTitle>
+                      <CardDescription className="mt-1 min-h-12">{automation.description}</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="mt-auto space-y-4">
+                    <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                      Público inicial: <span className="font-medium text-foreground">{automation.audience}</span>
+                    </div>
+                    <Button asChild className="w-full">
+                      <Link to={automation.href}>
+                        Criar campanha
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
         <section aria-label="Integrações disponíveis">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold">Integrações</h2>
+            <p className="text-sm text-muted-foreground">
+              Canais e ferramentas que ampliam a operação do restaurante.
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => {
               const Icon = card.icon;

@@ -287,6 +287,9 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
   if (audienceType === "recent_customers") {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     contactQuery = contactQuery.gte("last_order_at", since);
+  } else if (audienceType === "inactive_customers") {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    contactQuery = contactQuery.lte("last_order_at", since);
   }
 
   const { data: contacts, error: contactsError } = await contactQuery;

@@ -50,6 +50,48 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Falhou",
 };
 
+type CampaignAudienceType = "marketing_opt_in" | "recent_customers" | "inactive_customers";
+
+type CampaignPreset = {
+  name: string;
+  subject: string;
+  message: string;
+  audience: CampaignAudienceType;
+  days?: number;
+};
+
+const CAMPAIGN_PRESETS: Record<string, CampaignPreset> = {
+  inactive_30: {
+    name: "Reativacao - 30 dias sem pedido",
+    subject: "Sentimos sua falta",
+    message: "Preparamos uma oferta especial para voce voltar a pedir com a gente.",
+    audience: "inactive_customers",
+    days: 30,
+  },
+  first_repurchase: {
+    name: "Segunda compra",
+    subject: "Seu proximo pedido pode ser ainda melhor",
+    message: "Obrigado pelo primeiro pedido. Volte hoje e aproveite uma condicao especial.",
+    audience: "recent_customers",
+    days: 30,
+  },
+  high_ticket: {
+    name: "Clientes VIP",
+    subject: "Um mimo para clientes especiais",
+    message: "Voce esta entre nossos clientes especiais. Temos uma oferta pensada para voce.",
+    audience: "marketing_opt_in",
+  },
+  loyalty_balance: {
+    name: "Saldo de fidelidade",
+    subject: "Voce tem beneficio esperando",
+    message: "Seu saldo de fidelidade pode deixar o proximo pedido ainda melhor.",
+    audience: "marketing_opt_in",
+  },
+};
+
+const makeCampaignHtml = (title: string, message: string) =>
+  `<h2>${title}</h2><p>${message}</p>`;
+
 export function EmailOperationsPanel({ scope }: Props) {
   const [searchParams] = useSearchParams();
   const autoCreatedCampaignRef = useRef(false);
@@ -77,8 +119,12 @@ export function EmailOperationsPanel({ scope }: Props) {
     ? queryTab
     : "settings";
   const queryAudience = searchParams.get("audience");
-  const initialAudience: "marketing_opt_in" | "recent_customers" =
-    queryAudience === "recent_customers" ? "recent_customers" : "marketing_opt_in";
+  const queryPreset = searchParams.get("preset");
+  const selectedPreset = queryPreset ? CAMPAIGN_PRESETS[queryPreset] : undefined;
+  const initialAudience: CampaignAudienceType =
+    queryAudience === "recent_customers" || queryAudience === "inactive_customers"
+      ? queryAudience
+      : "marketing_opt_in";
   const canEditSelected = Boolean(selectedTemplate && (isSystemScope || selectedTemplate.restaurant_id));
   const campaignTemplates = templates.filter((template) => template.category === "marketing" || template.template_key === "campaign_basic");
   const campaignUsagePercent = campaignEntitlement?.monthlyLimit
@@ -209,12 +255,17 @@ export function EmailOperationsPanel({ scope }: Props) {
       id: tempId,
       restaurant_id: "",
       template_id: baseTemplate?.id || null,
-      name: "Nova campanha",
-      subject: baseTemplate?.subject || "",
-      html_content: baseTemplate?.html_content || "<h2>{{title}}</h2><p>{{message}}</p>",
-      text_content: baseTemplate?.text_content || "{{title}} - {{message}}",
+      name: selectedPreset?.name || "Nova campanha",
+      subject: selectedPreset?.subject || baseTemplate?.subject || "",
+      html_content: selectedPreset
+        ? makeCampaignHtml(selectedPreset.subject, selectedPreset.message)
+        : baseTemplate?.html_content || "<h2>{{title}}</h2><p>{{message}}</p>",
+      text_content: selectedPreset?.message || baseTemplate?.text_content || "{{title}} - {{message}}",
       status: "draft",
-      audience_filter: { type: initialAudience },
+      audience_filter: {
+        type: selectedPreset?.audience || initialAudience,
+        ...(selectedPreset?.days ? { days: selectedPreset.days } : {}),
+      },
       recipient_count: 0,
       sent_count: 0,
       failed_count: 0,
@@ -643,7 +694,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                               updateSelectedCampaign({
                                 audience_filter: {
                                   ...selectedCampaign.audience_filter,
-                                  type: value as "marketing_opt_in" | "recent_customers",
+                                  type: value as CampaignAudienceType,
                                 },
                               })
                             }
@@ -655,6 +706,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                             <SelectContent>
                               <SelectItem value="marketing_opt_in">Todos com opt-in</SelectItem>
                               <SelectItem value="recent_customers">Clientes recentes</SelectItem>
+                              <SelectItem value="inactive_customers">Clientes inativos</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

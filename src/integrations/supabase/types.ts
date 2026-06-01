@@ -2878,6 +2878,10 @@ export type Database = {
         Returns: Json
       }
       apply_stock_movement: { Args: { p_args: Json }; Returns: Json }
+      apply_public_loyalty_redemption: {
+        Args: { p_order_id: string; p_requested_amount: number }
+        Returns: Json
+      }
       can_manage_restaurant_employees: {
         Args: { target_restaurant_id: string }
         Returns: boolean
@@ -2910,6 +2914,14 @@ export type Database = {
       }
       get_public_restaurant_promotions: {
         Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_public_loyalty_quote: {
+        Args: {
+          p_order_subtotal?: number
+          p_phone: string
+          p_restaurant_id: string
+        }
         Returns: Json
       }
       get_orders_summary: {
@@ -2949,6 +2961,10 @@ export type Database = {
           p_restaurant_id: string
           p_window_days?: number
         }
+        Returns: Json
+      }
+      get_restaurant_loyalty_dashboard: {
+        Args: { p_restaurant_id: string }
         Returns: Json
       }
       get_restaurant_sales_period_metrics: {
@@ -3036,6 +3052,10 @@ export type Database = {
       }
       repair_missing_restaurant_subscriptions: { Args: never; Returns: number }
       revert_stock_for_order: { Args: { p_order_id: string }; Returns: Json }
+      save_restaurant_loyalty_settings: {
+        Args: { p_patch: Json; p_restaurant_id: string }
+        Returns: Json
+      }
       update_crm_customer_profile: {
         Args: {
           p_patch: Json

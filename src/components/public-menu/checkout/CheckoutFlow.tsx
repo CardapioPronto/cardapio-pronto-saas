@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MenuData } from '@/types/menuTheme';
 import { useCart, formatBRL } from '../cart/cartContextCore';
 import {
@@ -8,9 +8,17 @@ import {
   DeliveryAddressInput,
   FulfillmentType,
 } from '@/services/deliveryOrderService';
-import { ArrowLeft, Loader2, X, CheckCircle2, Bike, Store, UtensilsCrossed, TicketPercent } from 'lucide-react';
+import { ArrowLeft, Loader2, X, CheckCircle2, Bike, Store, UtensilsCrossed, TicketPercent, Gift } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import {
+  clearPendingCheckout,
+  createClientRequestId,
+  readPendingCheckout,
+  writePendingCheckout,
+} from '@/lib/publicMenuCheckoutIdempotency';
+import { getPublicLoyaltyQuote } from '@/services/loyaltyService';
+import type { PublicLoyaltyQuote } from '@/types/loyalty';
 
 interface Props {
   data: MenuData;
@@ -41,6 +49,8 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   const dCfg = data.deliveryConfig;
   const paymentCfg = data.paymentSettings;
   const context = data.context;
+  const clientRequestIdRef = useRef(createClientRequestId());
+  const submitInFlightRef = useRef(false);
 
   const availableFulfillmentTypes = useMemo<FulfillmentType[]>(() => {
     const modes: FulfillmentType[] = [];
@@ -81,8 +91,9 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     title?: string;
     discount: number;
   } | null>(null);
-  const discountAmount = appliedCoupon?.discount || 0;
-  const total = Math.max(subtotal - discountAmount, 0) + deliveryFee;
+  const [loyaltyQuote, setLoyaltyQuote] = useState<PublicLoyaltyQuote | null>(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [useLoyaltyCredit, setUseLoyaltyCredit] = useState(false);
   const hasOrderPromotion = !!data.orderPromotions && data.orderPromotions.length > 0;
 
   const firstDataStep = needsAddress ? 'address' : 'customer';
@@ -116,6 +127,14 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   const [changeFor, setChangeFor] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
+  const couponDiscountAmount = appliedCoupon?.discount || 0;
+  const loyaltyPhone = customer.phone || address.customer_phone;
+  const loyaltyOrderSubtotal = Math.max(subtotal - couponDiscountAmount, 0);
+  const loyaltyRedeemAmount = useLoyaltyCredit
+    ? Math.min(Number(loyaltyQuote?.max_redeem_amount || 0), loyaltyOrderSubtotal)
+    : 0;
+  const discountAmount = couponDiscountAmount + loyaltyRedeemAmount;
+  const total = Math.max(subtotal - discountAmount, 0) + deliveryFee;
 
   useEffect(() => {
     if (!paymentMethods.includes(payment)) {
@@ -187,6 +206,46 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     setAppliedCoupon(null);
     setCouponCode('');
   };
+
+  useEffect(() => {
+    if (step !== 'review') return;
+
+    const digits = loyaltyPhone.replace(/\D/g, '');
+    if (digits.length < 10 || loyaltyOrderSubtotal <= 0) {
+      setLoyaltyQuote(null);
+      setUseLoyaltyCredit(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoyaltyLoading(true);
+
+    getPublicLoyaltyQuote({
+      restaurantId: data.restaurant.id,
+      phone: loyaltyPhone,
+      orderSubtotal: loyaltyOrderSubtotal,
+    })
+      .then(quote => {
+        if (cancelled) return;
+        setLoyaltyQuote(quote);
+        if (!quote.enabled || quote.max_redeem_amount <= 0) {
+          setUseLoyaltyCredit(false);
+        }
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setLoyaltyQuote(null);
+        setUseLoyaltyCredit(false);
+        console.warn('Erro ao consultar fidelidade', error);
+      })
+      .finally(() => {
+        if (!cancelled) setLoyaltyLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.restaurant.id, loyaltyOrderSubtotal, loyaltyPhone, step]);
 
   const handleCepBlur = async () => {
     const clean = address.zip_code.replace(/\D/g, '');
@@ -317,6 +376,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
           coupon_code: appliedCoupon?.code,
           delivery_fee: deliveryFee,
           estimated_delivery_minutes: dCfg?.estimated_delivery_minutes,
+          loyalty_redeem_amount: loyaltyRedeemAmount || undefined,
         });
 
         writePendingCheckout(restaurantId, {
@@ -328,6 +388,17 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
           fulfillment_type,
           total: result.total,
         });
+      }
+
+      if (reusePending && loyaltyRedeemAmount > 0) {
+        const redemption = await deliveryOrderService.applyLoyaltyRedemption(result.order_id, loyaltyRedeemAmount);
+        if (redemption.applied) {
+          result = {
+            ...result,
+            discount_amount: Number(result.discount_amount || 0) + Number(redemption.discount_amount || 0),
+            total: Number(redemption.total ?? result.total),
+          };
+        }
       }
 
       setCreatedId(result.id);
@@ -543,9 +614,52 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                   </p>
                 )}
               </Section>
+              {loyaltyPhone.replace(/\D/g, '').length >= 10 && (
+                <Section title="Fidelidade">
+                  {loyaltyLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Consultando saldo...
+                    </div>
+                  ) : loyaltyQuote?.enabled && loyaltyQuote.balance > 0 ? (
+                    <div className="rounded-lg border border-border p-3">
+                      <label className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={useLoyaltyCredit}
+                          disabled={loyaltyQuote.max_redeem_amount <= 0}
+                          onChange={event => setUseLoyaltyCredit(event.target.checked)}
+                          className="mt-0.5"
+                        />
+                        <span className="flex-1">
+                          <span className="flex items-center gap-1 font-medium">
+                            <Gift className="h-4 w-4" style={{ color: primary }} />
+                            Usar {formatBRL(loyaltyQuote.max_redeem_amount)} de saldo
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            Saldo disponivel: {formatBRL(loyaltyQuote.balance)}
+                          </span>
+                        </span>
+                      </label>
+                      {loyaltyQuote.max_redeem_amount <= 0 && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          O pedido ainda nao atingiu a regra minima para resgate.
+                        </p>
+                      )}
+                    </div>
+                  ) : loyaltyQuote?.enabled && loyaltyQuote.earn_estimate > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Este pedido gera {formatBRL(loyaltyQuote.earn_estimate)} de cashback apos finalizar.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Sem saldo disponivel para este pedido.</p>
+                  )}
+                </Section>
+              )}
               <div className="border-t border-border pt-3 space-y-1">
                 <div className="flex justify-between"><span>Subtotal</span><span>{formatBRL(subtotal)}</span></div>
-                {discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Desconto</span><span>-{formatBRL(discountAmount)}</span></div>}
+                {couponDiscountAmount > 0 && <div className="flex justify-between text-green-600"><span>Cupom</span><span>-{formatBRL(couponDiscountAmount)}</span></div>}
+                {loyaltyRedeemAmount > 0 && <div className="flex justify-between text-green-600"><span>Fidelidade</span><span>-{formatBRL(loyaltyRedeemAmount)}</span></div>}
                 {needsAddress && <div className="flex justify-between"><span>Taxa de entrega</span><span>{deliveryFee > 0 ? formatBRL(deliveryFee) : 'Grátis'}</span></div>}
                 <div className="flex justify-between font-bold text-base"><span>Total</span><span style={{ color: primary }}>{formatBRL(total)}</span></div>
               </div>

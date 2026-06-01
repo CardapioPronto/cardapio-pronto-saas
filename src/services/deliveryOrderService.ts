@@ -38,6 +38,7 @@ export interface CreateDeliveryOrderInput {
   delivery_fee: number;
   estimated_delivery_minutes?: number;
   client_request_id?: string;
+  loyalty_redeem_amount?: number;
 }
 
 export interface OnlineOrderPayment {
@@ -73,6 +74,15 @@ type OnlineOrderPaymentResponse = OnlineOrderPayment & {
   error?: string;
 };
 
+type LoyaltyRedemptionResult = {
+  applied: boolean;
+  discount_amount: number;
+  total: number | null;
+  original_total?: number;
+  reason?: string;
+  idempotent_replay?: boolean;
+};
+
 type ViaCepResponse = {
   erro?: boolean;
   logradouro?: string;
@@ -89,6 +99,9 @@ const readString = (record: JsonRecord, key: string): string | undefined =>
 
 const readNumber = (record: JsonRecord, key: string): number | undefined =>
   typeof record[key] === 'number' ? record[key] : undefined;
+
+const readBoolean = (record: JsonRecord, key: string): boolean | undefined =>
+  typeof record[key] === 'boolean' ? record[key] : undefined;
 
 const readNullableString = (record: JsonRecord, key: string): string | null => {
   const value = record[key];
@@ -134,6 +147,39 @@ const parseCouponValidation = (value: Json): CouponValidationResult => {
     title: readString(value, 'title'),
     discount: readNumber(value, 'discount'),
   };
+};
+
+const parseLoyaltyRedemption = (value: Json): LoyaltyRedemptionResult => {
+  if (!isRecord(value)) {
+    throw new Error('Resposta invalida ao aplicar fidelidade.');
+  }
+
+  return {
+    applied: readBoolean(value, 'applied') === true,
+    discount_amount: Number(readNumber(value, 'discount_amount') || 0),
+    total: readNumber(value, 'total') ?? null,
+    original_total: readNumber(value, 'original_total'),
+    reason: readString(value, 'reason'),
+    idempotent_replay: readBoolean(value, 'idempotent_replay'),
+  };
+};
+
+const applyLoyaltyRedemption = async (
+  orderId: string,
+  requestedAmount: number,
+): Promise<LoyaltyRedemptionResult> => {
+  const amount = Number(requestedAmount || 0);
+  if (!orderId || amount <= 0) {
+    return { applied: false, discount_amount: 0, total: null, reason: 'invalid_amount' };
+  }
+
+  const { data, error } = await supabase.rpc('apply_public_loyalty_redemption', {
+    p_order_id: orderId,
+    p_requested_amount: amount,
+  });
+
+  if (error) throw error;
+  return parseLoyaltyRedemption(data);
 };
 
 export const deliveryOrderService = {
@@ -187,6 +233,16 @@ export const deliveryOrderService = {
     if (error) throw error;
 
     const result = parseCreateOrderResult(data);
+    let loyaltyDiscount = 0;
+    let orderTotal = Number(result.total || 0);
+
+    if (Number(input.loyalty_redeem_amount || 0) > 0) {
+      const redemption = await applyLoyaltyRedemption(result.order_id, Number(input.loyalty_redeem_amount));
+      if (redemption.applied) {
+        loyaltyDiscount = Number(redemption.discount_amount || 0);
+        orderTotal = Number(redemption.total ?? orderTotal);
+      }
+    }
 
     try {
       await captureCrmLeadFromOrder(result.order_id, {
@@ -260,10 +316,12 @@ export const deliveryOrderService = {
       delivery_order_id: result.delivery_order_id,
       order_number: result.order_number,
       fulfillment_type: result.fulfillment_type,
-      discount_amount: Number(result.discount_amount || 0),
-      total: Number(result.total || 0),
+      discount_amount: Number(result.discount_amount || 0) + loyaltyDiscount,
+      total: orderTotal,
     };
   },
+
+  applyLoyaltyRedemption,
 
   async createOnlinePayment(input: {
     order_id: string;

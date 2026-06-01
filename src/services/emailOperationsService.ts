@@ -60,7 +60,7 @@ export interface EmailCampaign {
   text_content: string | null;
   status: string;
   audience_filter: {
-    type?: "marketing_opt_in" | "recent_customers";
+    type?: "marketing_opt_in" | "recent_customers" | "inactive_customers";
     days?: number;
   };
   recipient_count: number;

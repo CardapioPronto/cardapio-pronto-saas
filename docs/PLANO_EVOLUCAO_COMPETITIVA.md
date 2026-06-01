@@ -176,13 +176,13 @@ Objetivo: aumentar recompra no canal proprio.
 
 ### Escopo MVP
 
-- [ ] Configuracao por restaurante: pontos ou cashback.
-- [ ] Regra simples: percentual do pedido finalizado vira credito.
-- [ ] Saldo por cliente.
-- [ ] Resgate no checkout publico.
-- [ ] Historico de creditos e debitos.
-- [ ] Limites: validade, pedido minimo e maximo por resgate.
-- [ ] Tela para o dono acompanhar clientes com saldo.
+- [x] Configuracao por restaurante: pontos ou cashback.
+- [x] Regra simples: percentual do pedido finalizado vira credito.
+- [x] Saldo por cliente.
+- [x] Resgate no checkout publico.
+- [x] Historico de creditos e debitos.
+- [x] Limites: validade, pedido minimo e maximo por resgate.
+- [x] Tela para o dono acompanhar clientes com saldo.
 
 ### Criterio de aceite
 
@@ -192,7 +192,10 @@ Objetivo: aumentar recompra no canal proprio.
 
 Evidencia:
 
-- Pendente.
+- 2026-05-28: Branch `bloco-2-fidelidade-cashback` criada a partir de `main`.
+- 2026-05-28: Motor MVP iniciado com `supabase/migrations/20260528170000_create_loyalty_cashback_mvp.sql`, servico `src/services/loyaltyService.ts`, tipos `src/types/loyalty.ts`, tela `/fidelidade` e link no menu lateral.
+- 2026-05-28: Cashback automatico em pedidos `finalizado` e estorno em reabertura/cancelamento implementados via trigger.
+- 2026-06-01: Resgate no checkout publico implementado com RPC segura/idempotente `apply_public_loyalty_redemption`, consulta de saldo no resumo do pedido e desconto aplicado antes do PIX online.
 
 ---
 
@@ -203,16 +206,16 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
 
 ### Escopo MVP
 
-- [ ] Segmentar clientes por comportamento.
-- [ ] Criar automacoes basicas:
+- [~] Segmentar clientes por comportamento.
+- [~] Criar automacoes basicas:
   - cliente inativo ha 30 dias;
   - aniversariante;
   - primeiro pedido sem recompra;
   - cliente alto ticket;
   - comprou categoria especifica.
 - [ ] Gerar cupom automatico vinculado a campanha.
-- [ ] Enviar por e-mail no MVP, WhatsApp quando a base operacional estiver validada.
-- [ ] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
+- [~] Enviar por e-mail no MVP, WhatsApp quando a base operacional estiver validada.
+- [~] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
 
 ### Criterio de aceite
 
@@ -222,7 +225,7 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-01: Bloco 3 iniciado com gatilhos guiados em `/automacoes` para criar campanhas por e-mail pre-preenchidas. O publico `inactive_customers` foi adicionado ao envio por e-mail para campanha real de cliente inativo; primeira recompra, cliente VIP e saldo de fidelidade entram como rascunhos guiados enquanto os filtros comportamentais completos sao evoluidos.
 
 ---
 
