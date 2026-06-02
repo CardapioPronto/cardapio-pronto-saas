@@ -5,10 +5,12 @@ import './index.css'
 import { initSupabase } from './lib/supabase-init.ts'
 import { initObservability } from './lib/observability.ts'
 import { createLogger } from './lib/log.ts'
+import { registerServiceWorker } from './lib/serviceWorkerRegistration.ts'
 
 const log = createLogger('boot')
 
 initObservability()
+registerServiceWorker()
 
 const container = document.getElementById('root')
 

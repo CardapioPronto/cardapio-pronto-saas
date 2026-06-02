@@ -59,10 +59,10 @@ const Automacoes = () => {
     {
       title: "Email — Resend",
       description: "Domínio de envio, templates, campanhas, logs de entrega e descadastro de contatos.",
-      href: "/email-integracao",
+      href: "/email-integracao?tab=automations",
       icon: Mail,
       category: "Marketing",
-      highlights: ["Domínio verificado", "Campanhas e templates", "Logs de entrega"],
+      highlights: ["Domínio verificado", "Campanhas automáticas", "Logs de entrega"],
       canAccess: canManageIntegrations,
       restrictedHint: integrationsHint,
     },
@@ -115,6 +115,12 @@ const Automacoes = () => {
         </header>
 
         <section aria-label="Integrações disponíveis">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold">Integrações</h2>
+            <p className="text-sm text-muted-foreground">
+              Canais e ferramentas que ampliam a operação do restaurante.
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => {
               const Icon = card.icon;

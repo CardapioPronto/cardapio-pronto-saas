@@ -176,13 +176,13 @@ Objetivo: aumentar recompra no canal proprio.
 
 ### Escopo MVP
 
-- [ ] Configuracao por restaurante: pontos ou cashback.
-- [ ] Regra simples: percentual do pedido finalizado vira credito.
-- [ ] Saldo por cliente.
-- [ ] Resgate no checkout publico.
-- [ ] Historico de creditos e debitos.
-- [ ] Limites: validade, pedido minimo e maximo por resgate.
-- [ ] Tela para o dono acompanhar clientes com saldo.
+- [x] Configuracao por restaurante: pontos ou cashback.
+- [x] Regra simples: percentual do pedido finalizado vira credito.
+- [x] Saldo por cliente.
+- [x] Resgate no checkout publico.
+- [x] Historico de creditos e debitos.
+- [x] Limites: validade, pedido minimo e maximo por resgate.
+- [x] Tela para o dono acompanhar clientes com saldo.
 
 ### Criterio de aceite
 
@@ -192,7 +192,10 @@ Objetivo: aumentar recompra no canal proprio.
 
 Evidencia:
 
-- Pendente.
+- 2026-05-28: Branch `bloco-2-fidelidade-cashback` criada a partir de `main`.
+- 2026-05-28: Motor MVP iniciado com `supabase/migrations/20260528170000_create_loyalty_cashback_mvp.sql`, servico `src/services/loyaltyService.ts`, tipos `src/types/loyalty.ts`, tela `/fidelidade` e link no menu lateral.
+- 2026-05-28: Cashback automatico em pedidos `finalizado` e estorno em reabertura/cancelamento implementados via trigger.
+- 2026-06-01: Resgate no checkout publico implementado com RPC segura/idempotente `apply_public_loyalty_redemption`, consulta de saldo no resumo do pedido e desconto aplicado antes do PIX online.
 
 ---
 
@@ -203,16 +206,18 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
 
 ### Escopo MVP
 
-- [ ] Segmentar clientes por comportamento.
-- [ ] Criar automacoes basicas:
-  - cliente inativo ha 30 dias;
-  - aniversariante;
-  - primeiro pedido sem recompra;
-  - cliente alto ticket;
-  - comprou categoria especifica.
-- [ ] Gerar cupom automatico vinculado a campanha.
-- [ ] Enviar por e-mail no MVP, WhatsApp quando a base operacional estiver validada.
-- [ ] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
+- [x] Segmentar clientes por comportamento.
+- [x] Criar automacoes basicas:
+  - [x] cliente inativo ha 30 dias;
+  - [x] aniversariante;
+  - [x] primeiro pedido sem recompra;
+  - [x] cliente alto ticket;
+  - [x] comprou categoria especifica.
+- [x] Gerar cupom automatico vinculado a campanha.
+- [x] Enviar teste da campanha antes do disparo real.
+- [x] Enviar por e-mail no MVP.
+- [x] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
+- [ ] Enviar por WhatsApp quando a base operacional estiver validada.
 
 ### Criterio de aceite
 
@@ -222,7 +227,19 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-01: Bloco 3 iniciado com gatilhos guiados em `/automacoes` para criar campanhas por e-mail pre-preenchidas. O publico `inactive_customers` foi adicionado ao envio por e-mail para campanha real de cliente inativo.
+- 2026-06-01: Segmentacao comportamental evoluida com RPC `get_email_campaign_recipients`: primeira compra sem recompra, alto ticket e saldo de fidelidade agora selecionam destinatarios reais no envio, respeitando opt-in, descadastro e limite do plano.
+- 2026-06-01: Cupom rastreavel por campanha iniciado com `generate_email_campaign_coupon`, relacionamento `email_campaigns.coupon_id`, exibicao no editor e renderizacao da variavel `{{coupon}}` no envio.
+- 2026-06-01: Metricas de atribuicao iniciadas com `get_email_campaign_attribution_metrics`, exibindo pedidos, pedidos finalizados, receita atribuida e descontos a partir do cupom vinculado.
+- 2026-06-01: Configuracao operacional do cupom da campanha adicionada ao painel: tipo de desconto, valor, validade e pedido minimo podem ser definidos antes do envio; campanhas em rascunho atualizam o mesmo cupom vinculado para manter a atribuicao limpa.
+- 2026-06-01: Segmentacao por categoria comprada iniciada com o publico `purchased_category`: automacao guiada em `/automacoes`, seletor de categoria no editor de campanhas e RPC filtrando clientes que compraram produtos daquela categoria em pedidos finalizados dentro da janela configurada.
+- 2026-06-01: Previa operacional de publico adicionada ao editor de campanhas via `preview_campaign_audience`, retornando quantidade alcançada, limites do plano e amostra de contatos antes do envio.
+- 2026-06-02: Segmentacao de aniversariantes iniciada com o publico `birthday`, card guiado em `/automacoes` e filtro de clientes com `birth_date` no CRM dentro da janela configurada.
+- 2026-06-02: Campanhas automaticas reorganizadas para dentro do modulo Email - Resend, com aba propria de automacoes, cards de gatilho guiado e navegacao voltar/avancar na pagina de integracao.
+- 2026-06-02: Reaproveitamento operacional adicionado ao editor: campanhas podem ser duplicadas como novo rascunho, status aparecem em portugues e o envio bloqueia conteudo com `{{coupon}}` sem cupom vinculado.
+- 2026-06-02: Envio de teste da campanha adicionado ao editor antes do disparo real, usando o Resend configurado do restaurante e registrando log separado como `test`, sem consumir metricas de campanha marketing.
+- 2026-06-02: Logs de e-mail ganharam filtros por tipo e status, destacando testes, campanhas, transacionais e contexto de origem para facilitar a conferencia operacional no piloto.
+- 2026-06-02: Checklist pre-disparo adicionado ao editor de campanhas, exigindo previa de publico com contatos antes do envio real e exibindo cupom, saldo mensal e ultimo teste registrado.
 
 ---
 
@@ -233,12 +250,12 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 
 ### Escopo MVP
 
-- [ ] Adicionar manifesto web.
-- [ ] Adicionar service worker.
-- [ ] Cachear assets da aplicacao.
-- [ ] Exibir indicador online/offline.
-- [ ] Permitir instalar no celular/tablet.
-- [ ] Bloquear acoes que exigem internet com mensagem clara.
+- [x] Adicionar manifesto web.
+- [x] Adicionar service worker.
+- [x] Cachear assets da aplicacao.
+- [x] Exibir indicador online/offline.
+- [x] Permitir instalar no celular/tablet.
+- [x] Bloquear acoes que exigem internet com mensagem clara.
 
 ### Criterio de aceite
 
@@ -248,7 +265,11 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-02: Bloco 4 iniciado com `manifest.webmanifest`, metadados mobile/Apple e icones PWA 192x192/512x512 gerados a partir da marca Pubfy para instalacao em celular/tablet. Offline e cache ainda nao foram prometidos nesta fatia.
+- 2026-06-02: Service worker conservador registrado em producao, com cache do shell minimo e assets estaticos de mesma origem. APIs, Supabase e acoes operacionais continuam dependentes de internet.
+- 2026-06-02: Indicador online/offline adicionado ao cabecalho operacional, exibindo estado de conexao nas telas protegidas sem prometer operacao offline.
+- 2026-06-02: Aviso global de perda de conexao adicionado e validado com Playwright em build de producao/preview: app shell permanece carregado offline apos primeiro acesso, e o estado volta ao normal quando a conexao retorna.
+- 2026-06-02: Acoes criticas que dependem de internet agora exibem bloqueio claro quando offline: finalizar pedido no PDV, alterar status, atualizar historico, aplicar cupom, buscar CEP e confirmar pedido no checkout publico.
 
 ---
 

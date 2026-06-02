@@ -28,6 +28,7 @@ type EmailDispatchBody = JsonRecord & {
   restaurant_id?: string;
   template_key?: string;
   campaign_id?: string;
+  audience_filter?: JsonRecord;
   order_id?: string;
   tracking_id?: string;
   delivery_order_id?: string;
@@ -44,6 +45,19 @@ type EmailDispatchBody = JsonRecord & {
   email_type?: string;
   accepts_marketing?: boolean;
   origin?: string;
+};
+
+type CampaignRecipient = {
+  id: string;
+  email: string;
+  name: string | null;
+  unsubscribe_token: string | null;
+  last_order_at: string | null;
+};
+
+type CampaignCoupon = {
+  id: string;
+  code: string;
 };
 
 const isRecord = (value: unknown): value is JsonRecord =>
@@ -119,6 +133,10 @@ const renderCampaignContent = (template: string, variables: Record<string, unkno
     }, variables);
     return escapeHtml(value);
   });
+
+const campaignContentUsesCoupon = (campaign: { html_content?: string | null; text_content?: string | null }) =>
+  /\{\{\s*coupon\s*\}\}/.test(String(campaign.html_content || "")) ||
+  /\{\{\s*coupon\s*\}\}/.test(String(campaign.text_content || ""));
 
 const chunkArray = <T>(items: T[], size: number) => {
   const chunks: T[][] = [];
@@ -236,6 +254,81 @@ const copyAllowedTemplate = async (req: Request, body: EmailDispatchBody) => {
   return { template: copied };
 };
 
+const previewCampaignAudience = async (req: Request, body: EmailDispatchBody) => {
+  const user = await getUser(req);
+  if (!user) throw new Error("Usuário não autenticado");
+  if (!body.restaurant_id) throw new Error("Restaurante obrigatório");
+  if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
+
+  const entitlement = await getRestaurantEntitlement(body.restaurant_id);
+  if (!entitlement.campaignsEnabled) {
+    throw new Error(`O plano ${entitlement.planName} não inclui campanhas por e-mail.`);
+  }
+
+  let audience = asRecord(body.audience_filter);
+  if (!Object.keys(audience).length && body.campaign_id) {
+    const { data: campaign, error: campaignError } = await admin
+      .from("email_campaigns")
+      .select("audience_filter")
+      .eq("id", body.campaign_id)
+      .eq("restaurant_id", body.restaurant_id)
+      .maybeSingle();
+
+    if (campaignError) throw campaignError;
+    audience = asRecord(campaign?.audience_filter);
+  }
+
+  const audienceType = String(audience.type || "marketing_opt_in");
+  const days = Number(audience.days || 90);
+  const usedThisMonth = await getCampaignUsage(body.restaurant_id);
+  const remaining = Math.max(0, entitlement.monthlyLimit - usedThisMonth);
+  const maxRecipients = Math.min(
+    remaining,
+    entitlement.contactLimit || remaining,
+    MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+  );
+
+  if (maxRecipients <= 0) {
+    return {
+      recipient_count: 0,
+      sample: [],
+      monthly_limit: entitlement.monthlyLimit,
+      used_this_month: usedThisMonth,
+      remaining_this_month: remaining,
+      capped_at: MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+      contact_limit: entitlement.contactLimit,
+    };
+  }
+
+  const { data: contactsData, error: contactsError } = await admin.rpc("get_email_campaign_recipients", {
+    p_restaurant_id: body.restaurant_id,
+    p_audience_filter: {
+      ...audience,
+      type: audienceType,
+      days,
+    },
+    p_limit: maxRecipients,
+  });
+
+  if (contactsError) throw contactsError;
+  const contacts = Array.isArray(contactsData) ? contactsData as CampaignRecipient[] : [];
+
+  return {
+    recipient_count: contacts.length,
+    sample: contacts.slice(0, 5).map((contact) => ({
+      id: contact.id,
+      email: contact.email,
+      name: contact.name,
+      last_order_at: contact.last_order_at,
+    })),
+    monthly_limit: entitlement.monthlyLimit,
+    used_this_month: usedThisMonth,
+    remaining_this_month: remaining,
+    capped_at: maxRecipients,
+    contact_limit: entitlement.contactLimit,
+  };
+};
+
 const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
   const user = await getUser(req);
   if (!user) throw new Error("Usuário não autenticado");
@@ -255,7 +348,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
 
   const { data: campaign, error: campaignError } = await admin
     .from("email_campaigns")
-    .select("id, restaurant_id, name, subject, html_content, text_content, status, audience_filter")
+    .select("id, restaurant_id, name, subject, html_content, text_content, status, audience_filter, coupon_id")
     .eq("id", body.campaign_id)
     .eq("restaurant_id", body.restaurant_id)
     .maybeSingle();
@@ -264,6 +357,23 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
   if (!campaign) throw new Error("Campanha não encontrada.");
   if (!["draft", "failed"].includes(campaign.status)) {
     throw new Error("Somente campanhas em rascunho ou falhadas podem ser enviadas.");
+  }
+
+  let coupon: CampaignCoupon | null = null;
+  if (campaign.coupon_id) {
+    const { data: couponData, error: couponError } = await admin
+      .from("coupons")
+      .select("id, code")
+      .eq("id", campaign.coupon_id)
+      .eq("restaurant_id", body.restaurant_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (couponError) throw couponError;
+    coupon = couponData as CampaignCoupon | null;
+  }
+  if (campaignContentUsesCoupon(campaign) && !coupon) {
+    throw new Error("Gere um cupom para usar a variável {{coupon}} nesta campanha.");
   }
 
   const audience = campaign.audience_filter || {};
@@ -275,22 +385,17 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
     MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
   );
 
-  let contactQuery = admin
-    .from("restaurant_email_contacts")
-    .select("id, email, name, unsubscribe_token, last_order_at")
-    .eq("restaurant_id", body.restaurant_id)
-    .eq("accepts_marketing", true)
-    .is("unsubscribed_at", null)
-    .order("last_order_at", { ascending: false, nullsFirst: false })
-    .limit(maxRecipients);
-
-  if (audienceType === "recent_customers") {
-    const since = new Date(Date.now() - days * 86400000).toISOString();
-    contactQuery = contactQuery.gte("last_order_at", since);
-  }
-
-  const { data: contacts, error: contactsError } = await contactQuery;
+  const { data: contactsData, error: contactsError } = await admin.rpc("get_email_campaign_recipients", {
+    p_restaurant_id: body.restaurant_id,
+    p_audience_filter: {
+      ...audience,
+      type: audienceType,
+      days,
+    },
+    p_limit: maxRecipients,
+  });
   if (contactsError) throw contactsError;
+  const contacts = Array.isArray(contactsData) ? contactsData as CampaignRecipient[] : [];
   if (!contacts?.length) throw new Error("Nenhum contato com opt-in encontrado para este público.");
 
   const { data: restaurant } = await admin
@@ -340,6 +445,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
           restaurant_name: restaurant?.name || "Restaurante",
           contact_name: contact.name || "Cliente",
           email: contact.email,
+          coupon: coupon?.code || "",
           unsubscribe_url: unsubscribeUrl,
         };
         const html = `${renderCampaignContent(campaign.html_content, variables)}
@@ -365,7 +471,7 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
             text,
             contextType: "campaign",
             contextId: campaign.id,
-            metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id },
+            metadata: { source: "email_campaign", campaign_id: campaign.id, contact_id: contact.id, coupon_id: coupon?.id || null },
           });
           sent += 1;
         } catch (error) {
@@ -401,6 +507,89 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
     used_this_month: usedThisMonth + sent + failed,
     remaining_after: Math.max(0, remaining - sent - failed),
     capped_at: MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+  };
+};
+
+const sendCampaignTest = async (req: Request, body: EmailDispatchBody) => {
+  const user = await getUser(req);
+  if (!user) throw new Error("Usuário não autenticado");
+  if (!body.restaurant_id || !body.campaign_id) throw new Error("Campanha inválida");
+  if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
+  if (!isEmail(String(body.to || ""))) throw new Error("Destinatário de teste inválido");
+  const to = String(body.to || "").trim().toLowerCase();
+
+  const entitlement = await getRestaurantEntitlement(body.restaurant_id);
+  if (!entitlement.campaignsEnabled) {
+    throw new Error(`O plano ${entitlement.planName} não inclui campanhas por e-mail.`);
+  }
+
+  const { data: campaign, error: campaignError } = await admin
+    .from("email_campaigns")
+    .select("id, restaurant_id, name, subject, html_content, text_content, coupon_id")
+    .eq("id", body.campaign_id)
+    .eq("restaurant_id", body.restaurant_id)
+    .maybeSingle();
+
+  if (campaignError) throw campaignError;
+  if (!campaign) throw new Error("Campanha não encontrada.");
+
+  let coupon: CampaignCoupon | null = null;
+  if (campaign.coupon_id) {
+    const { data: couponData, error: couponError } = await admin
+      .from("coupons")
+      .select("id, code")
+      .eq("id", campaign.coupon_id)
+      .eq("restaurant_id", body.restaurant_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (couponError) throw couponError;
+    coupon = couponData as CampaignCoupon | null;
+  }
+  if (campaignContentUsesCoupon(campaign) && !coupon) {
+    throw new Error("Gere um cupom para usar a variável {{coupon}} nesta campanha.");
+  }
+
+  const { data: restaurant } = await admin
+    .from("restaurants")
+    .select("name")
+    .eq("id", body.restaurant_id)
+    .maybeSingle();
+
+  const variables = {
+    restaurant_name: restaurant?.name || "Restaurante",
+    contact_name: "Cliente teste",
+    email: to,
+    coupon: coupon?.code || "",
+    unsubscribe_url: "#",
+  };
+  const html = `${renderCampaignContent(campaign.html_content, variables)}
+    <hr>
+    <p style="font-size:12px;color:#64748b;line-height:1.5">
+      Este é um envio de teste da campanha "${escapeHtml(campaign.name)}".
+    </p>`;
+  const text = campaign.text_content
+    ? `${renderCampaignContent(campaign.text_content, variables)}\n\nEnvio de teste da campanha "${campaign.name}".`
+    : undefined;
+
+  const result = await sendManagedEmail({
+    admin,
+    restaurantId: body.restaurant_id,
+    preferRestaurantConfig: true,
+    emailType: "test",
+    to,
+    recipientName: "Teste da campanha",
+    subject: `[Teste] ${campaign.subject}`,
+    html,
+    text,
+    contextType: "campaign_test",
+    contextId: campaign.id,
+    metadata: { source: "email_campaign_test", campaign_id: campaign.id, coupon_id: coupon?.id || null },
+  });
+
+  return {
+    log_id: result.logId,
+    provider_message_id: result.providerMessageId,
   };
 };
 
@@ -543,8 +732,16 @@ Deno.serve(async (req) => {
       return json({ success: true, ...(await copyAllowedTemplate(req, body)) });
     }
 
+    if (action === "preview_campaign_audience") {
+      return json({ success: true, ...(await previewCampaignAudience(req, body)) });
+    }
+
     if (action === "send_campaign") {
       return json({ success: true, ...(await sendCampaign(req, body)) });
+    }
+
+    if (action === "send_campaign_test") {
+      return json({ success: true, ...(await sendCampaignTest(req, body)) });
     }
 
     return json({ error: "Ação inválida" }, 400);

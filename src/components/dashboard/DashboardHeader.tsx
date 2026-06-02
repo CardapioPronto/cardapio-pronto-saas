@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Menu, Bell, CheckCircle2, Loader2, Settings } from "lucide-react";
+import { Menu, Bell, CheckCircle2, Loader2, Settings, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardNotifications } from "@/hooks/useDashboardNotifications";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import DashboardSidebar from "./DashboardSidebar";
 
 interface DashboardHeaderProps {
@@ -21,6 +22,7 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user } = useCurrentUser();
   const { notifications, unreadCount, loading } = useDashboardNotifications();
+  const { isOnline } = useNetworkStatus();
 
   const initials = (user?.name || user?.email || "Usuário")
     .split(" ")
@@ -49,6 +51,18 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
         <h1 className="truncate text-xl font-semibold text-navy sm:text-2xl">{title}</h1>
       </div>
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
+        <Badge
+          variant="outline"
+          className={
+            isOnline
+              ? "hidden border-emerald-200 bg-emerald-50 text-emerald-700 sm:inline-flex"
+              : "border-red-200 bg-red-50 text-red-700"
+          }
+          aria-live="polite"
+        >
+          {isOnline ? <Wifi className="mr-1 h-3.5 w-3.5" /> : <WifiOff className="mr-1 h-3.5 w-3.5" />}
+          {isOnline ? "Online" : "Offline"}
+        </Badge>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">

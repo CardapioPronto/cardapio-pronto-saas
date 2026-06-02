@@ -26,6 +26,7 @@ import {
 } from "../utils/historicoPedidos";
 import { useOrdersRealtimeSubscription } from "./useOrdersRealtimeSubscription";
 import { captureCrmLeadFromOrder } from "@/services/crmService";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 const getCreatedOrderId = (pedido: unknown) => {
   if (!pedido || typeof pedido !== "object") return null;
@@ -39,6 +40,7 @@ const getCreatedOrderId = (pedido: unknown) => {
 };
 
 export const usePDVHook = (restaurantId: string) => {
+  const { isOnline } = useNetworkStatus();
   // Estados do PDV
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
   const [mesaSelecionada, setMesaSelecionada] = useState("");
@@ -78,6 +80,10 @@ export const usePDVHook = (restaurantId: string) => {
   // Carregar histórico de pedidos
   const carregarHistoricoPedidos = useCallback(async () => {
     if (!restaurantId) return;
+    if (!isOnline) {
+      toast.error("Sem conexão. Reconecte a internet para atualizar o histórico.");
+      return;
+    }
 
     setCarregandoHistorico(true);
     
@@ -100,7 +106,7 @@ export const usePDVHook = (restaurantId: string) => {
     } finally {
       setCarregandoHistorico(false);
     }
-  }, [restaurantId, historicoFiltros]);
+  }, [restaurantId, historicoFiltros, isOnline]);
 
   useEffect(() => {
     if (restaurantId && visualizacaoAtiva === "historico") {
@@ -277,6 +283,11 @@ export const usePDVHook = (restaurantId: string) => {
       dadosCliente: DadosClientePedido,
       override?: { allowNegative: boolean; reason: string },
     ): Promise<SalvarPedidoResult> => {
+      if (!isOnline) {
+        toast.error("Sem conexão. Reconecte a internet para salvar o pedido.");
+        return { success: false };
+      }
+
       const mesa = tipoPedido === "mesa" && mesaSelecionada ? `Mesa ${mesaSelecionada}` : "Balcão";
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -307,6 +318,7 @@ export const usePDVHook = (restaurantId: string) => {
       restaurantId,
       tipoPedido,
       totalPedido,
+      isOnline,
     ],
   );
 
@@ -412,6 +424,11 @@ export const usePDVHook = (restaurantId: string) => {
 
   // Mudar status do pedido
   const handleAlterarStatusPedido = async (pedidoId: number | string, novoStatus: PedidoStatus) => {
+    if (!isOnline) {
+      toast.error("Sem conexão. Reconecte a internet para alterar o status do pedido.");
+      return;
+    }
+
     const result = await alterarStatusPedido(String(pedidoId), novoStatus);
     if (result.success) {
       setPedidosHistorico(pedidos => 

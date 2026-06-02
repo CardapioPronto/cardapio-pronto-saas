@@ -12,6 +12,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { captureException } from '@/lib/observability';
 import { CookieConsentBar } from '@/components/legal/CookieConsentBar';
 import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
+import { OfflineStatusBanner } from '@/components/pwa/OfflineStatusBanner';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -84,6 +85,7 @@ function App() {
               >
                 <AppRoutes />
                 <CookieConsentBar />
+                <OfflineStatusBanner />
               </BrowserRouter>
               <Toaster />
               {isProduction && <Analytics />}

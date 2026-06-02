@@ -918,6 +918,7 @@ export type Database = {
       email_campaigns: {
         Row: {
           audience_filter: Json
+          coupon_id: string | null
           created_at: string
           created_by: string | null
           failed_count: number
@@ -938,6 +939,7 @@ export type Database = {
         }
         Insert: {
           audience_filter?: Json
+          coupon_id?: string | null
           created_at?: string
           created_by?: string | null
           failed_count?: number
@@ -958,6 +960,7 @@ export type Database = {
         }
         Update: {
           audience_filter?: Json
+          coupon_id?: string | null
           created_at?: string
           created_by?: string | null
           failed_count?: number
@@ -977,6 +980,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_campaigns_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_campaigns_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -2878,6 +2888,10 @@ export type Database = {
         Returns: Json
       }
       apply_stock_movement: { Args: { p_args: Json }; Returns: Json }
+      apply_public_loyalty_redemption: {
+        Args: { p_order_id: string; p_requested_amount: number }
+        Returns: Json
+      }
       can_manage_restaurant_employees: {
         Args: { target_restaurant_id: string }
         Returns: boolean
@@ -2910,6 +2924,36 @@ export type Database = {
       }
       get_public_restaurant_promotions: {
         Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_public_loyalty_quote: {
+        Args: {
+          p_order_subtotal?: number
+          p_phone: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      get_email_campaign_recipients: {
+        Args: {
+          p_audience_filter?: Json
+          p_limit?: number
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      get_email_campaign_attribution_metrics: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
+      generate_email_campaign_coupon: {
+        Args: {
+          p_campaign_id: string
+          p_discount_type?: string
+          p_discount_value?: number
+          p_minimum_order_value?: number
+          p_valid_days?: number
+        }
         Returns: Json
       }
       get_orders_summary: {
@@ -2949,6 +2993,10 @@ export type Database = {
           p_restaurant_id: string
           p_window_days?: number
         }
+        Returns: Json
+      }
+      get_restaurant_loyalty_dashboard: {
+        Args: { p_restaurant_id: string }
         Returns: Json
       }
       get_restaurant_sales_period_metrics: {
@@ -3036,6 +3084,10 @@ export type Database = {
       }
       repair_missing_restaurant_subscriptions: { Args: never; Returns: number }
       revert_stock_for_order: { Args: { p_order_id: string }; Returns: Json }
+      save_restaurant_loyalty_settings: {
+        Args: { p_patch: Json; p_restaurant_id: string }
+        Returns: Json
+      }
       update_crm_customer_profile: {
         Args: {
           p_patch: Json
