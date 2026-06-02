@@ -250,11 +250,11 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 
 ### Escopo MVP
 
-- [ ] Adicionar manifesto web.
+- [x] Adicionar manifesto web.
 - [ ] Adicionar service worker.
 - [ ] Cachear assets da aplicacao.
 - [ ] Exibir indicador online/offline.
-- [ ] Permitir instalar no celular/tablet.
+- [x] Permitir instalar no celular/tablet.
 - [ ] Bloquear acoes que exigem internet com mensagem clara.
 
 ### Criterio de aceite
@@ -265,7 +265,7 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-02: Bloco 4 iniciado com `manifest.webmanifest`, metadados mobile/Apple e icones PWA 192x192/512x512 gerados a partir da marca Pubfy para instalacao em celular/tablet. Offline e cache ainda nao foram prometidos nesta fatia.
 
 ---
 

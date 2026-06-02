@@ -1,0 +1,26 @@
+{
+  "name": "Pubfy",
+  "short_name": "Pubfy",
+  "description": "Operacao de cardapio digital, PDV, pedidos e relacionamento para restaurantes.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F2",
+  "theme_color": "#81B29A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "food"]
+}
