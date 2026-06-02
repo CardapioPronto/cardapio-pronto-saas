@@ -118,6 +118,16 @@ const orderTypeFor = (orderType?: string) => {
 
 type ImportOrderOutcome = "imported" | "status_updated" | "unchanged";
 
+type StockSyncResult = {
+  action: "apply" | "revert" | "skip";
+  error?: string;
+};
+
+type ImportOrderResult = {
+  outcome: ImportOrderOutcome;
+  stockSync?: StockSyncResult;
+};
+
 type IfoodItemMapping = {
   product_id: string | null;
 };
@@ -216,13 +226,39 @@ const recordIfoodItemObservation = async (
   if (error) throw error;
 };
 
+const syncStockForIfoodOrder = async (
+  admin: SupabaseClient,
+  orderId: string,
+  status: string,
+): Promise<StockSyncResult> => {
+  const mappedStatus = status.toLowerCase();
+
+  if (mappedStatus === "cancelado" || mappedStatus === "pagamento_falhou") {
+    const { error } = await admin.rpc("revert_stock_for_order", {
+      p_order_id: orderId,
+    });
+    return error
+      ? { action: "revert", error: error.message }
+      : { action: "revert" };
+  }
+
+  const { error } = await admin.rpc("apply_stock_for_order", {
+    p_order_id: orderId,
+    p_allow_negative: false,
+  });
+
+  return error
+    ? { action: "apply", error: error.message }
+    : { action: "apply" };
+};
+
 const importOrder = async (
   admin: SupabaseClient,
   restaurantId: string,
   order: Record<string, unknown>,
-): Promise<ImportOrderOutcome> => {
+): Promise<ImportOrderResult> => {
   const ifoodId = String(order.id || "");
-  if (!ifoodId) return "unchanged";
+  if (!ifoodId) return { outcome: "unchanged" };
 
   const { data: existing } = await admin
     .from("orders")
@@ -240,9 +276,13 @@ const importOrder = async (
         .update({ status: mappedStatus, updated_at: new Date().toISOString() })
         .eq("id", existing.id);
       if (statusError) throw statusError;
-      return "status_updated";
+
+      return {
+        outcome: "status_updated",
+        stockSync: await syncStockForIfoodOrder(admin, existing.id, mappedStatus),
+      };
     }
-    return "unchanged";
+    return { outcome: "unchanged" };
   }
 
   const orderType = String(order.orderType || order.type || "DELIVERY");
@@ -323,7 +363,12 @@ const importOrder = async (
     ));
   }
 
-  return "imported";
+  return {
+    outcome: "imported",
+    stockSync: items.some((item) => item.product_id)
+      ? await syncStockForIfoodOrder(admin, inserted.id, mappedStatus)
+      : { action: "skip" },
+  };
 };
 
 /** Consulta eventos iFood, importa pedidos e confirma (ACK) ao marketplace. */
@@ -387,11 +432,23 @@ export async function pollIfoodEvents(
             "Content-Type": "application/json",
           },
         });
-        const outcome = order
+        const importResult = order
           ? await importOrder(admin, restaurantId, order as Record<string, unknown>)
-          : "unchanged";
-        if (outcome === "imported") ordersImported++;
-        if (outcome === "status_updated") ordersStatusUpdated++;
+          : { outcome: "unchanged" as const };
+        if (importResult.outcome === "imported") ordersImported++;
+        if (importResult.outcome === "status_updated") ordersStatusUpdated++;
+        if (importResult.stockSync?.error) {
+          console.warn("iFood order imported but stock sync failed", {
+            restaurantId,
+            orderId: event.orderId,
+            action: importResult.stockSync.action,
+            error: importResult.stockSync.error,
+          });
+          await admin
+            .from("ifood_events")
+            .update({ error: importResult.stockSync.error })
+            .eq("id", event.id);
+        }
         acknowledgedIds.push(event.id);
       } catch (error) {
         await admin
