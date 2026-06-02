@@ -63,7 +63,8 @@ type CampaignAudienceType =
   | "first_order_no_repurchase"
   | "high_ticket"
   | "loyalty_balance"
-  | "purchased_category";
+  | "purchased_category"
+  | "birthday";
 
 type CampaignPreset = {
   name: string;
@@ -106,6 +107,13 @@ const CAMPAIGN_PRESETS: Record<string, CampaignPreset> = {
     message: "Selecionamos uma oferta especial baseada nos produtos que voce costuma pedir.",
     audience: "purchased_category",
     days: 180,
+  },
+  birthday: {
+    name: "Aniversariantes",
+    subject: "Seu aniversario merece um presente",
+    message: "Preparamos uma oferta especial para celebrar com voce.",
+    audience: "birthday",
+    days: 30,
   },
 };
 
@@ -192,6 +200,7 @@ export function EmailOperationsPanel({ scope }: Props) {
     "high_ticket",
     "loyalty_balance",
     "purchased_category",
+    "birthday",
   ];
   const initialAudience: CampaignAudienceType =
     supportedAudienceTypes.includes(queryAudience as CampaignAudienceType)
@@ -929,6 +938,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                               <SelectItem value="high_ticket">Alto ticket</SelectItem>
                               <SelectItem value="loyalty_balance">Saldo de fidelidade</SelectItem>
                               <SelectItem value="purchased_category">Comprou categoria</SelectItem>
+                              <SelectItem value="birthday">Aniversariantes</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

@@ -73,7 +73,8 @@ export interface EmailCampaign {
       | "first_order_no_repurchase"
       | "high_ticket"
       | "loyalty_balance"
-      | "purchased_category";
+      | "purchased_category"
+      | "birthday";
     days?: number;
     categoryId?: string;
   };

@@ -144,6 +144,14 @@ const Automacoes = () => {
       status: "ready",
       audience: "Categoria específica",
     },
+    {
+      title: "Aniversariantes",
+      description: "Encante clientes que fazem aniversário nos próximos dias.",
+      href: "/email-integracao?tab=campaigns&create=1&preset=birthday",
+      icon: CalendarClock,
+      status: "ready",
+      audience: "Aniversário cadastrado",
+    },
   ];
 
   return (
@@ -186,7 +194,7 @@ const Automacoes = () => {
             </Button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             {campaignAutomations.map((automation) => {
               const Icon = automation.icon;
               return (
