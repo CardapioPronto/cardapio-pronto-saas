@@ -233,6 +233,7 @@ Evidencia:
 - 2026-06-01: Segmentacao por categoria comprada iniciada com o publico `purchased_category`: automacao guiada em `/automacoes`, seletor de categoria no editor de campanhas e RPC filtrando clientes que compraram produtos daquela categoria em pedidos finalizados dentro da janela configurada.
 - 2026-06-01: Previa operacional de publico adicionada ao editor de campanhas via `preview_campaign_audience`, retornando quantidade alcançada, limites do plano e amostra de contatos antes do envio.
 - 2026-06-02: Segmentacao de aniversariantes iniciada com o publico `birthday`, card guiado em `/automacoes` e filtro de clientes com `birth_date` no CRM dentro da janela configurada.
+- 2026-06-02: Campanhas automaticas reorganizadas para dentro do modulo Email - Resend, com aba propria de automacoes, cards de gatilho guiado e navegacao voltar/avancar na pagina de integracao.
 
 ---
 

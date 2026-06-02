@@ -1,5 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, FileText, Inbox, Mail, Plus, RefreshCw, Save, Send, TicketPercent, Users } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarClock,
+  Copy,
+  FileText,
+  Gift,
+  Inbox,
+  Mail,
+  Plus,
+  RefreshCw,
+  Save,
+  Send,
+  Tags,
+  Target,
+  TicketPercent,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import type { ComponentType } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/sonner-toast";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +92,14 @@ type CampaignPreset = {
   days?: number;
 };
 
+type CampaignAutomationCard = {
+  key: keyof typeof CAMPAIGN_PRESETS;
+  title: string;
+  description: string;
+  icon: ComponentType<{ className?: string }>;
+  audience: string;
+};
+
 const CAMPAIGN_PRESETS: Record<string, CampaignPreset> = {
   inactive_30: {
     name: "Reativacao - 30 dias sem pedido",
@@ -117,6 +143,51 @@ const CAMPAIGN_PRESETS: Record<string, CampaignPreset> = {
   },
 };
 
+const CAMPAIGN_AUTOMATIONS: CampaignAutomationCard[] = [
+  {
+    key: "inactive_30",
+    title: "Cliente inativo",
+    description: "Recupere clientes que ficaram tempo demais sem pedir.",
+    icon: CalendarClock,
+    audience: "Opt-in marketing",
+  },
+  {
+    key: "first_repurchase",
+    title: "Primeira recompra",
+    description: "Transforme quem fez só um pedido em cliente recorrente.",
+    icon: Target,
+    audience: "Primeira compra sem recompra",
+  },
+  {
+    key: "high_ticket",
+    title: "Cliente VIP",
+    description: "Aborde clientes de maior valor com uma campanha especial.",
+    icon: TrendingUp,
+    audience: "Alto ticket",
+  },
+  {
+    key: "loyalty_balance",
+    title: "Saldo de fidelidade",
+    description: "Convide clientes com beneficio acumulado a voltar ao cardapio.",
+    icon: Gift,
+    audience: "Saldo positivo",
+  },
+  {
+    key: "purchased_category",
+    title: "Comprou categoria",
+    description: "Crie uma campanha para quem comprou produtos de uma categoria.",
+    icon: Tags,
+    audience: "Categoria específica",
+  },
+  {
+    key: "birthday",
+    title: "Aniversariantes",
+    description: "Encante clientes que fazem aniversário nos próximos dias.",
+    icon: CalendarClock,
+    audience: "Aniversário cadastrado",
+  },
+];
+
 const makeCampaignHtml = (title: string, message: string) =>
   `<h2>${title}</h2><p>${message}</p>`;
 
@@ -159,7 +230,13 @@ const couponValidDaysFromNow = (validUntil?: string | null) => {
 
 export function EmailOperationsPanel({ scope }: Props) {
   const [searchParams] = useSearchParams();
+  const queryTab = searchParams.get("tab");
+  const initialTab =
+    queryTab === "automations" || queryTab === "campaigns" || queryTab === "templates" || queryTab === "logs"
+      ? queryTab
+      : "settings";
   const autoCreatedCampaignRef = useRef(false);
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [logs, setLogs] = useState<EmailSendLog[]>([]);
   const [contacts, setContacts] = useState<EmailContact[]>([]);
@@ -185,10 +262,6 @@ export function EmailOperationsPanel({ scope }: Props) {
   const selectedCampaignCoupon = selectedCampaign?.coupon;
   const isSystemScope = scope === "system";
   const isRestaurantScope = scope === "restaurant";
-  const queryTab = searchParams.get("tab");
-  const initialTab = queryTab === "campaigns" || queryTab === "templates" || queryTab === "logs"
-    ? queryTab
-    : "settings";
   const queryAudience = searchParams.get("audience");
   const queryPreset = searchParams.get("preset");
   const selectedPreset = queryPreset ? CAMPAIGN_PRESETS[queryPreset] : undefined;
@@ -258,6 +331,10 @@ export function EmailOperationsPanel({ scope }: Props) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     if (!selectedCampaign?.id) {
@@ -358,24 +435,24 @@ export function EmailOperationsPanel({ scope }: Props) {
     }
   };
 
-  const handleCreateCampaign = () => {
+  const handleCreateCampaign = (preset = selectedPreset) => {
     const baseTemplate = campaignTemplates.find((template) => template.template_key === "campaign_basic") || campaignTemplates[0];
     const tempId = `new-${Date.now()}`;
     const campaign = {
       id: tempId,
       restaurant_id: "",
       template_id: baseTemplate?.id || null,
-      name: selectedPreset?.name || "Nova campanha",
-      subject: selectedPreset?.subject || baseTemplate?.subject || "",
-      html_content: selectedPreset
-        ? makeCampaignHtml(selectedPreset.subject, selectedPreset.message)
+      name: preset?.name || "Nova campanha",
+      subject: preset?.subject || baseTemplate?.subject || "",
+      html_content: preset
+        ? makeCampaignHtml(preset.subject, preset.message)
         : baseTemplate?.html_content || "<h2>{{title}}</h2><p>{{message}}</p>",
-      text_content: selectedPreset?.message || baseTemplate?.text_content || "{{title}} - {{message}}",
+      text_content: preset?.message || baseTemplate?.text_content || "{{title}} - {{message}}",
       status: "draft",
       audience_filter: {
-        type: selectedPreset?.audience || initialAudience,
-        ...(selectedPreset?.days ? { days: selectedPreset.days } : {}),
-        ...(selectedPreset?.audience === "purchased_category" && campaignCategories[0]?.id
+        type: preset?.audience || initialAudience,
+        ...(preset?.days ? { days: preset.days } : {}),
+        ...(preset?.audience === "purchased_category" && campaignCategories[0]?.id
           ? { categoryId: campaignCategories[0].id }
           : {}),
       },
@@ -390,6 +467,7 @@ export function EmailOperationsPanel({ scope }: Props) {
     };
     setCampaigns((current) => [campaign, ...current]);
     setSelectedCampaignId(tempId);
+    setActiveTab("campaigns");
   };
 
   useEffect(() => {
@@ -556,10 +634,11 @@ export function EmailOperationsPanel({ scope }: Props) {
   };
 
   return (
-    <Tabs defaultValue={initialTab} className="space-y-6">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="settings">Configuração</TabsTrigger>
+          <TabsTrigger value="automations">Automações</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
@@ -572,6 +651,90 @@ export function EmailOperationsPanel({ scope }: Props) {
 
       <TabsContent value="settings">
         <EmailIntegrationForm scope={scope} />
+      </TabsContent>
+
+      <TabsContent value="automations">
+        {!isRestaurantScope ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Campanhas automáticas</CardTitle>
+              <CardDescription>
+                Gatilhos comerciais são configurados dentro de cada restaurante.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr,280px]">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campanhas automáticas</CardTitle>
+                  <CardDescription>
+                    Gatilhos comerciais prontos para criar campanhas de recompra usando a base capturada no Pubfy.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Base apta</CardTitle>
+                  <CardDescription>Contatos com opt-in de marketing.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold">
+                    {contacts.filter((contact) => contact.accepts_marketing && !contact.unsubscribed_at).length}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {!campaignEntitlement?.campaignsEnabled && (
+              <Alert>
+                <AlertDescription>
+                  Campanhas automáticas ficam reservadas para planos avançados. Configure o domínio de envio e confirme o plano antes de disparar campanhas.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {CAMPAIGN_AUTOMATIONS.map((automation) => {
+                const Icon = automation.icon;
+                const preset = CAMPAIGN_PRESETS[automation.key];
+                return (
+                  <Card key={automation.key} className="flex h-full flex-col">
+                    <CardHeader className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                          Pronto
+                        </Badge>
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{automation.title}</CardTitle>
+                        <CardDescription className="mt-1 min-h-12">{automation.description}</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="mt-auto space-y-4">
+                      <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                        Público inicial: <span className="font-medium text-foreground">{automation.audience}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={() => handleCreateCampaign(preset)}
+                        disabled={!campaignEntitlement?.campaignsEnabled}
+                      >
+                        Criar campanha
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </TabsContent>
 
       <TabsContent value="templates">
