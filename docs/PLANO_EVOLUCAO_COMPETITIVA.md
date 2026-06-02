@@ -255,7 +255,7 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 - [x] Cachear assets da aplicacao.
 - [x] Exibir indicador online/offline.
 - [x] Permitir instalar no celular/tablet.
-- [ ] Bloquear acoes que exigem internet com mensagem clara.
+- [x] Bloquear acoes que exigem internet com mensagem clara.
 
 ### Criterio de aceite
 
@@ -269,6 +269,7 @@ Evidencia:
 - 2026-06-02: Service worker conservador registrado em producao, com cache do shell minimo e assets estaticos de mesma origem. APIs, Supabase e acoes operacionais continuam dependentes de internet.
 - 2026-06-02: Indicador online/offline adicionado ao cabecalho operacional, exibindo estado de conexao nas telas protegidas sem prometer operacao offline.
 - 2026-06-02: Aviso global de perda de conexao adicionado e validado com Playwright em build de producao/preview: app shell permanece carregado offline apos primeiro acesso, e o estado volta ao normal quando a conexao retorna.
+- 2026-06-02: Acoes criticas que dependem de internet agora exibem bloqueio claro quando offline: finalizar pedido no PDV, alterar status, atualizar historico, aplicar cupom, buscar CEP e confirmar pedido no checkout publico.
 
 ---
 

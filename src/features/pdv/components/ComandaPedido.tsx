@@ -7,6 +7,7 @@ import { AlertCircle, Loader2, Printer } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
 import { MesaStatus } from "@/types/mesa";
 import { cn } from "@/lib/utils";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 interface ComandaPedidoProps {
   tipoPedido: "mesa" | "balcao";
@@ -40,6 +41,7 @@ export const ComandaPedido = ({
   className,
 }: ComandaPedidoProps) => {
   const { printOrder, printing } = usePrint();
+  const { isOnline } = useNetworkStatus();
   const mesaAtual = mesas.find(m => m.id === mesaSelecionada);
 
   const getMesaDisplay = () => {
@@ -123,6 +125,13 @@ export const ComandaPedido = ({
             </div>
           )}
 
+          {!isOnline && itensPedido.length > 0 && (
+            <div className="mb-4 flex w-full items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Reconecte a internet para finalizar este pedido.</span>
+            </div>
+          )}
+
           <div className="flex justify-between w-full mb-4 font-bold text-lg">
             <span>Total</span>
             <span>R$ {totalPedido.toFixed(2)}</span>
@@ -145,7 +154,7 @@ export const ComandaPedido = ({
             onClick={finalizarPedido}
             className="w-full"
             size="lg"
-            disabled={itensPedido.length === 0 || salvandoPedido}
+            disabled={itensPedido.length === 0 || salvandoPedido || !isOnline}
           >
             {salvandoPedido ? (
               <>

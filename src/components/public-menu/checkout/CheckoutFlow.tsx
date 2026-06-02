@@ -19,6 +19,7 @@ import {
 } from '@/lib/publicMenuCheckoutIdempotency';
 import { getPublicLoyaltyQuote } from '@/services/loyaltyService';
 import type { PublicLoyaltyQuote } from '@/types/loyalty';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 interface Props {
   data: MenuData;
@@ -44,6 +45,7 @@ const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
 
 export const CheckoutFlow = ({ data, onClose }: Props) => {
   const { items, subtotal, clear } = useCart();
+  const { isOnline } = useNetworkStatus();
   const navigate = useNavigate();
   const primary = data.theme.colors.primary;
   const dCfg = data.deliveryConfig;
@@ -135,6 +137,13 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     : 0;
   const discountAmount = couponDiscountAmount + loyaltyRedeemAmount;
   const total = Math.max(subtotal - discountAmount, 0) + deliveryFee;
+  const notifyOffline = (description = 'Reconecte a internet para concluir esta ação.') => {
+    toast({
+      title: 'Sem conexão',
+      description,
+      variant: 'destructive',
+    });
+  };
 
   useEffect(() => {
     if (!paymentMethods.includes(payment)) {
@@ -163,6 +172,11 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
   };
 
   const applyCoupon = async () => {
+    if (!isOnline) {
+      notifyOffline('Reconecte a internet para validar o cupom.');
+      return;
+    }
+
     const code = couponCode.trim().toUpperCase();
     if (!code) {
       toast({ title: 'Informe um cupom', variant: 'destructive' });
@@ -211,9 +225,10 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     if (step !== 'review') return;
 
     const digits = loyaltyPhone.replace(/\D/g, '');
-    if (digits.length < 10 || loyaltyOrderSubtotal <= 0) {
+    if (!isOnline || digits.length < 10 || loyaltyOrderSubtotal <= 0) {
       setLoyaltyQuote(null);
       setUseLoyaltyCredit(false);
+      setLoyaltyLoading(false);
       return;
     }
 
@@ -245,11 +260,16 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [data.restaurant.id, loyaltyOrderSubtotal, loyaltyPhone, step]);
+  }, [data.restaurant.id, isOnline, loyaltyOrderSubtotal, loyaltyPhone, step]);
 
   const handleCepBlur = async () => {
     const clean = address.zip_code.replace(/\D/g, '');
     if (clean.length !== 8) return;
+    if (!isOnline) {
+      notifyOffline('Reconecte a internet para buscar o endereço pelo CEP.');
+      return;
+    }
+
     setCepLoading(true);
     const result = await lookupCep(clean);
     setCepLoading(false);
@@ -329,6 +349,11 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
 
   const submit = async () => {
     if (submitInFlightRef.current) return;
+    if (!isOnline) {
+      notifyOffline('Reconecte a internet para enviar o pedido.');
+      return;
+    }
+
     submitInFlightRef.current = true;
     setSubmitting(true);
     try {
@@ -546,6 +571,11 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
 
           {step === 'review' && (
             <div className="space-y-3 text-sm">
+              {!isOnline && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                  Reconecte a internet para confirmar e enviar este pedido.
+                </div>
+              )}
               <Section title="Tipo de pedido">
                 <p className="text-muted-foreground">{FULFILLMENT_LABELS[fulfillmentType]}</p>
               </Section>
@@ -595,7 +625,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                     <button
                       type="button"
                       onClick={applyCoupon}
-                      disabled={couponLoading}
+                      disabled={couponLoading || !isOnline}
                       className="px-3 rounded-lg text-white text-sm font-semibold disabled:opacity-60"
                       style={{ backgroundColor: primary }}
                     >
@@ -713,7 +743,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
           <div className="p-4 border-t border-border">
             <button
               onClick={next}
-              disabled={submitting}
+              disabled={submitting || (step === 'review' && !isOnline)}
               className="w-full text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: primary }}
             >
