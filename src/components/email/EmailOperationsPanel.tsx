@@ -328,6 +328,15 @@ export function EmailOperationsPanel({ scope }: Props) {
     const matchesStatus = logStatusFilter === "all" || log.status === logStatusFilter;
     return matchesType && matchesStatus;
   });
+  const selectedCampaignTestLog = selectedCampaign && !selectedCampaign.id.startsWith("new-")
+    ? logs.find(
+        (log) =>
+          log.email_type === "test" &&
+          log.context_type === "campaign_test" &&
+          log.context_id === selectedCampaign.id,
+      )
+    : null;
+  const hasValidAudiencePreview = Boolean(audiencePreview && audiencePreview.recipientCount > 0);
 
   const load = async () => {
     setLoading(true);
@@ -710,6 +719,14 @@ export function EmailOperationsPanel({ scope }: Props) {
     }
     if (!validateCampaignAudience(selectedCampaign)) return;
     if (!validateCampaignCoupon(selectedCampaign)) return;
+    if (!audiencePreview) {
+      toast.error("Atualize a prévia do público antes de enviar");
+      return;
+    }
+    if (audiencePreview.recipientCount <= 0) {
+      toast.error("A prévia do público não encontrou contatos para envio");
+      return;
+    }
     setSendingCampaign(true);
     try {
       const result = await sendEmailCampaign(selectedCampaign.id);
@@ -744,6 +761,7 @@ export function EmailOperationsPanel({ scope }: Props) {
       if (!savedCampaign) return;
       await sendEmailCampaignTest(savedCampaign.id, email);
       toast.success("Teste da campanha enviado");
+      await load();
     } catch (error) {
       console.error("Erro ao enviar teste da campanha:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao enviar teste da campanha");
@@ -1570,6 +1588,59 @@ export function EmailOperationsPanel({ scope }: Props) {
                         </div>
                       </div>
 
+                      <div className="space-y-3 rounded-md border bg-muted/20 p-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="text-sm font-medium">Checklist antes de enviar</div>
+                            <p className="text-xs text-muted-foreground">
+                              Conferência rápida para evitar disparos acidentais no piloto.
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              hasValidAudiencePreview
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-amber-200 bg-amber-50 text-amber-700"
+                            }
+                          >
+                            {hasValidAudiencePreview ? "Pronto para envio" : "Prévia pendente"}
+                          </Badge>
+                        </div>
+                        <div className="grid gap-2 text-xs md:grid-cols-4">
+                          <div className="rounded-md border bg-background px-3 py-2">
+                            <span className="block font-medium text-foreground">
+                              {audiencePreview ? audiencePreview.recipientCount : "Pendente"}
+                            </span>
+                            público calculado
+                          </div>
+                          <div className="rounded-md border bg-background px-3 py-2">
+                            <span className="block font-medium text-foreground">
+                              {selectedCampaign.coupon
+                                ? selectedCampaign.coupon.code
+                                : campaignContentUsesCoupon(selectedCampaign)
+                                  ? "Obrigatório"
+                                  : "Opcional"}
+                            </span>
+                            cupom
+                          </div>
+                          <div className="rounded-md border bg-background px-3 py-2">
+                            <span className="block font-medium text-foreground">
+                              {selectedCampaignTestLog
+                                ? new Date(selectedCampaignTestLog.created_at).toLocaleDateString("pt-BR")
+                                : "Sem teste"}
+                            </span>
+                            último teste
+                          </div>
+                          <div className="rounded-md border bg-background px-3 py-2">
+                            <span className="block font-medium text-foreground">
+                              {campaignEntitlement?.remainingThisMonth ?? 0}
+                            </span>
+                            saldo mensal
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button
                           type="button"
@@ -1593,6 +1664,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                             sendingCampaign ||
                             selectedCampaign.status === "sent" ||
                             !campaignEntitlement?.campaignsEnabled ||
+                            !hasValidAudiencePreview ||
                             !contacts.some((contact) => contact.accepts_marketing && !contact.unsubscribed_at)
                           }
                         >
