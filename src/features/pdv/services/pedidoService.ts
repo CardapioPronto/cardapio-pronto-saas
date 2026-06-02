@@ -29,6 +29,13 @@ type PedidoQueryRow = {
     quantity: number;
     price: number;
     observations: string | null;
+    product?: {
+      category?: {
+        id: string;
+        name: string;
+        restaurant_id: string;
+      } | null;
+    } | null;
   }> | null;
   mesa?: {
     id: string;
@@ -69,6 +76,7 @@ const formatPedidoRow = (pedido: PedidoQueryRow, restaurantId: string): Pedido =
       price: item.price,
       description: "",
       available: true,
+      category: item.product?.category ?? null,
       restaurant_id: restaurantId
     } as ProdutoSimplificado,
     quantidade: item.quantity,
@@ -245,7 +253,14 @@ export async function listarPedidos(
           product_name,
           quantity,
           price,
-          observations
+          observations,
+          product:products (
+            category:categories (
+              id,
+              name,
+              restaurant_id
+            )
+          )
         ),
         mesa:mesas (
           id,
@@ -323,7 +338,14 @@ export async function obterPedidoPorId(
           product_name,
           quantity,
           price,
-          observations
+          observations,
+          product:products (
+            category:categories (
+              id,
+              name,
+              restaurant_id
+            )
+          )
         ),
         mesa:mesas (
           id,

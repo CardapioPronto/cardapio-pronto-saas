@@ -282,7 +282,7 @@ Objetivo: atender rotina real de cozinha, caixa e salao.
 
 - [x] Configurar modelo de comanda.
 - [x] Configurar vias: cozinha, caixa, cliente.
-- [ ] Imprimir pedido por setor.
+- [x] Imprimir pedido por setor.
 - [x] Botao de reimpressao.
 - [x] Comprovante com itens, observacoes, mesa, cliente, total e forma de pagamento.
 - [x] Documentar impressoras/formatos suportados.
@@ -299,6 +299,7 @@ Evidencia:
 - 2026-06-02: Guia operacional criado em `docs/IMPRESSAO_OPERACIONAL.md`, documentando fluxo de teste, impressao via navegador e limites do MVP.
 - 2026-06-02: Preferencias de impressao por restaurante adicionadas em Configuracoes > Sistema: tamanho de papel 58mm/80mm/A4 e vias padrao cozinha/caixa/cliente. Teste de impressao e reimpressoes do PDV passam a respeitar o tamanho configurado.
 - 2026-06-02: Impressao pos-finalizacao conectada ao PDV: quando a impressao automatica esta ativa, o pedido recem-criado abre um dialogo para imprimir as vias padrao sem depender de reabrir o historico.
+- 2026-06-02: Via de cozinha passou a organizar itens por setor operacional usando a categoria do produto; pedidos antigos ou produtos sem categoria caem no setor Geral.
 
 ---
 

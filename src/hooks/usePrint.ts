@@ -122,6 +122,59 @@ const getPaymentLabel = (value?: string | null, labels: Record<string, string> =
   return labels[value] || value.replace(/_/g, " ");
 };
 
+type PrintableItem = Pedido["itensPedido"][number];
+
+const getOperationalSectorName = (item: PrintableItem) =>
+  item.produto.category?.name?.trim() || "Geral";
+
+const groupItemsBySector = (items: PrintableItem[]) => {
+  const sectors = new Map<string, PrintableItem[]>();
+
+  for (const item of items) {
+    const sector = getOperationalSectorName(item);
+    const current = sectors.get(sector) || [];
+    current.push(item);
+    sectors.set(sector, current);
+  }
+
+  return Array.from(sectors.entries()).map(([sector, sectorItems]) => ({
+    sector,
+    items: sectorItems,
+  }));
+};
+
+const renderPrintItem = (item: PrintableItem, showPrices: boolean) => `
+    <div class="item">
+        <div class="item-line">
+            <div class="item-name">${item.quantidade}x ${escapeHtml(item.produto.name)}</div>
+            ${showPrices ? `
+                <div class="item-price">${formatCurrency(item.produto.price * item.quantidade)}</div>
+            ` : ''}
+        </div>
+        ${item.produto.description ? `
+            <div class="item-description">${escapeHtml(item.produto.description)}</div>
+        ` : ''}
+        ${item.observacao ? `
+            <div class="item-observation">
+                <span class="observation-label">OBS:</span> ${escapeHtml(item.observacao)}
+            </div>
+        ` : ''}
+    </div>
+`;
+
+const renderItemsHTML = (pedido: Pedido, template: PrintTemplate, showPrices: boolean) => {
+  if (template !== "kitchen") {
+    return pedido.itensPedido.map((item) => renderPrintItem(item, showPrices)).join('');
+  }
+
+  return groupItemsBySector(pedido.itensPedido).map(({ sector, items }) => `
+      <div class="sector">
+          <div class="sector-title">SETOR: ${escapeHtml(sector.toUpperCase())}</div>
+          ${items.map((item) => renderPrintItem(item, false)).join('')}
+      </div>
+  `).join('');
+};
+
 const generatePrintHTML = (
   pedido: Pedido,
   restaurantName: string,
@@ -223,6 +276,20 @@ const generatePrintHTML = (
                 font-weight: bold;
                 margin-bottom: 10px;
                 font-size: 14px;
+            }
+
+            .sector {
+                margin-bottom: 14px;
+            }
+
+            .sector-title {
+                text-align: center;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 4px 0;
+                margin-bottom: 8px;
+                border-top: 1px dashed black;
+                border-bottom: 1px dashed black;
             }
             
             .item {
@@ -333,26 +400,9 @@ const generatePrintHTML = (
 
         <div class="separator"></div>
 
-        <div class="items-header">ITENS DO PEDIDO</div>
+        <div class="items-header">${template === "kitchen" ? "ITENS POR SETOR" : "ITENS DO PEDIDO"}</div>
 
-        ${pedido.itensPedido.map(item => `
-            <div class="item">
-                <div class="item-line">
-                    <div class="item-name">${item.quantidade}x ${escapeHtml(item.produto.name)}</div>
-                    ${showPrices ? `
-                        <div class="item-price">${formatCurrency(item.produto.price * item.quantidade)}</div>
-                    ` : ''}
-                </div>
-                ${item.produto.description ? `
-                    <div class="item-description">${escapeHtml(item.produto.description)}</div>
-                ` : ''}
-                ${item.observacao ? `
-                    <div class="item-observation">
-                        <span class="observation-label">OBS:</span> ${escapeHtml(item.observacao)}
-                    </div>
-                ` : ''}
-            </div>
-        `).join('')}
+        ${renderItemsHTML(pedido, template, showPrices)}
 
         <div class="separator"></div>
 
