@@ -206,16 +206,17 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
 
 ### Escopo MVP
 
-- [~] Segmentar clientes por comportamento.
-- [~] Criar automacoes basicas:
-  - cliente inativo ha 30 dias;
-  - [~] aniversariante;
-  - primeiro pedido sem recompra;
-  - cliente alto ticket;
-  - [~] comprou categoria especifica.
-- [~] Gerar cupom automatico vinculado a campanha.
-- [~] Enviar por e-mail no MVP, WhatsApp quando a base operacional estiver validada.
-- [~] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
+- [x] Segmentar clientes por comportamento.
+- [x] Criar automacoes basicas:
+  - [x] cliente inativo ha 30 dias;
+  - [x] aniversariante;
+  - [x] primeiro pedido sem recompra;
+  - [x] cliente alto ticket;
+  - [x] comprou categoria especifica.
+- [x] Gerar cupom automatico vinculado a campanha.
+- [x] Enviar por e-mail no MVP.
+- [x] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
+- [ ] Enviar por WhatsApp quando a base operacional estiver validada.
 
 ### Criterio de aceite
 
@@ -234,6 +235,7 @@ Evidencia:
 - 2026-06-01: Previa operacional de publico adicionada ao editor de campanhas via `preview_campaign_audience`, retornando quantidade alcançada, limites do plano e amostra de contatos antes do envio.
 - 2026-06-02: Segmentacao de aniversariantes iniciada com o publico `birthday`, card guiado em `/automacoes` e filtro de clientes com `birth_date` no CRM dentro da janela configurada.
 - 2026-06-02: Campanhas automaticas reorganizadas para dentro do modulo Email - Resend, com aba propria de automacoes, cards de gatilho guiado e navegacao voltar/avancar na pagina de integracao.
+- 2026-06-02: Reaproveitamento operacional adicionado ao editor: campanhas podem ser duplicadas como novo rascunho, status aparecem em portugues e o envio bloqueia conteudo com `{{coupon}}` sem cupom vinculado.
 
 ---
 

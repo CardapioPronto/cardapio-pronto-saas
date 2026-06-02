@@ -74,6 +74,13 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Falhou",
 };
 
+const CAMPAIGN_STATUS_LABEL: Record<string, string> = {
+  draft: "Rascunho",
+  sending: "Enviando",
+  sent: "Enviada",
+  failed: "Falhou",
+};
+
 type CampaignAudienceType =
   | "marketing_opt_in"
   | "recent_customers"
@@ -227,6 +234,9 @@ const couponValidDaysFromNow = (validUntil?: string | null) => {
   const diff = new Date(validUntil).getTime() - Date.now();
   return String(Math.max(1, Math.ceil(diff / 86_400_000)));
 };
+
+const campaignContentUsesCoupon = (campaign: EmailCampaign) =>
+  campaign.html_content.includes("{{coupon}}") || !!campaign.text_content?.includes("{{coupon}}");
 
 export function EmailOperationsPanel({ scope }: Props) {
   const [searchParams] = useSearchParams();
@@ -394,6 +404,14 @@ export function EmailOperationsPanel({ scope }: Props) {
     return true;
   };
 
+  const validateCampaignCoupon = (campaign: EmailCampaign) => {
+    if (campaignContentUsesCoupon(campaign) && !campaign.coupon_id) {
+      toast.error("Gere um cupom para usar a variável {{coupon}} nesta campanha");
+      return false;
+    }
+    return true;
+  };
+
   const handleCopyTemplate = async (templateKey: "order_confirmation" | "campaign_basic") => {
     setCopyingTemplate(templateKey);
     try {
@@ -468,6 +486,31 @@ export function EmailOperationsPanel({ scope }: Props) {
     setCampaigns((current) => [campaign, ...current]);
     setSelectedCampaignId(tempId);
     setActiveTab("campaigns");
+  };
+
+  const handleDuplicateCampaign = () => {
+    if (!selectedCampaign) return;
+    const tempId = `new-${Date.now()}`;
+    const duplicated: EmailCampaign = {
+      ...selectedCampaign,
+      id: tempId,
+      name: `Cópia - ${selectedCampaign.name}`,
+      status: "draft",
+      recipient_count: 0,
+      sent_count: 0,
+      failed_count: 0,
+      last_error: null,
+      coupon_id: null,
+      coupon: null,
+      sent_at: null,
+      created_at: new Date().toISOString(),
+    };
+
+    setCampaigns((current) => [duplicated, ...current]);
+    setSelectedCampaignId(tempId);
+    setAudiencePreview(null);
+    setActiveTab("campaigns");
+    toast.success("Campanha duplicada como rascunho");
   };
 
   useEffect(() => {
@@ -619,6 +662,7 @@ export function EmailOperationsPanel({ scope }: Props) {
       return;
     }
     if (!validateCampaignAudience(selectedCampaign)) return;
+    if (!validateCampaignCoupon(selectedCampaign)) return;
     setSendingCampaign(true);
     try {
       const result = await sendEmailCampaign(selectedCampaign.id);
@@ -1018,7 +1062,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                           <div className="line-clamp-1 text-xs text-muted-foreground">{campaign.subject}</div>
                         </div>
                         <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
-                          {campaign.status}
+                          {CAMPAIGN_STATUS_LABEL[campaign.status] || campaign.status}
                         </Badge>
                       </div>
                     </button>
@@ -1375,6 +1419,14 @@ export function EmailOperationsPanel({ scope }: Props) {
                       )}
 
                       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleDuplicateCampaign}
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Duplicar
+                        </Button>
                         <Button
                           variant="outline"
                           onClick={handleSaveCampaign}
