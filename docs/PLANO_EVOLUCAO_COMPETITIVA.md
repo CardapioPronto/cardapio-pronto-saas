@@ -280,12 +280,12 @@ Objetivo: atender rotina real de cozinha, caixa e salao.
 
 ### Escopo MVP
 
-- [ ] Configurar modelo de comanda.
-- [ ] Configurar vias: cozinha, caixa, cliente.
+- [x] Configurar modelo de comanda.
+- [x] Configurar vias: cozinha, caixa, cliente.
 - [ ] Imprimir pedido por setor.
-- [ ] Botao de reimpressao.
-- [ ] Comprovante com itens, observacoes, mesa, cliente, total e forma de pagamento.
-- [ ] Documentar impressoras/formatos suportados.
+- [x] Botao de reimpressao.
+- [x] Comprovante com itens, observacoes, mesa, cliente, total e forma de pagamento.
+- [x] Documentar impressoras/formatos suportados.
 
 ### Criterio de aceite
 
@@ -295,7 +295,8 @@ Objetivo: atender rotina real de cozinha, caixa e salao.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-02: Bloco 5 iniciado com modelos separados no motor de impressao: comanda da cozinha sem valores, via do caixa com pagamento/total e comprovante do cliente. Historico do PDV ganhou reimpressao por via.
+- 2026-06-02: Guia operacional criado em `docs/IMPRESSAO_OPERACIONAL.md`, documentando fluxo de teste, impressao via navegador e limites do MVP.
 
 ---
 

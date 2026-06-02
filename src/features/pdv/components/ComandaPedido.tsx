@@ -70,7 +70,7 @@ export const ComandaPedido = ({
       timestamp: new Date(),
       total: totalPedido,
     };
-    printOrder(pedidoTemp, { restaurantName });
+    printOrder(pedidoTemp, { restaurantName, template: "kitchen" });
   };
 
   return (
@@ -146,7 +146,7 @@ export const ComandaPedido = ({
               disabled={printing}
             >
               <Printer className="mr-2 h-4 w-4" />
-              {printing ? 'Imprimindo...' : 'Visualizar Impressão'}
+              {printing ? 'Imprimindo...' : 'Visualizar Cozinha'}
             </Button>
           )}
 

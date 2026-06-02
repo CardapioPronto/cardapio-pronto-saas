@@ -5,6 +5,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Pedido, PedidoStatus } from "../types";
 import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Clock, Package, Printer, User, XCircle } from "lucide-react";
 import { usePrint } from "@/hooks/usePrint";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PedidoHistoricoItemProps {
   pedido: Pedido;
@@ -74,8 +80,8 @@ export const PedidoHistoricoItem = ({
   const nomeCliente = pedido.cliente || pedido.clientName || "Cliente não informado";
   const totalItens = pedido.itensPedido.reduce((total, item) => total + item.quantidade, 0);
 
-  const handlePrint = () => {
-    printOrder(pedido, { restaurantName });
+  const handlePrint = (template: "kitchen" | "cashier" | "customer") => {
+    printOrder(pedido, { restaurantName, template });
   };
 
   return (
@@ -158,16 +164,30 @@ export const PedidoHistoricoItem = ({
           <span>R$ {pedido.total.toFixed(2)}</span>
         </div>
 
-        {/* Botão de Imprimir - sempre disponível */}
-        <Button 
-          variant="outline" 
-          onClick={handlePrint}
-          disabled={printing}
-          className="border-gray-500 text-gray-700 hover:bg-gray-50"
-        >
-          <Printer className="h-4 w-4 mr-1" />
-          {printing ? 'Imprimindo...' : 'Imprimir Comanda'}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              disabled={printing}
+              className="border-gray-500 text-gray-700 hover:bg-gray-50"
+            >
+              <Printer className="h-4 w-4 mr-1" />
+              {printing ? "Imprimindo..." : "Reimprimir"}
+              <ChevronDown className="ml-1 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => handlePrint("kitchen")}>
+              Comanda da cozinha
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePrint("cashier")}>
+              Via do caixa
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePrint("customer")}>
+              Comprovante do cliente
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         {canManageOrders && pedido.status === 'pendente' && (
           <Button 

@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Pedido } from '@/features/pdv/types';
 import { useToast } from '@/hooks/use-toast';
 
+export type PrintTemplate = "kitchen" | "cashier" | "customer";
+
 interface PrintConfig {
   restaurantName: string;
   autoPrint?: boolean;
+  template?: PrintTemplate;
 }
 
 export const usePrint = () => {
@@ -24,8 +27,9 @@ export const usePrint = () => {
         throw new Error('Não foi possível abrir a janela de impressão. Verifique se o bloqueador de pop-ups está desabilitado.');
       }
 
-      // Gerar o conteúdo HTML para impressão
-      const printContent = generatePrintHTML(pedido, config.restaurantName);
+      const template = config.template ?? "kitchen";
+      const templateLabel = PRINT_TEMPLATE_LABELS[template];
+      const printContent = generatePrintHTML(pedido, config.restaurantName, template);
       
       printWindow.document.write(printContent);
       printWindow.document.close();
@@ -42,7 +46,7 @@ export const usePrint = () => {
 
       toast({
         title: "Imprimindo pedido",
-        description: `Comanda do pedido ${pedido.mesa} enviada para impressão.`,
+        description: `${templateLabel} do pedido ${pedido.mesa || "Balcão"} enviada para impressão.`,
       });
 
     } catch (error) {
@@ -63,10 +67,60 @@ export const usePrint = () => {
   };
 };
 
-const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
+const PRINT_TEMPLATE_LABELS: Record<PrintTemplate, string> = {
+  kitchen: "Comanda da cozinha",
+  cashier: "Via do caixa",
+  customer: "Comprovante do cliente",
+};
+
+const PRINT_TEMPLATE_TITLES: Record<PrintTemplate, string> = {
+  kitchen: "COMANDA DE COZINHA",
+  cashier: "VIA DO CAIXA",
+  customer: "COMPROVANTE DO CLIENTE",
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  pix: "PIX",
+  pix_online: "PIX online",
+  credit_card_online: "Cartão online",
+  dinheiro: "Dinheiro",
+  cartao_credito: "Cartão de crédito",
+  cartao_debito: "Cartão de débito",
+  local: "Pagamento no local",
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendente",
+  paid: "Pago",
+  failed: "Falhou",
+  refunded: "Estornado",
+  aguardando_pagamento: "Aguardando pagamento",
+  pagamento_falhou: "Pagamento falhou",
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+
+const getPaymentLabel = (value?: string | null, labels: Record<string, string> = PAYMENT_METHOD_LABELS) => {
+  if (!value) return "Não informado";
+  return labels[value] || value.replace(/_/g, " ");
+};
+
+const generatePrintHTML = (pedido: Pedido, restaurantName: string, template: PrintTemplate): string => {
   const safeRestaurantName = escapeHtml(restaurantName);
   const safeMesa = escapeHtml(pedido.mesa || "Balcão");
   const safeCliente = pedido.cliente ? escapeHtml(pedido.cliente) : "";
+  const documentTitle = PRINT_TEMPLATE_TITLES[template];
+  const showPrices = template !== "kitchen";
+  const showPayment = template !== "kitchen";
+  const footerMessage = template === "kitchen"
+    ? "Preparar com atenção às observações"
+    : template === "cashier"
+      ? "Conferir pagamento e entrega antes de finalizar"
+      : "Obrigado pela preferência";
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -132,6 +186,7 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
                 display: flex;
                 justify-content: space-between;
                 margin-bottom: 3px;
+                gap: 8px;
             }
             
             .info-label {
@@ -159,6 +214,16 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
             .item-name {
                 font-weight: bold;
                 margin-bottom: 3px;
+            }
+
+            .item-line {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+            }
+
+            .item-price {
+                white-space: nowrap;
             }
             
             .item-description {
@@ -199,12 +264,20 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
             .footer p {
                 margin: 2px 0;
             }
+
+            .kitchen-warning {
+                text-align: center;
+                font-size: 10px;
+                margin: 10px 0;
+                padding: 6px;
+                border: 1px dashed black;
+            }
         </style>
     </head>
     <body>
         <div class="header">
             <div class="restaurant-name">${safeRestaurantName}</div>
-            <div class="document-type">COMANDA DE COZINHA</div>
+            <div class="document-type">${documentTitle}</div>
         </div>
 
         <div class="order-info">
@@ -226,6 +299,16 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
                 <span class="info-label">STATUS:</span>
                 <span>${escapeHtml(pedido.status.toUpperCase())}</span>
             </div>
+            ${showPayment ? `
+            <div class="info-row">
+                <span class="info-label">PAGAMENTO:</span>
+                <span>${escapeHtml(getPaymentLabel(pedido.payment_method))}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">STATUS PGTO:</span>
+                <span>${escapeHtml(getPaymentLabel(pedido.payment_status, PAYMENT_STATUS_LABELS))}</span>
+            </div>
+            ` : ''}
         </div>
 
         <div class="separator"></div>
@@ -234,7 +317,12 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
 
         ${pedido.itensPedido.map(item => `
             <div class="item">
-                <div class="item-name">${item.quantidade}x ${escapeHtml(item.produto.name)}</div>
+                <div class="item-line">
+                    <div class="item-name">${item.quantidade}x ${escapeHtml(item.produto.name)}</div>
+                    ${showPrices ? `
+                        <div class="item-price">${formatCurrency(item.produto.price * item.quantidade)}</div>
+                    ` : ''}
+                </div>
                 ${item.produto.description ? `
                     <div class="item-description">${escapeHtml(item.produto.description)}</div>
                 ` : ''}
@@ -248,13 +336,19 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string): string => {
 
         <div class="separator"></div>
 
+        ${template === "kitchen" ? `
+            <div class="kitchen-warning">VIA SEM VALORES - USO OPERACIONAL</div>
+        ` : ''}
+
+        ${showPrices ? `
         <div class="total">
-            TOTAL: R$ ${pedido.total.toFixed(2)}
+            TOTAL: ${formatCurrency(pedido.total)}
         </div>
+        ` : ''}
 
         <div class="footer">
-            <p>*** COMANDA DE COZINHA ***</p>
-            <p>Preparar com atenção às observações</p>
+            <p>*** ${documentTitle} ***</p>
+            <p>${footerMessage}</p>
             <p>Impresso em: ${new Date().toLocaleString('pt-BR')}</p>
         </div>
     </body>
