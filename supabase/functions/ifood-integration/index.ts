@@ -4,7 +4,9 @@ import { captureEdgeException } from "../_shared/observability.ts";
 import { pollIfoodEvents, type IfoodPollConfig } from "../_shared/ifood-poll-core.ts";
 import {
   getIfoodAccessToken,
+  hasIfoodSaasAppCredentials,
   loadIfoodCredentialsForRestaurant,
+  loadIfoodSaasAppCredentials,
   pushPubfyStatusToIfood,
 } from "../_shared/ifood-api.ts";
 
@@ -21,8 +23,8 @@ type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "upda
 
 type IfoodConfig = {
   restaurant_id: string;
-  client_id: string;
-  client_secret: string;
+  client_id?: string | null;
+  client_secret?: string | null;
   merchant_id: string;
   restaurant_ifood_id: string | null;
   is_enabled: boolean;
@@ -117,15 +119,14 @@ const resolveRestaurantId = async (userId: string, requestedRestaurantId?: strin
   throw new Error("Sem permissão para gerenciar integrações");
 };
 
-const publicConfigFor = (config: Partial<IfoodConfig> | null) => ({
-  clientId: config?.client_id || "",
+const publicConfigFor = (config: Partial<IfoodConfig> | null, hasSaasAppCredentials: boolean) => ({
   merchantId: config?.merchant_id || "",
   restaurantIfoodId: config?.restaurant_ifood_id || "",
   isEnabled: Boolean(config?.is_enabled),
   pollingEnabled: config?.polling_enabled ?? true,
   pollingInterval: config?.polling_interval ?? 60,
   webhookUrl: config?.webhook_url || null,
-  hasStoredCredentials: Boolean(config?.client_secret),
+  hasSaasAppCredentials,
   notifyNewOrders: config?.notify_new_orders ?? true,
   notifyStatusChanges: config?.notify_status_changes ?? true,
 });
@@ -144,38 +145,33 @@ const loadIfoodConfigRow = async (restaurantId: string) => {
 const loadIfoodConfig = async (restaurantId: string): Promise<IfoodConfig> => {
   const data = await loadIfoodConfigRow(restaurantId);
   if (!data) throw new Error("Configuração do iFood não encontrada");
-  if (!data.client_id || !data.client_secret || !data.merchant_id) {
-    throw new Error("Credenciais do iFood incompletas");
+  if (!data.merchant_id) {
+    throw new Error("Loja iFood não configurada");
   }
-  return data;
+  const appCredentials = await loadIfoodSaasAppCredentials(admin);
+  return { ...data, ...appCredentials };
 };
 
 const getPublicConfig = async (restaurantId: string) => {
   const config = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(config),
+    config: publicConfigFor(config, appConfigured),
   };
 };
 
 const saveConfig = async (restaurantId: string, payload: Record<string, unknown>) => {
   const existing = await loadIfoodConfigRow(restaurantId);
-  const clientId = String(payload.clientId || "").trim();
-  const clientSecret = String(payload.clientSecret || "").trim();
   const merchantId = String(payload.merchantId || "").trim();
   const restaurantIfoodId = String(payload.restaurantIfoodId || payload.ifoodRestaurantId || "").trim();
   const pollingInterval = Math.min(300, Math.max(30, Number(payload.pollingInterval || existing?.polling_interval || 60)));
 
-  if (!clientId || !merchantId) {
-    throw new Error("Client ID e Merchant ID são obrigatórios.");
-  }
-
-  if (!clientSecret && !existing?.client_secret) {
-    throw new Error("Client Secret é obrigatório na primeira configuração.");
+  if (!merchantId) {
+    throw new Error("Merchant ID é obrigatório.");
   }
 
   const baseConfig = {
-    client_id: clientId,
     merchant_id: merchantId,
     restaurant_ifood_id: restaurantIfoodId || null,
     is_enabled: typeof payload.isEnabled === "boolean" ? payload.isEnabled : Boolean(existing?.is_enabled),
@@ -193,10 +189,7 @@ const saveConfig = async (restaurantId: string, payload: Record<string, unknown>
   if (existing) {
     const { error } = await admin
       .from("ifood_integration")
-      .update({
-        ...baseConfig,
-        ...(clientSecret ? { client_secret: clientSecret } : {}),
-      })
+      .update(baseConfig)
       .eq("restaurant_id", restaurantId);
 
     if (error) throw error;
@@ -206,16 +199,16 @@ const saveConfig = async (restaurantId: string, payload: Record<string, unknown>
       .insert({
         restaurant_id: restaurantId,
         ...baseConfig,
-        client_secret: clientSecret,
       });
 
     if (error) throw error;
   }
 
   const saved = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(saved),
+    config: publicConfigFor(saved, appConfigured),
   };
 };
 
@@ -233,9 +226,10 @@ const toggleConfig = async (restaurantId: string, enabled: unknown) => {
   if (error) throw error;
 
   const saved = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(saved),
+    config: publicConfigFor(saved, appConfigured),
   };
 };
 
@@ -262,9 +256,10 @@ const updatePollingConfig = async (restaurantId: string, payload: Record<string,
   if (error) throw error;
 
   const saved = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(saved),
+    config: publicConfigFor(saved, appConfigured),
   };
 };
 
@@ -320,7 +315,8 @@ const updateNotificationConfig = async (restaurantId: string, payload: Record<st
   if (error) throw error;
 
   const saved = await loadIfoodConfigRow(restaurantId);
-  return { success: true, config: publicConfigFor(saved) };
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
+  return { success: true, config: publicConfigFor(saved, appConfigured) };
 };
 
 

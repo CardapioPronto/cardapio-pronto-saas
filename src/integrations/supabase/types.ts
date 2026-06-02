@@ -1401,8 +1401,8 @@ export type Database = {
       }
       ifood_integration: {
         Row: {
-          client_id: string
-          client_secret: string
+          client_id: string | null
+          client_secret: string | null
           created_at: string
           is_enabled: boolean
           merchant_id: string
@@ -1414,8 +1414,8 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
-          client_id: string
-          client_secret: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           is_enabled?: boolean
           merchant_id: string
@@ -1427,8 +1427,8 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
-          client_id?: string
-          client_secret?: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           is_enabled?: boolean
           merchant_id?: string

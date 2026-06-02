@@ -1,9 +1,8 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
+import { loadIfoodSaasAppCredentials } from "./ifood-api.ts";
 
 export type IfoodPollConfig = {
   restaurant_id: string;
-  client_id: string;
-  client_secret: string;
   merchant_id: string;
   restaurant_ifood_id: string | null;
   is_enabled: boolean;
@@ -52,11 +51,12 @@ const ifoodFetch = async (path: string, init: RequestInit = {}) => {
   return body;
 };
 
-const getIfoodToken = async (config: IfoodPollConfig) => {
+const getIfoodToken = async (admin: SupabaseClient) => {
+  const appCredentials = await loadIfoodSaasAppCredentials(admin);
   const body = new URLSearchParams({
     grantType: "client_credentials",
-    clientId: config.client_id,
-    clientSecret: config.client_secret,
+    clientId: appCredentials.client_id,
+    clientSecret: appCredentials.client_secret,
   });
 
   const data = await ifoodFetch("/authentication/v1.0/oauth/token", {
@@ -217,7 +217,7 @@ export async function pollIfoodEvents(
 ): Promise<IfoodPollResult> {
   if (!config.is_enabled) throw new Error("Integração com iFood está desativada");
 
-  const token = await getIfoodToken(config);
+  const token = await getIfoodToken(admin);
   const eventsPayload = await ifoodFetch("/events/v1.0/events:polling?groups=ORDER_STATUS", {
     method: "GET",
     headers: {

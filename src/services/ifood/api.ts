@@ -14,14 +14,13 @@ type IfoodFunctionAction =
 export interface IfoodIntegrationConfigResponse {
   success: boolean;
   config: {
-    clientId: string;
     merchantId: string;
     restaurantIfoodId: string;
     isEnabled: boolean;
     pollingEnabled: boolean;
     pollingInterval: number;
     webhookUrl: string | null;
-    hasStoredCredentials: boolean;
+    hasSaasAppCredentials: boolean;
     notifyNewOrders: boolean;
     notifyStatusChanges: boolean;
   };
@@ -29,8 +28,6 @@ export interface IfoodIntegrationConfigResponse {
 
 export interface SaveIfoodIntegrationConfigParams {
   restaurantId?: string;
-  clientId: string;
-  clientSecret?: string;
   merchantId: string;
   restaurantIfoodId?: string;
   isEnabled: boolean;

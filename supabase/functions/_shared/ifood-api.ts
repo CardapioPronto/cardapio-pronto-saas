@@ -4,6 +4,12 @@ export type IfoodCredentials = {
   client_id: string;
   client_secret: string;
   merchant_id: string;
+  restaurant_ifood_id?: string | null;
+};
+
+export type IfoodSaasAppCredentials = {
+  client_id: string;
+  client_secret: string;
 };
 
 export type IfoodOrderDetails = {
@@ -20,6 +26,51 @@ export type IfoodStatusPushResult = {
 };
 
 const IFOOD_ORDER_PREFIX = "/order/v1.0/orders";
+const IFOOD_SAAS_APP_SETTING_KEY = "ifood_saas_app";
+
+const readEnv = (key: string) => {
+  const runtime = globalThis as unknown as {
+    Deno?: { env?: { get(name: string): string | undefined } };
+  };
+  return runtime.Deno?.env?.get(key) || "";
+};
+
+export async function loadIfoodSaasAppCredentials(
+  admin: SupabaseClient,
+): Promise<IfoodSaasAppCredentials> {
+  const { data, error } = await admin
+    .from("system_settings")
+    .select("value")
+    .eq("key", IFOOD_SAAS_APP_SETTING_KEY)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const value = data?.value && typeof data.value === "object" && !Array.isArray(data.value)
+    ? data.value as Record<string, unknown>
+    : {};
+
+  const clientId = String(value.client_id || readEnv("IFOOD_CLIENT_ID") || "").trim();
+  const clientSecret = String(value.client_secret || readEnv("IFOOD_CLIENT_SECRET") || "").trim();
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Aplicativo iFood SaaS não configurado no Super Admin");
+  }
+
+  return {
+    client_id: clientId,
+    client_secret: clientSecret,
+  };
+}
+
+export async function hasIfoodSaasAppCredentials(admin: SupabaseClient): Promise<boolean> {
+  try {
+    await loadIfoodSaasAppCredentials(admin);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function ifoodFetch(path: string, init: RequestInit = {}) {
   const response = await fetch(`https://merchant-api.ifood.com.br${path}`, init);
@@ -174,22 +225,24 @@ export async function loadIfoodCredentialsForRestaurant(
 ): Promise<IfoodCredentials & { is_enabled: boolean }> {
   const { data, error } = await admin
     .from("ifood_integration")
-    .select("client_id, client_secret, merchant_id, is_enabled")
+    .select("merchant_id, restaurant_ifood_id, is_enabled")
     .eq("restaurant_id", restaurantId)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data?.client_id || !data?.client_secret || !data?.merchant_id) {
-    throw new Error("Credenciais do iFood incompletas");
+  if (!data?.merchant_id) {
+    throw new Error("Loja iFood não configurada");
   }
   if (!data.is_enabled) {
     throw new Error("Integração com iFood está desativada");
   }
 
+  const appCredentials = await loadIfoodSaasAppCredentials(admin);
+
   return {
-    client_id: data.client_id,
-    client_secret: data.client_secret,
+    ...appCredentials,
     merchant_id: data.merchant_id,
+    restaurant_ifood_id: data.restaurant_ifood_id,
     is_enabled: true,
   };
 }

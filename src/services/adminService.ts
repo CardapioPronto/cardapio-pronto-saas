@@ -9,6 +9,20 @@ type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 type Restaurant = Database['public']['Tables']['restaurants']['Row'];
 
+export const IFOOD_SAAS_APP_SETTING_KEY = 'ifood_saas_app';
+
+export interface IfoodSaasAppSettings {
+  app_name: string;
+  app_url: string;
+  client_id: string;
+  client_secret: string;
+  distribution_model: 'centralized_saas';
+  category: 'Food';
+  visibility: 'private' | 'public';
+  modules: string[];
+  notes: string;
+}
+
 export interface SuperAdminRecord {
   user_id: string;
   email: string | null;
@@ -127,6 +141,23 @@ export async function updateSystemSetting(key: string, value: Json): Promise<{ d
       updated_by: currentUser.user?.id
     })
     .eq('key', key)
+    .select();
+}
+
+export async function upsertIfoodSaasAppSettings(
+  value: IfoodSaasAppSettings
+): Promise<{ data: SystemSetting[] | null; error: PostgrestError | null }> {
+  const { data: currentUser } = await supabase.auth.getUser();
+
+  return await supabase
+    .from('system_settings')
+    .upsert({
+      key: IFOOD_SAAS_APP_SETTING_KEY,
+      value: value as unknown as Json,
+      description: 'Credenciais globais do aplicativo iFood SaaS Centralizado usado pelo Pubfy.',
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser.user?.id
+    }, { onConflict: 'key' })
     .select();
 }
 

@@ -2,8 +2,6 @@
 // Tipos para integração com iFood
 
 export interface IfoodCredentials {
-  clientId: string;
-  clientSecret: string;
   merchantId: string;
   restaurantId?: string;
 }

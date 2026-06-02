@@ -289,8 +289,8 @@ export interface Database {
       ifood_integration: {
         Row: {
           restaurant_id: string;
-          client_id: string;
-          client_secret: string;
+          client_id: string | null;
+          client_secret: string | null;
           merchant_id: string;
           restaurant_ifood_id: string | null;
           is_enabled: boolean;
@@ -302,8 +302,8 @@ export interface Database {
         };
         Insert: {
           restaurant_id: string;
-          client_id: string;
-          client_secret: string;
+          client_id?: string | null;
+          client_secret?: string | null;
           merchant_id: string;
           restaurant_ifood_id?: string | null;
           is_enabled?: boolean;
@@ -315,8 +315,8 @@ export interface Database {
         };
         Update: {
           restaurant_id?: string;
-          client_id?: string;
-          client_secret?: string;
+          client_id?: string | null;
+          client_secret?: string | null;
           merchant_id?: string;
           restaurant_ifood_id?: string | null;
           is_enabled?: boolean;

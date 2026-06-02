@@ -16,8 +16,6 @@ export const saveIfoodConfig = (config: IfoodConfig): void => {
     ...config,
     credentials: config.credentials
       ? {
-          clientId: config.credentials.clientId,
-          clientSecret: '',
           merchantId: config.credentials.merchantId,
           restaurantId: config.credentials.restaurantId,
         }
@@ -51,7 +49,7 @@ export const configureIfoodCredentials = (credentials: IfoodCredentials): void =
 // Verificar se as credenciais estão configuradas
 export const hasIfoodCredentials = (): boolean => {
   const config = loadIfoodConfig();
-  return !!(config.credentials?.clientId && config.credentials?.merchantId);
+  return !!config.credentials?.merchantId;
 };
 
 // Habilitar ou desabilitar integração
