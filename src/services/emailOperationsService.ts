@@ -24,6 +24,8 @@ export interface EmailSendLog {
   subject: string;
   status: string;
   email_type: string;
+  context_type: string | null;
+  context_id: string | null;
   template_key: string | null;
   provider_message_id: string | null;
   diagnostic_status: string | null;

@@ -82,6 +82,22 @@ const CAMPAIGN_STATUS_LABEL: Record<string, string> = {
   failed: "Falhou",
 };
 
+const EMAIL_TYPE_LABEL: Record<string, string> = {
+  transactional: "Transacional",
+  operational: "Operacional",
+  marketing: "Campanha",
+  test: "Teste",
+};
+
+const LOG_CONTEXT_LABEL: Record<string, string> = {
+  campaign: "Campanha",
+  campaign_test: "Teste de campanha",
+  order: "Pedido",
+};
+
+type LogTypeFilter = "all" | "marketing" | "test" | "transactional" | "operational";
+type LogStatusFilter = "all" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "failed" | "bounced";
+
 type CampaignAudienceType =
   | "marketing_opt_in"
   | "recent_customers"
@@ -270,6 +286,8 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [previewingAudience, setPreviewingAudience] = useState(false);
   const [generatingCoupon, setGeneratingCoupon] = useState(false);
   const [couponConfig, setCouponConfig] = useState<CouponFormState>(DEFAULT_COUPON_CONFIG);
+  const [logTypeFilter, setLogTypeFilter] = useState<LogTypeFilter>("all");
+  const [logStatusFilter, setLogStatusFilter] = useState<LogStatusFilter>("all");
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) || templates[0];
   const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) || campaigns[0];
@@ -305,6 +323,11 @@ export function EmailOperationsPanel({ scope }: Props) {
   const emptyTemplatesMessage = isSystemScope
     ? "Nenhum template global encontrado."
     : "Nenhum template próprio ainda. Os e-mails automáticos continuam usando os modelos padrão do Pubfy.";
+  const filteredLogs = logs.filter((log) => {
+    const matchesType = logTypeFilter === "all" || log.email_type === logTypeFilter;
+    const matchesStatus = logStatusFilter === "all" || log.status === logStatusFilter;
+    return matchesType && matchesStatus;
+  });
 
   const load = async () => {
     setLoading(true);
@@ -954,27 +977,81 @@ export function EmailOperationsPanel({ scope }: Props) {
             <CardDescription>Status enviado pelo Pubfy e atualizado por webhooks do Resend.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {logs.map((log) => (
+            <div className="grid gap-3 md:grid-cols-[1fr,1fr,auto] md:items-end">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={logTypeFilter} onValueChange={(value) => setLogTypeFilter(value as LogTypeFilter)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="marketing">Campanhas</SelectItem>
+                    <SelectItem value="test">Testes</SelectItem>
+                    <SelectItem value="transactional">Transacionais</SelectItem>
+                    <SelectItem value="operational">Operacionais</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={logStatusFilter} onValueChange={(value) => setLogStatusFilter(value as LogStatusFilter)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="queued">Na fila</SelectItem>
+                    <SelectItem value="sent">Enviado</SelectItem>
+                    <SelectItem value="delivered">Entregue</SelectItem>
+                    <SelectItem value="opened">Aberto</SelectItem>
+                    <SelectItem value="clicked">Clique</SelectItem>
+                    <SelectItem value="failed">Falhou</SelectItem>
+                    <SelectItem value="bounced">Rejeitado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                <span className="font-semibold">{filteredLogs.length}</span>
+                <span className="text-muted-foreground"> de {logs.length} logs</span>
+              </div>
+            </div>
+
+            {filteredLogs.map((log) => (
               <div key={log.id} className="rounded-md border p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-medium">{log.subject}</p>
-                    <p className="text-sm text-muted-foreground">{log.recipient_email}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{log.subject}</p>
+                      <Badge variant="outline">{EMAIL_TYPE_LABEL[log.email_type] || log.email_type}</Badge>
+                      {log.context_type && (
+                        <Badge variant="secondary">{LOG_CONTEXT_LABEL[log.context_type] || log.context_type}</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {log.recipient_name ? `${log.recipient_name} · ` : ""}
+                      {log.recipient_email}
+                    </p>
                   </div>
                   <Badge>{STATUS_LABEL[log.status] || log.status}</Badge>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
                   {new Date(log.created_at).toLocaleString("pt-BR")} · {log.template_key || "sem template"}
+                  {log.context_id && <span> · Ref: {log.context_id.slice(0, 8)}</span>}
                   {log.error_message && <span className="text-destructive"> · {log.error_message}</span>}
                   {log.provider_message_id && <span> · Resend: {log.provider_message_id}</span>}
                 </div>
               </div>
             ))}
-            {!logs.length && (
+            {!filteredLogs.length && (
               <EmptyState
                 icon={Inbox}
-                title="Nenhum envio registrado"
-                description="Os envios aparecerão aqui assim que e-mails forem processados pelo Pubfy."
+                title={logs.length ? "Nenhum log neste filtro" : "Nenhum envio registrado"}
+                description={
+                  logs.length
+                    ? "Ajuste os filtros para visualizar outros envios."
+                    : "Os envios aparecerão aqui assim que e-mails forem processados pelo Pubfy."
+                }
                 compact
               />
             )}

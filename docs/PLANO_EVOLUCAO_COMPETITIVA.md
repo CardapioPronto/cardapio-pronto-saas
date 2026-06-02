@@ -238,6 +238,7 @@ Evidencia:
 - 2026-06-02: Campanhas automaticas reorganizadas para dentro do modulo Email - Resend, com aba propria de automacoes, cards de gatilho guiado e navegacao voltar/avancar na pagina de integracao.
 - 2026-06-02: Reaproveitamento operacional adicionado ao editor: campanhas podem ser duplicadas como novo rascunho, status aparecem em portugues e o envio bloqueia conteudo com `{{coupon}}` sem cupom vinculado.
 - 2026-06-02: Envio de teste da campanha adicionado ao editor antes do disparo real, usando o Resend configurado do restaurante e registrando log separado como `test`, sem consumir metricas de campanha marketing.
+- 2026-06-02: Logs de e-mail ganharam filtros por tipo e status, destacando testes, campanhas, transacionais e contexto de origem para facilitar a conferencia operacional no piloto.
 
 ---
 
