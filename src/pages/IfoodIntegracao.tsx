@@ -25,14 +25,18 @@ import { toast } from "@/components/ui/sonner-toast";
 import { AlertCircle, CheckCircle, RefreshCw, ShieldCheck, Store, Wifi } from "lucide-react";
 import {
   IfoodCredentials,
+  IfoodItemMapping,
   getIfoodIntegrationConfig,
+  getIfoodItemMappings,
   pollIfoodEvents,
   saveIfoodIntegrationConfig,
+  saveIfoodItemMapping,
   setIfoodIntegrationStatus,
   testIfoodConnection,
   updateIfoodPollingSettings,
 } from "@/services/ifoodService";
 import { getCurrentRestaurantId } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface IfoodIntegrationConfig {
@@ -42,6 +46,13 @@ interface IfoodIntegrationConfig {
   hasSaasAppCredentials: boolean;
   notifyNewOrders: boolean;
   notifyStatusChanges: boolean;
+}
+
+interface IfoodProductOption {
+  id: string;
+  name: string;
+  price: number;
+  available: boolean;
 }
 
 function useRestaurantId(
@@ -152,12 +163,14 @@ async function pollNowHelper(
   restaurantId: string,
   setIsPollingNow: (value: boolean) => void,
   setLastPollResult: (result: string | null) => void,
+  reloadMappings?: () => Promise<void>,
 ) {
   setIsPollingNow(true);
   try {
     const result = await pollIfoodEvents(restaurantId);
     const message = `${result.eventsReceived} evento(s), ${result.eventsStored} armazenado(s), ${result.eventsAcknowledged} confirmado(s), ${result.ordersImported} pedido(s) importado(s).`;
     setLastPollResult(message);
+    await reloadMappings?.();
     toast.success("Consulta ao iFood concluída");
   } catch (error) {
     console.error("Erro ao consultar eventos do iFood:", error);
@@ -207,10 +220,14 @@ const IfoodIntegracao = () => {
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isPollingNow, setIsPollingNow] = useState(false);
+  const [isMappingsLoading, setIsMappingsLoading] = useState(false);
+  const [isSavingMappingId, setIsSavingMappingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [lastPollResult, setLastPollResult] = useState<string | null>(null);
   const [restaurantId, setRestaurantId] = useState<string>("");
   const [savedMerchantId, setSavedMerchantId] = useState("");
+  const [itemMappings, setItemMappings] = useState<IfoodItemMapping[]>([]);
+  const [productOptions, setProductOptions] = useState<IfoodProductOption[]>([]);
 
   const [credentials, setCredentials] = useState<IfoodCredentials>({
     merchantId: "",
@@ -256,8 +273,47 @@ const IfoodIntegracao = () => {
     }
   }, [restaurantId, loadExistingConfig]);
 
+  const loadMappingData = useCallback(async () => {
+    if (!restaurantId) return;
+
+    setIsMappingsLoading(true);
+    try {
+      const [mappingsResult, productsResult] = await Promise.all([
+        getIfoodItemMappings(restaurantId),
+        supabase
+          .from("products")
+          .select("id, name, price, available")
+          .eq("restaurant_id", restaurantId)
+          .order("name", { ascending: true }),
+      ]);
+
+      if (productsResult.error) throw productsResult.error;
+
+      setItemMappings(mappingsResult.mappings);
+      setProductOptions((productsResult.data ?? []).map((product) => ({
+        id: String(product.id),
+        name: String(product.name),
+        price: Number(product.price || 0),
+        available: Boolean(product.available),
+      })));
+    } catch (error) {
+      console.error("Erro ao carregar mapeamentos iFood:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar mapeamentos iFood");
+    } finally {
+      setIsMappingsLoading(false);
+    }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (activeTab === "mapeamento") {
+      void loadMappingData();
+    }
+  }, [activeTab, loadMappingData]);
+
   const storeConfigured = Boolean(savedMerchantId.trim());
   const canUseIntegration = storeConfigured && config.hasSaasAppCredentials;
+  const unmappedItemsCount = itemMappings.filter((mapping) => !mapping.productId).length;
+  const mappedItemsCount = itemMappings.length - unmappedItemsCount;
 
   const handleSaveStoreConnection = async () => {
     if (!restaurantId) {
@@ -279,7 +335,21 @@ const IfoodIntegracao = () => {
   };
 
   const handlePollNow = async () => {
-    await pollNowHelper(restaurantId, setIsPollingNow, setLastPollResult);
+    await pollNowHelper(restaurantId, setIsPollingNow, setLastPollResult, loadMappingData);
+  };
+
+  const handleSaveItemMapping = async (mappingId: string, productId: string | null) => {
+    setIsSavingMappingId(mappingId);
+    try {
+      const result = await saveIfoodItemMapping(restaurantId, mappingId, productId);
+      setItemMappings(result.mappings);
+      toast.success(productId ? "Item iFood vinculado ao produto" : "Vinculo removido");
+    } catch (error) {
+      console.error("Erro ao salvar mapeamento iFood:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar mapeamento");
+    } finally {
+      setIsSavingMappingId(null);
+    }
   };
 
   const toggleIntegration = async (enabled: boolean) => {
@@ -379,9 +449,10 @@ const IfoodIntegracao = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto">
+          <TabsList className="grid h-auto w-full grid-cols-2 md:inline-flex md:w-auto">
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="loja">Loja iFood</TabsTrigger>
+            <TabsTrigger value="mapeamento">Mapeamento</TabsTrigger>
             <TabsTrigger value="sincronizacao">Sincronização</TabsTrigger>
           </TabsList>
 
@@ -531,6 +602,120 @@ const IfoodIntegracao = () => {
                       </div>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="mapeamento">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <CardTitle>Mapeamento de itens iFood</CardTitle>
+                      <CardDescription>
+                        Vincule itens recebidos do marketplace aos produtos internos para preparar baixa de estoque e relatórios por produto.
+                      </CardDescription>
+                    </div>
+                    <Button variant="outline" onClick={loadMappingData} disabled={isMappingsLoading}>
+                      {isMappingsLoading ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Atualizar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-md border p-4">
+                      <p className="text-sm text-muted-foreground">Itens observados</p>
+                      <p className="text-2xl font-semibold">{itemMappings.length}</p>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <p className="text-sm text-muted-foreground">Mapeados</p>
+                      <p className="text-2xl font-semibold text-emerald-700">{mappedItemsCount}</p>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <p className="text-sm text-muted-foreground">Pendentes</p>
+                      <p className="text-2xl font-semibold text-amber-700">{unmappedItemsCount}</p>
+                    </div>
+                  </div>
+
+                  {isMappingsLoading ? (
+                    <div className="rounded-md border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                      Carregando mapeamentos...
+                    </div>
+                  ) : itemMappings.length === 0 ? (
+                    <div className="rounded-md border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                      Nenhum item iFood observado ainda. Use a consulta manual ou aguarde a importação de pedidos para popular esta lista.
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-md border">
+                      <div className="grid grid-cols-[1.5fr_0.8fr_1.4fr] gap-3 border-b bg-muted/40 px-4 py-3 text-sm font-medium text-muted-foreground">
+                        <span>Item iFood</span>
+                        <span>Ocorrências</span>
+                        <span>Produto interno</span>
+                      </div>
+                      <div className="divide-y">
+                        {itemMappings.map((mapping) => (
+                          <div
+                            key={mapping.id}
+                            className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[1.5fr_0.8fr_1.4fr] md:items-center"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="truncate font-medium">{mapping.externalItemName}</p>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    mapping.productId
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-amber-200 bg-amber-50 text-amber-700"
+                                  }
+                                >
+                                  {mapping.productId ? "Mapeado" : "Pendente"}
+                                </Badge>
+                              </div>
+                              <p className="mt-1 truncate text-xs text-muted-foreground">
+                                ID externo: {mapping.externalItemId}
+                              </p>
+                            </div>
+
+                            <div className="text-sm text-muted-foreground">
+                              <p>{mapping.timesSeen} vez(s)</p>
+                              {mapping.lastSeenAt && (
+                                <p className="text-xs">
+                                  Ultima vez: {new Date(mapping.lastSeenAt).toLocaleString("pt-BR")}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <select
+                                className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                value={mapping.productId ?? ""}
+                                disabled={isSavingMappingId === mapping.id}
+                                onChange={(event) => {
+                                  void handleSaveItemMapping(mapping.id, event.target.value || null);
+                                }}
+                              >
+                                <option value="">Sem vinculo</option>
+                                {productOptions.map((product) => (
+                                  <option key={product.id} value={product.id}>
+                                    {product.name}{product.available ? "" : " (indisponivel)"}
+                                  </option>
+                                ))}
+                              </select>
+                              {isSavingMappingId === mapping.id && (
+                                <RefreshCw className="mt-2 h-4 w-4 animate-spin text-muted-foreground" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

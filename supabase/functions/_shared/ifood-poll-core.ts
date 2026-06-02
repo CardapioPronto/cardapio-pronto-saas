@@ -118,6 +118,104 @@ const orderTypeFor = (orderType?: string) => {
 
 type ImportOrderOutcome = "imported" | "status_updated" | "unchanged";
 
+type IfoodItemMapping = {
+  product_id: string | null;
+};
+
+const normalizeExternalItemId = (item: Record<string, unknown>) => {
+  const explicitId = item.id
+    ?? item.externalCode
+    ?? item.external_code
+    ?? item.integrationId
+    ?? item.integration_id
+    ?? item.code
+    ?? item.sku;
+
+  if (explicitId) return String(explicitId).trim();
+
+  const name = String(item.name || "Item iFood").trim().toLowerCase();
+  return `name:${name.replace(/\s+/g, "-")}`;
+};
+
+const loadIfoodItemMappings = async (
+  admin: SupabaseClient,
+  restaurantId: string,
+  externalItemIds: string[],
+) => {
+  const uniqueIds = Array.from(new Set(externalItemIds.filter(Boolean)));
+  if (uniqueIds.length === 0) return new Map<string, IfoodItemMapping>();
+
+  const { data, error } = await admin
+    .from("ifood_item_mappings")
+    .select("external_item_id, product_id")
+    .eq("restaurant_id", restaurantId)
+    .in("external_item_id", uniqueIds);
+
+  if (error) throw error;
+
+  return new Map(
+    (data ?? []).map((row) => [
+      String(row.external_item_id),
+      { product_id: row.product_id ? String(row.product_id) : null },
+    ]),
+  );
+};
+
+const recordIfoodItemObservation = async (
+  admin: SupabaseClient,
+  restaurantId: string,
+  merchantId: string | null,
+  orderId: string,
+  externalItemId: string,
+  externalItemName: string,
+  mappedProductId: string | null,
+) => {
+  const now = new Date().toISOString();
+
+  const { data: current, error: readError } = await admin
+    .from("ifood_item_mappings")
+    .select("id, product_id, times_seen")
+    .eq("restaurant_id", restaurantId)
+    .eq("external_item_id", externalItemId)
+    .maybeSingle();
+
+  if (readError) throw readError;
+
+  if (current?.id) {
+    const { error } = await admin
+      .from("ifood_item_mappings")
+      .update({
+        merchant_id: merchantId,
+        external_item_name: externalItemName,
+        product_id: current.product_id || mappedProductId,
+        last_order_id: orderId,
+        times_seen: Number(current.times_seen || 0) + 1,
+        last_seen_at: now,
+        updated_at: now,
+      })
+      .eq("id", current.id);
+
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await admin
+    .from("ifood_item_mappings")
+    .insert({
+      restaurant_id: restaurantId,
+      merchant_id: merchantId,
+      external_item_id: externalItemId,
+      external_item_name: externalItemName,
+      product_id: mappedProductId,
+      last_order_id: orderId,
+      first_seen_at: now,
+      last_seen_at: now,
+      times_seen: 1,
+    });
+
+  if (error) throw error;
+};
+
 const importOrder = async (
   admin: SupabaseClient,
   restaurantId: string,
@@ -178,13 +276,19 @@ const importOrder = async (
   if (error) throw error;
 
   const rawItems = Array.isArray(order.items) ? order.items : [];
-  const items = rawItems.map((item) => {
-    const row = item as Record<string, unknown>;
+  const itemRows = rawItems.map((item) => item as Record<string, unknown>);
+  const externalItemIds = itemRows.map(normalizeExternalItemId);
+  const itemMappings = await loadIfoodItemMappings(admin, restaurantId, externalItemIds);
+  const merchantId = String(read(order, "merchant.id", order.merchantId || "")) || null;
+
+  const items = itemRows.map((row, index) => {
     const quantity = Number(row.quantity || 1);
     const itemTotal = normalizeMoney(row.totalPrice ?? row.price ?? row.unitPrice);
+    const externalItemId = externalItemIds[index];
+    const mappedProductId = itemMappings.get(externalItemId)?.product_id ?? null;
     return {
       order_id: inserted.id,
-      product_id: null,
+      product_id: mappedProductId,
       product_name: String(row.name || "Item iFood"),
       quantity,
       price: quantity > 0 ? itemTotal / quantity : itemTotal,
@@ -192,18 +296,31 @@ const importOrder = async (
     };
   });
 
-  if (items.length > 0) {
+  const unmappedItems = items.filter((item) => !item.product_id).length;
+  if (unmappedItems > 0) {
     console.info("iFood order imported with unmapped stock items", {
       restaurantId,
       ifoodId,
       orderId: inserted.id,
-      unmappedItems: items.length,
+      unmappedItems,
     });
   }
 
   if (items.length > 0) {
     const { error: itemsError } = await admin.from("order_items").insert(items);
     if (itemsError) throw itemsError;
+
+    await Promise.all(itemRows.map((row, index) =>
+      recordIfoodItemObservation(
+        admin,
+        restaurantId,
+        merchantId,
+        inserted.id,
+        externalItemIds[index],
+        String(row.name || "Item iFood"),
+        itemMappings.get(externalItemIds[index])?.product_id ?? null,
+      )
+    ));
   }
 
   return "imported";

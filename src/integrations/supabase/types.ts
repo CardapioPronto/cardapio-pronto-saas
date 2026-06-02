@@ -1449,6 +1449,86 @@ export type Database = {
           },
         ]
       }
+      ifood_item_mappings: {
+        Row: {
+          created_at: string
+          external_item_id: string
+          external_item_name: string
+          first_seen_at: string
+          id: string
+          last_order_id: string | null
+          last_seen_at: string
+          mapped_at: string | null
+          mapped_by: string | null
+          merchant_id: string | null
+          product_id: string | null
+          restaurant_id: string
+          times_seen: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_item_id: string
+          external_item_name: string
+          first_seen_at?: string
+          id?: string
+          last_order_id?: string | null
+          last_seen_at?: string
+          mapped_at?: string | null
+          mapped_by?: string | null
+          merchant_id?: string | null
+          product_id?: string | null
+          restaurant_id: string
+          times_seen?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_item_id?: string
+          external_item_name?: string
+          first_seen_at?: string
+          id?: string
+          last_order_id?: string | null
+          last_seen_at?: string
+          mapped_at?: string | null
+          mapped_by?: string | null
+          merchant_id?: string | null
+          product_id?: string | null
+          restaurant_id?: string
+          times_seen?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ifood_item_mappings_last_order_id_fkey"
+            columns: ["last_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ifood_item_mappings_mapped_by_fkey"
+            columns: ["mapped_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ifood_item_mappings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ifood_item_mappings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           created_at: string

@@ -310,9 +310,9 @@ Objetivo: transformar iFood em canal integrado, nao apenas pedido importado.
 
 ### Escopo MVP
 
-- [ ] Criar mapeamento SKU/item iFood para `products.id`.
-- [ ] Mostrar itens iFood nao mapeados.
-- [ ] Permitir vinculo manual item externo -> produto interno.
+- [x] Criar mapeamento SKU/item iFood para `products.id`.
+- [x] Mostrar itens iFood nao mapeados.
+- [x] Permitir vinculo manual item externo -> produto interno.
 - [ ] Baixar estoque quando item estiver mapeado.
 - [ ] Estornar estoque em cancelamento quando status externo permitir.
 - [ ] Relatorio separado: vendas iFood x vendas canal proprio.
@@ -325,7 +325,9 @@ Objetivo: transformar iFood em canal integrado, nao apenas pedido importado.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-02: Bloco 6 iniciado com tabela `ifood_item_mappings`, registro automatico de itens observados no polling iFood, tentativa de vinculo durante importacao de pedidos e aba "Mapeamento" em `/ifood-integracao` para associar item externo a produto interno.
+- 2026-06-02: Credenciais do app iFood foram centralizadas no Super Admin em `ifood_saas_app`; restaurantes configuram apenas a loja/Merchant ID.
+- Pendente: aplicar baixa/estorno automatico de estoque usando pedidos iFood mapeados e criar relatorio comparando iFood x canal proprio.
 
 ---
 

@@ -19,7 +19,17 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
-type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "update_notifications" | "test" | "poll" | "update_order_status";
+type Action =
+  | "get_config"
+  | "save_config"
+  | "toggle"
+  | "update_polling"
+  | "update_notifications"
+  | "list_item_mappings"
+  | "save_item_mapping"
+  | "test"
+  | "poll"
+  | "update_order_status";
 
 type IfoodConfig = {
   restaurant_id: string;
@@ -319,6 +329,101 @@ const updateNotificationConfig = async (restaurantId: string, payload: Record<st
   return { success: true, config: publicConfigFor(saved, appConfigured) };
 };
 
+const publicIfoodItemMappingFor = (row: Record<string, unknown>) => {
+  const product = row.product && typeof row.product === "object"
+    ? row.product as Record<string, unknown>
+    : null;
+
+  return {
+    id: String(row.id),
+    merchantId: row.merchant_id ? String(row.merchant_id) : null,
+    externalItemId: String(row.external_item_id),
+    externalItemName: String(row.external_item_name),
+    productId: row.product_id ? String(row.product_id) : null,
+    productName: product?.name ? String(product.name) : null,
+    timesSeen: Number(row.times_seen || 0),
+    lastSeenAt: row.last_seen_at ? String(row.last_seen_at) : null,
+    mappedAt: row.mapped_at ? String(row.mapped_at) : null,
+  };
+};
+
+const listItemMappings = async (restaurantId: string) => {
+  const { data, error } = await admin
+    .from("ifood_item_mappings")
+    .select(`
+      id,
+      merchant_id,
+      external_item_id,
+      external_item_name,
+      product_id,
+      times_seen,
+      last_seen_at,
+      mapped_at,
+      product:products!ifood_item_mappings_product_id_fkey (
+        id,
+        name
+      )
+    `)
+    .eq("restaurant_id", restaurantId)
+    .order("product_id", { ascending: true, nullsFirst: true })
+    .order("last_seen_at", { ascending: false });
+
+  if (error) throw error;
+
+  return {
+    success: true,
+    mappings: (data ?? []).map((row) => publicIfoodItemMappingFor(row as Record<string, unknown>)),
+  };
+};
+
+const saveItemMapping = async (
+  restaurantId: string,
+  userId: string,
+  payload: Record<string, unknown>,
+) => {
+  const mappingId = String(payload.mappingId || payload.id || "").trim();
+  const productId = String(payload.productId || "").trim() || null;
+
+  if (!mappingId) throw new Error("mappingId é obrigatório.");
+
+  const { data: mapping, error: mappingError } = await admin
+    .from("ifood_item_mappings")
+    .select("id")
+    .eq("id", mappingId)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (mappingError) throw mappingError;
+  if (!mapping?.id) throw new Error("Mapeamento iFood não encontrado.");
+
+  if (productId) {
+    const { data: product, error: productError } = await admin
+      .from("products")
+      .select("id")
+      .eq("id", productId)
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle();
+
+    if (productError) throw productError;
+    if (!product?.id) throw new Error("Produto não encontrado para este restaurante.");
+  }
+
+  const { error } = await admin
+    .from("ifood_item_mappings")
+    .update({
+      product_id: productId,
+      mapped_at: productId ? new Date().toISOString() : null,
+      mapped_by: productId ? userId : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", mappingId)
+    .eq("restaurant_id", restaurantId);
+
+  if (error) throw error;
+
+  return await listItemMappings(restaurantId);
+};
+
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -352,6 +457,14 @@ serve(async (req: Request) => {
 
     if (action === "update_polling") {
       return jsonResponse(await updatePollingConfig(restaurantId, payload));
+    }
+
+    if (action === "list_item_mappings") {
+      return jsonResponse(await listItemMappings(restaurantId));
+    }
+
+    if (action === "save_item_mapping") {
+      return jsonResponse(await saveItemMapping(restaurantId, user.id, payload));
     }
 
     if (action === "update_order_status") {

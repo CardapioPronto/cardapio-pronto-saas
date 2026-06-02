@@ -7,6 +7,8 @@ type IfoodFunctionAction =
   | "toggle"
   | "update_polling"
   | "update_notifications"
+  | "list_item_mappings"
+  | "save_item_mapping"
   | "test"
   | "poll"
   | "update_order_status";
@@ -35,6 +37,23 @@ export interface SaveIfoodIntegrationConfigParams {
   pollingInterval: number;
   notifyNewOrders?: boolean;
   notifyStatusChanges?: boolean;
+}
+
+export interface IfoodItemMapping {
+  id: string;
+  merchantId: string | null;
+  externalItemId: string;
+  externalItemName: string;
+  productId: string | null;
+  productName: string | null;
+  timesSeen: number;
+  lastSeenAt: string | null;
+  mappedAt: string | null;
+}
+
+export interface IfoodItemMappingsResponse {
+  success: boolean;
+  mappings: IfoodItemMapping[];
 }
 
 const invokeIfoodFunction = async <T>(
@@ -94,6 +113,24 @@ export const updateIfoodNotificationSettings = async (
   return invokeIfoodFunction<IfoodIntegrationConfigResponse>("update_notifications", {
     restaurantId,
     ...prefs,
+  });
+};
+
+export const getIfoodItemMappings = async (
+  restaurantId?: string,
+): Promise<IfoodItemMappingsResponse> => {
+  return invokeIfoodFunction<IfoodItemMappingsResponse>("list_item_mappings", { restaurantId });
+};
+
+export const saveIfoodItemMapping = async (
+  restaurantId: string | undefined,
+  mappingId: string,
+  productId: string | null,
+): Promise<IfoodItemMappingsResponse> => {
+  return invokeIfoodFunction<IfoodItemMappingsResponse>("save_item_mapping", {
+    restaurantId,
+    mappingId,
+    productId,
   });
 };
 

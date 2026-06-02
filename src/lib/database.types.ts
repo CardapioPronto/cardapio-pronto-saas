@@ -326,6 +326,56 @@ export interface Database {
           updated_at?: string;
         };
       };
+      ifood_item_mappings: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          merchant_id: string | null;
+          external_item_id: string;
+          external_item_name: string;
+          product_id: string | null;
+          last_order_id: string | null;
+          times_seen: number;
+          first_seen_at: string;
+          last_seen_at: string;
+          mapped_at: string | null;
+          mapped_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          merchant_id?: string | null;
+          external_item_id: string;
+          external_item_name: string;
+          product_id?: string | null;
+          last_order_id?: string | null;
+          times_seen?: number;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          mapped_at?: string | null;
+          mapped_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          merchant_id?: string | null;
+          external_item_id?: string;
+          external_item_name?: string;
+          product_id?: string | null;
+          last_order_id?: string | null;
+          times_seen?: number;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          mapped_at?: string | null;
+          mapped_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       demos: {
         Row: {
           id: string;
