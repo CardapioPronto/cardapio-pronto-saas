@@ -6,10 +6,14 @@ import { HistoricoPedidos } from "@/features/pdv/components/HistoricoPedidos";
 import { NovoPedido } from "@/features/pdv/components/NovoPedido";
 import { PDVTabs } from "@/features/pdv/components/PDVTabs";
 import { OverrideEstoqueDialog } from "@/features/pdv/components/OverrideEstoqueDialog";
+import { PrintDefaultCopiesDialog } from "@/features/pdv/components/PrintDefaultCopiesDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
 import { supabase } from "@/integrations/supabase/client";
+import { obterConfiguracoesSistema } from "@/services/configuracoes";
+import type { ConfiguracoesSistema } from "@/services/configuracoes";
+import type { PrintPaperSize, PrintTemplate } from "@/hooks/usePrint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +28,26 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+type PrintPreferences = {
+  autoPrint: boolean;
+  paperSize: PrintPaperSize;
+  templates: PrintTemplate[];
+};
+
+const DEFAULT_PRINT_PREFERENCES: PrintPreferences = {
+  autoPrint: false,
+  paperSize: "80mm",
+  templates: ["kitchen"],
+};
+
+const getDefaultPrintTemplates = (config: ConfiguracoesSistema): PrintTemplate[] => {
+  const templates: PrintTemplate[] = [];
+  if (config.print_default_kitchen) templates.push("kitchen");
+  if (config.print_default_cashier) templates.push("cashier");
+  if (config.print_default_customer) templates.push("customer");
+  return templates.length > 0 ? templates : ["kitchen"];
+};
+
 export default function PDV() {
   // Obter o usuário atual e ID do restaurante
   const { user } = useCurrentUser();
@@ -31,6 +55,7 @@ export default function PDV() {
   const navigate = useNavigate();
   const restaurantId = user?.restaurant_id || "";
   const [restaurantName, setRestaurantName] = useState("Pubfy");
+  const [printPreferences, setPrintPreferences] = useState<PrintPreferences>(DEFAULT_PRINT_PREFERENCES);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mostrarValorVendido, setMostrarValorVendido] = useState(true);
   const canViewDashboard = hasPermission("dashboard_view");
@@ -81,6 +106,8 @@ export default function PDV() {
     stockOverride,
     confirmarOverrideEstoque,
     cancelarOverrideEstoque,
+    pedidoRecemFinalizado,
+    limparPedidoRecemFinalizado,
   } = usePDVHook(restaurantId);
 
   useEffect(() => {
@@ -110,6 +137,38 @@ export default function PDV() {
       active = false;
     };
   }, [restaurantId]);
+
+  useEffect(() => {
+    let active = true;
+
+    const carregarConfiguracoesImpressao = async () => {
+      if (!restaurantId) {
+        setPrintPreferences(DEFAULT_PRINT_PREFERENCES);
+        return;
+      }
+
+      const config = await obterConfiguracoesSistema(restaurantId);
+      if (active) {
+        setPrintPreferences({
+          autoPrint: config.auto_print,
+          paperSize: config.print_paper_size,
+          templates: getDefaultPrintTemplates(config),
+        });
+      }
+    };
+
+    void carregarConfiguracoesImpressao();
+
+    return () => {
+      active = false;
+    };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (pedidoRecemFinalizado && !printPreferences.autoPrint) {
+      limparPedidoRecemFinalizado();
+    }
+  }, [limparPedidoRecemFinalizado, pedidoRecemFinalizado, printPreferences.autoPrint]);
 
   useEffect(() => {
     if (!canViewOrderHistory && visualizacaoAtiva === "historico") {
@@ -254,6 +313,7 @@ export default function PDV() {
             <NovoPedido
               restaurantId={restaurantId}
               restaurantName={restaurantName}
+              printPaperSize={printPreferences.paperSize}
               categoriaAtiva={categoriaAtiva}
               setCategoriaAtiva={setCategoriaAtiva}
               busca={busca}
@@ -278,6 +338,7 @@ export default function PDV() {
               alterarStatusPedido={handleAlterarStatusPedido}
               onAtualizar={carregarHistoricoPedidos}
               restaurantName={restaurantName}
+              printPaperSize={printPreferences.paperSize}
               filtros={historicoFiltros}
               total={historicoTotal}
               resumo={historicoResumo}
@@ -309,6 +370,15 @@ export default function PDV() {
         canOverride={canOverrideStock}
         onCancel={cancelarOverrideEstoque}
         onConfirm={confirmarOverrideEstoque}
+      />
+
+      <PrintDefaultCopiesDialog
+        open={printPreferences.autoPrint && Boolean(pedidoRecemFinalizado)}
+        pedido={pedidoRecemFinalizado}
+        restaurantName={restaurantName}
+        paperSize={printPreferences.paperSize}
+        templates={printPreferences.templates}
+        onClose={limparPedidoRecemFinalizado}
       />
     </div>
   );

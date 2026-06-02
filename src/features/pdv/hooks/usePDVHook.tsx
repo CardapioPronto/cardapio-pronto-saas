@@ -16,6 +16,7 @@ import {
   salvarPedido, 
   listarPedidos, 
   alterarStatusPedido,
+  obterPedidoPorId,
 } from "../services/pedidoService";
 import type { SalvarPedidoResult } from "../services/pedidoService";
 import {
@@ -62,6 +63,7 @@ export const usePDVHook = (restaurantId: string) => {
     pedidosAbertos: 0,
     cancelados: 0,
   });
+  const [pedidoRecemFinalizado, setPedidoRecemFinalizado] = useState<Pedido | null>(null);
 
   // Estado do diálogo de "vender mesmo assim sem saldo".
   const [stockOverride, setStockOverride] = useState<{
@@ -278,6 +280,39 @@ export const usePDVHook = (restaurantId: string) => {
     0
   );
 
+  const carregarPedidoFinalizadoParaImpressao = useCallback(
+    async (
+      pedidoCriado: unknown,
+      dadosCliente: DadosClientePedido,
+      mesa: string,
+      itens: ItemPedido[],
+      total: number,
+    ) => {
+      const orderId = getCreatedOrderId(pedidoCriado);
+      if (!orderId) return null;
+
+      const result = await obterPedidoPorId(restaurantId, orderId);
+      if (result.success) {
+        return result.pedido;
+      }
+
+      return {
+        id: orderId,
+        mesa,
+        cliente: dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined,
+        clientName: dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined,
+        itensPedido: itens,
+        status: "pendente" as const,
+        timestamp: new Date(),
+        total,
+        payment_method: null,
+        payment_status: null,
+        source: "app" as const,
+      } satisfies Pedido;
+    },
+    [nomeCliente, restaurantId],
+  );
+
   const submitPedido = useCallback(
     async (
       dadosCliente: DadosClientePedido,
@@ -342,6 +377,9 @@ export const usePDVHook = (restaurantId: string) => {
     
     try {
       setSalvandoPedido(true);
+      const mesaImpressao = tipoPedido === "mesa" && mesaSelecionada ? `Mesa ${mesaSelecionada}` : "Balcão";
+      const itensImpressao = [...itensPedido];
+      const totalImpressao = totalPedido;
 
       const result = await submitPedido(dadosCliente);
 
@@ -358,6 +396,14 @@ export const usePDVHook = (restaurantId: string) => {
 
       if (result.success) {
         const orderId = getCreatedOrderId(result.pedido);
+        const pedidoParaImpressao = await carregarPedidoFinalizadoParaImpressao(
+          result.pedido,
+          dadosCliente,
+          mesaImpressao,
+          itensImpressao,
+          totalImpressao,
+        );
+
         if (orderId) {
           captureCrmLeadFromOrder(orderId, {
             acceptsMarketing: dadosCliente.aceitaMarketing ?? null,
@@ -367,6 +413,7 @@ export const usePDVHook = (restaurantId: string) => {
           });
         }
 
+        setPedidoRecemFinalizado(pedidoParaImpressao);
         setItensPedido([]);
         setNomeCliente("");
         setMesaSelecionada("");
@@ -387,12 +434,23 @@ export const usePDVHook = (restaurantId: string) => {
   const confirmarOverrideEstoque = async (reason: string) => {
     try {
       setSalvandoPedido(true);
+      const mesaImpressao = tipoPedido === "mesa" && mesaSelecionada ? `Mesa ${mesaSelecionada}` : "Balcão";
+      const itensImpressao = [...itensPedido];
+      const totalImpressao = totalPedido;
       const result = await submitPedido(stockOverride.pendingClient, {
         allowNegative: true,
         reason,
       });
       if (result.success) {
         const orderId = getCreatedOrderId(result.pedido);
+        const pedidoParaImpressao = await carregarPedidoFinalizadoParaImpressao(
+          result.pedido,
+          stockOverride.pendingClient,
+          mesaImpressao,
+          itensImpressao,
+          totalImpressao,
+        );
+
         if (orderId) {
           captureCrmLeadFromOrder(orderId, {
             acceptsMarketing: stockOverride.pendingClient.aceitaMarketing ?? null,
@@ -403,6 +461,7 @@ export const usePDVHook = (restaurantId: string) => {
         }
 
         setStockOverride({ open: false, errorMessage: "", pendingClient: {} });
+        setPedidoRecemFinalizado(pedidoParaImpressao);
         setItensPedido([]);
         setNomeCliente("");
         setMesaSelecionada("");
@@ -421,6 +480,10 @@ export const usePDVHook = (restaurantId: string) => {
   const cancelarOverrideEstoque = () => {
     setStockOverride({ open: false, errorMessage: "", pendingClient: {} });
   };
+
+  const limparPedidoRecemFinalizado = useCallback(() => {
+    setPedidoRecemFinalizado(null);
+  }, []);
 
   // Mudar status do pedido
   const handleAlterarStatusPedido = async (pedidoId: number | string, novoStatus: PedidoStatus) => {
@@ -484,5 +547,7 @@ export const usePDVHook = (restaurantId: string) => {
     stockOverride,
     confirmarOverrideEstoque,
     cancelarOverrideEstoque,
+    pedidoRecemFinalizado,
+    limparPedidoRecemFinalizado,
   };
 };

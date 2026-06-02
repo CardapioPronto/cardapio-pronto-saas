@@ -297,6 +297,8 @@ Evidencia:
 
 - 2026-06-02: Bloco 5 iniciado com modelos separados no motor de impressao: comanda da cozinha sem valores, via do caixa com pagamento/total e comprovante do cliente. Historico do PDV ganhou reimpressao por via.
 - 2026-06-02: Guia operacional criado em `docs/IMPRESSAO_OPERACIONAL.md`, documentando fluxo de teste, impressao via navegador e limites do MVP.
+- 2026-06-02: Preferencias de impressao por restaurante adicionadas em Configuracoes > Sistema: tamanho de papel 58mm/80mm/A4 e vias padrao cozinha/caixa/cliente. Teste de impressao e reimpressoes do PDV passam a respeitar o tamanho configurado.
+- 2026-06-02: Impressao pos-finalizacao conectada ao PDV: quando a impressao automatica esta ativa, o pedido recem-criado abre um dialogo para imprimir as vias padrao sem depender de reabrir o historico.
 
 ---
 

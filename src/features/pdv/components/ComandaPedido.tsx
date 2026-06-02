@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { ItemPedidoLinha } from "./ItemPedidoLinha";
 import { ItemPedido } from "../types";
 import { AlertCircle, Loader2, Printer } from "lucide-react";
-import { usePrint } from "@/hooks/usePrint";
+import { PrintPaperSize, usePrint } from "@/hooks/usePrint";
 import { MesaStatus } from "@/types/mesa";
 import { cn } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
@@ -20,6 +20,7 @@ interface ComandaPedidoProps {
   salvandoPedido: boolean;
   nomeCliente: string;
   restaurantName: string;
+  printPaperSize?: PrintPaperSize;
   mesaError?: string;
   mesas?: Array<{id: string; number: string; status: MesaStatus}>;
   className?: string;
@@ -36,6 +37,7 @@ export const ComandaPedido = ({
   salvandoPedido,
   nomeCliente,
   restaurantName,
+  printPaperSize = "80mm",
   mesaError,
   mesas = [],
   className,
@@ -70,7 +72,7 @@ export const ComandaPedido = ({
       timestamp: new Date(),
       total: totalPedido,
     };
-    printOrder(pedidoTemp, { restaurantName, template: "kitchen" });
+    printOrder(pedidoTemp, { restaurantName, template: "kitchen", paperSize: printPaperSize });
   };
 
   return (

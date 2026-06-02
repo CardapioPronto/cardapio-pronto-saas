@@ -3,11 +3,13 @@ import { Pedido } from '@/features/pdv/types';
 import { useToast } from '@/hooks/use-toast';
 
 export type PrintTemplate = "kitchen" | "cashier" | "customer";
+export type PrintPaperSize = "58mm" | "80mm" | "a4";
 
 interface PrintConfig {
   restaurantName: string;
   autoPrint?: boolean;
   template?: PrintTemplate;
+  paperSize?: PrintPaperSize;
 }
 
 export const usePrint = () => {
@@ -29,7 +31,12 @@ export const usePrint = () => {
 
       const template = config.template ?? "kitchen";
       const templateLabel = PRINT_TEMPLATE_LABELS[template];
-      const printContent = generatePrintHTML(pedido, config.restaurantName, template);
+      const printContent = generatePrintHTML(
+        pedido,
+        config.restaurantName,
+        template,
+        config.paperSize ?? "80mm",
+      );
       
       printWindow.document.write(printContent);
       printWindow.document.close();
@@ -79,6 +86,12 @@ const PRINT_TEMPLATE_TITLES: Record<PrintTemplate, string> = {
   customer: "COMPROVANTE DO CLIENTE",
 };
 
+const PRINT_PAPER_STYLES: Record<PrintPaperSize, { pageSize: string; bodyWidth: string; padding: string }> = {
+  "58mm": { pageSize: "58mm auto", bodyWidth: "58mm", padding: "6px" },
+  "80mm": { pageSize: "80mm auto", bodyWidth: "80mm", padding: "10px" },
+  a4: { pageSize: "A4", bodyWidth: "190mm", padding: "16px" },
+};
+
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   pix: "PIX",
   pix_online: "PIX online",
@@ -109,10 +122,16 @@ const getPaymentLabel = (value?: string | null, labels: Record<string, string> =
   return labels[value] || value.replace(/_/g, " ");
 };
 
-const generatePrintHTML = (pedido: Pedido, restaurantName: string, template: PrintTemplate): string => {
+const generatePrintHTML = (
+  pedido: Pedido,
+  restaurantName: string,
+  template: PrintTemplate,
+  paperSize: PrintPaperSize,
+): string => {
   const safeRestaurantName = escapeHtml(restaurantName);
   const safeMesa = escapeHtml(pedido.mesa || "Balcão");
   const safeCliente = pedido.cliente ? escapeHtml(pedido.cliente) : "";
+  const paper = PRINT_PAPER_STYLES[paperSize];
   const documentTitle = PRINT_TEMPLATE_TITLES[template];
   const showPrices = template !== "kitchen";
   const showPayment = template !== "kitchen";
@@ -138,7 +157,7 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string, template: Pri
         <style>
             @media print {
                 @page {
-                    size: 80mm auto;
+                    size: ${paper.pageSize};
                     margin: 0;
                 }
                 body {
@@ -153,9 +172,10 @@ const generatePrintHTML = (pedido: Pedido, restaurantName: string, template: Pri
                 line-height: 1.4;
                 color: black;
                 background: white;
-                width: 80mm;
+                width: ${paper.bodyWidth};
+                max-width: ${paper.bodyWidth};
                 margin: 0 auto;
-                padding: 10px;
+                padding: ${paper.padding};
                 box-sizing: border-box;
             }
             

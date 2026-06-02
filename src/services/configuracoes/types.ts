@@ -19,6 +19,10 @@ export type ConfiguracoesSistema = {
   dark_mode: boolean;
   language: string;
   auto_print: boolean;
+  print_paper_size: "58mm" | "80mm" | "a4";
+  print_default_kitchen: boolean;
+  print_default_cashier: boolean;
+  print_default_customer: boolean;
 };
 
 export type DadosUsuario = {

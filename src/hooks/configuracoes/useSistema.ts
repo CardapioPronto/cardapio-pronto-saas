@@ -11,7 +11,11 @@ export const useSistema = () => {
     notification_email: true,
     dark_mode: false,
     language: "pt-BR",
-    auto_print: false
+    auto_print: false,
+    print_paper_size: "80mm",
+    print_default_kitchen: true,
+    print_default_cashier: false,
+    print_default_customer: false,
   });
   const [loading, setLoading] = useState(false);
 

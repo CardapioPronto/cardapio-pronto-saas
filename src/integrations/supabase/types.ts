@@ -2669,6 +2669,10 @@ export type Database = {
           language: string | null
           notification_email: boolean | null
           notification_new_order: boolean | null
+          print_default_cashier: boolean
+          print_default_customer: boolean
+          print_default_kitchen: boolean
+          print_paper_size: string
           restaurant_id: string
           updated_at: string
         }
@@ -2680,6 +2684,10 @@ export type Database = {
           language?: string | null
           notification_email?: boolean | null
           notification_new_order?: boolean | null
+          print_default_cashier?: boolean
+          print_default_customer?: boolean
+          print_default_kitchen?: boolean
+          print_paper_size?: string
           restaurant_id: string
           updated_at?: string
         }
@@ -2691,6 +2699,10 @@ export type Database = {
           language?: string | null
           notification_email?: boolean | null
           notification_new_order?: boolean | null
+          print_default_cashier?: boolean
+          print_default_customer?: boolean
+          print_default_kitchen?: boolean
+          print_paper_size?: string
           restaurant_id?: string
           updated_at?: string
         }

@@ -2,6 +2,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ConfiguracoesSistema } from "./types";
 
+const DEFAULT_SYSTEM_CONFIG: Omit<ConfiguracoesSistema, "id"> = {
+  notification_new_order: true,
+  notification_email: true,
+  dark_mode: false,
+  language: "pt-BR",
+  auto_print: false,
+  print_paper_size: "80mm",
+  print_default_kitchen: true,
+  print_default_cashier: false,
+  print_default_customer: false,
+};
+
 async function obterRestauranteId(restauranteId?: string | null) {
   if (restauranteId) return restauranteId;
 
@@ -41,13 +53,7 @@ export async function obterConfiguracoesSistema(restauranteId?: string | null): 
 
     // Se não existir configuração, retorna valores padrão
     if (!data) {
-      return {
-        notification_new_order: true,
-        notification_email: true,
-        dark_mode: false,
-        language: "pt-BR",
-        auto_print: false,
-      };
+      return DEFAULT_SYSTEM_CONFIG;
     }
 
     return {
@@ -57,17 +63,15 @@ export async function obterConfiguracoesSistema(restauranteId?: string | null): 
       dark_mode: data.dark_mode ?? false,
       language: data.language ?? "pt-BR",
       auto_print: data.auto_print ?? false,
+      print_paper_size: data.print_paper_size ?? "80mm",
+      print_default_kitchen: data.print_default_kitchen ?? true,
+      print_default_cashier: data.print_default_cashier ?? false,
+      print_default_customer: data.print_default_customer ?? false,
     };
   } catch (error) {
     console.error("Erro ao obter configurações do sistema:", error);
     // Retornar configurações padrão em caso de erro
-    return {
-      notification_new_order: true,
-      notification_email: true,
-      dark_mode: false,
-      language: "pt-BR",
-      auto_print: false,
-    };
+    return DEFAULT_SYSTEM_CONFIG;
   }
 }
 
@@ -89,6 +93,10 @@ export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema, r
           dark_mode: config.dark_mode,
           language: config.language,
           auto_print: config.auto_print,
+          print_paper_size: config.print_paper_size,
+          print_default_kitchen: config.print_default_kitchen,
+          print_default_cashier: config.print_default_cashier,
+          print_default_customer: config.print_default_customer,
           updated_at: new Date().toISOString(),
         })
         .eq("id", config.id);
@@ -106,6 +114,10 @@ export async function salvarConfiguracoesSistema(config: ConfiguracoesSistema, r
         dark_mode: config.dark_mode,
         language: config.language,
         auto_print: config.auto_print,
+        print_paper_size: config.print_paper_size,
+        print_default_kitchen: config.print_default_kitchen,
+        print_default_cashier: config.print_default_cashier,
+        print_default_customer: config.print_default_customer,
       });
 
       if (error) {

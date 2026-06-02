@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pedido, PedidoStatus } from "../types";
 import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Clock, Package, Printer, User, XCircle } from "lucide-react";
-import { usePrint } from "@/hooks/usePrint";
+import { PrintPaperSize, usePrint } from "@/hooks/usePrint";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ interface PedidoHistoricoItemProps {
   pedido: Pedido;
   alterarStatusPedido: (pedidoId: number | string, novoStatus: PedidoStatus) => void;
   restaurantName: string;
+  printPaperSize?: PrintPaperSize;
   canManageOrders: boolean;
 }
 
@@ -23,6 +24,7 @@ export const PedidoHistoricoItem = ({
   pedido,
   alterarStatusPedido,
   restaurantName,
+  printPaperSize = "80mm",
   canManageOrders,
 }: PedidoHistoricoItemProps) => {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
@@ -81,7 +83,7 @@ export const PedidoHistoricoItem = ({
   const totalItens = pedido.itensPedido.reduce((total, item) => total + item.quantidade, 0);
 
   const handlePrint = (template: "kitchen" | "cashier" | "customer") => {
-    printOrder(pedido, { restaurantName, template });
+    printOrder(pedido, { restaurantName, template, paperSize: printPaperSize });
   };
 
   return (
