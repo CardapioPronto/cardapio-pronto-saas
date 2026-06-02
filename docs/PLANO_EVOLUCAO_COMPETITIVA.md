@@ -214,6 +214,7 @@ Objetivo: gerar recompra sem depender de acao manual diaria.
   - [x] cliente alto ticket;
   - [x] comprou categoria especifica.
 - [x] Gerar cupom automatico vinculado a campanha.
+- [x] Enviar teste da campanha antes do disparo real.
 - [x] Enviar por e-mail no MVP.
 - [x] Mostrar metricas: enviados, abertos/clicados quando disponivel, pedidos gerados, receita atribuida.
 - [ ] Enviar por WhatsApp quando a base operacional estiver validada.
@@ -236,6 +237,7 @@ Evidencia:
 - 2026-06-02: Segmentacao de aniversariantes iniciada com o publico `birthday`, card guiado em `/automacoes` e filtro de clientes com `birth_date` no CRM dentro da janela configurada.
 - 2026-06-02: Campanhas automaticas reorganizadas para dentro do modulo Email - Resend, com aba propria de automacoes, cards de gatilho guiado e navegacao voltar/avancar na pagina de integracao.
 - 2026-06-02: Reaproveitamento operacional adicionado ao editor: campanhas podem ser duplicadas como novo rascunho, status aparecem em portugues e o envio bloqueia conteudo com `{{coupon}}` sem cupom vinculado.
+- 2026-06-02: Envio de teste da campanha adicionado ao editor antes do disparo real, usando o Resend configurado do restaurante e registrando log separado como `test`, sem consumir metricas de campanha marketing.
 
 ---
 

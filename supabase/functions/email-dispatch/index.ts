@@ -134,6 +134,10 @@ const renderCampaignContent = (template: string, variables: Record<string, unkno
     return escapeHtml(value);
   });
 
+const campaignContentUsesCoupon = (campaign: { html_content?: string | null; text_content?: string | null }) =>
+  /\{\{\s*coupon\s*\}\}/.test(String(campaign.html_content || "")) ||
+  /\{\{\s*coupon\s*\}\}/.test(String(campaign.text_content || ""));
+
 const chunkArray = <T>(items: T[], size: number) => {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -368,6 +372,9 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
     if (couponError) throw couponError;
     coupon = couponData as CampaignCoupon | null;
   }
+  if (campaignContentUsesCoupon(campaign) && !coupon) {
+    throw new Error("Gere um cupom para usar a variável {{coupon}} nesta campanha.");
+  }
 
   const audience = campaign.audience_filter || {};
   const audienceType = String(audience.type || "marketing_opt_in");
@@ -500,6 +507,89 @@ const sendCampaign = async (req: Request, body: EmailDispatchBody) => {
     used_this_month: usedThisMonth + sent + failed,
     remaining_after: Math.max(0, remaining - sent - failed),
     capped_at: MAX_CAMPAIGN_RECIPIENTS_PER_REQUEST,
+  };
+};
+
+const sendCampaignTest = async (req: Request, body: EmailDispatchBody) => {
+  const user = await getUser(req);
+  if (!user) throw new Error("Usuário não autenticado");
+  if (!body.restaurant_id || !body.campaign_id) throw new Error("Campanha inválida");
+  if (!(await canManageRestaurant(user.id, body.restaurant_id))) throw new Error("Sem permissão");
+  if (!isEmail(String(body.to || ""))) throw new Error("Destinatário de teste inválido");
+  const to = String(body.to || "").trim().toLowerCase();
+
+  const entitlement = await getRestaurantEntitlement(body.restaurant_id);
+  if (!entitlement.campaignsEnabled) {
+    throw new Error(`O plano ${entitlement.planName} não inclui campanhas por e-mail.`);
+  }
+
+  const { data: campaign, error: campaignError } = await admin
+    .from("email_campaigns")
+    .select("id, restaurant_id, name, subject, html_content, text_content, coupon_id")
+    .eq("id", body.campaign_id)
+    .eq("restaurant_id", body.restaurant_id)
+    .maybeSingle();
+
+  if (campaignError) throw campaignError;
+  if (!campaign) throw new Error("Campanha não encontrada.");
+
+  let coupon: CampaignCoupon | null = null;
+  if (campaign.coupon_id) {
+    const { data: couponData, error: couponError } = await admin
+      .from("coupons")
+      .select("id, code")
+      .eq("id", campaign.coupon_id)
+      .eq("restaurant_id", body.restaurant_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (couponError) throw couponError;
+    coupon = couponData as CampaignCoupon | null;
+  }
+  if (campaignContentUsesCoupon(campaign) && !coupon) {
+    throw new Error("Gere um cupom para usar a variável {{coupon}} nesta campanha.");
+  }
+
+  const { data: restaurant } = await admin
+    .from("restaurants")
+    .select("name")
+    .eq("id", body.restaurant_id)
+    .maybeSingle();
+
+  const variables = {
+    restaurant_name: restaurant?.name || "Restaurante",
+    contact_name: "Cliente teste",
+    email: to,
+    coupon: coupon?.code || "",
+    unsubscribe_url: "#",
+  };
+  const html = `${renderCampaignContent(campaign.html_content, variables)}
+    <hr>
+    <p style="font-size:12px;color:#64748b;line-height:1.5">
+      Este é um envio de teste da campanha "${escapeHtml(campaign.name)}".
+    </p>`;
+  const text = campaign.text_content
+    ? `${renderCampaignContent(campaign.text_content, variables)}\n\nEnvio de teste da campanha "${campaign.name}".`
+    : undefined;
+
+  const result = await sendManagedEmail({
+    admin,
+    restaurantId: body.restaurant_id,
+    preferRestaurantConfig: true,
+    emailType: "test",
+    to,
+    recipientName: "Teste da campanha",
+    subject: `[Teste] ${campaign.subject}`,
+    html,
+    text,
+    contextType: "campaign_test",
+    contextId: campaign.id,
+    metadata: { source: "email_campaign_test", campaign_id: campaign.id, coupon_id: coupon?.id || null },
+  });
+
+  return {
+    log_id: result.logId,
+    provider_message_id: result.providerMessageId,
   };
 };
 
@@ -648,6 +738,10 @@ Deno.serve(async (req) => {
 
     if (action === "send_campaign") {
       return json({ success: true, ...(await sendCampaign(req, body)) });
+    }
+
+    if (action === "send_campaign_test") {
+      return json({ success: true, ...(await sendCampaignTest(req, body)) });
     }
 
     return json({ error: "Ação inválida" }, 400);

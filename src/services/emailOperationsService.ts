@@ -401,6 +401,28 @@ export async function sendEmailCampaign(campaignId: string) {
   };
 }
 
+export async function sendEmailCampaignTest(campaignId: string, testEmail: string) {
+  const restaurantId = await getCurrentRestaurantId();
+  if (!restaurantId) throw new Error("Restaurante nao encontrado.");
+
+  const { data, error } = await supabase.functions.invoke("email-dispatch", {
+    body: {
+      action: "send_campaign_test",
+      restaurant_id: restaurantId,
+      campaign_id: campaignId,
+      to: testEmail,
+    },
+  });
+
+  if (error) throw error;
+  if (data?.success === false) throw new Error(data.error || "Erro ao enviar teste da campanha");
+  return data as {
+    success: true;
+    log_id?: string;
+    provider_message_id?: string | null;
+  };
+}
+
 export async function previewEmailCampaignAudience(campaign: Partial<EmailCampaign>): Promise<EmailCampaignAudiencePreview> {
   const restaurantId = await getCurrentRestaurantId();
   if (!restaurantId) throw new Error("Restaurante nao encontrado.");

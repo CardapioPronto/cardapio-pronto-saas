@@ -55,6 +55,7 @@ import {
   EmailCampaign,
   generateEmailCampaignCoupon,
   sendEmailCampaign,
+  sendEmailCampaignTest,
 } from "@/services/emailOperationsService";
 import { EmailIntegrationForm } from "./EmailIntegrationForm";
 
@@ -236,7 +237,8 @@ const couponValidDaysFromNow = (validUntil?: string | null) => {
 };
 
 const campaignContentUsesCoupon = (campaign: EmailCampaign) =>
-  campaign.html_content.includes("{{coupon}}") || !!campaign.text_content?.includes("{{coupon}}");
+  /\{\{\s*coupon\s*\}\}/.test(campaign.html_content) ||
+  /\{\{\s*coupon\s*\}\}/.test(campaign.text_content || "");
 
 export function EmailOperationsPanel({ scope }: Props) {
   const [searchParams] = useSearchParams();
@@ -263,6 +265,8 @@ export function EmailOperationsPanel({ scope }: Props) {
   const [copyingTemplate, setCopyingTemplate] = useState<string | null>(null);
   const [savingCampaign, setSavingCampaign] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [sendingCampaignTest, setSendingCampaignTest] = useState(false);
+  const [campaignTestEmail, setCampaignTestEmail] = useState("");
   const [previewingAudience, setPreviewingAudience] = useState(false);
   const [generatingCoupon, setGeneratingCoupon] = useState(false);
   const [couponConfig, setCouponConfig] = useState<CouponFormState>(DEFAULT_COUPON_CONFIG);
@@ -412,6 +416,14 @@ export function EmailOperationsPanel({ scope }: Props) {
     return true;
   };
 
+  const validateCampaignBasics = (campaign: EmailCampaign) => {
+    if (!campaign.name.trim() || !campaign.subject.trim() || !campaign.html_content.trim()) {
+      toast.error("Informe nome, assunto e conteúdo da campanha");
+      return false;
+    }
+    return true;
+  };
+
   const handleCopyTemplate = async (templateKey: "order_confirmation" | "campaign_basic") => {
     setCopyingTemplate(templateKey);
     try {
@@ -542,10 +554,7 @@ export function EmailOperationsPanel({ scope }: Props) {
 
   const handleSaveCampaign = async () => {
     if (!selectedCampaign) return;
-    if (!selectedCampaign.name.trim() || !selectedCampaign.subject.trim() || !selectedCampaign.html_content.trim()) {
-      toast.error("Informe nome, assunto e conteúdo da campanha");
-      return;
-    }
+    if (!validateCampaignBasics(selectedCampaign)) return;
     if (!validateCampaignAudience(selectedCampaign)) return;
     setSavingCampaign(true);
     try {
@@ -564,6 +573,21 @@ export function EmailOperationsPanel({ scope }: Props) {
     } finally {
       setSavingCampaign(false);
     }
+  };
+
+  const persistSelectedCampaignForDispatch = async () => {
+    if (!selectedCampaign) return null;
+    if (selectedCampaign.status === "sent") return selectedCampaign;
+
+    const campaignToSave = selectedCampaign.id.startsWith("new-")
+      ? { ...selectedCampaign, id: undefined }
+      : selectedCampaign;
+    const saved = await saveEmailCampaign(campaignToSave);
+    setCampaigns((current) =>
+      current.map((campaign) => (campaign.id === selectedCampaign.id ? saved : campaign)),
+    );
+    setSelectedCampaignId(saved.id);
+    return saved;
   };
 
   const handleGenerateCampaignCoupon = async () => {
@@ -674,6 +698,34 @@ export function EmailOperationsPanel({ scope }: Props) {
       await load();
     } finally {
       setSendingCampaign(false);
+    }
+  };
+
+  const handleSendCampaignTest = async () => {
+    if (!selectedCampaign) return;
+    const email = campaignTestEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error("Informe um e-mail para teste");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Informe um e-mail válido para teste");
+      return;
+    }
+    if (!validateCampaignBasics(selectedCampaign)) return;
+    if (!validateCampaignCoupon(selectedCampaign)) return;
+
+    setSendingCampaignTest(true);
+    try {
+      const savedCampaign = await persistSelectedCampaignForDispatch();
+      if (!savedCampaign) return;
+      await sendEmailCampaignTest(savedCampaign.id, email);
+      toast.success("Teste da campanha enviado");
+    } catch (error) {
+      console.error("Erro ao enviar teste da campanha:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar teste da campanha");
+    } finally {
+      setSendingCampaignTest(false);
     }
   };
 
@@ -1417,6 +1469,29 @@ export function EmailOperationsPanel({ scope }: Props) {
                           <AlertDescription>{selectedCampaign.last_error}</AlertDescription>
                         </Alert>
                       )}
+
+                      <div className="rounded-md border bg-muted/20 p-4">
+                        <div className="grid gap-3 md:grid-cols-[1fr,auto] md:items-end">
+                          <div className="space-y-2">
+                            <Label>E-mail de teste</Label>
+                            <Input
+                              type="email"
+                              placeholder="email@restaurante.com"
+                              value={campaignTestEmail}
+                              onChange={(event) => setCampaignTestEmail(event.target.value)}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleSendCampaignTest}
+                            disabled={sendingCampaignTest || !campaignEntitlement?.campaignsEnabled}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            {sendingCampaignTest ? "Enviando..." : "Enviar teste"}
+                          </Button>
+                        </div>
+                      </div>
 
                       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button
