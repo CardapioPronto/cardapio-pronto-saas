@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Menu, Bell, CheckCircle2, Loader2, Settings, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -13,6 +14,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardNotifications } from "@/hooks/useDashboardNotifications";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import DashboardSidebar from "./DashboardSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cleanupStaleRadixOverlays } from "@/lib/radixOverlayCleanup";
 
 interface DashboardHeaderProps {
   title: string;
@@ -20,9 +23,22 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const location = useLocation();
   const { user } = useCurrentUser();
   const { notifications, unreadCount, loading } = useDashboardNotifications();
   const { isOnline } = useNetworkStatus();
+
+  useEffect(() => {
+    setMenuOpen(false);
+    cleanupStaleRadixOverlays();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMenuOpen(false);
+    }
+  }, [isMobile]);
 
   const initials = (user?.name || user?.email || "Usuário")
     .split(" ")
@@ -34,20 +50,22 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   return (
     <header className="z-10 flex h-16 flex-shrink-0 items-center justify-between border-b bg-white px-4 sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center">
-        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="mr-2 md:hidden">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 sm:max-w-72">
-            <SheetTitle className="sr-only">Menu do dashboard</SheetTitle>
-            <DashboardSidebar
-              className="flex w-full border-r-0 md:flex"
-              onNavigate={() => setMenuOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
+        {isMobile && (
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 sm:max-w-72">
+              <SheetTitle className="sr-only">Menu do dashboard</SheetTitle>
+              <DashboardSidebar
+                className="flex w-full border-r-0"
+                onNavigate={() => setMenuOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        )}
         <h1 className="truncate text-xl font-semibold text-navy sm:text-2xl">{title}</h1>
       </div>
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">

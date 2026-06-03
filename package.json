@@ -1,7 +1,7 @@
 {
-  "name": "Pronto Menu Saas",
+  "name": "Pubfy Menu Saas",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
     "preflight:prod": "node scripts/production-preflight.mjs",
     "pagarme:smoke-homolog": "node scripts/pagarme-homologation-smoke.mjs",
     "test": "vitest run",
+    "test:referral-db": "node scripts/test-referral-db.mjs",
     "test:watch": "vitest",
     "test:e2e": "npm run build && playwright test"
   },

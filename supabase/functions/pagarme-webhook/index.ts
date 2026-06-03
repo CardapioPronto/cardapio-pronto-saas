@@ -22,6 +22,12 @@ import {
   SUBSCRIPTION_ENTITLEMENT_STATUSES,
   supersedePriorSubscriptions,
 } from "../_shared/pagarme-subscription-status.ts";
+import {
+  buildPagarmeReference,
+  extractPagarmePaidAmountCents,
+  tryAccrueReferralCommission,
+  tryReverseReferralCommission,
+} from "../_shared/referral-commission.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -296,6 +302,24 @@ async function healPaidPlatformOrderWithoutLocalRow(
   if (insertErr) {
     throw new Error(`insert_paid_checkout_subscription: ${insertErr.message}`);
   }
+
+  const { data: insertedSub } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("restaurant_id", restaurantId)
+    .eq("pagarme_subscription_id", promoted.subscriptionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const reference = buildPagarmeReference("order", { id: pagarmeOrderId }, promoted.subscriptionId);
+  if (insertedSub?.id && reference) {
+    await tryAccrueReferralCommission(supabase, {
+      localSubscriptionId: insertedSub.id,
+      pagarmeReference: reference,
+      grossAmountCents: extractPagarmePaidAmountCents({ id: pagarmeOrderId }),
+    });
+  }
 }
 
 async function processPlatformSubscriptionOrderPayment(
@@ -410,6 +434,14 @@ async function processPlatformSubscriptionOrderPayment(
 
   if (update.status === "active") {
     await supersedeSubscriptionById(subscriptionId);
+    const reference = buildPagarmeReference(type, data, pagarmeOrderId ?? undefined);
+    if (reference) {
+      await tryAccrueReferralCommission(supabase, {
+        localSubscriptionId: subscriptionId,
+        pagarmeReference: reference,
+        grossAmountCents: extractPagarmePaidAmountCents(data),
+      });
+    }
   }
 
   return true;
@@ -617,6 +649,24 @@ async function processEvent(event: PagarmeEvent): Promise<void> {
       await sendSubscriptionReceipt(pagarmeSubId, charge).catch((error) =>
         console.error("[pagarme-webhook] receipt email failed:", error),
       );
+
+      const { data: localSub } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("pagarme_subscription_id", pagarmeSubId)
+        .maybeSingle();
+
+      const reference = buildPagarmeReference(type, charge, pagarmeSubId);
+      if (localSub?.id && reference) {
+        await tryAccrueReferralCommission(supabase, {
+          localSubscriptionId: localSub.id,
+          pagarmeReference: reference,
+          grossAmountCents: extractPagarmePaidAmountCents(charge),
+        });
+      }
+    } else if (type === "charge.refunded") {
+      const reference = buildPagarmeReference(type, charge, pagarmeSubId);
+      await tryReverseReferralCommission(supabase, reference);
     }
   }
 

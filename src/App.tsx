@@ -13,6 +13,7 @@ import { captureException } from '@/lib/observability';
 import { CookieConsentBar } from '@/components/legal/CookieConsentBar';
 import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
 import { OfflineStatusBanner } from '@/components/pwa/OfflineStatusBanner';
+import { RadixOverlayCleanup } from '@/components/RadixOverlayCleanup';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -83,6 +84,7 @@ function App() {
                   v7_relativeSplatPath: true,
                 }}
               >
+                <RadixOverlayCleanup />
                 <AppRoutes />
                 <CookieConsentBar />
                 <OfflineStatusBanner />

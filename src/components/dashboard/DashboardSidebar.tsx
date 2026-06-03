@@ -15,6 +15,7 @@ import {
   Tags,
   Shield,
   ShieldCheck,
+  Share2,
   Workflow,
   ChefHat,
   Users,
@@ -209,6 +210,20 @@ const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
                 <>
                   <Separator className="my-4" />
                   <div className="space-y-1">{visibleAdmin.map(renderLink)}</div>
+                </>
+              )}
+
+              {appUser && (
+                <>
+                  <Separator className="my-4" />
+                  <Link
+                    to="/indique/painel"
+                    className="flex min-h-10 items-center rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                    onClick={onNavigate}
+                  >
+                    <Share2 className="mr-3 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Programa de indicações</span>
+                  </Link>
                 </>
               )}
 
