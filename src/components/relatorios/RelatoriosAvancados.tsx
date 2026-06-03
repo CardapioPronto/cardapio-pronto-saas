@@ -5,7 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, BarChart3, PieChart, TrendingUp, AlertCircle, Receipt, DollarSign, Ban, FileSpreadsheet, FileText } from "lucide-react";
+import {
+  CalendarIcon,
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  AlertCircle,
+  Receipt,
+  DollarSign,
+  Ban,
+  FileSpreadsheet,
+  FileText,
+  Store,
+  ShoppingBag,
+} from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -96,6 +109,16 @@ export const RelatoriosAvancados = () => {
       style: 'currency',
       currency: 'BRL'
     }).format(valor);
+
+  const formatarPercentual = (valor: number) =>
+    `${valor.toFixed(1).replace(".", ",")}%`;
+
+  const canaisResumo =
+    relatorioData?.canais.filter((canal) => canal.grupo === "marketplace" || canal.grupo === "proprio") ?? [];
+  const canaisDetalhe =
+    relatorioData?.canais.filter((canal) => canal.grupo === "detalhe_proprio" && canal.pedidos > 0) ?? [];
+  const canalIfood = canaisResumo.find((canal) => canal.codigo === "ifood");
+  const canalProprio = canaisResumo.find((canal) => canal.codigo === "proprio");
 
   return (
     <div className="space-y-6">
@@ -314,6 +337,88 @@ export const RelatoriosAvancados = () => {
               </CardContent>
             </Card>
           </div>
+
+          {(canalIfood || canalProprio) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Store className="h-5 w-5" />
+                  iFood x canal próprio
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {[canalIfood, canalProprio].filter(Boolean).map((canal) => {
+                    const participacao = Math.min(100, Math.max(0, canal.participacaoFaturamento));
+                    const isMarketplace = canal.grupo === "marketplace";
+
+                    return (
+                      <div key={canal.codigo} className="rounded-md border bg-background p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium">{canal.nome}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {canal.pedidos.toLocaleString("pt-BR")} pedidos finalizados
+                            </p>
+                          </div>
+                          {isMarketplace ? (
+                            <ShoppingBag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="mt-4">
+                          <div className="text-2xl font-bold">{formatarMoeda(canal.faturamento)}</div>
+                          <p className="text-xs text-muted-foreground">
+                            Ticket médio {formatarMoeda(canal.ticketMedio)}
+                          </p>
+                        </div>
+                        <div className="mt-4 h-2 rounded-full bg-muted">
+                          <div
+                            className={cn(
+                              "h-2 rounded-full",
+                              isMarketplace ? "bg-amber-500" : "bg-emerald-600",
+                            )}
+                            style={{ width: `${participacao}%` }}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {formatarPercentual(canal.participacaoFaturamento)} do faturamento finalizado do período
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {canaisDetalhe.length > 0 && (
+                  <div className="rounded-md border">
+                    <div className="grid gap-2 border-b bg-muted/40 px-4 py-3 text-xs font-medium text-muted-foreground md:grid-cols-[1.2fr_0.7fr_0.8fr_0.7fr]">
+                      <span>Canal próprio</span>
+                      <span>Pedidos</span>
+                      <span>Faturamento</span>
+                      <span>Participação</span>
+                    </div>
+                    {canaisDetalhe.map((canal) => (
+                      <div
+                        key={canal.codigo}
+                        className="grid gap-1 border-b px-4 py-3 text-sm last:border-b-0 md:grid-cols-[1.2fr_0.7fr_0.8fr_0.7fr]"
+                      >
+                        <span className="font-medium">{canal.nome}</span>
+                        <span>{canal.pedidos.toLocaleString("pt-BR")}</span>
+                        <span>{formatarMoeda(canal.faturamento)}</span>
+                        <span>{formatarPercentual(canal.participacaoFaturamento)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  O comparativo considera pedidos finalizados no período e ignora o filtro de origem para mostrar a visão
+                  completa entre marketplace e venda direta.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-6 md:grid-cols-2">
             <Card>

@@ -19,6 +19,7 @@ interface RelatoriosParams {
 interface RelatorioData {
   graficos: GraficoVendasItem[];
   produtos: ProdutoRelatorio[];
+  canais: CanalRelatorio[];
   resumo: {
     totalVendas: number;
     totalPedidos: number;
@@ -48,9 +49,21 @@ type ProdutoRelatorio = {
   pedidos: number;
 };
 
+export type CanalRelatorio = {
+  codigo: string;
+  nome: string;
+  grupo: "marketplace" | "proprio" | "detalhe_proprio" | string;
+  pedidos: number;
+  faturamento: number;
+  ticketMedio: number;
+  participacaoFaturamento: number;
+  participacaoPedidos: number;
+};
+
 type SalesReportRpcRow = {
   graficos: GraficoVendasItem[] | null;
   produtos: ProdutoRelatorio[] | null;
+  canais: CanalRelatorio[] | null;
   resumo: {
     totalVendas: number;
     totalPedidos: number;
@@ -124,6 +137,7 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
       const row = raw as SalesReportRpcRow;
       const graficos = Array.isArray(row.graficos) ? row.graficos : [];
       const produtos = Array.isArray(row.produtos) ? row.produtos : [];
+      const canais = Array.isArray(row.canais) ? row.canais : [];
       const statusRows = Array.isArray(row.status) ? row.status : [];
       const resumo = row.resumo ?? {
         totalVendas: 0,
@@ -137,6 +151,16 @@ export const useRelatoriosAvancados = (params: RelatoriosParams) => {
       setData({
         graficos,
         produtos,
+        canais: canais.map((canal) => ({
+          codigo: String(canal.codigo),
+          nome: String(canal.nome),
+          grupo: String(canal.grupo),
+          pedidos: Number(canal.pedidos ?? 0),
+          faturamento: Number(canal.faturamento ?? 0),
+          ticketMedio: Number(canal.ticketMedio ?? 0),
+          participacaoFaturamento: Number(canal.participacaoFaturamento ?? 0),
+          participacaoPedidos: Number(canal.participacaoPedidos ?? 0),
+        })),
         resumo: {
           totalVendas: Number(resumo.totalVendas ?? 0),
           totalPedidos: Number(resumo.totalPedidos ?? 0),

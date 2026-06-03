@@ -315,7 +315,7 @@ Objetivo: transformar iFood em canal integrado, nao apenas pedido importado.
 - [x] Permitir vinculo manual item externo -> produto interno.
 - [x] Baixar estoque quando item estiver mapeado.
 - [x] Estornar estoque em cancelamento quando status externo permitir.
-- [ ] Relatorio separado: vendas iFood x vendas canal proprio.
+- [x] Relatorio separado: vendas iFood x vendas canal proprio.
 
 ### Criterio de aceite
 
@@ -328,7 +328,7 @@ Evidencia:
 - 2026-06-02: Bloco 6 iniciado com tabela `ifood_item_mappings`, registro automatico de itens observados no polling iFood, tentativa de vinculo durante importacao de pedidos e aba "Mapeamento" em `/ifood-integracao` para associar item externo a produto interno.
 - 2026-06-02: Credenciais do app iFood foram centralizadas no Super Admin em `ifood_saas_app`; restaurantes configuram apenas a loja/Merchant ID.
 - 2026-06-02: Baixa automatica de estoque conectada ao polling iFood para itens mapeados, reaproveitando `apply_stock_for_order`; cancelamentos/status externos cancelados estornam via `revert_stock_for_order`. Se faltar saldo, o pedido importado nao e perdido e o erro fica registrado no evento/log para correcao operacional.
-- Pendente: criar relatorio comparando iFood x canal proprio.
+- 2026-06-02: Relatorio iFood x canal proprio adicionado aos Relatorios Avancados, com faturamento, pedidos, ticket medio, participacao e detalhamento dos canais proprios. Requer aplicar a migration `20260602172000_add_channel_breakdown_to_sales_report.sql`.
 
 ---
 
