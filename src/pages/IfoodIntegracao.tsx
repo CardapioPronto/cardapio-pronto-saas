@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,18 +22,38 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/components/ui/sonner-toast";
-import { AlertCircle, CheckCircle, RefreshCw, ShieldCheck, Wifi } from "lucide-react";
+import { AlertCircle, CheckCircle, RefreshCw, ShieldCheck, Store, Wifi } from "lucide-react";
 import {
   IfoodCredentials,
+  IfoodItemMapping,
   getIfoodIntegrationConfig,
+  getIfoodItemMappings,
   pollIfoodEvents,
   saveIfoodIntegrationConfig,
+  saveIfoodItemMapping,
   setIfoodIntegrationStatus,
   testIfoodConnection,
   updateIfoodPollingSettings,
 } from "@/services/ifoodService";
 import { getCurrentRestaurantId } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+interface IfoodIntegrationConfig {
+  isEnabled: boolean;
+  pollingEnabled: boolean;
+  pollingInterval: number;
+  hasSaasAppCredentials: boolean;
+  notifyNewOrders: boolean;
+  notifyStatusChanges: boolean;
+}
+
+interface IfoodProductOption {
+  id: string;
+  name: string;
+  price: number;
+  available: boolean;
+}
 
 function useRestaurantId(
   user: unknown,
@@ -43,52 +62,59 @@ function useRestaurantId(
 ) {
   useEffect(() => {
     const loadRestaurantId = async () => {
-      if (user) {
-        try {
-          const id = await getCurrentRestaurantId();
-          if (id) {
-            setRestaurantId(id);
-          } else {
-            toast.error("Restaurante não encontrado");
-            setIsLoading(false);
-          }
-        } catch (error) {
-          console.error("Erro ao obter ID do restaurante:", error);
-          toast.error("Erro ao obter informações do restaurante");
+      if (!user) return;
+
+      try {
+        const id = await getCurrentRestaurantId();
+        if (id) {
+          setRestaurantId(id);
+        } else {
+          toast.error("Restaurante não encontrado");
           setIsLoading(false);
         }
+      } catch (error) {
+        console.error("Erro ao obter ID do restaurante:", error);
+        toast.error("Erro ao obter informações do restaurante");
+        setIsLoading(false);
       }
     };
-    loadRestaurantId();
+
+    void loadRestaurantId();
   }, [user, setRestaurantId, setIsLoading]);
 }
 
-interface IfoodIntegrationConfig {
-  isEnabled: boolean;
-  pollingEnabled: boolean;
-  pollingInterval: number;
-}
+const applyConfig = (
+  setConfig: Dispatch<SetStateAction<IfoodIntegrationConfig>>,
+  data: Partial<IfoodIntegrationConfig>,
+) => {
+  setConfig((current) => ({
+    ...current,
+    isEnabled: data.isEnabled ?? current.isEnabled,
+    pollingEnabled: data.pollingEnabled ?? current.pollingEnabled,
+    pollingInterval: data.pollingInterval ?? current.pollingInterval,
+    hasSaasAppCredentials: data.hasSaasAppCredentials ?? current.hasSaasAppCredentials,
+    notifyNewOrders: data.notifyNewOrders ?? current.notifyNewOrders,
+    notifyStatusChanges: data.notifyStatusChanges ?? current.notifyStatusChanges,
+  }));
+};
 
-async function saveCredentialsHelper(
+async function saveStoreConnectionHelper(
   restaurantId: string,
   credentials: IfoodCredentials,
   config: IfoodIntegrationConfig,
-  hasStoredCredentials: boolean,
-  setHasStoredCredentials: (value: boolean) => void,
-  setIsConfiguring: (b: boolean) => void,
-  toast: { success: (msg: string) => void; error: (msg: string) => void },
-  setCredentials: React.Dispatch<React.SetStateAction<IfoodCredentials>>
+  setConfig: Dispatch<SetStateAction<IfoodIntegrationConfig>>,
+  setSavedMerchantId: (value: string) => void,
+  setIsConfiguring: (value: boolean) => void,
 ) {
   setIsConfiguring(true);
   try {
-    if (!credentials.clientId || (!credentials.clientSecret && !hasStoredCredentials) || !credentials.merchantId) {
-      toast.error("Por favor, preencha todos os campos obrigatórios");
+    if (!credentials.merchantId.trim()) {
+      toast.error("Informe o Merchant ID da loja iFood.");
       return;
     }
+
     const result = await saveIfoodIntegrationConfig({
       restaurantId,
-      clientId: credentials.clientId.trim(),
-      clientSecret: credentials.clientSecret.trim() || undefined,
       merchantId: credentials.merchantId.trim(),
       restaurantIfoodId: credentials.restaurantId?.trim() || undefined,
       isEnabled: config.isEnabled,
@@ -98,12 +124,12 @@ async function saveCredentialsHelper(
       notifyStatusChanges: config.notifyStatusChanges,
     });
 
-    setHasStoredCredentials(result.config.hasStoredCredentials);
-    setCredentials((current) => ({ ...current, clientSecret: "" }));
-    toast.success("Credenciais salvas com sucesso");
+    applyConfig(setConfig, result.config);
+    setSavedMerchantId(result.config.merchantId);
+    toast.success("Loja iFood salva com sucesso");
   } catch (error) {
-    console.error("Erro ao salvar credenciais:", error);
-    toast.error(error instanceof Error ? error.message : "Erro ao salvar credenciais");
+    console.error("Erro ao salvar loja iFood:", error);
+    toast.error(error instanceof Error ? error.message : "Erro ao salvar loja iFood");
   } finally {
     setIsConfiguring(false);
   }
@@ -111,40 +137,40 @@ async function saveCredentialsHelper(
 
 async function testConnectionHelper(
   restaurantId: string,
-  setIsLoading: (b: boolean) => void,
+  setIsTesting: (value: boolean) => void,
   setTestResult: (result: { success: boolean; message: string } | null) => void,
-  toast: { success: (msg: string) => void; error: (msg: string) => void }
 ) {
-  setIsLoading(true);
+  setIsTesting(true);
   setTestResult(null);
   try {
     const result = await testIfoodConnection(restaurantId);
     setTestResult({
       success: result.success,
-      message: result.message || "Conexão estabelecida com sucesso!"
+      message: result.message || "Conexão estabelecida com sucesso!",
     });
     toast.success("Conexão com iFood validada");
   } catch (error) {
     console.error("Erro na conexão com iFood:", error);
-    setTestResult({
-      success: false,
-      message: "Falha na conexão. Verifique suas credenciais."
-    });
+    const message = error instanceof Error ? error.message : "Falha na conexão. Verifique a loja iFood e o app SaaS.";
+    setTestResult({ success: false, message });
+    toast.error(message);
   } finally {
-    setIsLoading(false);
+    setIsTesting(false);
   }
 }
 
 async function pollNowHelper(
   restaurantId: string,
-  setIsPollingNow: (b: boolean) => void,
+  setIsPollingNow: (value: boolean) => void,
   setLastPollResult: (result: string | null) => void,
+  reloadMappings?: () => Promise<void>,
 ) {
   setIsPollingNow(true);
   try {
     const result = await pollIfoodEvents(restaurantId);
     const message = `${result.eventsReceived} evento(s), ${result.eventsStored} armazenado(s), ${result.eventsAcknowledged} confirmado(s), ${result.ordersImported} pedido(s) importado(s).`;
     setLastPollResult(message);
+    await reloadMappings?.();
     toast.success("Consulta ao iFood concluída");
   } catch (error) {
     console.error("Erro ao consultar eventos do iFood:", error);
@@ -156,47 +182,30 @@ async function pollNowHelper(
   }
 }
 
-// Helper to toggle integration enabled/disabled
 async function toggleIntegrationHelper(
   enabled: boolean,
   restaurantId: string,
-  setConfig: React.Dispatch<React.SetStateAction<IfoodIntegrationConfig>>,
-  toast: { success: (msg: string) => void; error: (msg: string) => void }
+  setConfig: Dispatch<SetStateAction<IfoodIntegrationConfig>>,
 ) {
   try {
     const result = await setIfoodIntegrationStatus(restaurantId, enabled);
-    setConfig((prev: IfoodIntegrationConfig) => ({
-      ...prev,
-      isEnabled: result.config.isEnabled,
-      pollingEnabled: result.config.pollingEnabled,
-      pollingInterval: result.config.pollingInterval,
-    }));
-    toast.success(`Integração ${enabled ? 'ativada' : 'desativada'} com sucesso`);
+    applyConfig(setConfig, result.config);
+    toast.success(`Integração ${enabled ? "ativada" : "desativada"} com sucesso`);
   } catch (error) {
     console.error("Erro ao alterar status da integração:", error);
     toast.error(error instanceof Error ? error.message : "Erro ao alterar status da integração");
   }
 }
 
-// Helper to update polling settings
 async function updatePollingSettingsHelper(
   pollingEnabled: boolean,
   interval: number | undefined,
   restaurantId: string,
-  setConfig: React.Dispatch<React.SetStateAction<IfoodIntegrationConfig>>,
-  toast: { success: (msg: string) => void; error: (msg: string) => void }
+  setConfig: Dispatch<SetStateAction<IfoodIntegrationConfig>>,
 ) {
   try {
-    const result = await updateIfoodPollingSettings(
-      restaurantId,
-      pollingEnabled,
-      interval
-    );
-    setConfig((prev: IfoodIntegrationConfig) => ({
-      ...prev,
-      pollingEnabled: result.config.pollingEnabled,
-      pollingInterval: result.config.pollingInterval
-    }));
+    const result = await updateIfoodPollingSettings(restaurantId, pollingEnabled, interval);
+    applyConfig(setConfig, result.config);
     toast.success("Configurações de sincronização atualizadas");
   } catch (error) {
     console.error("Erro ao atualizar configurações de sincronização:", error);
@@ -209,22 +218,28 @@ const IfoodIntegracao = () => {
   const [activeTab, setActiveTab] = useState("geral");
   const [isLoading, setIsLoading] = useState(true);
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [isPollingNow, setIsPollingNow] = useState(false);
+  const [isMappingsLoading, setIsMappingsLoading] = useState(false);
+  const [isSavingMappingId, setIsSavingMappingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [lastPollResult, setLastPollResult] = useState<string | null>(null);
-  const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
   const [restaurantId, setRestaurantId] = useState<string>("");
+  const [savedMerchantId, setSavedMerchantId] = useState("");
+  const [itemMappings, setItemMappings] = useState<IfoodItemMapping[]>([]);
+  const [productOptions, setProductOptions] = useState<IfoodProductOption[]>([]);
 
   const [credentials, setCredentials] = useState<IfoodCredentials>({
-    clientId: "",
-    clientSecret: "",
     merchantId: "",
-    restaurantId: ""
+    restaurantId: "",
   });
   const [config, setConfig] = useState<IfoodIntegrationConfig>({
     isEnabled: false,
     pollingEnabled: true,
-    pollingInterval: 60
+    pollingInterval: 60,
+    hasSaasAppCredentials: false,
+    notifyNewOrders: true,
+    notifyStatusChanges: true,
   });
 
   useRestaurantId(user, setRestaurantId, setIsLoading);
@@ -238,18 +253,11 @@ const IfoodIntegracao = () => {
       const data = result.config;
       if (data) {
         setCredentials({
-          clientId: data.clientId,
-          clientSecret: "",
           merchantId: data.merchantId,
-          restaurantId: data.restaurantIfoodId ?? ""
+          restaurantId: data.restaurantIfoodId ?? "",
         });
-        setHasStoredCredentials(data.hasStoredCredentials);
-
-        setConfig({
-          isEnabled: data.isEnabled,
-          pollingEnabled: data.pollingEnabled,
-          pollingInterval: data.pollingInterval
-        });
+        setSavedMerchantId(data.merchantId);
+        applyConfig(setConfig, data);
       }
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
@@ -261,24 +269,87 @@ const IfoodIntegracao = () => {
 
   useEffect(() => {
     if (restaurantId) {
-      loadExistingConfig();
+      void loadExistingConfig();
     }
   }, [restaurantId, loadExistingConfig]);
 
-  const handleSaveCredentials = async () => {
+  const loadMappingData = useCallback(async () => {
+    if (!restaurantId) return;
+
+    setIsMappingsLoading(true);
+    try {
+      const [mappingsResult, productsResult] = await Promise.all([
+        getIfoodItemMappings(restaurantId),
+        supabase
+          .from("products")
+          .select("id, name, price, available")
+          .eq("restaurant_id", restaurantId)
+          .order("name", { ascending: true }),
+      ]);
+
+      if (productsResult.error) throw productsResult.error;
+
+      setItemMappings(mappingsResult.mappings);
+      setProductOptions((productsResult.data ?? []).map((product) => ({
+        id: String(product.id),
+        name: String(product.name),
+        price: Number(product.price || 0),
+        available: Boolean(product.available),
+      })));
+    } catch (error) {
+      console.error("Erro ao carregar mapeamentos iFood:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar mapeamentos iFood");
+    } finally {
+      setIsMappingsLoading(false);
+    }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (activeTab === "mapeamento") {
+      void loadMappingData();
+    }
+  }, [activeTab, loadMappingData]);
+
+  const storeConfigured = Boolean(savedMerchantId.trim());
+  const canUseIntegration = storeConfigured && config.hasSaasAppCredentials;
+  const unmappedItemsCount = itemMappings.filter((mapping) => !mapping.productId).length;
+  const mappedItemsCount = itemMappings.length - unmappedItemsCount;
+
+  const handleSaveStoreConnection = async () => {
     if (!restaurantId) {
       toast.error("ID do restaurante não encontrado");
       return;
     }
-    await saveCredentialsHelper(restaurantId, credentials, config, hasStoredCredentials, setHasStoredCredentials, setIsConfiguring, toast, setCredentials);
+    await saveStoreConnectionHelper(
+      restaurantId,
+      credentials,
+      config,
+      setConfig,
+      setSavedMerchantId,
+      setIsConfiguring,
+    );
   };
 
   const handleTestConnection = async () => {
-    await testConnectionHelper(restaurantId, setIsLoading, setTestResult, toast);
+    await testConnectionHelper(restaurantId, setIsTesting, setTestResult);
   };
 
   const handlePollNow = async () => {
-    await pollNowHelper(restaurantId, setIsPollingNow, setLastPollResult);
+    await pollNowHelper(restaurantId, setIsPollingNow, setLastPollResult, loadMappingData);
+  };
+
+  const handleSaveItemMapping = async (mappingId: string, productId: string | null) => {
+    setIsSavingMappingId(mappingId);
+    try {
+      const result = await saveIfoodItemMapping(restaurantId, mappingId, productId);
+      setItemMappings(result.mappings);
+      toast.success(productId ? "Item iFood vinculado ao produto" : "Vinculo removido");
+    } catch (error) {
+      console.error("Erro ao salvar mapeamento iFood:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar mapeamento");
+    } finally {
+      setIsSavingMappingId(null);
+    }
   };
 
   const toggleIntegration = async (enabled: boolean) => {
@@ -286,7 +357,7 @@ const IfoodIntegracao = () => {
       toast.error("ID do restaurante não encontrado");
       return;
     }
-    await toggleIntegrationHelper(enabled, restaurantId, setConfig, toast);
+    await toggleIntegrationHelper(enabled, restaurantId, setConfig);
   };
 
   const updatePollingSettings = async (pollingEnabled: boolean, interval?: number) => {
@@ -294,15 +365,13 @@ const IfoodIntegracao = () => {
       toast.error("ID do restaurante não encontrado");
       return;
     }
-    await updatePollingSettingsHelper(pollingEnabled, interval, restaurantId, setConfig, toast);
+    await updatePollingSettingsHelper(pollingEnabled, interval, restaurantId, setConfig);
   };
-
-  const credentialsConfigured = Boolean(credentials.clientId && (credentials.clientSecret || hasStoredCredentials) && credentials.merchantId);
 
   if (isLoading) {
     return (
       <DashboardLayout title="Integração com iFood">
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex min-h-[400px] items-center justify-center">
           <div className="text-muted-foreground">Carregando configurações...</div>
         </div>
       </DashboardLayout>
@@ -312,7 +381,7 @@ const IfoodIntegracao = () => {
   if (!restaurantId) {
     return (
       <DashboardLayout title="Integração com iFood">
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex min-h-[400px] items-center justify-center">
           <div className="text-destructive">Erro: Restaurante não encontrado</div>
         </div>
       </DashboardLayout>
@@ -322,48 +391,57 @@ const IfoodIntegracao = () => {
   return (
     <DashboardLayout title="Integração com iFood">
       <div className="space-y-6">
-        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
-          <ShieldCheck className="h-4 w-4 text-amber-700" />
-          <AlertTitle>Integração preparada para homologação</AlertTitle>
+        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
+          <ShieldCheck className="h-4 w-4 text-emerald-700" />
+          <AlertTitle>Modelo centralizado SaaS</AlertTitle>
           <AlertDescription>
-            As chamadas sensíveis agora passam por Edge Function. O polling usa os endpoints atuais do iFood e registra eventos antes do ACK.
-            Para uso contínuo em produção, agende a função a cada 30 segundos no Supabase após validar as credenciais.
+            O aplicativo iFood do Pubfy é configurado pelo Super Admin. Nesta tela o restaurante informa apenas a loja autorizada no iFood.
           </AlertDescription>
         </Alert>
 
+        {!config.hasSaasAppCredentials && (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+            <AlertCircle className="h-4 w-4 text-amber-700" />
+            <AlertTitle>Aplicativo iFood pendente no Super Admin</AlertTitle>
+            <AlertDescription>
+              Cadastre o Client ID e Client Secret do app SaaS antes de testar ou ativar lojas de restaurantes.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <CardTitle className="text-xl flex items-center">
+                <CardTitle className="flex items-center text-xl">
                   Status da Integração
                   <Badge
                     variant="outline"
                     className={`ml-2 ${
                       config.isEnabled
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-slate-50 text-slate-700"
                     }`}
                   >
-                    {config.isEnabled ? 'Ativada' : 'Desativada'}
+                    {config.isEnabled ? "Ativada" : "Desativada"}
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  {config.isEnabled 
-                    ? 'Sua integração com iFood está ativa e funcionando'
-                    : 'Ative a integração para começar a receber pedidos do iFood'}
+                  {config.isEnabled
+                    ? "Pedidos do iFood podem ser sincronizados com o Pubfy"
+                    : "Conecte a loja e ative a integração para receber pedidos do iFood"}
                 </CardDescription>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Switch
                   id="integration-status"
                   checked={config.isEnabled}
                   onCheckedChange={toggleIntegration}
-                  disabled={!credentialsConfigured || isLoading}
+                  disabled={!canUseIntegration || isTesting}
                 />
                 <Label htmlFor="integration-status">
-                  {config.isEnabled ? 'Ativada' : 'Desativada'}
+                  {config.isEnabled ? "Ativada" : "Desativada"}
                 </Label>
               </div>
             </div>
@@ -371,85 +449,78 @@ const IfoodIntegracao = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full md:w-auto grid-cols-3 md:inline-flex">
+          <TabsList className="grid h-auto w-full grid-cols-2 md:inline-flex md:w-auto">
             <TabsTrigger value="geral">Geral</TabsTrigger>
-            <TabsTrigger value="credenciais">Credenciais</TabsTrigger>
+            <TabsTrigger value="loja">Loja iFood</TabsTrigger>
+            <TabsTrigger value="mapeamento">Mapeamento</TabsTrigger>
             <TabsTrigger value="sincronizacao">Sincronização</TabsTrigger>
           </TabsList>
-          
+
           <div className="mt-6">
             <TabsContent value="geral">
               <Card>
                 <CardHeader>
                   <CardTitle>Integração com iFood</CardTitle>
                   <CardDescription>
-                    Conecte seu estabelecimento com o iFood para receber pedidos diretamente no sistema
+                    Receba pedidos do iFood diretamente no Pubfy usando o app SaaS centralizado.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Como funciona</h3>
-                    <p className="text-muted-foreground">
-                      A integração com o iFood permite que você receba pedidos feitos no aplicativo
-                      diretamente no sistema Pubfy, sem precisar de equipamentos adicionais.
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                      <div className="border rounded-lg p-4">
-                        <h4 className="font-medium mb-2">1. Configure suas credenciais</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Adicione suas credenciais do iFood na aba "Credenciais"
-                        </p>
-                      </div>
-                      
-                      <div className="border rounded-lg p-4">
-                        <h4 className="font-medium mb-2">2. Teste a conexão</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Verifique se suas credenciais estão funcionando corretamente
-                        </p>
-                      </div>
-                      
-                      <div className="border rounded-lg p-4">
-                        <h4 className="font-medium mb-2">3. Ative a integração</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Ative a integração para começar a receber pedidos automaticamente
-                        </p>
-                      </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-lg border p-4">
+                      <h4 className="mb-2 font-medium">1. App Pubfy iFood</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Credenciais globais ficam protegidas no Super Admin.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border p-4">
+                      <h4 className="mb-2 font-medium">2. Loja do restaurante</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Informe o Merchant ID da loja autorizada no iFood.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border p-4">
+                      <h4 className="mb-2 font-medium">3. Sincronização</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Teste a conexão, ative a integração e acompanhe os pedidos.
+                      </p>
                     </div>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Status da configuração</h3>
-                    <div className="space-y-2">
+                    <h3 className="mb-4 text-lg font-medium">Status da configuração</h3>
+                    <div className="space-y-3">
                       <div className="flex items-center">
-                        {credentialsConfigured ? (
-                          <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
+                        {config.hasSaasAppCredentials ? (
+                          <CheckCircle className="mr-2 h-5 w-5 text-emerald-700" />
                         ) : (
-                          <AlertCircle className="h-5 w-5 text-amber-700 mr-2" />
+                          <AlertCircle className="mr-2 h-5 w-5 text-amber-700" />
                         )}
                         <span>
-                          Credenciais: {credentialsConfigured ? "Configuradas" : "Não configuradas"}
+                          App SaaS do Pubfy: {config.hasSaasAppCredentials ? "Configurado" : "Pendente no Super Admin"}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center">
-                        {config.isEnabled ? (
-                          <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
+                        {storeConfigured ? (
+                          <CheckCircle className="mr-2 h-5 w-5 text-emerald-700" />
                         ) : (
-                          <AlertCircle className="h-5 w-5 text-amber-700 mr-2" />
+                          <AlertCircle className="mr-2 h-5 w-5 text-amber-700" />
                         )}
                         <span>
-                          Status da integração: {config.isEnabled ? "Ativada" : "Desativada"}
+                          Loja iFood: {storeConfigured ? "Conectada" : "Merchant ID pendente"}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center">
                         {config.pollingEnabled ? (
-                          <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
+                          <CheckCircle className="mr-2 h-5 w-5 text-emerald-700" />
                         ) : (
-                          <AlertCircle className="h-5 w-5 text-amber-700 mr-2" />
+                          <AlertCircle className="mr-2 h-5 w-5 text-amber-700" />
                         )}
                         <span>
                           Sincronização automática: {config.pollingEnabled ? "Ativada" : "Desativada"}
@@ -460,100 +531,71 @@ const IfoodIntegracao = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="credenciais">
+
+            <TabsContent value="loja">
               <Card>
                 <CardHeader>
-                  <CardTitle>Credenciais do iFood</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Store className="h-5 w-5" />
+                    Loja iFood
+                  </CardTitle>
                   <CardDescription>
-                    Configure suas credenciais para conexão com a API do iFood
+                    Configure a loja do restaurante. As credenciais do aplicativo Pubfy iFood ficam no Super Admin.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="client-id">Client ID *</Label>
-                      <Input 
-                        id="client-id" 
-                        placeholder="Seu Client ID do iFood"
-                        value={credentials.clientId}
-                        onChange={(e) => setCredentials({...credentials, clientId: e.target.value})}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Client ID fornecido pelo iFood para autenticação
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="client-secret">Client Secret *</Label>
-                      <Input 
-                        id="client-secret" 
-                        type="password"
-                        placeholder={hasStoredCredentials ? "Secret já salvo. Preencha apenas para trocar." : "Seu Client Secret do iFood"}
-                        value={credentials.clientSecret}
-                        onChange={(e) => setCredentials({...credentials, clientSecret: e.target.value})}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        {hasStoredCredentials
-                          ? "Por segurança, o secret salvo não é exibido."
-                          : "Chave secreta fornecida pelo iFood"}
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
                       <Label htmlFor="merchant-id">Merchant ID *</Label>
-                      <Input 
-                        id="merchant-id" 
-                        placeholder="Seu ID de comerciante no iFood"
+                      <Input
+                        id="merchant-id"
+                        placeholder="ID de comerciante/loja no iFood"
                         value={credentials.merchantId}
-                        onChange={(e) => setCredentials({...credentials, merchantId: e.target.value})}
+                        onChange={(event) => setCredentials({ ...credentials, merchantId: event.target.value })}
                       />
                       <p className="text-sm text-muted-foreground">
-                        Identificador único do seu estabelecimento no iFood
+                        Identificador da loja que autorizou o app Pubfy iFood.
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="restaurant-id">ID do Restaurante (opcional)</Label>
-                      <Input 
-                        id="restaurant-id" 
-                        placeholder="ID do restaurante específico (se aplicável)"
+                      <Label htmlFor="restaurant-id">ID do Restaurante iFood (opcional)</Label>
+                      <Input
+                        id="restaurant-id"
+                        placeholder="Use apenas se o iFood fornecer um ID separado"
                         value={credentials.restaurantId ?? ""}
-                        onChange={(e) => setCredentials({...credentials, restaurantId: e.target.value})}
+                        onChange={(event) => setCredentials({ ...credentials, restaurantId: event.target.value })}
                       />
                       <p className="text-sm text-muted-foreground">
-                        Se você tem múltiplos restaurantes no mesmo Merchant ID
+                        Campo auxiliar para cenários com múltiplas lojas ou identificação adicional.
                       </p>
                     </div>
-                    
-                    <div className="pt-4 space-x-2">
-                      <Button 
-                        onClick={handleSaveCredentials}
-                        disabled={isConfiguring}
-                      >
-                        {isConfiguring ? "Salvando..." : "Salvar Credenciais"}
+
+                    <div className="flex flex-col gap-2 pt-4 sm:flex-row">
+                      <Button onClick={handleSaveStoreConnection} disabled={isConfiguring}>
+                        {isConfiguring ? "Salvando..." : "Salvar loja iFood"}
                       </Button>
-                      
-                      <Button 
-                        variant="outline" 
+
+                      <Button
+                        variant="outline"
                         onClick={handleTestConnection}
-                        disabled={!credentialsConfigured || isLoading}
+                        disabled={!canUseIntegration || isTesting}
                       >
-                        {isLoading ? "Testando..." : "Testar conexão"}
+                        {isTesting ? "Testando..." : "Testar conexão"}
                       </Button>
                     </div>
-                    
+
                     {testResult && (
-                      <div className={`p-4 mt-4 rounded-md ${
-                        testResult.success ? 'border border-emerald-200 bg-emerald-50' : 'border border-rose-200 bg-rose-50'
+                      <div className={`mt-4 rounded-md p-4 ${
+                        testResult.success ? "border border-emerald-200 bg-emerald-50" : "border border-rose-200 bg-rose-50"
                       }`}>
                         <div className="flex items-center">
                           {testResult.success ? (
-                            <CheckCircle className="h-5 w-5 text-emerald-700 mr-2" />
+                            <CheckCircle className="mr-2 h-5 w-5 text-emerald-700" />
                           ) : (
-                            <AlertCircle className="h-5 w-5 text-rose-700 mr-2" />
+                            <AlertCircle className="mr-2 h-5 w-5 text-rose-700" />
                           )}
-                          <span className={testResult.success ? 'text-emerald-800' : 'text-rose-800'}>
+                          <span className={testResult.success ? "text-emerald-800" : "text-rose-800"}>
                             {testResult.message}
                           </span>
                         </div>
@@ -563,31 +605,145 @@ const IfoodIntegracao = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
+            <TabsContent value="mapeamento">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <CardTitle>Mapeamento de itens iFood</CardTitle>
+                      <CardDescription>
+                        Vincule itens recebidos do marketplace aos produtos internos para preparar baixa de estoque e relatórios por produto.
+                      </CardDescription>
+                    </div>
+                    <Button variant="outline" onClick={loadMappingData} disabled={isMappingsLoading}>
+                      {isMappingsLoading ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
+                      Atualizar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-md border p-4">
+                      <p className="text-sm text-muted-foreground">Itens observados</p>
+                      <p className="text-2xl font-semibold">{itemMappings.length}</p>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <p className="text-sm text-muted-foreground">Mapeados</p>
+                      <p className="text-2xl font-semibold text-emerald-700">{mappedItemsCount}</p>
+                    </div>
+                    <div className="rounded-md border p-4">
+                      <p className="text-sm text-muted-foreground">Pendentes</p>
+                      <p className="text-2xl font-semibold text-amber-700">{unmappedItemsCount}</p>
+                    </div>
+                  </div>
+
+                  {isMappingsLoading ? (
+                    <div className="rounded-md border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                      Carregando mapeamentos...
+                    </div>
+                  ) : itemMappings.length === 0 ? (
+                    <div className="rounded-md border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                      Nenhum item iFood observado ainda. Use a consulta manual ou aguarde a importação de pedidos para popular esta lista.
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-md border">
+                      <div className="grid grid-cols-[1.5fr_0.8fr_1.4fr] gap-3 border-b bg-muted/40 px-4 py-3 text-sm font-medium text-muted-foreground">
+                        <span>Item iFood</span>
+                        <span>Ocorrências</span>
+                        <span>Produto interno</span>
+                      </div>
+                      <div className="divide-y">
+                        {itemMappings.map((mapping) => (
+                          <div
+                            key={mapping.id}
+                            className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[1.5fr_0.8fr_1.4fr] md:items-center"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="truncate font-medium">{mapping.externalItemName}</p>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    mapping.productId
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-amber-200 bg-amber-50 text-amber-700"
+                                  }
+                                >
+                                  {mapping.productId ? "Mapeado" : "Pendente"}
+                                </Badge>
+                              </div>
+                              <p className="mt-1 truncate text-xs text-muted-foreground">
+                                ID externo: {mapping.externalItemId}
+                              </p>
+                            </div>
+
+                            <div className="text-sm text-muted-foreground">
+                              <p>{mapping.timesSeen} vez(s)</p>
+                              {mapping.lastSeenAt && (
+                                <p className="text-xs">
+                                  Ultima vez: {new Date(mapping.lastSeenAt).toLocaleString("pt-BR")}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <select
+                                className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                value={mapping.productId ?? ""}
+                                disabled={isSavingMappingId === mapping.id}
+                                onChange={(event) => {
+                                  void handleSaveItemMapping(mapping.id, event.target.value || null);
+                                }}
+                              >
+                                <option value="">Sem vinculo</option>
+                                {productOptions.map((product) => (
+                                  <option key={product.id} value={product.id}>
+                                    {product.name}{product.available ? "" : " (indisponivel)"}
+                                  </option>
+                                ))}
+                              </select>
+                              {isSavingMappingId === mapping.id && (
+                                <RefreshCw className="mt-2 h-4 w-4 animate-spin text-muted-foreground" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="sincronizacao">
               <Card>
                 <CardHeader>
                   <CardTitle>Configurações de Sincronização</CardTitle>
                   <CardDescription>
-                    Defina como os pedidos do iFood serão sincronizados com o sistema
+                    Defina como os pedidos do iFood serão sincronizados com o sistema.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div className="space-y-0.5">
                         <h3 className="font-medium">Sincronização automática</h3>
                         <p className="text-sm text-muted-foreground">
-                          Buscar novos pedidos automaticamente em intervalos regulares
+                          Buscar novos pedidos automaticamente em intervalos regulares.
                         </p>
                       </div>
                       <Switch
                         checked={config.pollingEnabled}
                         onCheckedChange={(checked) => updatePollingSettings(checked)}
-                        disabled={!credentialsConfigured || !config.isEnabled || isLoading}
+                        disabled={!canUseIntegration || !config.isEnabled}
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="polling-interval">Intervalo de verificação</Label>
@@ -602,14 +758,14 @@ const IfoodIntegracao = () => {
                         step={30}
                         value={[config.pollingInterval]}
                         onValueChange={(values) => updatePollingSettings(config.pollingEnabled, values[0])}
-                        disabled={!config.pollingEnabled || isLoading}
+                        disabled={!config.pollingEnabled || !canUseIntegration || !config.isEnabled}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Tempo entre cada verificação de novos pedidos (30 a 300 segundos)
+                        Tempo entre cada verificação de novos pedidos (30 a 300 segundos).
                       </p>
                     </div>
                   </div>
-                  
+
                   <Separator />
 
                   <div className="space-y-4">
@@ -617,13 +773,13 @@ const IfoodIntegracao = () => {
                       <div className="space-y-0.5">
                         <h3 className="font-medium">Consulta manual</h3>
                         <p className="text-sm text-muted-foreground">
-                          Valide o token, consulte eventos pendentes e importe pedidos disponíveis sem depender do agendamento.
+                          Consulte eventos pendentes e importe pedidos disponíveis sem depender do agendamento.
                         </p>
                       </div>
                       <Button
                         variant="outline"
                         onClick={handlePollNow}
-                        disabled={!credentialsConfigured || !config.isEnabled || isPollingNow}
+                        disabled={!canUseIntegration || !config.isEnabled || isPollingNow}
                         className="w-full sm:w-auto"
                       >
                         {isPollingNow ? (
@@ -642,27 +798,27 @@ const IfoodIntegracao = () => {
                   </div>
 
                   <Separator />
-                  
+
                   <div className="space-y-4">
                     <h3 className="font-medium">Notificações de pedidos</h3>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                        <Switch id="notify-new-orders" checked disabled />
+                        <Switch id="notify-new-orders" checked={config.notifyNewOrders} disabled />
                         <Label htmlFor="notify-new-orders">Notificar novos pedidos</Label>
                       </div>
-                      <p className="text-xs text-muted-foreground pl-7">
-                        Receba uma notificação no sistema quando novos pedidos forem recebidos do iFood
+                      <p className="pl-7 text-xs text-muted-foreground">
+                        Receba uma notificação no sistema quando novos pedidos forem recebidos do iFood.
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
-                        <Switch id="notify-status-changes" checked disabled />
+                        <Switch id="notify-status-changes" checked={config.notifyStatusChanges} disabled />
                         <Label htmlFor="notify-status-changes">Notificar alterações de status</Label>
                       </div>
-                      <p className="text-xs text-muted-foreground pl-7">
-                        Receba notificações quando o status de um pedido for alterado no iFood
+                      <p className="pl-7 text-xs text-muted-foreground">
+                        Receba notificações quando o status de um pedido for alterado no iFood.
                       </p>
                     </div>
                   </div>

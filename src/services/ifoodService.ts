@@ -18,7 +18,9 @@ export {
 // Exportar funções da API
 export {
   getIfoodIntegrationConfig,
+  getIfoodItemMappings,
   saveIfoodIntegrationConfig,
+  saveIfoodItemMapping,
   setIfoodIntegrationStatus,
   updateIfoodPollingSettings,
   updateIfoodNotificationSettings,
@@ -27,7 +29,8 @@ export {
   getIfoodPendingOrders,
   getIfoodOrderDetails,
   updateIfoodOrderStatus,
-  processIfoodWebhookEvent
+  processIfoodWebhookEvent,
+  type IfoodItemMapping
 } from './ifood/api';
 
 // Exportar funções de sincronização

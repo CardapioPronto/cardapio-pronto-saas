@@ -280,12 +280,12 @@ Objetivo: atender rotina real de cozinha, caixa e salao.
 
 ### Escopo MVP
 
-- [ ] Configurar modelo de comanda.
-- [ ] Configurar vias: cozinha, caixa, cliente.
-- [ ] Imprimir pedido por setor.
-- [ ] Botao de reimpressao.
-- [ ] Comprovante com itens, observacoes, mesa, cliente, total e forma de pagamento.
-- [ ] Documentar impressoras/formatos suportados.
+- [x] Configurar modelo de comanda.
+- [x] Configurar vias: cozinha, caixa, cliente.
+- [x] Imprimir pedido por setor.
+- [x] Botao de reimpressao.
+- [x] Comprovante com itens, observacoes, mesa, cliente, total e forma de pagamento.
+- [x] Documentar impressoras/formatos suportados.
 
 ### Criterio de aceite
 
@@ -295,7 +295,11 @@ Objetivo: atender rotina real de cozinha, caixa e salao.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-02: Bloco 5 iniciado com modelos separados no motor de impressao: comanda da cozinha sem valores, via do caixa com pagamento/total e comprovante do cliente. Historico do PDV ganhou reimpressao por via.
+- 2026-06-02: Guia operacional criado em `docs/IMPRESSAO_OPERACIONAL.md`, documentando fluxo de teste, impressao via navegador e limites do MVP.
+- 2026-06-02: Preferencias de impressao por restaurante adicionadas em Configuracoes > Sistema: tamanho de papel 58mm/80mm/A4 e vias padrao cozinha/caixa/cliente. Teste de impressao e reimpressoes do PDV passam a respeitar o tamanho configurado.
+- 2026-06-02: Impressao pos-finalizacao conectada ao PDV: quando a impressao automatica esta ativa, o pedido recem-criado abre um dialogo para imprimir as vias padrao sem depender de reabrir o historico.
+- 2026-06-02: Via de cozinha passou a organizar itens por setor operacional usando a categoria do produto; pedidos antigos ou produtos sem categoria caem no setor Geral.
 
 ---
 
@@ -306,12 +310,12 @@ Objetivo: transformar iFood em canal integrado, nao apenas pedido importado.
 
 ### Escopo MVP
 
-- [ ] Criar mapeamento SKU/item iFood para `products.id`.
-- [ ] Mostrar itens iFood nao mapeados.
-- [ ] Permitir vinculo manual item externo -> produto interno.
-- [ ] Baixar estoque quando item estiver mapeado.
-- [ ] Estornar estoque em cancelamento quando status externo permitir.
-- [ ] Relatorio separado: vendas iFood x vendas canal proprio.
+- [x] Criar mapeamento SKU/item iFood para `products.id`.
+- [x] Mostrar itens iFood nao mapeados.
+- [x] Permitir vinculo manual item externo -> produto interno.
+- [x] Baixar estoque quando item estiver mapeado.
+- [x] Estornar estoque em cancelamento quando status externo permitir.
+- [x] Relatorio separado: vendas iFood x vendas canal proprio.
 
 ### Criterio de aceite
 
@@ -321,7 +325,10 @@ Objetivo: transformar iFood em canal integrado, nao apenas pedido importado.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-02: Bloco 6 iniciado com tabela `ifood_item_mappings`, registro automatico de itens observados no polling iFood, tentativa de vinculo durante importacao de pedidos e aba "Mapeamento" em `/ifood-integracao` para associar item externo a produto interno.
+- 2026-06-02: Credenciais do app iFood foram centralizadas no Super Admin em `ifood_saas_app`; restaurantes configuram apenas a loja/Merchant ID.
+- 2026-06-02: Baixa automatica de estoque conectada ao polling iFood para itens mapeados, reaproveitando `apply_stock_for_order`; cancelamentos/status externos cancelados estornam via `revert_stock_for_order`. Se faltar saldo, o pedido importado nao e perdido e o erro fica registrado no evento/log para correcao operacional.
+- 2026-06-02: Relatorio iFood x canal proprio adicionado aos Relatorios Avancados, com faturamento, pedidos, ticket medio, participacao e detalhamento dos canais proprios. Requer aplicar a migration `20260602172000_add_channel_breakdown_to_sales_report.sql`.
 
 ---
 

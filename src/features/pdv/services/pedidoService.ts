@@ -29,6 +29,13 @@ type PedidoQueryRow = {
     quantity: number;
     price: number;
     observations: string | null;
+    product?: {
+      category?: {
+        id: string;
+        name: string;
+        restaurant_id: string;
+      } | null;
+    } | null;
   }> | null;
   mesa?: {
     id: string;
@@ -55,6 +62,33 @@ const formatMesaDisplay = (pedido: PedidoQueryRow) => {
 
   return 'Mesa';
 };
+
+const formatPedidoRow = (pedido: PedidoQueryRow, restaurantId: string): Pedido => ({
+  id: pedido.id,
+  mesa: formatMesaDisplay(pedido),
+  table_id: pedido.table_id,
+  cliente: pedido.customer_name || undefined,
+  clientName: pedido.customer_name || undefined,
+  itensPedido: (pedido.order_items || []).map((item) => ({
+    produto: {
+      id: item.product_id || item.id,
+      name: item.product_name,
+      price: item.price,
+      description: "",
+      available: true,
+      category: item.product?.category ?? null,
+      restaurant_id: restaurantId
+    } as ProdutoSimplificado,
+    quantidade: item.quantity,
+    observacao: item.observations
+  })),
+  status: pedido.status as PedidoStatus,
+  timestamp: new Date(pedido.created_at),
+  total: pedido.total,
+  payment_method: pedido.payment_method,
+  payment_status: pedido.payment_status,
+  source: pedido.source as Pedido['source']
+});
 
 const notifyMesasChanged = (restaurantId: string) => {
   window.dispatchEvent(new CustomEvent('mesas:changed', { detail: { restaurantId } }));
@@ -219,7 +253,14 @@ export async function listarPedidos(
           product_name,
           quantity,
           price,
-          observations
+          observations,
+          product:products (
+            category:categories (
+              id,
+              name,
+              restaurant_id
+            )
+          )
         ),
         mesa:mesas (
           id,
@@ -268,31 +309,7 @@ export async function listarPedidos(
 
     const rows = (data || []) as PedidoQueryRow[];
 
-    const pedidosFormatados = rows.map((pedido) => ({
-      id: pedido.id,
-      mesa: formatMesaDisplay(pedido),
-      table_id: pedido.table_id,
-      cliente: pedido.customer_name || undefined,
-      clientName: pedido.customer_name || undefined,
-      itensPedido: (pedido.order_items || []).map((item) => ({
-        produto: {
-          id: item.product_id || item.id,
-          name: item.product_name,
-          price: item.price,
-          description: "",
-          available: true,
-          restaurant_id: restaurantId
-        } as ProdutoSimplificado,
-        quantidade: item.quantity,
-        observacao: item.observations
-      })),
-      status: pedido.status as PedidoStatus,
-      timestamp: new Date(pedido.created_at),
-      total: pedido.total,
-      payment_method: pedido.payment_method,
-      payment_status: pedido.payment_status,
-      source: pedido.source as Pedido['source']
-    })) satisfies Pedido[];
+    const pedidosFormatados = rows.map((pedido) => formatPedidoRow(pedido, restaurantId));
 
     return {
       success: true,
@@ -302,6 +319,59 @@ export async function listarPedidos(
     };
   } catch (error) {
     console.error('Erro ao listar pedidos:', error);
+    return { success: false, error };
+  }
+}
+
+export async function obterPedidoPorId(
+  restaurantId: string,
+  pedidoId: string,
+): Promise<{ success: true; pedido: Pedido } | { success: false; error: unknown }> {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          id,
+          product_id,
+          product_name,
+          quantity,
+          price,
+          observations,
+          product:products (
+            category:categories (
+              id,
+              name,
+              restaurant_id
+            )
+          )
+        ),
+        mesa:mesas (
+          id,
+          name,
+          number
+        )
+      `)
+      .eq('restaurant_id', restaurantId)
+      .eq('id', pedidoId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Erro ao buscar pedido para impressão:', error);
+      return { success: false, error };
+    }
+
+    if (!data) {
+      return { success: false, error: new Error('Pedido não encontrado') };
+    }
+
+    return {
+      success: true,
+      pedido: formatPedidoRow(data as PedidoQueryRow, restaurantId),
+    };
+  } catch (error) {
+    console.error('Erro ao buscar pedido para impressão:', error);
     return { success: false, error };
   }
 }

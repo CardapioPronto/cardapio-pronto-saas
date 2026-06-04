@@ -4,7 +4,9 @@ import { captureEdgeException } from "../_shared/observability.ts";
 import { pollIfoodEvents, type IfoodPollConfig } from "../_shared/ifood-poll-core.ts";
 import {
   getIfoodAccessToken,
+  hasIfoodSaasAppCredentials,
   loadIfoodCredentialsForRestaurant,
+  loadIfoodSaasAppCredentials,
   pushPubfyStatusToIfood,
 } from "../_shared/ifood-api.ts";
 
@@ -17,12 +19,22 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(supabaseUrl, serviceRoleKey);
 
-type Action = "get_config" | "save_config" | "toggle" | "update_polling" | "update_notifications" | "test" | "poll" | "update_order_status";
+type Action =
+  | "get_config"
+  | "save_config"
+  | "toggle"
+  | "update_polling"
+  | "update_notifications"
+  | "list_item_mappings"
+  | "save_item_mapping"
+  | "test"
+  | "poll"
+  | "update_order_status";
 
 type IfoodConfig = {
   restaurant_id: string;
-  client_id: string;
-  client_secret: string;
+  client_id?: string | null;
+  client_secret?: string | null;
   merchant_id: string;
   restaurant_ifood_id: string | null;
   is_enabled: boolean;
@@ -117,15 +129,14 @@ const resolveRestaurantId = async (userId: string, requestedRestaurantId?: strin
   throw new Error("Sem permissão para gerenciar integrações");
 };
 
-const publicConfigFor = (config: Partial<IfoodConfig> | null) => ({
-  clientId: config?.client_id || "",
+const publicConfigFor = (config: Partial<IfoodConfig> | null, hasSaasAppCredentials: boolean) => ({
   merchantId: config?.merchant_id || "",
   restaurantIfoodId: config?.restaurant_ifood_id || "",
   isEnabled: Boolean(config?.is_enabled),
   pollingEnabled: config?.polling_enabled ?? true,
   pollingInterval: config?.polling_interval ?? 60,
   webhookUrl: config?.webhook_url || null,
-  hasStoredCredentials: Boolean(config?.client_secret),
+  hasSaasAppCredentials,
   notifyNewOrders: config?.notify_new_orders ?? true,
   notifyStatusChanges: config?.notify_status_changes ?? true,
 });
@@ -144,38 +155,33 @@ const loadIfoodConfigRow = async (restaurantId: string) => {
 const loadIfoodConfig = async (restaurantId: string): Promise<IfoodConfig> => {
   const data = await loadIfoodConfigRow(restaurantId);
   if (!data) throw new Error("Configuração do iFood não encontrada");
-  if (!data.client_id || !data.client_secret || !data.merchant_id) {
-    throw new Error("Credenciais do iFood incompletas");
+  if (!data.merchant_id) {
+    throw new Error("Loja iFood não configurada");
   }
-  return data;
+  const appCredentials = await loadIfoodSaasAppCredentials(admin);
+  return { ...data, ...appCredentials };
 };
 
 const getPublicConfig = async (restaurantId: string) => {
   const config = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(config),
+    config: publicConfigFor(config, appConfigured),
   };
 };
 
 const saveConfig = async (restaurantId: string, payload: Record<string, unknown>) => {
   const existing = await loadIfoodConfigRow(restaurantId);
-  const clientId = String(payload.clientId || "").trim();
-  const clientSecret = String(payload.clientSecret || "").trim();
   const merchantId = String(payload.merchantId || "").trim();
   const restaurantIfoodId = String(payload.restaurantIfoodId || payload.ifoodRestaurantId || "").trim();
   const pollingInterval = Math.min(300, Math.max(30, Number(payload.pollingInterval || existing?.polling_interval || 60)));
 
-  if (!clientId || !merchantId) {
-    throw new Error("Client ID e Merchant ID são obrigatórios.");
-  }
-
-  if (!clientSecret && !existing?.client_secret) {
-    throw new Error("Client Secret é obrigatório na primeira configuração.");
+  if (!merchantId) {
+    throw new Error("Merchant ID é obrigatório.");
   }
 
   const baseConfig = {
-    client_id: clientId,
     merchant_id: merchantId,
     restaurant_ifood_id: restaurantIfoodId || null,
     is_enabled: typeof payload.isEnabled === "boolean" ? payload.isEnabled : Boolean(existing?.is_enabled),
@@ -193,10 +199,7 @@ const saveConfig = async (restaurantId: string, payload: Record<string, unknown>
   if (existing) {
     const { error } = await admin
       .from("ifood_integration")
-      .update({
-        ...baseConfig,
-        ...(clientSecret ? { client_secret: clientSecret } : {}),
-      })
+      .update(baseConfig)
       .eq("restaurant_id", restaurantId);
 
     if (error) throw error;
@@ -206,16 +209,16 @@ const saveConfig = async (restaurantId: string, payload: Record<string, unknown>
       .insert({
         restaurant_id: restaurantId,
         ...baseConfig,
-        client_secret: clientSecret,
       });
 
     if (error) throw error;
   }
 
   const saved = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(saved),
+    config: publicConfigFor(saved, appConfigured),
   };
 };
 
@@ -233,9 +236,10 @@ const toggleConfig = async (restaurantId: string, enabled: unknown) => {
   if (error) throw error;
 
   const saved = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(saved),
+    config: publicConfigFor(saved, appConfigured),
   };
 };
 
@@ -262,9 +266,10 @@ const updatePollingConfig = async (restaurantId: string, payload: Record<string,
   if (error) throw error;
 
   const saved = await loadIfoodConfigRow(restaurantId);
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
   return {
     success: true,
-    config: publicConfigFor(saved),
+    config: publicConfigFor(saved, appConfigured),
   };
 };
 
@@ -320,7 +325,103 @@ const updateNotificationConfig = async (restaurantId: string, payload: Record<st
   if (error) throw error;
 
   const saved = await loadIfoodConfigRow(restaurantId);
-  return { success: true, config: publicConfigFor(saved) };
+  const appConfigured = await hasIfoodSaasAppCredentials(admin);
+  return { success: true, config: publicConfigFor(saved, appConfigured) };
+};
+
+const publicIfoodItemMappingFor = (row: Record<string, unknown>) => {
+  const product = row.product && typeof row.product === "object"
+    ? row.product as Record<string, unknown>
+    : null;
+
+  return {
+    id: String(row.id),
+    merchantId: row.merchant_id ? String(row.merchant_id) : null,
+    externalItemId: String(row.external_item_id),
+    externalItemName: String(row.external_item_name),
+    productId: row.product_id ? String(row.product_id) : null,
+    productName: product?.name ? String(product.name) : null,
+    timesSeen: Number(row.times_seen || 0),
+    lastSeenAt: row.last_seen_at ? String(row.last_seen_at) : null,
+    mappedAt: row.mapped_at ? String(row.mapped_at) : null,
+  };
+};
+
+const listItemMappings = async (restaurantId: string) => {
+  const { data, error } = await admin
+    .from("ifood_item_mappings")
+    .select(`
+      id,
+      merchant_id,
+      external_item_id,
+      external_item_name,
+      product_id,
+      times_seen,
+      last_seen_at,
+      mapped_at,
+      product:products!ifood_item_mappings_product_id_fkey (
+        id,
+        name
+      )
+    `)
+    .eq("restaurant_id", restaurantId)
+    .order("product_id", { ascending: true, nullsFirst: true })
+    .order("last_seen_at", { ascending: false });
+
+  if (error) throw error;
+
+  return {
+    success: true,
+    mappings: (data ?? []).map((row) => publicIfoodItemMappingFor(row as Record<string, unknown>)),
+  };
+};
+
+const saveItemMapping = async (
+  restaurantId: string,
+  userId: string,
+  payload: Record<string, unknown>,
+) => {
+  const mappingId = String(payload.mappingId || payload.id || "").trim();
+  const productId = String(payload.productId || "").trim() || null;
+
+  if (!mappingId) throw new Error("mappingId é obrigatório.");
+
+  const { data: mapping, error: mappingError } = await admin
+    .from("ifood_item_mappings")
+    .select("id")
+    .eq("id", mappingId)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (mappingError) throw mappingError;
+  if (!mapping?.id) throw new Error("Mapeamento iFood não encontrado.");
+
+  if (productId) {
+    const { data: product, error: productError } = await admin
+      .from("products")
+      .select("id")
+      .eq("id", productId)
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle();
+
+    if (productError) throw productError;
+    if (!product?.id) throw new Error("Produto não encontrado para este restaurante.");
+  }
+
+  const { error } = await admin
+    .from("ifood_item_mappings")
+    .update({
+      product_id: productId,
+      mapped_at: productId ? new Date().toISOString() : null,
+      mapped_by: productId ? userId : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", mappingId)
+    .eq("restaurant_id", restaurantId);
+
+  if (error) throw error;
+
+  return await listItemMappings(restaurantId);
 };
 
 
@@ -356,6 +457,14 @@ serve(async (req: Request) => {
 
     if (action === "update_polling") {
       return jsonResponse(await updatePollingConfig(restaurantId, payload));
+    }
+
+    if (action === "list_item_mappings") {
+      return jsonResponse(await listItemMappings(restaurantId));
+    }
+
+    if (action === "save_item_mapping") {
+      return jsonResponse(await saveItemMapping(restaurantId, user.id, payload));
     }
 
     if (action === "update_order_status") {

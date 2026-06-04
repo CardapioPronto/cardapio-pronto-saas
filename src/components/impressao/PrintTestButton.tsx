@@ -1,16 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { usePrint } from "@/hooks/usePrint";
+import { PrintPaperSize, PrintTemplate, usePrint } from "@/hooks/usePrint";
 import { Pedido } from "@/features/pdv/types";
 
 interface PrintTestButtonProps {
   disabled?: boolean;
+  paperSize?: PrintPaperSize;
+  templates?: PrintTemplate[];
 }
 
-export const PrintTestButton = ({ disabled = false }: PrintTestButtonProps) => {
+export const PrintTestButton = ({
+  disabled = false,
+  paperSize = "80mm",
+  templates = ["kitchen"],
+}: PrintTestButtonProps) => {
   const { printOrder, printing } = usePrint();
 
-  const handleTestPrint = () => {
+  const handleTestPrint = async () => {
     // Criar pedido de teste
     const testOrder: Pedido = {
       id: 'test',
@@ -39,9 +45,19 @@ export const PrintTestButton = ({ disabled = false }: PrintTestButtonProps) => {
       status: 'pendente',
       timestamp: new Date(),
       total: 63.80,
+      payment_method: "dinheiro",
+      payment_status: "pending",
     };
 
-    printOrder(testOrder, { restaurantName: 'Restaurante Demo' });
+    const selectedTemplates = templates.length > 0 ? templates : ["kitchen"];
+
+    for (const template of selectedTemplates) {
+      await printOrder(testOrder, {
+        restaurantName: 'Restaurante Demo',
+        paperSize,
+        template,
+      });
+    }
   };
 
   return (

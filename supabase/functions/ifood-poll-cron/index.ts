@@ -76,12 +76,10 @@ serve(async (req: Request) => {
     const { data: rows, error } = await admin
       .from("ifood_integration")
       .select(
-        "restaurant_id, client_id, client_secret, merchant_id, restaurant_ifood_id, is_enabled, polling_enabled, polling_interval, webhook_url, last_polled_at",
+        "restaurant_id, merchant_id, restaurant_ifood_id, is_enabled, polling_enabled, polling_interval, webhook_url, last_polled_at",
       )
       .eq("is_enabled", true)
       .eq("polling_enabled", true)
-      .not("client_id", "is", null)
-      .not("client_secret", "is", null)
       .not("merchant_id", "is", null);
 
     if (error) throw error;

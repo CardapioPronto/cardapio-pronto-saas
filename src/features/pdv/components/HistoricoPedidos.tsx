@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, RefreshCw, Receipt, XCircle } from "lucide-react";
 import { useState } from "react";
 import { PedidoStatus } from "../types";
+import { PrintPaperSize } from "@/hooks/usePrint";
 
 interface HistoricoPedidosProps {
   pedidosHistorico: Pedido[];
@@ -22,6 +23,7 @@ interface HistoricoPedidosProps {
   alterarStatusPedido: (pedidoId: number | string, novoStatus: PedidoStatus) => void;
   onAtualizar: () => Promise<void>;
   restaurantName: string;
+  printPaperSize?: PrintPaperSize;
   filtros: HistoricoPedidosFiltros;
   total: number;
   resumo: HistoricoPedidosResumo;
@@ -41,6 +43,7 @@ export const HistoricoPedidos = ({
   alterarStatusPedido,
   onAtualizar,
   restaurantName,
+  printPaperSize = "80mm",
   filtros,
   total,
   resumo,
@@ -220,6 +223,7 @@ export const HistoricoPedidos = ({
               pedido={pedido}
               alterarStatusPedido={alterarStatusPedido}
               restaurantName={restaurantName}
+              printPaperSize={printPaperSize}
               canManageOrders={canManageOrders}
             />
           ))}

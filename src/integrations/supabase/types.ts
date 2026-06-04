@@ -1401,8 +1401,8 @@ export type Database = {
       }
       ifood_integration: {
         Row: {
-          client_id: string
-          client_secret: string
+          client_id: string | null
+          client_secret: string | null
           created_at: string
           is_enabled: boolean
           merchant_id: string
@@ -1414,8 +1414,8 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
-          client_id: string
-          client_secret: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           is_enabled?: boolean
           merchant_id: string
@@ -1427,8 +1427,8 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
-          client_id?: string
-          client_secret?: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           is_enabled?: boolean
           merchant_id?: string
@@ -1444,6 +1444,86 @@ export type Database = {
             foreignKeyName: "ifood_integration_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ifood_item_mappings: {
+        Row: {
+          created_at: string
+          external_item_id: string
+          external_item_name: string
+          first_seen_at: string
+          id: string
+          last_order_id: string | null
+          last_seen_at: string
+          mapped_at: string | null
+          mapped_by: string | null
+          merchant_id: string | null
+          product_id: string | null
+          restaurant_id: string
+          times_seen: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_item_id: string
+          external_item_name: string
+          first_seen_at?: string
+          id?: string
+          last_order_id?: string | null
+          last_seen_at?: string
+          mapped_at?: string | null
+          mapped_by?: string | null
+          merchant_id?: string | null
+          product_id?: string | null
+          restaurant_id: string
+          times_seen?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_item_id?: string
+          external_item_name?: string
+          first_seen_at?: string
+          id?: string
+          last_order_id?: string | null
+          last_seen_at?: string
+          mapped_at?: string | null
+          mapped_by?: string | null
+          merchant_id?: string | null
+          product_id?: string | null
+          restaurant_id?: string
+          times_seen?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ifood_item_mappings_last_order_id_fkey"
+            columns: ["last_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ifood_item_mappings_mapped_by_fkey"
+            columns: ["mapped_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ifood_item_mappings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ifood_item_mappings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
@@ -2669,6 +2749,10 @@ export type Database = {
           language: string | null
           notification_email: boolean | null
           notification_new_order: boolean | null
+          print_default_cashier: boolean
+          print_default_customer: boolean
+          print_default_kitchen: boolean
+          print_paper_size: string
           restaurant_id: string
           updated_at: string
         }
@@ -2680,6 +2764,10 @@ export type Database = {
           language?: string | null
           notification_email?: boolean | null
           notification_new_order?: boolean | null
+          print_default_cashier?: boolean
+          print_default_customer?: boolean
+          print_default_kitchen?: boolean
+          print_paper_size?: string
           restaurant_id: string
           updated_at?: string
         }
@@ -2691,6 +2779,10 @@ export type Database = {
           language?: string | null
           notification_email?: boolean | null
           notification_new_order?: boolean | null
+          print_default_cashier?: boolean
+          print_default_customer?: boolean
+          print_default_kitchen?: boolean
+          print_paper_size?: string
           restaurant_id?: string
           updated_at?: string
         }

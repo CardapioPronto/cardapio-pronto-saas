@@ -13,6 +13,7 @@ import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 import { Product } from "@/types";
 import { DadosClientePedido, ItemPedido } from "../types";
 import { PackageSearch, UserRound } from "lucide-react";
+import { PrintPaperSize } from "@/hooks/usePrint";
 
 // B7 — Limite alto para evitar paginação no PDV. A consulta usa
 // ordenação por nome e a filtragem (busca/categoria) é client-side
@@ -23,6 +24,7 @@ const PDV_PRODUCTS_LIMIT = 500;
 export interface NovoPedidoProps {
   restaurantId: string;
   restaurantName: string;
+  printPaperSize: PrintPaperSize;
   categoriaAtiva: string;
   setCategoriaAtiva: (categoria: string) => void;
   busca: string;
@@ -44,6 +46,7 @@ export interface NovoPedidoProps {
 export const NovoPedido: React.FC<NovoPedidoProps> = ({
   restaurantId,
   restaurantName,
+  printPaperSize,
   categoriaAtiva,
   setCategoriaAtiva,
   busca,
@@ -262,6 +265,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
           mesas={mesas.map(mesa => ({ id: mesa.id, number: mesa.number, status: mesa.status }))}
           nomeCliente={nomeCliente}
           restaurantName={restaurantName}
+          printPaperSize={printPaperSize}
           mesaError={mesaError}
           className="min-h-[420px] flex-1 xl:min-h-0"
         />

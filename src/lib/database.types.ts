@@ -289,8 +289,8 @@ export interface Database {
       ifood_integration: {
         Row: {
           restaurant_id: string;
-          client_id: string;
-          client_secret: string;
+          client_id: string | null;
+          client_secret: string | null;
           merchant_id: string;
           restaurant_ifood_id: string | null;
           is_enabled: boolean;
@@ -302,8 +302,8 @@ export interface Database {
         };
         Insert: {
           restaurant_id: string;
-          client_id: string;
-          client_secret: string;
+          client_id?: string | null;
+          client_secret?: string | null;
           merchant_id: string;
           restaurant_ifood_id?: string | null;
           is_enabled?: boolean;
@@ -315,14 +315,64 @@ export interface Database {
         };
         Update: {
           restaurant_id?: string;
-          client_id?: string;
-          client_secret?: string;
+          client_id?: string | null;
+          client_secret?: string | null;
           merchant_id?: string;
           restaurant_ifood_id?: string | null;
           is_enabled?: boolean;
           webhook_url?: string | null;
           polling_enabled?: boolean;
           polling_interval?: number;
+          updated_at?: string;
+        };
+      };
+      ifood_item_mappings: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          merchant_id: string | null;
+          external_item_id: string;
+          external_item_name: string;
+          product_id: string | null;
+          last_order_id: string | null;
+          times_seen: number;
+          first_seen_at: string;
+          last_seen_at: string;
+          mapped_at: string | null;
+          mapped_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          merchant_id?: string | null;
+          external_item_id: string;
+          external_item_name: string;
+          product_id?: string | null;
+          last_order_id?: string | null;
+          times_seen?: number;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          mapped_at?: string | null;
+          mapped_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          merchant_id?: string | null;
+          external_item_id?: string;
+          external_item_name?: string;
+          product_id?: string | null;
+          last_order_id?: string | null;
+          times_seen?: number;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          mapped_at?: string | null;
+          mapped_by?: string | null;
+          created_at?: string;
           updated_at?: string;
         };
       };

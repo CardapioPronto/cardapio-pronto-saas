@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { ConfiguracoesSistema } from "@/services/configuracoes";
 import { PrintTestButton } from "@/components/impressao/PrintTestButton";
 import { Badge } from "@/components/ui/badge";
+import { PrintTemplate } from "@/hooks/usePrint";
 
 interface SistemaTabProps {
   configuracoesSistema: ConfiguracoesSistema;
@@ -24,6 +25,12 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
   salvarConfiguracoesDoSistema,
   canEdit
 }) => {
+  const printTemplates: PrintTemplate[] = [
+    configuracoesSistema.print_default_kitchen ? "kitchen" : null,
+    configuracoesSistema.print_default_cashier ? "cashier" : null,
+    configuracoesSistema.print_default_customer ? "customer" : null,
+  ].filter(Boolean) as PrintTemplate[];
+
   return (
     <Card>
       <CardHeader>
@@ -81,29 +88,105 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
           />
         </div>
         
-        <div className="flex items-center justify-between">
+        <div className="space-y-4 rounded-md border p-4">
           <div>
-            <Label htmlFor="impressao-automatica">Impressão automática</Label>
+            <h3 className="text-sm font-semibold">Impressão operacional</h3>
             <p className="text-sm text-muted-foreground">
-              Imprimir pedidos automaticamente quando finalizados
+              Configure o formato usado nas comandas e comprovantes do navegador.
             </p>
           </div>
-          <Switch
-            id="impressao-automatica"
-            checked={configuracoesSistema.auto_print}
-            onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, auto_print: value})}
-            disabled={!canEdit}
-          />
-        </div>
 
-        <div className="flex items-center justify-between pt-4">
-          <div>
-            <Label>Testar Impressão</Label>
-            <p className="text-sm text-muted-foreground">
-              Teste a configuração de impressão com um pedido de exemplo
-            </p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="impressao-automatica">Impressão automática</Label>
+              <p className="text-sm text-muted-foreground">
+                Preparar vias padrão quando o pedido for finalizado
+              </p>
+            </div>
+            <Switch
+              id="impressao-automatica"
+              checked={configuracoesSistema.auto_print}
+              onCheckedChange={(value) => setConfiguracoesSistema({...configuracoesSistema, auto_print: value})}
+              disabled={!canEdit}
+            />
           </div>
-          <PrintTestButton disabled={!canEdit} />
+
+          <div className="space-y-2">
+            <Label htmlFor="tamanho-papel">Tamanho do papel</Label>
+            <select
+              id="tamanho-papel"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={configuracoesSistema.print_paper_size}
+              onChange={(e) => setConfiguracoesSistema({
+                ...configuracoesSistema,
+                print_paper_size: e.target.value as ConfiguracoesSistema["print_paper_size"],
+              })}
+              disabled={!canEdit}
+            >
+              <option value="80mm">Térmica 80mm</option>
+              <option value="58mm">Térmica 58mm</option>
+              <option value="a4">A4 / impressora comum</option>
+            </select>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label>Vias padrão</Label>
+              <p className="text-sm text-muted-foreground">
+                Usadas no teste de impressão e como base para a automação futura.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                <span>Cozinha</span>
+                <Switch
+                  checked={configuracoesSistema.print_default_kitchen}
+                  onCheckedChange={(value) => setConfiguracoesSistema({
+                    ...configuracoesSistema,
+                    print_default_kitchen: value,
+                  })}
+                  disabled={!canEdit}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                <span>Caixa</span>
+                <Switch
+                  checked={configuracoesSistema.print_default_cashier}
+                  onCheckedChange={(value) => setConfiguracoesSistema({
+                    ...configuracoesSistema,
+                    print_default_cashier: value,
+                  })}
+                  disabled={!canEdit}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                <span>Cliente</span>
+                <Switch
+                  checked={configuracoesSistema.print_default_customer}
+                  onCheckedChange={(value) => setConfiguracoesSistema({
+                    ...configuracoesSistema,
+                    print_default_customer: value,
+                  })}
+                  disabled={!canEdit}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 pt-2">
+            <div>
+              <Label>Testar impressão</Label>
+              <p className="text-sm text-muted-foreground">
+                Envia as vias selecionadas com um pedido de exemplo.
+              </p>
+            </div>
+            <PrintTestButton
+              disabled={!canEdit}
+              paperSize={configuracoesSistema.print_paper_size}
+              templates={printTemplates}
+            />
+          </div>
         </div>
         
         <div className="space-y-2">
