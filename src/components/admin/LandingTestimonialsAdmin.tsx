@@ -137,7 +137,6 @@ export const LandingTestimonialsAdmin = () => {
     setForm((current) => ({
       ...current,
       restaurantId: client.restaurant_id,
-      authorName: current.authorName || client.owner_name || client.name,
       authorRole: current.authorRole || `Cliente Pubfy - ${client.name}`,
     }));
   };
@@ -204,9 +203,9 @@ export const LandingTestimonialsAdmin = () => {
         <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4 rounded-md border p-4">
             <div>
-              <h3 className="text-sm font-semibold">Cliente vinculado</h3>
+              <h3 className="text-sm font-semibold">Restaurante cliente vinculado</h3>
               <p className="text-sm text-muted-foreground">
-                Pesquise o restaurante para usar nome e logo como base do depoimento.
+                Pesquise a conta do restaurante para vincular o depoimento ao cliente correto.
               </p>
             </div>
 
@@ -217,7 +216,7 @@ export const LandingTestimonialsAdmin = () => {
                   value={clientSearch}
                   onChange={(event) => setClientSearch(event.target.value)}
                   className="pl-9"
-                  placeholder="Buscar por restaurante, e-mail ou responsável"
+                  placeholder="Buscar restaurante por nome, e-mail ou responsável"
                 />
               </div>
             </div>
@@ -226,7 +225,7 @@ export const LandingTestimonialsAdmin = () => {
               {clientsQuery.isLoading ? (
                 <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Buscando clientes...
+                  Buscando restaurantes...
                 </div>
               ) : (
                 clientsQuery.data?.map((client) => (
@@ -238,18 +237,33 @@ export const LandingTestimonialsAdmin = () => {
                     }`}
                     onClick={() => handleSelectClient(client)}
                   >
-                    <span className="block font-medium">{client.name}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {client.owner_name || "Responsável não informado"} {client.email ? `- ${client.email}` : ""}
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="font-medium">{client.name}</span>
+                      <span className="text-xs font-medium text-green">
+                        {form.restaurantId === client.restaurant_id ? "Vinculado" : "Vincular"}
+                      </span>
                     </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Responsável: {client.owner_name || "não informado"}
+                    </span>
+                    {(client.email || client.owner_email) && (
+                      <span className="block text-xs text-muted-foreground">
+                        E-mail: {client.email || client.owner_email}
+                      </span>
+                    )}
                   </button>
                 ))
               )}
             </div>
 
             {selectedClient && (
-              <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-                Selecionado: <span className="font-medium">{selectedClient.name}</span>
+              <div className="space-y-1 rounded-md bg-muted/50 px-3 py-2 text-sm">
+                <p>
+                  Restaurante vinculado: <span className="font-medium">{selectedClient.name}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O autor exibido na landing deve ser preenchido no formulário ao lado.
+                </p>
               </div>
             )}
           </div>
@@ -259,7 +273,7 @@ export const LandingTestimonialsAdmin = () => {
               <div>
                 <h3 className="text-sm font-semibold">{form.id ? "Editar depoimento" : "Novo depoimento"}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Cadastre mensagens recebidas por WhatsApp, call, e-mail ou ajuste mensagens enviadas pelo app.
+                  Cadastre a mensagem autorizada e informe separadamente quem assina o depoimento.
                 </p>
               </div>
               {form.id && (
@@ -274,16 +288,16 @@ export const LandingTestimonialsAdmin = () => {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="admin-testimonial-author">Autor *</Label>
+                <Label htmlFor="admin-testimonial-author">Autor exibido na landing *</Label>
                 <Input
                   id="admin-testimonial-author"
                   value={form.authorName}
                   onChange={(event) => setForm((current) => ({ ...current, authorName: event.target.value }))}
-                  placeholder="Nome exibido"
+                  placeholder="Nome da pessoa que autorizou a mensagem"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="admin-testimonial-role">Cargo/contexto</Label>
+                <Label htmlFor="admin-testimonial-role">Cargo/contexto exibido</Label>
                 <Input
                   id="admin-testimonial-role"
                   value={form.authorRole || ""}
@@ -300,7 +314,7 @@ export const LandingTestimonialsAdmin = () => {
                 value={form.message}
                 onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))}
                 maxLength={700}
-                placeholder="Mensagem do cliente"
+                placeholder="Cole ou escreva a mensagem autorizada pelo cliente"
               />
             </div>
 
@@ -396,7 +410,7 @@ export const LandingTestimonialsAdmin = () => {
             <div className="flex justify-end">
               <Button onClick={() => saveMutation.mutate()} disabled={!canSave}>
                 {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                {form.restaurantId ? "Salvar depoimento" : "Selecione um cliente"}
+                {form.restaurantId ? "Salvar depoimento" : "Vincule um restaurante"}
               </Button>
             </div>
           </div>
@@ -421,7 +435,7 @@ export const LandingTestimonialsAdmin = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cliente</TableHead>
+                <TableHead>Restaurante</TableHead>
                 <TableHead>Mensagem</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Origem</TableHead>
