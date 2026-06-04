@@ -22,15 +22,15 @@ const Hero = () => {
         <div className="max-w-3xl py-16 md:py-24">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur">
             <QrCode size={16} className="text-beige" />
-            Cardápio digital, PDV, pedidos e atendimento em uma única plataforma
+            Canal próprio, PDV, CRM e automações para restaurantes
           </div>
 
           <h1 className="max-w-4xl text-4xl font-bold leading-tight md:text-6xl lg:text-7xl">
-            Venda mais no salão, delivery e WhatsApp com uma operação mais simples.
+            Venda direto, organize pedidos e transforme clientes em recompra.
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/80 md:text-xl">
-            O Pubfy centraliza cardápio por QR Code, PDV online, mesas, pedidos, cupons, relatórios, equipe e automações para o restaurante trabalhar com menos erro e mais velocidade.
+            O Pubfy une cardápio por QR Code, PDV online, mesas, cozinha, CRM, fidelidade, campanhas, WhatsApp, iFood, impressão operacional e relatórios para o restaurante vender com mais controle fora dos marketplaces.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -48,7 +48,7 @@ const Hero = () => {
           </div>
 
           <div className="mt-8 grid gap-3 text-sm text-white/90 sm:grid-cols-3">
-            {["Sem cartão no teste", "Implantação guiada", "Acesso pelo navegador"].map((item) => (
+            {["CRM e captura de leads", "Campanhas e fidelidade", "PWA com suporte offline"].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle2 size={17} className="shrink-0 text-green-light" />
                 <span>{item}</span>
@@ -73,7 +73,7 @@ const Hero = () => {
                     ["Vendas", "R$ 2.840"],
                     ["Pedidos", "86"],
                     ["Ticket médio", "R$ 33,02"],
-                    ["Tempo médio", "11 min"],
+                    ["Leads capturados", "42"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-gray-100 bg-white p-4">
                       <p className="text-xs text-navy/55">{label}</p>
@@ -104,9 +104,9 @@ const Hero = () => {
                 <div className="space-y-3">
                   {[
                     ["Mesa 08", "2 itens", "Preparando", "bg-orange/10 text-orange"],
-                    ["Delivery", "4 itens", "Novo", "bg-green/10 text-green"],
-                    ["WhatsApp", "1 item", "Confirmar", "bg-beige/30 text-navy"],
-                    ["Mesa 12", "3 itens", "Pronto", "bg-navy/10 text-navy"],
+                    ["Cardápio", "4 itens", "Novo", "bg-green/10 text-green"],
+                    ["iFood", "3 itens", "Sincronizado", "bg-beige/30 text-navy"],
+                    ["WhatsApp", "1 item", "Confirmar", "bg-navy/10 text-navy"],
                   ].map(([origin, items, status, color]) => (
                     <div key={origin} className="flex items-center justify-between rounded-md border border-gray-100 p-3">
                       <div>
@@ -129,8 +129,8 @@ const Hero = () => {
               </p>
             </div>
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
-              <p className="text-3xl font-bold">QR Code</p>
-              <p className="mt-1 text-sm text-white/72">cardápio pronto para divulgar</p>
+              <p className="text-3xl font-bold">Canal próprio</p>
+              <p className="mt-1 text-sm text-white/72">base de clientes, cupons e recompra</p>
             </div>
           </div>
         </div>

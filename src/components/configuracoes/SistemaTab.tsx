@@ -9,6 +9,7 @@ import { ConfiguracoesSistema } from "@/services/configuracoes";
 import { PrintTestButton } from "@/components/impressao/PrintTestButton";
 import { Badge } from "@/components/ui/badge";
 import { PrintTemplate } from "@/hooks/usePrint";
+import { TestimonialSubmissionPanel } from "./TestimonialSubmissionPanel";
 
 interface SistemaTabProps {
   configuracoesSistema: ConfiguracoesSistema;
@@ -203,6 +204,8 @@ export const SistemaTab: React.FC<SistemaTabProps> = ({
             <option value="es">Español</option>
           </select>
         </div>
+
+        <TestimonialSubmissionPanel />
       </CardContent>
       {canEdit && (
         <CardFooter>
