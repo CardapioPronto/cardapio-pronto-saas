@@ -174,14 +174,16 @@ async function getCallerAccess(
 
   if (permissionsError) throw permissionsError;
 
-  const callerPermissions = new Set((permissionRows ?? []).map((row) => row.permission as string));
+  const callerPermissions: Set<string> = new Set(
+    (permissionRows ?? []).map((row) => String(row.permission)),
+  );
   const canManageEmployees = employee.user_type === "manager" || callerPermissions.has("employees_manage");
 
   if (!canManageEmployees) {
     return { allowed: false, isOwnerOrAdmin: false, grantablePermissions: new Set() };
   }
 
-  const grantablePermissions = employee.user_type === "manager"
+  const grantablePermissions: Set<string> = employee.user_type === "manager"
     ? new Set([...MANAGER_GRANTABLE_PERMISSIONS].filter((p) => VALID_PERMISSIONS.has(p)))
     : new Set([...callerPermissions].filter((p) => MANAGER_GRANTABLE_PERMISSIONS.has(p)));
 
