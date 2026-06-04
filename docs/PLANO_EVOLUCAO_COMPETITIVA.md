@@ -364,7 +364,7 @@ Objetivo: transformar dados operacionais em recomendacoes simples.
 
 ### Escopo MVP
 
-- [~] Gerar resumo diario automatico.
+- [x] Gerar resumo diario automatico.
 - [x] Sugerir produto parado, produto campeao e queda de vendas.
 - [x] Sugerir campanha com base em clientes inativos.
 - [x] Sugerir ajuste de cardapio/promocao.
@@ -380,6 +380,7 @@ Evidencia:
 
 - 2026-06-04: Bloco 8 iniciado com Copiloto em `/copiloto`, RPC `get_owner_copilot_insights` e recomendações explicáveis usando vendas de hoje, comparação semanal, produto campeão, produto parado e clientes inativos com opt-in. O modo atual é sob demanda; agendamento/envio automático fica para próxima fatia.
 - 2026-06-04: Resumo diário persistido adicionado com `owner_copilot_daily_summaries`, histórico recente no painel e marcação de recomendações como revisadas. O resumo já fica salvo por dia quando o dono abre/atualiza o Copiloto; cron/notificação automática ainda pendente.
+- 2026-06-04: Alertas internos adicionados ao sino do dashboard via RPC `get_owner_copilot_alerts`. O sistema cria o resumo do dia caso ainda nao exista, mostra recomendações de prioridade alta/media pendentes e permite marcar como revisada ou descartada no `/copiloto`.
 
 ---
 
