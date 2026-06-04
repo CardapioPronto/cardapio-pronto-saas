@@ -19,6 +19,7 @@ import {
   ChefHat,
   Users,
   Gift,
+  BrainCircuit,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,7 @@ const operationalLinks: NavItem[] = [
   { to: "/cardapio", label: "Menu Digital", icon: Store, permissions: ["products_view"] },
   { to: "/mesas", label: "Áreas e Mesas", icon: TableIcon, permissions: ["settings_view"] },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3, permissions: ["reports_view"] },
+  { to: "/copiloto", label: "Copiloto", icon: BrainCircuit, permissions: ["reports_view", "orders_metrics_view"] },
 ];
 
 const communicationLinks: NavItem[] = [
