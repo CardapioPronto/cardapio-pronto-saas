@@ -94,7 +94,7 @@ export const ProdutoForm = ({
           restaurantId={restaurantId}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="grid gap-2">
             <Label htmlFor="preco">Preço (R$)*</Label>
             <Input
@@ -110,6 +110,27 @@ export const ProdutoForm = ({
                 })
               }
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="custo">Custo unitário (R$)</Label>
+            <Input
+              id="custo"
+              type="number"
+              step="0.01"
+              min="0"
+              value={produto.cost_price ?? ""}
+              placeholder="Opcional"
+              onChange={(e) =>
+                onChangeProduto({
+                  ...produto,
+                  cost_price: e.target.value === "" ? null : parseFloat(e.target.value),
+                })
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Usado apenas para estimar margem nos relatórios.
+            </p>
           </div>
 
           <div className="grid gap-2">

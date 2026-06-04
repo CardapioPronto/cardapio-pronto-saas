@@ -256,6 +256,7 @@ export const RelatoriosAvancados = () => {
                   <SelectItem value="todos">Todas</SelectItem>
                   <SelectItem value="source:app">PDV</SelectItem>
                   <SelectItem value="source:cardapio">Cardápio digital</SelectItem>
+                  <SelectItem value="source:whatsapp">WhatsApp</SelectItem>
                   <SelectItem value="source:ifood">iFood</SelectItem>
                   <SelectItem value="tipo:mesa">Mesa</SelectItem>
                   <SelectItem value="tipo:balcao">Balcão</SelectItem>

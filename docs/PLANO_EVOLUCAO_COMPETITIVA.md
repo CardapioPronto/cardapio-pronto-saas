@@ -416,10 +416,6 @@ Evidencia:
 - 2026-06-04: Detecção de conectividade reforçada com probe real do endpoint de saúde do Supabase, pois `navigator.onLine` pode permanecer verdadeiro sem acesso à internet. Badge, banner, cache do PDV, polls operacionais e Realtime agora aguardam a conectividade real e pausam chamadas repetitivas enquanto o backend estiver indisponível.
 - 2026-06-04: Fila local de pedidos de balcão adicionada ao PDV, com sincronização automática ao reconectar, painel de pendências/erros e remoção com confirmação. A migration `20260604130000_pos_order_client_order_id.sql` adiciona idempotência por restaurante + `client_order_id` na RPC `create_pos_order`, impedindo duplicidade em retries concorrentes. Pedidos de mesa continuam exigindo conexão.
 
-Evidencia:
-
-- Pendente.
-
 ---
 
 ## Bloco 10 — Dashboard financeiro e margem
@@ -429,12 +425,12 @@ Objetivo: provar valor economico do Pubfy.
 
 ### Escopo MVP
 
-- [ ] Receita por canal: PDV, cardapio proprio, WhatsApp, iFood.
-- [ ] Taxas estimadas de marketplace/gateway.
-- [ ] Ticket medio por canal.
-- [ ] Produtos com maior receita.
-- [ ] Margem estimada quando houver custo/ficha tecnica.
-- [ ] Calculadora de economia do canal proprio.
+- [x] Receita por canal: PDV, cardapio proprio, WhatsApp, iFood.
+- [x] Taxas estimadas de marketplace/gateway.
+- [x] Ticket medio por canal.
+- [x] Produtos com maior receita.
+- [x] Margem estimada quando houver custo/ficha tecnica.
+- [x] Calculadora de economia do canal proprio.
 
 ### Criterio de aceite
 
@@ -443,7 +439,9 @@ Objetivo: provar valor economico do Pubfy.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-04: Bloco 10 iniciado com a nova aba Financeiro em Relatorios. A migration `20260604140000_create_financial_dashboard_foundation.sql` cria configuracao de taxas estimadas por restaurante e a RPC agregada `get_restaurant_financial_dashboard`, com receita, pedidos, ticket medio, taxas, receita liquida estimada e participacao para PDV, cardapio proprio, WhatsApp e iFood.
+- 2026-06-04: A tela financeira adiciona configuracao das taxas medias de iFood e gateway, calculadora de economia do canal proprio e comparacao de custo estimado sem prometer percentuais padrao. Produtos com maior receita permanecem disponiveis no relatorio avancado, e o filtro de origem passou a incluir WhatsApp.
+- 2026-06-04: A migration `20260604150000_add_product_cost_and_financial_margin.sql` adiciona custo unitario opcional em tabela financeira protegida por RLS e amplia o dashboard com margem bruta estimada, cobertura da receita por custos cadastrados e ranking de margem por produto. Itens sem custo ou sem vinculo com o catalogo ficam fora do calculo, evitando tratar ausencia de dados como custo zero.
 
 ---
 
