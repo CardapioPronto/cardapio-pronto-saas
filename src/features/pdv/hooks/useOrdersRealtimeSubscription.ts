@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export type OrdersRealtimeHandlers = {
   onInsert?: (row: Record<string, unknown>) => void;
@@ -21,6 +22,7 @@ export function useOrdersRealtimeSubscription(
   handlers: OrdersRealtimeHandlers,
   channelId: string,
 ) {
+  const { isOnline, isChecking } = useNetworkStatus();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const handlersRef = useRef(handlers);
   const reloadTimerRef = useRef<number | null>(null);
@@ -31,7 +33,7 @@ export function useOrdersRealtimeSubscription(
   }, [handlers]);
 
   useEffect(() => {
-    if (!restaurantId) return;
+    if (!restaurantId || !isOnline || isChecking) return;
 
     const scheduleReload = () => {
       if (reloadTimerRef.current) window.clearTimeout(reloadTimerRef.current);
@@ -97,5 +99,5 @@ export function useOrdersRealtimeSubscription(
         channelRef.current = null;
       }
     };
-  }, [restaurantId, channelId]);
+  }, [channelId, isChecking, isOnline, restaurantId]);
 }

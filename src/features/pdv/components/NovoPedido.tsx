@@ -3,23 +3,32 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
 import { FiltroProdutos } from "./FiltroProdutos";
-import { useProdutos } from "@/hooks/useProdutos";
-import { useMesas } from "@/hooks/useMesas";
+import { usePDVOfflineCatalog } from "../hooks/usePDVOfflineCatalog";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 import { Product } from "@/types";
 import { DadosClientePedido, ItemPedido } from "../types";
-import { PackageSearch, UserRound } from "lucide-react";
+import { Database, PackageSearch, RefreshCw, UserRound, WifiOff } from "lucide-react";
 import { PrintPaperSize } from "@/hooks/usePrint";
+import { cn } from "@/lib/utils";
 
-// B7 — Limite alto para evitar paginação no PDV. A consulta usa
-// ordenação por nome e a filtragem (busca/categoria) é client-side
-// sobre este conjunto. Restaurantes com mais de PDV_PRODUCTS_LIMIT
-// produtos disponíveis recebem aviso para usar a busca por nome.
-const PDV_PRODUCTS_LIMIT = 500;
+const formatLastSync = (value: string | null) => {
+  if (!value) return "Ainda não sincronizado neste dispositivo";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Última sincronização indisponível";
+
+  return `Última sincronização: ${date.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  })}`;
+};
 
 export interface NovoPedidoProps {
   restaurantId: string;
@@ -66,19 +75,22 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
 }) => {
   const {
     produtos,
-    total: totalProdutos,
-    loading: produtosLoading,
-    isFetching: produtosFetching,
-  } = useProdutos(restaurantId, {
-    busca,
-    tab: "disponiveis",
-    itensPorPagina: PDV_PRODUCTS_LIMIT,
-    sortKey: "name",
-    sortDirection: "asc",
-  });
-  const { mesas, loading: mesasLoading, loadMesas } = useMesas(restaurantId);
-
-  const produtosListaTruncada = totalProdutos > PDV_PRODUCTS_LIMIT;
+    totalProdutos,
+    produtosListaTruncada,
+    categorias,
+    mesas,
+    areas,
+    ultimaSincronizacao,
+    possuiDadosLocais,
+    usandoCache,
+    isOnline,
+    isChecking,
+    loading: catalogLoading,
+    syncing: catalogSyncing,
+    error: catalogError,
+    syncCatalog,
+    refreshMesas,
+  } = usePDVOfflineCatalog(restaurantId);
 
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [aceitaMarketing, setAceitaMarketing] = useState(false);
@@ -149,7 +161,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
         return;
       }
 
-      await loadMesas();
+      await refreshMesas();
 
       // Limpar campos após sucesso
       setTelefoneCliente("");
@@ -166,17 +178,56 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
     <div className="grid h-full min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px] 2xl:grid-cols-[minmax(0,1fr)_460px]">
       <Card className="flex min-h-[560px] flex-col overflow-hidden xl:h-full xl:min-h-0">
         <CardHeader className="border-b px-4 py-3">
-          <CardTitle className="flex items-center justify-between gap-3 text-base">
-            <span className="flex min-w-0 items-center gap-2">
-              <PackageSearch className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">Produtos</span>
-            </span>
-            <span className="shrink-0 text-sm font-normal text-muted-foreground">
-              {produtosFiltrados.length} disponíveis
-            </span>
-          </CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PackageSearch className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">Produtos</span>
+                <span className="shrink-0 text-sm font-normal text-muted-foreground">
+                  {produtosFiltrados.length} disponíveis
+                </span>
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {formatLastSync(ultimaSincronizacao)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Badge variant="outline" className="gap-1.5">
+                {isChecking
+                  ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  : !isOnline
+                    ? <WifiOff className="h-3.5 w-3.5" />
+                    : <Database className="h-3.5 w-3.5" />}
+                {isChecking
+                  ? "Verificando conexão"
+                  : !isOnline
+                  ? possuiDadosLocais ? "Offline: dados salvos" : "Offline"
+                  : catalogSyncing
+                    ? "Sincronizando"
+                    : usandoCache
+                      ? "Dados salvos"
+                      : "Sincronizado"}
+              </Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => void syncCatalog()}
+                disabled={!isOnline || catalogSyncing}
+                aria-label="Atualizar dados do PDV"
+                title="Atualizar dados do PDV"
+              >
+                <RefreshCw className={cn("h-4 w-4", catalogSyncing && "animate-spin")} />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+            {catalogError && (
+              <Alert variant={possuiDadosLocais ? "default" : "destructive"}>
+                <AlertDescription>{catalogError}</AlertDescription>
+              </Alert>
+            )}
             <FiltroProdutos
               categoriaAtiva={categoriaAtiva}
               setCategoriaAtiva={setCategoriaAtiva}
@@ -185,22 +236,24 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
               tipoPedido={tipoPedido}
               mesaSelecionada={mesaSelecionada}
               setMesaSelecionada={setMesaSelecionada}
-              restaurantId={restaurantId}
               mesaError={mesaError}
               mesas={mesas}
-              mesasLoading={mesasLoading}
-              onRefreshMesas={loadMesas}
+              mesasLoading={catalogLoading || catalogSyncing}
+              onRefreshMesas={refreshMesas}
+              categorias={categorias}
+              categoriasLoading={catalogLoading}
+              areas={areas}
             />
             {produtosListaTruncada && !busca.trim() && (
               <p className="text-xs text-muted-foreground">
-                Exibindo os {PDV_PRODUCTS_LIMIT} primeiros produtos. Use a busca para localizar itens fora desta lista.
+                Exibindo {produtos.length.toLocaleString("pt-BR")} de {totalProdutos.toLocaleString("pt-BR")} produtos disponíveis.
               </p>
             )}
             <div className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
               <ListaProdutos
                 produtosFiltrados={produtosFiltrados}
                 onSelecionarProduto={adicionarProduto}
-                loading={produtosLoading || produtosFetching}
+                loading={catalogLoading}
               />
             </div>
         </CardContent>

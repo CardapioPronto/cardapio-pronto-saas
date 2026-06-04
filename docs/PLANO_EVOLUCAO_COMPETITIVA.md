@@ -391,12 +391,12 @@ Objetivo: reduzir risco quando a internet oscila.
 
 ### Escopo MVP
 
-- [ ] Cache local de produtos, categorias e mesas.
-- [ ] Mostrar ultima sincronizacao.
-- [ ] Criar fila local de pedidos de balcao.
-- [ ] Sincronizar quando internet voltar.
-- [ ] Adicionar `client_order_id` para evitar duplicidade.
-- [ ] Mostrar painel de pedidos pendentes de sincronizacao.
+- [x] Cache local de produtos, categorias e mesas.
+- [x] Mostrar ultima sincronizacao.
+- [x] Criar fila local de pedidos de balcao.
+- [x] Sincronizar quando internet voltar.
+- [x] Adicionar `client_order_id` para evitar duplicidade.
+- [x] Mostrar painel de pedidos pendentes de sincronizacao.
 
 ### Fora do MVP
 
@@ -409,6 +409,12 @@ Objetivo: reduzir risco quando a internet oscila.
 
 - Operador consegue registrar pedido de balcao sem internet e sincronizar depois sem duplicar.
 - Conflitos aparecem para revisao, nao sao silenciosos.
+
+Evidencia:
+
+- 2026-06-04: Bloco 9 iniciado com snapshot local versionado por restaurante para produtos disponíveis, categorias, mesas e áreas do PDV. O Novo Pedido usa a última sincronização salva quando a rede cai, mostra origem/horário dos dados e permite atualização manual online. A finalização de pedidos offline permanece bloqueada até a implementação da fila local e de `client_order_id`.
+- 2026-06-04: Detecção de conectividade reforçada com probe real do endpoint de saúde do Supabase, pois `navigator.onLine` pode permanecer verdadeiro sem acesso à internet. Badge, banner, cache do PDV, polls operacionais e Realtime agora aguardam a conectividade real e pausam chamadas repetitivas enquanto o backend estiver indisponível.
+- 2026-06-04: Fila local de pedidos de balcão adicionada ao PDV, com sincronização automática ao reconectar, painel de pendências/erros e remoção com confirmação. A migration `20260604130000_pos_order_client_order_id.sql` adiciona idempotência por restaurante + `client_order_id` na RPC `create_pos_order`, impedindo duplicidade em retries concorrentes. Pedidos de mesa continuam exigindo conexão.
 
 Evidencia:
 

@@ -22,7 +22,7 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user } = useCurrentUser();
   const { notifications, unreadCount, loading } = useDashboardNotifications();
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isChecking } = useNetworkStatus();
 
   const initials = (user?.name || user?.email || "Usuário")
     .split(" ")
@@ -54,14 +54,20 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
         <Badge
           variant="outline"
           className={
-            isOnline
+            isChecking
+              ? "hidden border-amber-200 bg-amber-50 text-amber-700 sm:inline-flex"
+              : isOnline
               ? "hidden border-emerald-200 bg-emerald-50 text-emerald-700 sm:inline-flex"
               : "border-red-200 bg-red-50 text-red-700"
           }
           aria-live="polite"
         >
-          {isOnline ? <Wifi className="mr-1 h-3.5 w-3.5" /> : <WifiOff className="mr-1 h-3.5 w-3.5" />}
-          {isOnline ? "Online" : "Offline"}
+          {isChecking
+            ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            : isOnline
+              ? <Wifi className="mr-1 h-3.5 w-3.5" />
+              : <WifiOff className="mr-1 h-3.5 w-3.5" />}
+          {isChecking ? "Verificando" : isOnline ? "Online" : "Offline"}
         </Badge>
         <Popover>
           <PopoverTrigger asChild>

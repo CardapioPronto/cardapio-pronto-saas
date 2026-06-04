@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { syncPagarmePendingPayment } from "@/services/pagarmeSubscriptionService";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 const POLL_INTERVAL_MS = 8_000;
 const POLL_MAX_MS = 5 * 60_000;
@@ -12,6 +13,7 @@ export function usePendingSubscriptionPoll(
   refetch: () => void | Promise<void>,
 ) {
   const inFlightRef = useRef(false);
+  const { isOnline, isChecking } = useNetworkStatus();
 
   const pendingKey = useMemo(
     () => [...pendingSubscriptionIds].sort().join("|"),
@@ -19,7 +21,7 @@ export function usePendingSubscriptionPoll(
   );
 
   useEffect(() => {
-    if (!pendingKey) return;
+    if (!pendingKey || !isOnline || isChecking) return;
 
     const subscriptionIds = pendingKey.split("|");
 
@@ -51,5 +53,5 @@ export function usePendingSubscriptionPoll(
       window.clearInterval(intervalId);
       window.clearTimeout(stopId);
     };
-  }, [pendingKey, refetch]);
+  }, [isChecking, isOnline, pendingKey, refetch]);
 }
