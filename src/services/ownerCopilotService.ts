@@ -52,6 +52,23 @@ export type OwnerCopilotDailySummary = {
   updatedAt: string;
 };
 
+export type OwnerCopilotAlert = {
+  id: string;
+  title: string;
+  description: string;
+  priority: CopilotPriority;
+  type: string;
+  actionHref: string;
+  summaryDate: string;
+};
+
+export type OwnerCopilotAlerts = {
+  summaryDate: string;
+  generatedAt: string;
+  alerts: OwnerCopilotAlert[];
+  unreadCount: number;
+};
+
 const emptySummary: OwnerCopilotSummary = {
   todayOrders: 0,
   todayRevenue: 0,
@@ -106,6 +123,29 @@ const normalizeDailySummary = (value: unknown): OwnerCopilotDailySummary => {
   };
 };
 
+const normalizeAlerts = (value: unknown): OwnerCopilotAlerts => {
+  const data = (value ?? {}) as Partial<OwnerCopilotAlerts>;
+  const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+
+  return {
+    summaryDate: String(data.summaryDate ?? new Date().toISOString().slice(0, 10)),
+    generatedAt: String(data.generatedAt ?? new Date().toISOString()),
+    alerts: alerts.map((alert) => {
+      const item = alert as Partial<OwnerCopilotAlert>;
+      return {
+        id: String(item.id ?? ""),
+        title: String(item.title ?? "Recomendação do Copiloto"),
+        description: String(item.description ?? "Existe uma sugestão operacional aguardando revisão."),
+        priority: String(item.priority ?? "low"),
+        type: String(item.type ?? "operation"),
+        actionHref: String(item.actionHref ?? "/copiloto"),
+        summaryDate: String(item.summaryDate ?? data.summaryDate ?? new Date().toISOString().slice(0, 10)),
+      };
+    }),
+    unreadCount: Number(data.unreadCount ?? alerts.length),
+  };
+};
+
 async function requireRestaurantId() {
   const restaurantId = await getCurrentRestaurantId();
   if (!restaurantId) {
@@ -136,6 +176,18 @@ export async function refreshOwnerCopilotDailySummary(referenceDate?: Date): Pro
 
   if (error) throw error;
   return normalizeDailySummary(data);
+}
+
+export async function getOwnerCopilotAlerts(referenceDate?: Date): Promise<OwnerCopilotAlerts> {
+  const restaurantId = await requireRestaurantId();
+
+  const { data, error } = await supabase.rpc("get_owner_copilot_alerts", {
+    p_restaurant_id: restaurantId,
+    p_reference_date: referenceDate?.toISOString().slice(0, 10) ?? null,
+  });
+
+  if (error) throw error;
+  return normalizeAlerts(data);
 }
 
 export async function listOwnerCopilotDailySummaries(limit = 7): Promise<OwnerCopilotDailySummary[]> {

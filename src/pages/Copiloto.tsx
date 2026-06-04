@@ -13,6 +13,7 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
+  XCircle,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   listOwnerCopilotDailySummaries,
   markOwnerCopilotRecommendation,
+  CopilotRecommendationState,
   OwnerCopilotDailySummary,
   OwnerCopilotRecommendation,
   refreshOwnerCopilotDailySummary,
@@ -77,18 +79,22 @@ const RecommendationCard = ({
   recommendation,
   state,
   onMarkReviewed,
-  isMarking,
+  onDismiss,
+  isUpdating,
 }: {
   recommendation: OwnerCopilotRecommendation;
-  state?: { status: string } | null;
+  state?: CopilotRecommendationState | null;
   onMarkReviewed: () => void;
-  isMarking: boolean;
+  onDismiss: () => void;
+  isUpdating: boolean;
 }) => {
   const Icon = typeIcon[recommendation.type] ?? Lightbulb;
   const isReviewed = state?.status === "reviewed";
+  const isDismissed = state?.status === "dismissed";
+  const isClosed = isReviewed || isDismissed;
 
   return (
-    <article className="rounded-md border bg-background p-5 shadow-sm">
+    <article className={cn("rounded-md border bg-background p-5 shadow-sm", isDismissed && "opacity-70")}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -103,7 +109,11 @@ const RecommendationCard = ({
           variant="outline"
           className={cn("shrink-0", priorityClass[recommendation.priority] ?? priorityClass.low)}
         >
-          {isReviewed ? "Revisada" : priorityLabel[recommendation.priority] ?? recommendation.priority}
+          {isReviewed
+            ? "Revisada"
+            : isDismissed
+              ? "Descartada"
+              : priorityLabel[recommendation.priority] ?? recommendation.priority}
         </Badge>
       </div>
 
@@ -128,10 +138,21 @@ const RecommendationCard = ({
             size="sm"
             className="shrink-0"
             onClick={onMarkReviewed}
-            disabled={isReviewed || isMarking}
+            disabled={isClosed || isUpdating}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
             {isReviewed ? "Revisada" : "Marcar revisada"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={onDismiss}
+            disabled={isClosed || isUpdating}
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            {isDismissed ? "Descartada" : "Descartar"}
           </Button>
           <Button asChild variant="outline" size="sm" className="shrink-0">
             <Link to={recommendation.actionHref}>
@@ -158,12 +179,16 @@ const Copiloto = () => {
     queryFn: () => listOwnerCopilotDailySummaries(7),
   });
 
-  const markMutation = useMutation({
-    mutationFn: (params: { summaryDate: string; recommendationId: string }) =>
+  const recommendationStateMutation = useMutation({
+    mutationFn: (params: {
+      summaryDate: string;
+      recommendationId: string;
+      status: "reviewed" | "dismissed";
+    }) =>
       markOwnerCopilotRecommendation({
         summaryDate: params.summaryDate,
         recommendationId: params.recommendationId,
-        status: "reviewed",
+        status: params.status,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["owner-copilot-daily-summary"] });
@@ -283,11 +308,17 @@ const Copiloto = () => {
                     key={recommendation.id}
                     recommendation={recommendation}
                     state={dailySummary.recommendationStates[recommendation.id]}
-                    onMarkReviewed={() => markMutation.mutate({
+                    onMarkReviewed={() => recommendationStateMutation.mutate({
                       summaryDate: dailySummary.summaryDate,
                       recommendationId: recommendation.id,
+                      status: "reviewed",
                     })}
-                    isMarking={markMutation.isPending}
+                    onDismiss={() => recommendationStateMutation.mutate({
+                      summaryDate: dailySummary.summaryDate,
+                      recommendationId: recommendation.id,
+                      status: "dismissed",
+                    })}
+                    isUpdating={recommendationStateMutation.isPending}
                   />
                 ))}
               </div>

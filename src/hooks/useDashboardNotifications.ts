@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { AlertTriangle, MessageCircle, Package, type LucideIcon } from "lucide-react";
+import { AlertTriangle, BrainCircuit, MessageCircle, Package, type LucideIcon } from "lucide-react";
+import { getOwnerCopilotAlerts } from "@/services/ownerCopilotService";
 
 const REFRESH_INTERVAL_MS = 60_000;
 
@@ -38,7 +39,12 @@ export function useDashboardNotifications() {
 
     setLoading(true);
     try {
-      const [ordersResult, threadsResult, instancesResult] = await Promise.all([
+      const copilotAlertsPromise = getOwnerCopilotAlerts().catch((error) => {
+        console.warn("Erro ao carregar alertas do Copiloto:", error);
+        return null;
+      });
+
+      const [ordersResult, threadsResult, instancesResult, copilotAlerts] = await Promise.all([
         supabase
           .from("orders")
           .select("id", { count: "exact", head: true })
@@ -54,6 +60,7 @@ export function useDashboardNotifications() {
           .select("id, status, webhook_url")
           .eq("restaurant_id", user.restaurant_id)
           .eq("is_active", true),
+        copilotAlertsPromise,
       ]);
 
       if (ordersResult.error) throw ordersResult.error;
@@ -105,6 +112,23 @@ export function useDashboardNotifications() {
           href: "/atendimento",
           tone: "danger",
           icon: AlertTriangle,
+        });
+      }
+
+      if (copilotAlerts && copilotAlerts.alerts.length > 0) {
+        const hasHighPriority = copilotAlerts.alerts.some((alert) => alert.priority === "high");
+        const firstAlert = copilotAlerts.alerts[0];
+
+        next.push({
+          id: "owner-copilot-alerts",
+          title: "Copiloto IA",
+          description: firstAlert?.title
+            ? `${firstAlert.title}${copilotAlerts.alerts.length > 1 ? " e outras sugestões aguardam revisão." : " aguarda revisão."}`
+            : "Há recomendações operacionais aguardando revisão.",
+          count: copilotAlerts.alerts.length,
+          href: "/copiloto",
+          tone: hasHighPriority ? "warning" : "info",
+          icon: BrainCircuit,
         });
       }
 
