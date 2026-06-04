@@ -47,6 +47,7 @@ const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
 const EmailIntegracao = lazy(() => import('@/pages/EmailIntegracao'));
 const Automacoes = lazy(() => import('@/pages/Automacoes'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
+const Copiloto = lazy(() => import('@/pages/Copiloto'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
 const Atendimento = lazy(() => import('@/pages/Atendimento'));
 const Admin = lazy(() => import('@/pages/Admin'));
@@ -247,6 +248,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['reports_view']}>
           <MainLayout>
             <Relatorios />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/copiloto" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'orders_metrics_view']} requireAny>
+          <MainLayout>
+            <Copiloto />
           </MainLayout>
         </ProtectedRoute>
       } />
