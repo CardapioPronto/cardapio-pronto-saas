@@ -18,12 +18,12 @@ const LandingCTA = () => {
               Comece com orientação e sem compromisso
             </span>
             <h2 className="mt-5 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">
-              Veja o Pubfy funcionando na rotina do seu restaurante.
+              Comece seu canal próprio com operação, dados e recompra no mesmo lugar.
             </h2>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/75">
               {trialDays > 0
-                ? "Crie sua conta, cadastre seu estabelecimento e teste o fluxo completo com cardápio, produtos, mesas, pedidos e atendimento em um só lugar."
-                : "Crie sua conta, cadastre seu estabelecimento e ative o plano para operar cardápio, produtos, mesas, pedidos e atendimento em um só lugar."}
+                ? "Crie sua conta, cadastre seu estabelecimento e teste o fluxo com cardápio, PDV, mesas, CRM, fidelidade, campanhas, impressão e relatórios."
+                : "Crie sua conta, cadastre seu estabelecimento e ative o plano para operar cardápio, PDV, mesas, CRM, fidelidade, campanhas, impressão e relatórios."}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link to="/teste-gratis">
@@ -46,8 +46,8 @@ const LandingCTA = () => {
               {[
                 "Cadastrar produtos, categorias e imagens principais",
                 "Publicar o cardápio por QR Code com tema do segmento",
-                "Abrir pedidos no PDV e testar mesas ou delivery",
-                "Conectar WhatsApp, campanhas e relatórios conforme a rotina",
+                "Abrir pedidos no PDV e testar mesas, cozinha e impressão",
+                "Ativar CRM, fidelidade, campanhas e relatórios por canal",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green" />

@@ -7,48 +7,45 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Star } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { listPublicLandingTestimonials } from "@/services/landingTestimonialsService";
 
-const testimonials = [
-  {
-    id: 1,
-    quote: "O Pubfy tirou nosso cardápio do papel e reduziu muito a confusão entre atendimento e cozinha.",
-    author: "Maria Silva",
-    role: "Proprietária, Restaurante Sabor Caseiro",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-  {
-    id: 2,
-    quote: "O PDV online ficou simples para a equipe usar no horário de pico. Os pedidos aparecem com muito mais clareza.",
-    author: "João Pereira",
-    role: "Gerente, Bar do João",
-    image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-  {
-    id: 3,
-    quote: "Conseguimos acompanhar mesas, delivery e WhatsApp sem depender de várias planilhas abertas.",
-    author: "Ana Costa",
-    role: "Proprietária, Café Aroma",
-    image: "https://images.unsplash.com/photo-1629747490241-624f07d70e1e?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-  {
-    id: 4,
-    quote: "Os relatórios mostram o que mais vende e ajudam a ajustar promoção, estoque e escala da equipe.",
-    author: "Carlos Mendes",
-    role: "Sócio, Pizzaria Napoli",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-];
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 
 const Testimonials = () => {
+  const { data: testimonials, isLoading } = useQuery({
+    queryKey: ["public-landing-testimonials"],
+    queryFn: async () => {
+      const { data, error } = await listPublicLandingTestimonials(6);
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    retry: 1,
+  });
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isLoading && !testimonials?.length) {
+    return null;
+  }
+
   return (
     <section className="py-16 md:py-24 bg-beige/20">
       <div className="container mx-auto px-6">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">
-            Feito para quem atende cliente todos os dias
+            Resultados de quem já está construindo canal próprio
           </h2>
           <p className="text-lg text-navy/70">
-            A mensagem comercial fica mais forte quando mostra resultados operacionais simples: menos erro, mais velocidade e mais controle.
+            Depoimentos reais de restaurantes que usam o Pubfy para organizar pedidos, relacionamento, campanhas e operação.
           </p>
         </div>
 
@@ -60,28 +57,37 @@ const Testimonials = () => {
             }}
           >
             <CarouselContent>
-              {testimonials.map((testimonial) => (
+              {(testimonials ?? []).map((testimonial) => (
                 <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3">
                   <div className="bg-white p-6 rounded-lg shadow-sm h-full flex flex-col">
                     <div className="mb-4">
-                      {[...Array(5)].map((_, i) => (
+                      {[...Array(testimonial.rating)].map((_, i) => (
                         <Star key={i} className="h-5 w-5 inline-block fill-orange text-orange" />
                       ))}
                     </div>
                     <blockquote className="flex-grow">
-                      <p className="text-navy/80 italic mb-6">"{testimonial.quote}"</p>
+                      <p className="text-navy/80 italic mb-6">"{testimonial.message}"</p>
                     </blockquote>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 rounded-full overflow-hidden mr-4">
-                        <img 
-                          src={testimonial.image} 
-                          alt={testimonial.author} 
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="mr-4 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-green/10 text-sm font-semibold text-green">
+                        {testimonial.avatar_url ? (
+                          <img
+                            src={testimonial.avatar_url}
+                            alt={testimonial.restaurant_name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          getInitials(testimonial.restaurant_name || testimonial.author_name)
+                        )}
                       </div>
                       <div>
-                        <p className="font-medium text-navy">{testimonial.author}</p>
-                        <p className="text-sm text-navy/60">{testimonial.role}</p>
+                        <p className="font-medium text-navy">{testimonial.author_name}</p>
+                        <p className="text-sm text-navy/60">
+                          {[testimonial.author_role, testimonial.restaurant_name].filter(Boolean).join(" · ")}
+                        </p>
+                        {testimonial.public_note && (
+                          <p className="mt-1 text-xs text-green">{testimonial.public_note}</p>
+                        )}
                       </div>
                     </div>
                   </div>

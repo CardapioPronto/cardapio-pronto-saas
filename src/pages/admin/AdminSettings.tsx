@@ -25,6 +25,7 @@ import {
   type IfoodSaasAppSettings,
 } from '@/services/adminService';
 import type { Database, Json } from '@/integrations/supabase/types';
+import { LandingTestimonialsAdmin } from '@/components/admin/LandingTestimonialsAdmin';
 
 type SystemSetting = Database['public']['Tables']['system_settings']['Row'];
 
@@ -358,6 +359,8 @@ const AdminSettings = () => {
           )}
         </CardContent>
       </Card>
+
+      <LandingTestimonialsAdmin />
       </div>
 
       {/* Dialog para editar configuração */}

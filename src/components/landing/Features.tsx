@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import {
   BarChart3,
-  Bot,
   CheckCircle2,
-  CreditCard,
+  Gift,
   Mail,
   Megaphone,
   MessageCircle,
+  Printer,
   QrCode,
   ReceiptText,
   Settings,
@@ -15,19 +15,20 @@ import {
   Tags,
   Users,
   Utensils,
+  Wifi,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const coreFeatures = [
   {
     icon: QrCode,
-    title: "Cardápio digital por QR Code",
-    description: "Menu público responsivo, fotos, categorias, temas por segmento, horário de funcionamento e pedidos pelo celular.",
+    title: "Canal próprio por QR Code",
+    description: "Cardápio público responsivo, fotos, categorias, temas por segmento, pedidos pelo celular e dados para relacionamento.",
   },
   {
     icon: ShoppingCart,
     title: "PDV online e pedidos",
-    description: "Lançamento rápido de pedidos, histórico, comandas, status e operação pelo navegador para salão e delivery.",
+    description: "Lançamento rápido de pedidos, histórico, comandas, status, badge do pedido atual e operação pelo navegador.",
   },
   {
     icon: Utensils,
@@ -35,9 +36,19 @@ const coreFeatures = [
     description: "Organize salão por ambientes, acompanhe mesas abertas e reduza atrito entre atendimento, cozinha e caixa.",
   },
   {
+    icon: Users,
+    title: "CRM e captura de leads",
+    description: "Clientes consolidados por telefone, origem, opt-in, recorrência, ticket, tags e histórico de pedidos.",
+  },
+  {
+    icon: Gift,
+    title: "Fidelidade e cashback",
+    description: "Regras simples de benefício, saldo por cliente, resgate no checkout e estorno quando o pedido é cancelado.",
+  },
+  {
     icon: Tags,
-    title: "Produtos, cupons e promoções",
-    description: "Controle itens, imagens, categorias, cupons promocionais e campanhas direto no painel administrativo.",
+    title: "Cupons e campanhas automáticas",
+    description: "Campanhas por comportamento, cupom rastreável, envio de teste, métricas e automações dentro do módulo de e-mail.",
   },
   {
     icon: MessageCircle,
@@ -47,32 +58,32 @@ const coreFeatures = [
   {
     icon: BarChart3,
     title: "Relatórios e desempenho",
-    description: "Indicadores de vendas, produtos populares, ticket médio, exportação de dados e análise para decidir com clareza.",
+    description: "Vendas por período, produtos populares, ticket médio, exportação e comparação entre iFood e canal próprio.",
+  },
+  {
+    icon: Printer,
+    title: "Impressão operacional",
+    description: "Vias de cozinha, caixa e cliente, templates por finalidade e impressão pós-finalização no PDV.",
+  },
+  {
+    icon: Wifi,
+    title: "PWA e indicador offline",
+    description: "Aplicação instalável, cache de assets, indicador online/offline e bloqueios claros para ações que exigem internet.",
+  },
+  {
+    icon: Store,
+    title: "iFood 2.0",
+    description: "App SaaS centralizado, Merchant ID por restaurante, mapeamento de itens, baixa de estoque e relatório por canal.",
+  },
+  {
+    icon: Mail,
+    title: "E-mail e Resend",
+    description: "Conta Resend por restaurante, templates, logs, testes de envio e campanhas comerciais com controle operacional.",
   },
   {
     icon: Users,
     title: "Equipe e permissões",
     description: "Cadastre funcionários, defina acessos por função e proteja telas sensíveis sem travar a rotina da loja.",
-  },
-  {
-    icon: CreditCard,
-    title: "Assinaturas e pagamentos",
-    description: "Planos, período de teste, pagamentos Pix, boleto e cartão com gestão integrada para administradores.",
-  },
-  {
-    icon: Mail,
-    title: "Email e campanhas",
-    description: "Configurações de e-mail, templates globais, campanhas e operações de disparo para relacionamento com clientes.",
-  },
-  {
-    icon: Bot,
-    title: "Automações inteligentes",
-    description: "Fluxos para atendimento, mensagens, transcrição e respostas com IA quando a operação precisa ganhar escala.",
-  },
-  {
-    icon: Store,
-    title: "Integração iFood",
-    description: "Base para eventos e sincronização de pedidos do iFood, aproximando canais externos da gestão central.",
   },
   {
     icon: Settings,
@@ -82,10 +93,10 @@ const coreFeatures = [
 ];
 
 const outcomes = [
-  "Cliente acessa o cardápio pelo QR Code",
-  "Pedido chega no painel e segue para preparo",
-  "Equipe acompanha mesa, delivery e WhatsApp",
-  "Gestor enxerga vendas, produtos e gargalos",
+  "Cliente acessa o cardápio e entra na base própria",
+  "Pedido chega no PDV, cozinha ou integração",
+  "Campanhas e fidelidade puxam recompra",
+  "Gestor compara marketplace e venda direta",
 ];
 
 const Features = () => {
@@ -96,14 +107,14 @@ const Features = () => {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-green/10 px-4 py-2 text-sm font-semibold text-green">
               <ReceiptText size={16} />
-              Plataforma completa para a rotina real
+              Plataforma para vender direto e operar melhor
             </span>
             <h2 className="mt-5 text-3xl font-bold leading-tight text-navy md:text-5xl">
-              Todas as funcionalidades importantes aparecem antes do cliente precisar procurar.
+              O Pubfy já nasce para conectar venda, operação e relacionamento.
             </h2>
           </div>
           <p className="text-lg leading-relaxed text-navy/70">
-            Reúna pedidos, cardápio, PDV, mesas, relatórios, equipe, WhatsApp, campanhas, integrações e configurações em uma experiência simples para operar todos os dias.
+            Reúna pedidos, cardápio, PDV, mesas, CRM, fidelidade, campanhas, relatórios, equipe, WhatsApp, impressão e iFood em uma experiência simples para operar todos os dias.
           </p>
         </div>
 
@@ -131,10 +142,10 @@ const Features = () => {
           <div className="p-7 md:p-10">
             <span className="inline-flex items-center gap-2 rounded-full bg-orange/10 px-4 py-2 text-sm font-semibold text-orange">
               <Megaphone size={16} />
-              Jornada de conversão
+              Jornada do canal próprio
             </span>
             <h3 className="mt-5 text-2xl font-bold text-navy md:text-3xl">
-              Da primeira leitura do QR Code até a decisão do gestor.
+              Da primeira venda até a recompra sem depender só de marketplace.
             </h3>
             <div className="mt-6 space-y-4">
               {outcomes.map((item, index) => (
@@ -145,10 +156,10 @@ const Features = () => {
                   <div className="border-b border-gray-100 pb-4">
                     <p className="font-medium text-navy">{item}</p>
                     <p className="mt-1 text-sm text-navy/60">
-                      {index === 0 && "Menos cardápio impresso e mais autonomia para escolher."}
-                      {index === 1 && "Mais velocidade no atendimento e menos erro de anotação."}
-                      {index === 2 && "Canais diferentes entram em uma rotina mais organizada."}
-                      {index === 3 && "Relatórios transformam movimento em decisões práticas."}
+                      {index === 0 && "Telefone, origem e opt-in ajudam a criar relacionamento."}
+                      {index === 1 && "Status, impressão e comandas reduzem ruído na operação."}
+                      {index === 2 && "Cupons rastreáveis transformam base própria em receita recorrente."}
+                      {index === 3 && "Relatórios mostram onde o restaurante ganha mais margem."}
                     </p>
                   </div>
                 </div>
@@ -170,7 +181,7 @@ const Features = () => {
         </div>
 
         <div className="mt-10 grid gap-3 text-sm text-navy/75 md:grid-cols-4">
-          {["Sem instalação local", "Atualização em tempo real", "Controle por permissões", "Pronto para crescer"].map((item) => (
+          {["Sem instalação local", "Atualização em tempo real", "Controle por permissões", "Pronto para piloto operacional"].map((item) => (
             <div key={item} className="flex items-center gap-2">
               <CheckCircle2 size={18} className="shrink-0 text-green" />
               <span>{item}</span>
