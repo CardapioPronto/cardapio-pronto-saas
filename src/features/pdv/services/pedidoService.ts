@@ -158,6 +158,8 @@ export async function salvarPedido(
   telefoneCliente?: string,
   mesaId?: string,
   override?: SalvarPedidoOverrideOptions,
+  clientOrderId?: string,
+  silent = false,
 ): Promise<SalvarPedidoResult> {
   try {
     // Determinar se é mesa ou balcão
@@ -175,6 +177,7 @@ export async function salvarPedido(
       table_id: tableId,
       customer_name: nomeCliente || undefined,
       customer_phone: telefoneCliente || undefined,
+      client_order_id: clientOrderId || undefined,
       items: itensPedido.map((item) => ({
         product_id: item.produto.id,
         quantity: item.quantidade,
@@ -207,7 +210,9 @@ export async function salvarPedido(
         };
       }
 
-      toast.error(errorMessage || 'Erro ao salvar o pedido. Por favor, tente novamente.');
+      if (!silent) {
+        toast.error(errorMessage || 'Erro ao salvar o pedido. Por favor, tente novamente.');
+      }
       return {
         success: false,
         error: orderError || new Error('Pedido não retornado'),
@@ -220,16 +225,22 @@ export async function salvarPedido(
     }
 
 
-    toast.success(
-      override?.allowNegative
-        ? 'Pedido finalizado (venda autorizada sem saldo).'
-        : 'Pedido finalizado com sucesso!',
-    );
+    if (!silent) {
+      toast.success(
+        override?.allowNegative
+          ? 'Pedido finalizado (venda autorizada sem saldo).'
+          : 'Pedido finalizado com sucesso!',
+      );
+    }
     return { success: true, pedido: order };
   } catch (error) {
     console.error('Erro ao processar pedido:', error);
-    toast.error('Erro ao processar o pedido.');
-    return { success: false, error };
+    if (!silent) toast.error('Erro ao processar o pedido.');
+    return {
+      success: false,
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Erro ao processar o pedido.',
+    };
   }
 }
 

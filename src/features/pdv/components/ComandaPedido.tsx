@@ -43,7 +43,7 @@ export const ComandaPedido = ({
   className,
 }: ComandaPedidoProps) => {
   const { printOrder, printing } = usePrint();
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isChecking } = useNetworkStatus();
   const mesaAtual = mesas.find(m => m.id === mesaSelecionada);
 
   const getMesaDisplay = () => {
@@ -127,10 +127,14 @@ export const ComandaPedido = ({
             </div>
           )}
 
-          {!isOnline && itensPedido.length > 0 && (
-            <div className="mb-4 flex w-full items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {!isOnline && !isChecking && itensPedido.length > 0 && (
+            <div className="mb-4 flex w-full items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Reconecte a internet para finalizar este pedido.</span>
+              <span>
+                {tipoPedido === "balcao"
+                  ? "Este pedido será salvo neste dispositivo e sincronizado quando a internet voltar."
+                  : "Pedidos de mesa exigem conexão. Altere para balcão para salvar offline."}
+              </span>
             </div>
           )}
 
@@ -156,7 +160,12 @@ export const ComandaPedido = ({
             onClick={finalizarPedido}
             className="w-full"
             size="lg"
-            disabled={itensPedido.length === 0 || salvandoPedido || !isOnline}
+            disabled={
+              itensPedido.length === 0
+              || salvandoPedido
+              || isChecking
+              || (!isOnline && tipoPedido === "mesa")
+            }
           >
             {salvandoPedido ? (
               <>
@@ -164,7 +173,13 @@ export const ComandaPedido = ({
                 Finalizando...
               </>
             ) : (
-              precisaMesa ? "Selecionar mesa para finalizar" : "Finalizar Pedido"
+              isChecking
+                ? "Verificando conexão..."
+                : !isOnline && tipoPedido === "balcao"
+                  ? "Salvar pedido offline"
+                  : precisaMesa
+                    ? "Selecionar mesa para finalizar"
+                    : "Finalizar Pedido"
             )}
           </Button>
         </CardFooter>

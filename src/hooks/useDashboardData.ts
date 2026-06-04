@@ -4,8 +4,10 @@ import { DashboardOverview, getDashboardOverview, getDashboardStats } from "@/se
 import { useStatsData } from "./useStatsData";
 import { useRecentSales } from "./useRecentSales";
 import { usePopularProducts } from "./usePopularProducts";
+import { useNetworkStatus } from "./useNetworkStatus";
 
 export const useDashboardData = (restaurantId: string | null, canViewFinancials = false) => {
+  const { isOnline, isChecking } = useNetworkStatus();
   const [loading, setLoading] = useState<boolean>(true);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const { stats, updateStats } = useStatsData();
@@ -13,7 +15,7 @@ export const useDashboardData = (restaurantId: string | null, canViewFinancials 
   const { popularProducts, loadPopularProducts } = usePopularProducts();
 
   useEffect(() => {
-    if (!restaurantId) {
+    if (!restaurantId || !isOnline || isChecking) {
       setLoading(false);
       return;
     }
@@ -38,7 +40,15 @@ export const useDashboardData = (restaurantId: string | null, canViewFinancials 
     };
 
     fetchDashboardData();
-  }, [restaurantId, canViewFinancials, loadRecentSales, loadPopularProducts, updateStats]);
+  }, [
+    restaurantId,
+    canViewFinancials,
+    isChecking,
+    isOnline,
+    loadRecentSales,
+    loadPopularProducts,
+    updateStats,
+  ]);
 
   return { stats, loading, recentSales, popularProducts, overview };
 };

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { AlertTriangle, BrainCircuit, MessageCircle, Package, type LucideIcon } from "lucide-react";
 import { getOwnerCopilotAlerts } from "@/services/ownerCopilotService";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 const REFRESH_INTERVAL_MS = 60_000;
 
@@ -28,10 +29,16 @@ export interface DashboardNotification {
 
 export function useDashboardNotifications() {
   const { user } = useCurrentUser();
+  const { isOnline, isChecking } = useNetworkStatus();
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadNotifications = useCallback(async () => {
+    if (!isOnline || isChecking) {
+      setLoading(false);
+      return;
+    }
+
     if (!user?.restaurant_id) {
       setNotifications([]);
       return;
@@ -139,7 +146,7 @@ export function useDashboardNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [user?.restaurant_id]);
+  }, [isChecking, isOnline, user?.restaurant_id]);
 
   useEffect(() => {
     void loadNotifications();

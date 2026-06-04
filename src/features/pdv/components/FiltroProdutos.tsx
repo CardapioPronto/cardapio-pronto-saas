@@ -2,12 +2,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useCategorias } from "@/hooks/useCategorias";
-import { useAreas } from "@/hooks/useAreas";
 import { MesaSelectorModal } from "@/components/pdv/MesaSelectorModal";
 import { AlertCircle, Search, XCircle, MapPin } from "lucide-react";
 import { useState } from "react";
 import { Mesa } from "@/types/mesa";
+import { Area } from "@/types/area";
+import { Category } from "@/types";
 
 interface FiltroProdutosProps {
   categoriaAtiva: string;
@@ -17,11 +17,13 @@ interface FiltroProdutosProps {
   tipoPedido: "mesa" | "balcao";
   mesaSelecionada: string;
   setMesaSelecionada: (mesa: string) => void;
-  restaurantId: string;
   mesaError?: string;
   mesas: Mesa[];
   mesasLoading?: boolean;
   onRefreshMesas?: () => Promise<void> | void;
+  categorias: Category[];
+  categoriasLoading?: boolean;
+  areas: Area[];
 }
 
 export const FiltroProdutos = ({
@@ -32,14 +34,14 @@ export const FiltroProdutos = ({
   tipoPedido,
   mesaSelecionada,
   setMesaSelecionada,
-  restaurantId,
   mesaError,
   mesas,
   mesasLoading = false,
   onRefreshMesas,
+  categorias,
+  categoriasLoading = false,
+  areas,
 }: FiltroProdutosProps) => {
-  const { categorias, loading } = useCategorias();
-  const { areas } = useAreas(restaurantId);
   const [modalMesaOpen, setModalMesaOpen] = useState(false);
 
   const getMesaInfo = (mesaId: string) => {
@@ -111,7 +113,7 @@ export const FiltroProdutos = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
-              {loading ? (
+              {categoriasLoading ? (
                 <SelectItem value="loading" disabled>
                   Carregando categorias...
                 </SelectItem>

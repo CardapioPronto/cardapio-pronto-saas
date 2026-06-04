@@ -18,6 +18,7 @@ const SUPABASE_PUBLISHABLE_KEY =
 // URL pública do Supabase deste projeto, útil para Edge Functions
 // invocadas pelo frontend (ex.: telas administrativas do Pagar.me).
 export const supabaseUrl = SUPABASE_URL;
+export const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY;
 
 /**
  * Retrocompatibilidade com builds que ainda importam `{ supabaseConfigError }`
