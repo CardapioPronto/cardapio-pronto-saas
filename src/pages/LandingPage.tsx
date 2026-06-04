@@ -17,8 +17,8 @@ const LandingPage = () => {
   return (
     <>
     <PublicSeo
-      title="Pubfy | Cardápio digital, PDV e gestão para restaurantes"
-      description="Cardápio digital com QR Code, pedidos integrados à cozinha, PDV e ferramentas de gestão. Teste sem cartão e opere com mais clareza."
+      title="Pubfy | Canal próprio, PDV, CRM e automações para restaurantes"
+      description="Venda direto com cardápio por QR Code, PDV, mesas, CRM, fidelidade, campanhas, impressão, iFood integrado e relatórios por canal."
       path="/"
     />
     <div className="flex flex-col min-h-screen">
