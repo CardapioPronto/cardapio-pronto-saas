@@ -452,11 +452,11 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 ### Escopo MVP
 
-- [ ] Enviar pesquisa pos-pedido.
-- [ ] Coletar nota e comentario.
+- [x] Enviar pesquisa pos-pedido.
+- [x] Coletar nota e comentario.
 - [ ] Alertar dono em nota baixa.
-- [ ] Mostrar media por periodo.
-- [ ] Associar avaliacao ao pedido e ao cliente.
+- [x] Mostrar media por periodo.
+- [x] Associar avaliacao ao pedido e ao cliente.
 
 ### Criterio de aceite
 
@@ -465,7 +465,7 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-05: Criada base `order_feedback` com RPC publica de avaliacao no acompanhamento do pedido finalizado, vinculo com pedido/cliente e aba "Avaliacoes" em Relatorios com NPS, media, detratores e comentarios recentes. Alerta proativo ao dono segue pendente para proxima fatia.
 
 ---
 

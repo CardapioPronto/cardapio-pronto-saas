@@ -1,11 +1,12 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Download, Landmark, TrendingUp } from "lucide-react";
+import { Calendar, Download, Landmark, MessageSquareText } from "lucide-react";
 import { RelatoriosAvancados } from "@/components/relatorios/RelatoriosAvancados";
 import { ExportacaoDados } from "@/components/relatorios/ExportacaoDados";
 import { AnalisePerformance } from "@/components/relatorios/AnalisePerformance";
 import { FinancialDashboard } from "@/components/relatorios/FinancialDashboard";
+import { FeedbackDashboard } from "@/components/relatorios/FeedbackDashboard";
 
 const Relatorios = () => {
   return (
@@ -53,13 +54,13 @@ const Relatorios = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Performance</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Avaliações</CardTitle>
+              <MessageSquareText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Análise</div>
+              <div className="text-2xl font-bold">NPS</div>
               <p className="text-xs text-muted-foreground">
-                Indicadores de performance
+                Satisfação e comentários pós-pedido
               </p>
             </CardContent>
           </Card>
@@ -68,6 +69,7 @@ const Relatorios = () => {
         <Tabs defaultValue="financeiro" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="financeiro" className="shrink-0">Financeiro</TabsTrigger>
+            <TabsTrigger value="avaliacoes" className="shrink-0">Avaliações</TabsTrigger>
             <TabsTrigger value="relatorios" className="shrink-0">Relatórios Avançados</TabsTrigger>
             <TabsTrigger value="exportacao" className="shrink-0">Exportação</TabsTrigger>
             <TabsTrigger value="performance" className="shrink-0">Performance</TabsTrigger>
@@ -75,6 +77,10 @@ const Relatorios = () => {
 
           <TabsContent value="financeiro" className="space-y-4">
             <FinancialDashboard />
+          </TabsContent>
+
+          <TabsContent value="avaliacoes" className="space-y-4">
+            <FeedbackDashboard />
           </TabsContent>
           
           <TabsContent value="relatorios" className="space-y-4">
