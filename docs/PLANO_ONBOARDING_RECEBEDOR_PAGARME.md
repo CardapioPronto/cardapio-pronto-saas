@@ -131,9 +131,9 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 
 ### Bloco B — Extrato: valor bruto x líquido
 
-- [ ] **B1** Renomear no extrato/cards o que hoje é bruto (ex.: “Valor dos pedidos”) para não sugerir líquido.
-- [ ] **B2** Calcular e exibir o **líquido repassado** (descontar comissão da plataforma e taxas Pagar.me) — usar split aplicado e/ou dados do `order_payments.raw_response`.
-- [ ] **B3** Coluna/somatório separando bruto, comissão e líquido.
+- [x] **B1** Renomear no extrato/cards o que hoje é bruto (ex.: “Valor dos pedidos”) para não sugerir líquido. → cards “Bruto dos pedidos”, coluna “Bruto”
+- [x] **B2** Calcular e exibir o **líquido repassado** (descontar comissão da plataforma e taxas Pagar.me) — usar split aplicado e/ou dados do `order_payments.raw_response`. → `orderPaymentBreakdown.ts` + `recipientFinancialsService`
+- [x] **B3** Coluna/somatório separando bruto, comissão e líquido. → tabela com 4 colunas + linha de totais em `Recebimentos.tsx`
 
 ### Bloco C — Sincronização automática do status do recebedor
 
@@ -173,3 +173,4 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-04 | Painel financeiro | Edge `pagarme-recipient-financials`, serviço, página `/recebimentos` e item de menu; typecheck verde |
 | 2026-06-04 | Backlog + docs | Backlog de refinamentos (blocos A–F) documentado; `INTEGRACOES_PAGARME.md` atualizado |
 | 2026-06-05 | Bloco A KYC | Migration KYC, edge com `register_information` completo, `RecipientOnboardingForm` PF/PJ, `field_errors` na UI |
+| 2026-06-05 | Bloco B extrato | Bruto/comissão/taxa/líquido no extrato e cards de resumo (`orderPaymentBreakdown.ts`) |
