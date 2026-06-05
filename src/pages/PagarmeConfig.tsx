@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { RecipientOnboardingForm } from "@/components/payment/RecipientOnboardingForm";
 import { toast } from "@/components/ui/sonner-toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRecipientStatusPoll } from "@/hooks/useRecipientStatusPoll";
 import {
   OnlinePaymentMethod,
   PaymentFulfillment,
@@ -135,13 +136,29 @@ const PagarmeConfig = () => {
   const recipientActive = recipientStatus === "active";
   const recipientCreated = Boolean(recipient?.recipient_id);
 
-  const invalidateRecipientQueries = async () => {
+  const invalidateRecipientQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-account", restaurantId] }),
       queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-details", restaurantId] }),
       queryClient.invalidateQueries({ queryKey: ["restaurant-payment-settings", restaurantId] }),
     ]);
-  };
+  }, [queryClient, restaurantId]);
+
+  const handleRecipientStatusChange = useCallback(async (newStatus: RecipientStatus) => {
+    await invalidateRecipientQueries();
+    if (newStatus === "active") {
+      toast.success("Recebedor ativo! Você já pode ligar o PIX online.");
+    } else if (newStatus === "refused") {
+      toast.error("Recebedor recusado pelo Pagar.me. Revise os dados ou contate o suporte.");
+    }
+  }, [invalidateRecipientQueries]);
+
+  useRecipientStatusPoll({
+    restaurantId,
+    status: recipientStatus,
+    enabled: !!restaurantId && recipientCreated,
+    onStatusChange: handleRecipientStatusChange,
+  });
 
   if (!restaurantId) {
     return (
@@ -234,7 +251,7 @@ const PagarmeConfig = () => {
                 </AlertTitle>
                 <AlertDescription>
                   {recipientCreated
-                    ? "O Pagar.me está validando os dados (KYC). Assim que o recebedor ficar ativo, você poderá ligar o PIX online. Use “Sincronizar status” para checar."
+                    ? "O Pagar.me está validando os dados (KYC). Esta página atualiza o status automaticamente a cada 30 segundos por até 5 minutos. Você também pode usar “Sincronizar status”."
                     : "Preencha os dados abaixo. Após o envio, o Pagar.me valida o recebedor (pode levar alguns minutos a algumas horas)."}
                 </AlertDescription>
               </Alert>

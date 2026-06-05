@@ -44,6 +44,8 @@ Fluxo que cria o **recebedor (`recipient`)** do restaurante e dá visibilidade d
 |-------|----------------|
 | UI onboarding | `PagarmeConfig` (form de titular + conta bancária) |
 | API onboarding | `pagarme-create-recipient` (`action: submit` cria/atualiza, `sync_status` consulta KYC) |
+| Sync automático | `pagarme-webhook` (`recipient.created`/`recipient.updated`/`recipient.deleted`) + poll na UI (30s × 10 após cadastro) |
+| Notificações | E-mail ao lojista (`recipient_activated` / `recipient_refused`) + alertas no sino do dashboard |
 | Estado recebedor | `restaurant_recipient_accounts` (PII, RLS) + espelho em `restaurant_payment_settings` (`recipient_status`, `recipient_synced_at`) |
 | Admin | `AdminPagarme` mostra `recipient_status` e botão “Sincronizar status” |
 | UI financeiro | `Recebimentos` (`/recebimentos`): saldo, liquidações e extrato |
@@ -64,6 +66,7 @@ O lojista **não informa chave de API nem chave PIX** — só dados bancários d
 - **Secrets:** `PAGARME_WEBHOOK_SECRET` (preferencial) e fallback `PAGARME_SECRET_KEY`
 - **Auditoria:** `pagarme_webhook_events` (`signature_valid`, `processed`, `processing_error`)
 - **JWT:** desligado na função (`verify_jwt = false`) — correto para chamadas da Pagar.me
+- **Recebedor:** habilitar no painel Pagar.me os eventos `recipient.created`, `recipient.updated` e `recipient.deleted` no mesmo endpoint
 
 ## Homologação vs produção
 

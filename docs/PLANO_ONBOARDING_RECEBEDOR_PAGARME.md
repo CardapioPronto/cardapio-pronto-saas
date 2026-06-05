@@ -137,9 +137,9 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 
 ### Bloco C — Sincronização automática do status do recebedor
 
-- [ ] **C1** Tratar eventos de `recipient`/KYC no `pagarme-webhook` (atualizar `recipient_status` + `onboarding_status`).
-- [ ] **C2** Poll leve após o cadastro (ex.: a cada 30s por alguns minutos) até sair de `registration`.
-- [ ] **C3** Notificar o lojista quando o recebedor ficar `active` (e quando for `refused`).
+- [x] **C1** Tratar eventos de `recipient`/KYC no `pagarme-webhook` (atualizar `recipient_status` + `onboarding_status`). → `recipient.*` + `_shared/pagarme-recipient-status.ts`
+- [x] **C2** Poll leve após o cadastro (ex.: a cada 30s por alguns minutos) até sair de `registration`. → `useRecipientStatusPoll` em `PagarmeConfig`
+- [x] **C3** Notificar o lojista quando o recebedor ficar `active` (e quando for `refused`). → e-mail (`recipient_activated`/`recipient_refused`) + alertas no sino do dashboard
 
 ### Bloco D — Validações e navegação
 
@@ -174,3 +174,4 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-04 | Backlog + docs | Backlog de refinamentos (blocos A–F) documentado; `INTEGRACOES_PAGARME.md` atualizado |
 | 2026-06-05 | Bloco A KYC | Migration KYC, edge com `register_information` completo, `RecipientOnboardingForm` PF/PJ, `field_errors` na UI |
 | 2026-06-05 | Bloco B extrato | Bruto/comissão/taxa/líquido no extrato e cards de resumo (`orderPaymentBreakdown.ts`) |
+| 2026-06-05 | Bloco C sync | Webhook `recipient.*`, poll 30s×10, e-mail e notificações do painel |
