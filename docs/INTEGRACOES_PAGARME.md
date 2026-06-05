@@ -1,6 +1,10 @@
 # Integrações Pagar.me — visão técnica
 
-Resumo para desenvolvedores e suporte. O checklist operacional completo está em **`docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`**.
+Resumo para desenvolvedores e suporte.
+
+- **Homologação / go-live:** `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`
+- **Manutenção assinatura B2B (bugs/gaps):** `docs/PLANO_MANUTENCAO_ASSINATURA_PAGARME.md`
+- **Onboarding recebedor / repasse PIX pedidos:** `docs/PLANO_ONBOARDING_RECEBEDOR_PAGARME.md`
 
 ## Dois produtos de cobrança no Pubfy
 
