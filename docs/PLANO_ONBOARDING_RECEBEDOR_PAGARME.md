@@ -28,7 +28,8 @@ Hoje o PIX do cliente final (pedido do cardápio) é cobrado na conta Pagar.me *
 Permitir que o **dono do restaurante** preencha, dentro do Pubfy, os dados necessários (titular + conta bancária + documento) e que o sistema **crie/atualize automaticamente o recebedor no Pagar.me**, gravando o `recipient_id` e o status de KYC. O super-admin passa a **acompanhar e aprovar** com base nesses dados, em vez de digitar o `rp_...` manualmente.
 
 ### Fora de escopo (próximas entregas)
-- Painel financeiro do lojista (saldo, extrato, liquidações, saque).
+- ~~Painel financeiro do lojista (saldo, extrato, liquidações).~~ → **Entregue** (ver seção 7).
+- Saque manual / antecipação configurável pelo lojista.
 - Cartão de crédito online no cardápio.
 - Webhook de `recipient`/KYC do Pagar.me para atualizar status automaticamente (faremos sincronização sob demanda nesta entrega; webhook fica como melhoria).
 
@@ -83,7 +84,30 @@ flowchart TB
 
 - **KYC do Pagar.me é assíncrono:** após criar o recebedor, o status pode ficar `registration`/`affiliation`/`active`. O split só funciona com recebedor apto. Por isso `onboarding_status` local começa em `pending` e só vai a `approved` quando o recebedor estiver `active` (sincronização manual nesta entrega; webhook depois).
 - **Simulador PIX + Split:** conforme doc Pagar.me, o simulador de PIX pode não funcionar com split — validar em homologação com recebedor real de teste.
-- **Bug pré-existente (fora do escopo, registrar):** `pagarme-create-order-payment/index.ts` referencia `buildPagarmeOrderLineItems` e `toCents` sem `import` visível — verificar antes do go-live de PIX de pedido.
+- **Bug pré-existente — CORRIGIDO:** imports faltantes adicionados em
+  `pagarme-create-order-payment/index.ts` (`buildPagarmeOrderLineItems`, `toCents`) e em
+  `pagarme-webhook/index.ts` (`reconcileOrderPaymentFromPagarme`, `PagarmeOrderPaymentData`).
+  Sem isso, o webhook de `order.*` e a criação de PIX de pedido lançavam `ReferenceError` em runtime.
+
+---
+
+## 7. Entrega 2 — Painel financeiro do lojista
+
+**Objetivo:** dar visibilidade do dinheiro recebido e do saldo, dentro do produto.
+
+### Checklist
+- [x] **FIN-DB/EF** Edge function `pagarme-recipient-financials`: consulta `GET /recipients/{id}/balance`
+  (saldo disponível, a liberar, transferido) e `GET /recipients/{id}/transfers` (liquidações). Registrada em `config.toml`.
+- [x] **FIN-SVC** `src/services/recipientFinancialsService.ts`: saldo via edge function + extrato a partir de `order_payments` (com número/cliente do pedido) e resumo (total recebido, pedidos pagos, ticket médio).
+- [x] **FIN-UI** Página `src/pages/Recebimentos.tsx`: cards de resumo, saldo Pagar.me, transferências e extrato com filtro de período (7/30/90 dias).
+- [x] **FIN-NAV** Rota `/recebimentos` (`AppRoutes.tsx`) + item "Recebimentos" no menu (`DashboardSidebar.tsx`).
+- [x] **FIN-QA** `npm run typecheck` verde; sem lints.
+- [ ] **FIN-DEPLOY** Deploy da function `pagarme-recipient-financials` e teste com recebedor real.
+
+### Observações
+- O extrato usa dados locais (`order_payments`) — sempre disponível mesmo sem recebedor ativo.
+- O saldo/transferências dependem do recebedor já criado no Pagar.me; sem recebedor, a UI mostra aviso e só o extrato.
+- Saque/antecipação não estão expostos (liquidação é automática `Daily`); ficam como evolução futura.
 
 ---
 
@@ -93,3 +117,5 @@ flowchart TB
 |------|------|------------|
 | 2026-06-04 | Branch + plano | Branch `feature/pagarme-recipient-onboarding` criada e plano aprovado |
 | 2026-06-04 | DB + EF + FE | Migration, edge function, serviço e UIs (lojista + admin) implementados; `npm run typecheck` verde |
+| 2026-06-04 | Bugfix imports | Corrigidos imports faltantes em `pagarme-create-order-payment` e `pagarme-webhook` |
+| 2026-06-04 | Painel financeiro | Edge `pagarme-recipient-financials`, serviço, página `/recebimentos` e item de menu; typecheck verde |

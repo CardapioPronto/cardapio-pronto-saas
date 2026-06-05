@@ -22,6 +22,10 @@ import {
   SUBSCRIPTION_ENTITLEMENT_STATUSES,
   supersedePriorSubscriptions,
 } from "../_shared/pagarme-subscription-status.ts";
+import {
+  reconcileOrderPaymentFromPagarme,
+  type PagarmeOrderPaymentData,
+} from "../_shared/pagarme-order-payment-reconcile.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

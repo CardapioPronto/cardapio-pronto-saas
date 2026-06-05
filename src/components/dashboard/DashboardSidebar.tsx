@@ -20,6 +20,7 @@ import {
   Users,
   Gift,
   BrainCircuit,
+  Wallet,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +93,7 @@ const communicationLinks: NavItem[] = [
 
 const adminLinks: NavItem[] = [
   { to: "/funcionarios", label: "Funcionários", icon: UserRound, permissions: ["employees_manage"] },
+  { to: "/recebimentos", label: "Recebimentos", icon: Wallet, permissions: ["settings_manage", "settings_integrations_manage", "reports_view"] },
   { to: "/assinaturas", label: "Assinatura", icon: CreditCard, permissions: ["subscription_view"] },
   { to: "/configuracoes", label: "Configurações", icon: Settings, permissions: ["settings_view"] },
 ];
