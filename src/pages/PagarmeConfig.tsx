@@ -23,7 +23,8 @@ import {
   RecipientStatus,
   restaurantRecipientService,
 } from "@/services/restaurantRecipientService";
-import { Banknote, CheckCircle2, Clock, Loader2, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Banknote, CheckCircle2, Clock, Loader2, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
 
 const METHOD_OPTIONS: Array<{ value: OnlinePaymentMethod; label: string; disabled?: boolean }> = [
   { value: "pix", label: "PIX online" },
@@ -206,12 +207,20 @@ const PagarmeConfig = () => {
                   Conta para repasse (recebedor)
                 </CardTitle>
                 <CardDescription>
-                  Dados da conta bancária que vai receber o dinheiro dos pedidos pagos com PIX.
+                  Dados da conta bancária e KYC do recebedor. Você pode atualizar titular, endereço e conta mesmo após o cadastro inicial.
                 </CardDescription>
               </div>
-              <Badge variant={recipientBadgeVariant(recipientStatus)}>
-                {RECIPIENT_STATUS_LABEL[recipientStatus]}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={recipientBadgeVariant(recipientStatus)}>
+                  {RECIPIENT_STATUS_LABEL[recipientStatus]}
+                </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/recebimentos">
+                    Ver painel financeiro
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">

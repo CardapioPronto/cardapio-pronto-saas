@@ -5,10 +5,10 @@ INSERT INTO public.email_templates (
   description,
   category,
   subject,
-  html_body,
-  text_body,
+  html_content,
+  text_content,
   variables,
-  is_active
+  is_system
 )
 VALUES
 (
@@ -41,8 +41,8 @@ SET
   description = EXCLUDED.description,
   category = EXCLUDED.category,
   subject = EXCLUDED.subject,
-  html_body = EXCLUDED.html_body,
-  text_body = EXCLUDED.text_body,
+  html_content = EXCLUDED.html_content,
+  text_content = EXCLUDED.text_content,
   variables = EXCLUDED.variables,
-  is_active = EXCLUDED.is_active,
+  is_system = EXCLUDED.is_system,
   updated_at = now();

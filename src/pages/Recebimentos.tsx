@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,7 +22,7 @@ import {
   recipientFinancialsService,
 } from "@/services/recipientFinancialsService";
 import { RECIPIENT_STATUS_LABEL, RecipientStatus } from "@/services/restaurantRecipientService";
-import { Banknote, Clock, Loader2, RefreshCw, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, Banknote, Clock, Loader2, RefreshCw, TrendingUp, Wallet } from "lucide-react";
 
 const PERIOD_OPTIONS = [
   { value: "7", label: "Últimos 7 dias" },
@@ -109,8 +110,12 @@ const Recebimentos = () => {
             <Clock className="h-4 w-4" />
             <AlertTitle>Conta de recebimento ainda não configurada</AlertTitle>
             <AlertDescription>
-              Cadastre os dados bancários em <strong>Recebimentos Online</strong> para que o Pagar.me crie seu
-              recebedor e o saldo passe a aparecer aqui. O extrato de pedidos abaixo já reflete as cobranças geradas.
+              Cadastre os dados bancários em{" "}
+              <Link to="/pagarme-config" className="font-medium underline underline-offset-2">
+                Recebimentos Online
+              </Link>{" "}
+              para que o Pagar.me crie seu recebedor e o saldo passe a aparecer aqui. O extrato de pedidos abaixo já
+              reflete as cobranças geradas.
             </AlertDescription>
           </Alert>
         )}
@@ -182,10 +187,16 @@ const Recebimentos = () => {
                   O valor é liquidado automaticamente na conta bancária cadastrada do recebedor.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={recipientStatus === "active" ? "default" : "outline"}>
                   Recebedor: {RECIPIENT_STATUS_LABEL[recipientStatus]}
                 </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/pagarme-config">
+                    Configurar recebedor
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
                 <Button
                   type="button"
                   variant="outline"

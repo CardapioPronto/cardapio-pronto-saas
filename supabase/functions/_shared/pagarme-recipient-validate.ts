@@ -1,3 +1,5 @@
+import { assertValidBankAccount } from "./br-bank-validate.ts";
+import { assertValidHolderDocument, assertValidPartnerCpf } from "./br-document-validate.ts";
 import type {
   ManagingPartnerInput,
   RecipientAddressInput,
@@ -60,11 +62,8 @@ export function validateRecipientKyc(input: unknown): RecipientKycInput {
   const bank = isRecord(input.bank_account) ? input.bank_account : null;
   if (!bank) throw new Error("Dados bancários são obrigatórios.");
 
+  const docType = assertValidHolderDocument(String(input.holder_document || ""));
   const holderDoc = digits(input.holder_document as string);
-  let docType: "cpf" | "cnpj";
-  if (holderDoc.length === 14) docType = "cnpj";
-  else if (holderDoc.length === 11) docType = "cpf";
-  else throw new Error("Documento deve ser CPF (11 dígitos) ou CNPJ (14 dígitos).");
 
   const holderName = String(input.holder_name || "").trim();
   const email = String(input.email || "").trim();
@@ -73,14 +72,18 @@ export function validateRecipientKyc(input: unknown): RecipientKycInput {
 
   const address = parseAddress(input.address, "Endereço");
 
+  assertValidBankAccount({
+    bank_code: String(bank.bank_code || ""),
+    branch_number: String(bank.branch_number || ""),
+    branch_check_digit: bank.branch_check_digit ? String(bank.branch_check_digit) : undefined,
+    account_number: String(bank.account_number || ""),
+    account_check_digit: String(bank.account_check_digit || ""),
+  });
+
   const bankCode = digits(bank.bank_code as string);
   const branch = digits(bank.branch_number as string);
   const account = digits(bank.account_number as string);
   const accountDigit = String(bank.account_check_digit || "").trim();
-  if (!bankCode) throw new Error("Código do banco é obrigatório.");
-  if (!branch) throw new Error("Agência é obrigatória.");
-  if (!account) throw new Error("Número da conta é obrigatório.");
-  if (!accountDigit) throw new Error("Dígito da conta é obrigatório.");
 
   const base: RecipientKycInput = {
     holder_name: holderName,
@@ -131,7 +134,7 @@ export function validateRecipientKyc(input: unknown): RecipientKycInput {
   const managing_partners = partnersRaw.map((p, i) => {
     const partner = parsePartner(p, i);
     if (!partner.name) throw new Error(`Sócio ${i + 1}: nome é obrigatório.`);
-    if (partner.document.length !== 11) throw new Error(`Sócio ${i + 1}: CPF inválido.`);
+    assertValidPartnerCpf(partner.document, `Sócio ${i + 1}: CPF`);
     if (!partner.birthdate) throw new Error(`Sócio ${i + 1}: data de nascimento é obrigatória.`);
     if (!partner.mother_name) throw new Error(`Sócio ${i + 1}: nome da mãe é obrigatório.`);
     if (!partner.professional_occupation) throw new Error(`Sócio ${i + 1}: ocupação é obrigatória.`);

@@ -143,10 +143,10 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 
 ### Bloco D — Validações e navegação
 
-- [ ] **D1** Validação real de CPF/CNPJ (dígitos verificadores) no form e na edge.
-- [ ] **D2** Validação de banco/agência/conta (lista de bancos, formato).
-- [ ] **D3** Suporte a atualizar dados do titular (não só a conta bancária) em recebedor existente (`PUT /recipients/{id}`).
-- [ ] **D4** Link cruzado entre “Recebimentos Online” (config) e “Recebimentos” (financeiro).
+- [x] **D1** Validação real de CPF/CNPJ (dígitos verificadores) no form e na edge. → `brDocumentValidation.ts` + `_shared/br-document-validate.ts`
+- [x] **D2** Validação de banco/agência/conta (lista de bancos, formato). → `brazilianBanks.ts` + select no form + edge
+- [x] **D3** Suporte a atualizar dados do titular (não só a conta bancária) em recebedor existente (`PUT /recipients/{id}`). → já em `pagarme-create-recipient` (Bloco A)
+- [x] **D4** Link cruzado entre “Recebimentos Online” (config) e “Recebimentos” (financeiro). → `PagarmeConfig` ↔ `Recebimentos`
 
 ### Bloco E — Operacional / deploy
 
@@ -175,3 +175,4 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-05 | Bloco A KYC | Migration KYC, edge com `register_information` completo, `RecipientOnboardingForm` PF/PJ, `field_errors` na UI |
 | 2026-06-05 | Bloco B extrato | Bruto/comissão/taxa/líquido no extrato e cards de resumo (`orderPaymentBreakdown.ts`) |
 | 2026-06-05 | Bloco C sync | Webhook `recipient.*`, poll 30s×10, e-mail e notificações do painel |
+| 2026-06-05 | Bloco D validação | CPF/CNPJ, lista de bancos, links cruzados config ↔ financeiro |

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner-toast";
+import { BRAZILIAN_BANKS, validateBankAccount } from "@/lib/brazilianBanks";
+import { getCpfError, getHolderDocumentError } from "@/lib/brDocumentValidation";
 import {
   AccountType,
   ManagingPartnerInput,
@@ -288,6 +290,14 @@ export function RecipientOnboardingForm({
   const docDigits = form.holder_document.replace(/\D/g, "");
   const isPF = docDigits.length === 11;
   const isPJ = docDigits.length === 14;
+  const holderDocumentError = getHolderDocumentError(form.holder_document);
+  const bankAccountError = validateBankAccount({
+    bank_code: form.bank_code,
+    branch_number: form.branch_number,
+    branch_check_digit: form.branch_check_digit,
+    account_number: form.account_number,
+    account_check_digit: form.account_check_digit,
+  });
 
   const updateForm = (patch: Partial<FormState>) => setForm(prev => ({ ...prev, ...patch }));
   const updateAddress = (patch: Partial<RecipientAddressInput>) =>
@@ -329,9 +339,11 @@ export function RecipientOnboardingForm({
     const baseOk =
       form.holder_name.trim().length > 1 &&
       (isPF || isPJ) &&
+      !holderDocumentError &&
       form.email.includes("@") &&
       addressOk &&
-      bankOk;
+      bankOk &&
+      !bankAccountError;
 
     if (!baseOk) return false;
 
@@ -345,8 +357,7 @@ export function RecipientOnboardingForm({
     }
 
     if (isPJ) {
-      const partnerOk = form.managing_partners.every(partner => {
-        const partnerDoc = partner.document.replace(/\D/g, "");
+      const partnerOk = form.managing_partners.every((partner, index) => {
         const partnerAddrOk =
           partner.address.street.trim() &&
           partner.address.number.trim() &&
@@ -356,7 +367,7 @@ export function RecipientOnboardingForm({
           partner.address.zip_code.replace(/\D/g, "").length === 8;
         return (
           partner.name.trim() &&
-          partnerDoc.length === 11 &&
+          !getCpfError(partner.document, `Sócio ${index + 1}: CPF`) &&
           partner.birthdate &&
           partner.mother_name.trim() &&
           partner.professional_occupation.trim() &&
@@ -368,7 +379,7 @@ export function RecipientOnboardingForm({
     }
 
     return false;
-  }, [form, isPF, isPJ]);
+  }, [form, isPF, isPJ, holderDocumentError, bankAccountError]);
 
   const submitMutation = useMutation({
     mutationFn: async () => restaurantRecipientService.submit(buildSubmitPayload(form), restaurantId),
@@ -440,8 +451,8 @@ export function RecipientOnboardingForm({
               placeholder="Somente números"
               inputMode="numeric"
             />
-            {docDigits.length > 0 && !isPF && !isPJ && (
-              <p className="text-xs text-destructive">Informe 11 dígitos (CPF) ou 14 (CNPJ).</p>
+            {holderDocumentError && (
+              <p className="text-xs text-destructive">{holderDocumentError}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -577,6 +588,11 @@ export function RecipientOnboardingForm({
                     onChange={e => updatePartner(index, { document: e.target.value })}
                     inputMode="numeric"
                   />
+                  {getCpfError(partner.document, "CPF do sócio") && (
+                    <p className="text-xs text-destructive">
+                      {getCpfError(partner.document, "CPF do sócio")}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`partner_email_${index}`}>E-mail (opcional)</Label>
@@ -658,15 +674,26 @@ export function RecipientOnboardingForm({
       <div className="space-y-4">
         <SectionTitle>Conta bancária para repasse</SectionTitle>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-2">
-            <Label htmlFor="bank_code">Banco (código)</Label>
-            <Input
-              id="bank_code"
-              value={form.bank_code}
-              onChange={e => updateForm({ bank_code: e.target.value })}
-              placeholder="Ex.: 341"
-              inputMode="numeric"
-            />
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="bank_code">Banco</Label>
+            <Select
+              value={form.bank_code || undefined}
+              onValueChange={value => updateForm({ bank_code: value })}
+            >
+              <SelectTrigger id="bank_code">
+                <SelectValue placeholder="Selecione o banco" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {BRAZILIAN_BANKS.map(bank => (
+                  <SelectItem key={bank.code} value={bank.code}>
+                    {bank.code} — {bank.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {bankAccountError && (
+              <p className="text-xs text-destructive">{bankAccountError}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="branch_number">Agência</Label>
