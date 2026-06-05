@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,7 +22,7 @@ import {
   recipientFinancialsService,
 } from "@/services/recipientFinancialsService";
 import { RECIPIENT_STATUS_LABEL, RecipientStatus } from "@/services/restaurantRecipientService";
-import { Banknote, Clock, Loader2, RefreshCw, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, Banknote, Clock, Loader2, RefreshCw, TrendingUp, Wallet } from "lucide-react";
 
 const PERIOD_OPTIONS = [
   { value: "7", label: "Últimos 7 dias" },
@@ -109,14 +110,18 @@ const Recebimentos = () => {
             <Clock className="h-4 w-4" />
             <AlertTitle>Conta de recebimento ainda não configurada</AlertTitle>
             <AlertDescription>
-              Cadastre os dados bancários em <strong>Recebimentos Online</strong> para que o Pagar.me crie seu
-              recebedor e o saldo passe a aparecer aqui. O extrato de pedidos abaixo já reflete as cobranças geradas.
+              Cadastre os dados bancários em{" "}
+              <Link to="/pagarme-config" className="font-medium underline underline-offset-2">
+                Recebimentos Online
+              </Link>{" "}
+              para que o Pagar.me crie seu recebedor e o saldo passe a aparecer aqui. O extrato de pedidos abaixo já
+              reflete as cobranças geradas.
             </AlertDescription>
           </Alert>
         )}
 
         {/* Cards de resumo */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           <SummaryCard
             icon={<Wallet className="h-5 w-5" />}
             title="Saldo disponível"
@@ -133,16 +138,38 @@ const Recebimentos = () => {
           />
           <SummaryCard
             icon={<TrendingUp className="h-5 w-5" />}
-            title="Recebido no período"
-            value={statement ? formatBRL(statement.summary.total_received) : "—"}
-            hint={`${statement?.summary.paid_count ?? 0} pedidos pagos`}
+            title="Bruto dos pedidos"
+            value={statement ? formatBRL(statement.summary.total_gross) : "—"}
+            hint={`${statement?.summary.paid_count ?? 0} pedidos pagos no período`}
             loading={statementQuery.isLoading}
           />
           <SummaryCard
             icon={<Banknote className="h-5 w-5" />}
-            title="Ticket médio"
-            value={statement ? formatBRL(statement.summary.average_ticket) : "—"}
-            hint="Por pedido pago no período"
+            title="Comissão da plataforma"
+            value={statement ? formatBRL(statement.summary.total_platform_commission) : "—"}
+            hint="Parte retida pelo split (Pubfy)"
+            loading={statementQuery.isLoading}
+          />
+          <SummaryCard
+            icon={<Banknote className="h-5 w-5" />}
+            title="Taxas Pagar.me"
+            value={
+              statement?.summary.total_pagarme_fees != null
+                ? formatBRL(statement.summary.total_pagarme_fees)
+                : "—"
+            }
+            hint="Processamento cobrado do recebedor"
+            loading={statementQuery.isLoading}
+          />
+          <SummaryCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            title="Líquido repassado"
+            value={
+              statement?.summary.total_net_repasse != null
+                ? formatBRL(statement.summary.total_net_repasse)
+                : "—"
+            }
+            hint="Estimativa: bruto − comissão − taxas"
             loading={statementQuery.isLoading}
           />
         </div>
@@ -160,10 +187,16 @@ const Recebimentos = () => {
                   O valor é liquidado automaticamente na conta bancária cadastrada do recebedor.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={recipientStatus === "active" ? "default" : "outline"}>
                   Recebedor: {RECIPIENT_STATUS_LABEL[recipientStatus]}
                 </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/pagarme-config">
+                    Configurar recebedor
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -235,7 +268,9 @@ const Recebimentos = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Extrato de pedidos online</CardTitle>
-                <CardDescription>Cobranças geradas no cardápio digital.</CardDescription>
+                <CardDescription>
+                  Valores brutos cobrados do cliente, comissão da plataforma e líquido estimado para o restaurante.
+                </CardDescription>
               </div>
               <Select value={period} onValueChange={setPeriod}>
                 <SelectTrigger className="w-[180px]">
@@ -260,7 +295,7 @@ const Recebimentos = () => {
             ) : !statement?.entries.length ? (
               <p className="text-sm text-muted-foreground">Nenhuma cobrança no período selecionado.</p>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -269,7 +304,10 @@ const Recebimentos = () => {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Método</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-right">Bruto</TableHead>
+                      <TableHead className="text-right">Comissão</TableHead>
+                      <TableHead className="text-right">Taxa Pagar.me</TableHead>
+                      <TableHead className="text-right">Líquido</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -281,15 +319,45 @@ const Recebimentos = () => {
                             {formatDate(entry.paid_at || entry.created_at)}
                           </TableCell>
                           <TableCell>#{entry.order_number || entry.order_id.slice(0, 8)}</TableCell>
-                          <TableCell className="max-w-[160px] truncate">{entry.customer_name || "—"}</TableCell>
+                          <TableCell className="max-w-[140px] truncate">{entry.customer_name || "—"}</TableCell>
                           <TableCell>{methodLabel(entry.payment_method)}</TableCell>
                           <TableCell>
                             <Badge variant={badge.variant}>{badge.label}</Badge>
                           </TableCell>
-                          <TableCell className="text-right font-medium">{formatBRL(entry.amount)}</TableCell>
+                          <TableCell className="text-right font-medium">{formatBRL(entry.gross_amount)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {entry.platform_commission > 0
+                              ? `−${formatBRL(entry.platform_commission)}`
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {entry.pagarme_fee != null ? `−${formatBRL(entry.pagarme_fee)}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {entry.net_repasse != null ? formatBRL(entry.net_repasse) : "—"}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
+                    <TableRow className="bg-muted/30 font-medium">
+                      <TableCell colSpan={5}>Total (pedidos pagos)</TableCell>
+                      <TableCell className="text-right">{formatBRL(statement.summary.total_gross)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {statement.summary.total_platform_commission > 0
+                          ? `−${formatBRL(statement.summary.total_platform_commission)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {statement.summary.total_pagarme_fees != null
+                          ? `−${formatBRL(statement.summary.total_pagarme_fees)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {statement.summary.total_net_repasse != null
+                          ? formatBRL(statement.summary.total_net_repasse)
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </div>

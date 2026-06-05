@@ -2480,11 +2480,21 @@ export type Database = {
           account_check_digit: string
           account_number: string
           account_type: string
+          addr_city: string | null
+          addr_complement: string | null
+          addr_neighborhood: string | null
+          addr_number: string | null
+          addr_reference_point: string | null
+          addr_state: string | null
+          addr_street: string | null
+          addr_zip_code: string | null
+          annual_revenue: number | null
           bank_account_id: string | null
           bank_code: string
           birthdate: string | null
           branch_check_digit: string | null
           branch_number: string
+          company_name: string | null
           created_at: string
           email: string
           holder_document: string
@@ -2494,24 +2504,38 @@ export type Database = {
           kyc_status: string | null
           last_error: string | null
           last_response: Json
+          managing_partners: Json
+          monthly_income: number | null
           mother_name: string | null
           phone: string | null
+          professional_occupation: string | null
           provider: string
           recipient_id: string | null
           recipient_status: string
           restaurant_id: string
           synced_at: string | null
+          trading_name: string | null
           updated_at: string
         }
         Insert: {
           account_check_digit: string
           account_number: string
           account_type?: string
+          addr_city?: string | null
+          addr_complement?: string | null
+          addr_neighborhood?: string | null
+          addr_number?: string | null
+          addr_reference_point?: string | null
+          addr_state?: string | null
+          addr_street?: string | null
+          addr_zip_code?: string | null
+          annual_revenue?: number | null
           bank_account_id?: string | null
           bank_code: string
           birthdate?: string | null
           branch_check_digit?: string | null
           branch_number: string
+          company_name?: string | null
           created_at?: string
           email: string
           holder_document: string
@@ -2521,24 +2545,38 @@ export type Database = {
           kyc_status?: string | null
           last_error?: string | null
           last_response?: Json
+          managing_partners?: Json
+          monthly_income?: number | null
           mother_name?: string | null
           phone?: string | null
+          professional_occupation?: string | null
           provider?: string
           recipient_id?: string | null
           recipient_status?: string
           restaurant_id: string
           synced_at?: string | null
+          trading_name?: string | null
           updated_at?: string
         }
         Update: {
           account_check_digit?: string
           account_number?: string
           account_type?: string
+          addr_city?: string | null
+          addr_complement?: string | null
+          addr_neighborhood?: string | null
+          addr_number?: string | null
+          addr_reference_point?: string | null
+          addr_state?: string | null
+          addr_street?: string | null
+          addr_zip_code?: string | null
+          annual_revenue?: number | null
           bank_account_id?: string | null
           bank_code?: string
           birthdate?: string | null
           branch_check_digit?: string | null
           branch_number?: string
+          company_name?: string | null
           created_at?: string
           email?: string
           holder_document?: string
@@ -2548,13 +2586,17 @@ export type Database = {
           kyc_status?: string | null
           last_error?: string | null
           last_response?: Json
+          managing_partners?: Json
+          monthly_income?: number | null
           mother_name?: string | null
           phone?: string | null
+          professional_occupation?: string | null
           provider?: string
           recipient_id?: string | null
           recipient_status?: string
           restaurant_id?: string
           synced_at?: string | null
+          trading_name?: string | null
           updated_at?: string
         }
         Relationships: [

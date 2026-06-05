@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -6,12 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { RecipientOnboardingForm } from "@/components/payment/RecipientOnboardingForm";
 import { toast } from "@/components/ui/sonner-toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRecipientStatusPoll } from "@/hooks/useRecipientStatusPoll";
 import {
   OnlinePaymentMethod,
   PaymentFulfillment,
@@ -19,12 +19,12 @@ import {
   restaurantPaymentService,
 } from "@/services/restaurantPaymentService";
 import {
-  AccountType,
   RECIPIENT_STATUS_LABEL,
   RecipientStatus,
   restaurantRecipientService,
 } from "@/services/restaurantRecipientService";
-import { Banknote, CheckCircle2, Clock, Loader2, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Banknote, CheckCircle2, Clock, Loader2, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
 
 const METHOD_OPTIONS: Array<{ value: OnlinePaymentMethod; label: string; disabled?: boolean }> = [
   { value: "pix", label: "PIX online" },
@@ -41,32 +41,6 @@ const FULFILLMENT_OPTIONS: Array<{
   { value: "table", label: "Mesa por QR Code", field: "allow_table" },
   { value: "counter", label: "Balcão", field: "allow_counter" },
 ];
-
-interface RecipientForm {
-  holder_name: string;
-  holder_document: string;
-  email: string;
-  phone: string;
-  bank_code: string;
-  branch_number: string;
-  branch_check_digit: string;
-  account_number: string;
-  account_check_digit: string;
-  account_type: AccountType;
-}
-
-const EMPTY_RECIPIENT_FORM: RecipientForm = {
-  holder_name: "",
-  holder_document: "",
-  email: "",
-  phone: "",
-  bank_code: "",
-  branch_number: "",
-  branch_check_digit: "",
-  account_number: "",
-  account_check_digit: "",
-  account_type: "checking",
-};
 
 const recipientBadgeVariant = (status: RecipientStatus): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
@@ -89,7 +63,6 @@ const PagarmeConfig = () => {
   const restaurantId = user?.restaurant_id || "";
   const queryClient = useQueryClient();
   const [form, setForm] = useState<RestaurantPaymentSettings | null>(null);
-  const [recipientForm, setRecipientForm] = useState<RecipientForm>(EMPTY_RECIPIENT_FORM);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["restaurant-payment-settings", restaurantId],
@@ -106,17 +79,6 @@ const PagarmeConfig = () => {
   useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
-
-  useEffect(() => {
-    if (recipient?.exists) {
-      setRecipientForm(prev => ({
-        ...prev,
-        holder_name: prev.holder_name || recipient.holder_name || "",
-        bank_code: prev.bank_code || recipient.bank_code || "",
-        account_type: recipient.account_type || prev.account_type,
-      }));
-    }
-  }, [recipient]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -140,40 +102,6 @@ const PagarmeConfig = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Erro ao salvar configuração");
-    },
-  });
-
-  const submitRecipientMutation = useMutation({
-    mutationFn: async () => {
-      const f = recipientForm;
-      return restaurantRecipientService.submit({
-        holder_name: f.holder_name,
-        holder_document: f.holder_document,
-        email: f.email,
-        phone: f.phone || undefined,
-        bank_account: {
-          bank_code: f.bank_code,
-          branch_number: f.branch_number,
-          branch_check_digit: f.branch_check_digit || undefined,
-          account_number: f.account_number,
-          account_check_digit: f.account_check_digit,
-          account_type: f.account_type,
-        },
-      });
-    },
-    onSuccess: async (data) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-account", restaurantId] }),
-        queryClient.invalidateQueries({ queryKey: ["restaurant-payment-settings", restaurantId] }),
-      ]);
-      toast.success(
-        data.recipient_status === "active"
-          ? "Recebedor ativo! Você já pode ligar o PIX online."
-          : "Recebedor enviado. Aguardando validação do Pagar.me.",
-      );
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Erro ao enviar dados do recebedor");
     },
   });
 
@@ -209,19 +137,29 @@ const PagarmeConfig = () => {
   const recipientActive = recipientStatus === "active";
   const recipientCreated = Boolean(recipient?.recipient_id);
 
-  const recipientFormValid = useMemo(() => {
-    const f = recipientForm;
-    const doc = f.holder_document.replace(/\D/g, "");
-    return (
-      f.holder_name.trim().length > 1 &&
-      (doc.length === 11 || doc.length === 14) &&
-      f.email.includes("@") &&
-      f.bank_code.trim().length > 0 &&
-      f.branch_number.trim().length > 0 &&
-      f.account_number.trim().length > 0 &&
-      f.account_check_digit.trim().length > 0
-    );
-  }, [recipientForm]);
+  const invalidateRecipientQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-account", restaurantId] }),
+      queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-details", restaurantId] }),
+      queryClient.invalidateQueries({ queryKey: ["restaurant-payment-settings", restaurantId] }),
+    ]);
+  }, [queryClient, restaurantId]);
+
+  const handleRecipientStatusChange = useCallback(async (newStatus: RecipientStatus) => {
+    await invalidateRecipientQueries();
+    if (newStatus === "active") {
+      toast.success("Recebedor ativo! Você já pode ligar o PIX online.");
+    } else if (newStatus === "refused") {
+      toast.error("Recebedor recusado pelo Pagar.me. Revise os dados ou contate o suporte.");
+    }
+  }, [invalidateRecipientQueries]);
+
+  useRecipientStatusPoll({
+    restaurantId,
+    status: recipientStatus,
+    enabled: !!restaurantId && recipientCreated,
+    onStatusChange: handleRecipientStatusChange,
+  });
 
   if (!restaurantId) {
     return (
@@ -246,8 +184,6 @@ const PagarmeConfig = () => {
   }
 
   const canUseOnline = recipientActive && form.is_enabled;
-  const updateRecipient = (patch: Partial<RecipientForm>) =>
-    setRecipientForm(prev => ({ ...prev, ...patch }));
 
   return (
     <DashboardLayout title="Recebimentos Online">
@@ -271,12 +207,20 @@ const PagarmeConfig = () => {
                   Conta para repasse (recebedor)
                 </CardTitle>
                 <CardDescription>
-                  Dados da conta bancária que vai receber o dinheiro dos pedidos pagos com PIX.
+                  Dados da conta bancária e KYC do recebedor. Você pode atualizar titular, endereço e conta mesmo após o cadastro inicial.
                 </CardDescription>
               </div>
-              <Badge variant={recipientBadgeVariant(recipientStatus)}>
-                {RECIPIENT_STATUS_LABEL[recipientStatus]}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={recipientBadgeVariant(recipientStatus)}>
+                  {RECIPIENT_STATUS_LABEL[recipientStatus]}
+                </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/recebimentos">
+                    Ver painel financeiro
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -316,135 +260,18 @@ const PagarmeConfig = () => {
                 </AlertTitle>
                 <AlertDescription>
                   {recipientCreated
-                    ? "O Pagar.me está validando os dados (KYC). Assim que o recebedor ficar ativo, você poderá ligar o PIX online. Use “Sincronizar status” para checar."
+                    ? "O Pagar.me está validando os dados (KYC). Esta página atualiza o status automaticamente a cada 30 segundos por até 5 minutos. Você também pode usar “Sincronizar status”."
                     : "Preencha os dados abaixo. Após o envio, o Pagar.me valida o recebedor (pode levar alguns minutos a algumas horas)."}
                 </AlertDescription>
               </Alert>
             )}
 
             {!recipientLoading && (
-              <div className="space-y-5">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="holder_name">Titular da conta (nome ou razão social)</Label>
-                    <Input
-                      id="holder_name"
-                      value={recipientForm.holder_name}
-                      onChange={e => updateRecipient({ holder_name: e.target.value })}
-                      placeholder="Ex.: Restaurante Sabor Ltda"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="holder_document">CPF ou CNPJ do titular</Label>
-                    <Input
-                      id="holder_document"
-                      value={recipientForm.holder_document}
-                      onChange={e => updateRecipient({ holder_document: e.target.value })}
-                      placeholder="Somente números"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="recipient_email">E-mail do recebedor</Label>
-                    <Input
-                      id="recipient_email"
-                      type="email"
-                      value={recipientForm.email}
-                      onChange={e => updateRecipient({ email: e.target.value })}
-                      placeholder="financeiro@restaurante.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="recipient_phone">Telefone (opcional)</Label>
-                    <Input
-                      id="recipient_phone"
-                      value={recipientForm.phone}
-                      onChange={e => updateRecipient({ phone: e.target.value })}
-                      placeholder="DDD + número"
-                      inputMode="numeric"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bank_code">Banco (código)</Label>
-                    <Input
-                      id="bank_code"
-                      value={recipientForm.bank_code}
-                      onChange={e => updateRecipient({ bank_code: e.target.value })}
-                      placeholder="Ex.: 341"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="branch_number">Agência</Label>
-                    <Input
-                      id="branch_number"
-                      value={recipientForm.branch_number}
-                      onChange={e => updateRecipient({ branch_number: e.target.value })}
-                      placeholder="0001"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="branch_check_digit">Dígito da agência (opcional)</Label>
-                    <Input
-                      id="branch_check_digit"
-                      value={recipientForm.branch_check_digit}
-                      onChange={e => updateRecipient({ branch_check_digit: e.target.value })}
-                      placeholder="0"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo de conta</Label>
-                    <Select
-                      value={recipientForm.account_type}
-                      onValueChange={value => updateRecipient({ account_type: value as AccountType })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="checking">Corrente</SelectItem>
-                        <SelectItem value="savings">Poupança</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account_number">Número da conta</Label>
-                    <Input
-                      id="account_number"
-                      value={recipientForm.account_number}
-                      onChange={e => updateRecipient({ account_number: e.target.value })}
-                      placeholder="Somente números"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account_check_digit">Dígito da conta</Label>
-                    <Input
-                      id="account_check_digit"
-                      value={recipientForm.account_check_digit}
-                      onChange={e => updateRecipient({ account_check_digit: e.target.value })}
-                      placeholder="0"
-                      inputMode="numeric"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => submitRecipientMutation.mutate()}
-                    disabled={submitRecipientMutation.isPending || !recipientFormValid}
-                  >
-                    {submitRecipientMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {recipientCreated ? "Atualizar conta bancária" : "Cadastrar recebedor"}
-                  </Button>
-                </div>
-              </div>
+              <RecipientOnboardingForm
+                restaurantId={restaurantId}
+                recipientCreated={recipientCreated}
+                onSuccess={invalidateRecipientQueries}
+              />
             )}
           </CardContent>
         </Card>

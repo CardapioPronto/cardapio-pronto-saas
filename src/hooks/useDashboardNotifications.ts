@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { AlertTriangle, BrainCircuit, MessageCircle, Package, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Banknote, BrainCircuit, CheckCircle2, MessageCircle, Package, type LucideIcon } from "lucide-react";
 import { getOwnerCopilotAlerts } from "@/services/ownerCopilotService";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
@@ -51,7 +51,7 @@ export function useDashboardNotifications() {
         return null;
       });
 
-      const [ordersResult, threadsResult, instancesResult, copilotAlerts] = await Promise.all([
+      const [ordersResult, threadsResult, instancesResult, paymentSettingsResult, copilotAlerts] = await Promise.all([
         supabase
           .from("orders")
           .select("id", { count: "exact", head: true })
@@ -67,12 +67,18 @@ export function useDashboardNotifications() {
           .select("id, status, webhook_url")
           .eq("restaurant_id", user.restaurant_id)
           .eq("is_active", true),
+        supabase
+          .from("restaurant_payment_settings")
+          .select("recipient_status, is_enabled, onboarding_status")
+          .eq("restaurant_id", user.restaurant_id)
+          .maybeSingle(),
         copilotAlertsPromise,
       ]);
 
       if (ordersResult.error) throw ordersResult.error;
       if (threadsResult.error) throw threadsResult.error;
       if (instancesResult.error) throw instancesResult.error;
+      if (paymentSettingsResult.error) throw paymentSettingsResult.error;
 
       const next: DashboardNotification[] = [];
       const openOrders = ordersResult.count || 0;
@@ -117,6 +123,39 @@ export function useDashboardNotifications() {
           description: "Existe instância desconectada ou sem webhook configurado.",
           count: instancesNeedingAttention,
           href: "/atendimento",
+          tone: "danger",
+          icon: AlertTriangle,
+        });
+      }
+
+      const recipientStatus = paymentSettingsResult.data?.recipient_status;
+      if (recipientStatus === "registration" || recipientStatus === "affiliation") {
+        next.push({
+          id: "recipient-kyc-pending",
+          title: "Recebedor em validação",
+          description: "O Pagar.me está analisando os dados bancários para liberar o PIX online.",
+          count: 1,
+          href: "/pagarme-config",
+          tone: "warning",
+          icon: Banknote,
+        });
+      } else if (recipientStatus === "active" && !paymentSettingsResult.data?.is_enabled) {
+        next.push({
+          id: "recipient-ready-pix",
+          title: "PIX online disponível",
+          description: "Seu recebedor foi aprovado. Ative o PIX online em Recebimentos Online.",
+          count: 1,
+          href: "/pagarme-config",
+          tone: "info",
+          icon: CheckCircle2,
+        });
+      } else if (recipientStatus === "refused") {
+        next.push({
+          id: "recipient-refused",
+          title: "Recebedor recusado",
+          description: "O Pagar.me recusou o cadastro. Revise os dados em Recebimentos Online.",
+          count: 1,
+          href: "/pagarme-config",
           tone: "danger",
           icon: AlertTriangle,
         });

@@ -74,7 +74,7 @@ flowchart TB
 ### Qualidade / entrega
 - [x] **QA-1** `npm run typecheck` verde; sem erros de lint nos arquivos alterados.
 - [ ] **QA-2** Revisão de RLS e de não-exposição de PII no fluxo público.
-- [ ] **QA-3** Atualizar `docs/INTEGRACOES_PAGARME.md` e o roteiro de homologação com o novo fluxo.
+- [x] **QA-3** Atualizar `docs/INTEGRACOES_PAGARME.md` e o roteiro de homologação com o novo fluxo. → Blocos F1–F3 + ROTEIRO G
 - [ ] **QA-4** Itens de homologação (criar recebedor de teste, validar split com recebedor real).
 - [x] **DEPLOY** Aplicar migration e fazer deploy da function `pagarme-create-recipient` no projeto Supabase.
 
@@ -122,44 +122,44 @@ Confirmado na doc oficial ([Criar recebedor](https://docs.pagar.me/reference/cri
 desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto `register_information`
 **completo**. Hoje a function só envia `phone_numbers` — em `sk_live` a criação tende a ser **recusada**.
 
-- [ ] **A1** Form PF: coletar `birthdate`, `mother_name`, `monthly_income`, `professional_occupation` e endereço completo (rua, número, complemento, bairro, cidade, estado, CEP, ponto de referência).
-- [ ] **A2** Form PJ: coletar `company_name`/`trading_name`, `annual_revenue`, endereço da empresa e ao menos um `managing_partners` (sócio) com KYC próprio (nome, documento, nascimento, nome da mãe, renda, ocupação, endereço, `self_declared_legal_representative`).
-- [ ] **A3** Edge `pagarme-create-recipient`: montar `register_information` (PF/PJ) conforme contrato v5; mover `name/email/document/type` para dentro de `register_information`.
-- [ ] **A4** Persistir os novos campos (migration: ampliar `restaurant_recipient_accounts` ou tabela de endereço/KYC) com RLS.
-- [ ] **A5** Tratar mensagens de erro de validação da Pagar.me por campo na UI.
+- [x] **A1** Form PF: coletar `birthdate`, `mother_name`, `monthly_income`, `professional_occupation` e endereço completo (rua, número, complemento, bairro, cidade, estado, CEP, ponto de referência). → `RecipientOnboardingForm.tsx`
+- [x] **A2** Form PJ: coletar `company_name`/`trading_name`, `annual_revenue`, endereço da empresa e ao menos um `managing_partners` (sócio) com KYC próprio (nome, documento, nascimento, nome da mãe, renda, ocupação, endereço, `self_declared_legal_representative`). → `RecipientOnboardingForm.tsx`
+- [x] **A3** Edge `pagarme-create-recipient`: montar `register_information` (PF/PJ) conforme contrato v5; mover `name/email/document/type` para dentro de `register_information`. → `_shared/pagarme-recipient-register.ts`
+- [x] **A4** Persistir os novos campos (migration: ampliar `restaurant_recipient_accounts` ou tabela de endereço/KYC) com RLS. → `20260605100000_recipient_kyc_fields.sql` + `types.ts`
+- [x] **A5** Tratar mensagens de erro de validação da Pagar.me por campo na UI. → `RecipientSubmitError` + lista `field_errors` no form
 - [ ] **A6** Homologar criação real PF e PJ até `status = active`.
 
 ### Bloco B — Extrato: valor bruto x líquido
 
-- [ ] **B1** Renomear no extrato/cards o que hoje é bruto (ex.: “Valor dos pedidos”) para não sugerir líquido.
-- [ ] **B2** Calcular e exibir o **líquido repassado** (descontar comissão da plataforma e taxas Pagar.me) — usar split aplicado e/ou dados do `order_payments.raw_response`.
-- [ ] **B3** Coluna/somatório separando bruto, comissão e líquido.
+- [x] **B1** Renomear no extrato/cards o que hoje é bruto (ex.: “Valor dos pedidos”) para não sugerir líquido. → cards “Bruto dos pedidos”, coluna “Bruto”
+- [x] **B2** Calcular e exibir o **líquido repassado** (descontar comissão da plataforma e taxas Pagar.me) — usar split aplicado e/ou dados do `order_payments.raw_response`. → `orderPaymentBreakdown.ts` + `recipientFinancialsService`
+- [x] **B3** Coluna/somatório separando bruto, comissão e líquido. → tabela com 4 colunas + linha de totais em `Recebimentos.tsx`
 
 ### Bloco C — Sincronização automática do status do recebedor
 
-- [ ] **C1** Tratar eventos de `recipient`/KYC no `pagarme-webhook` (atualizar `recipient_status` + `onboarding_status`).
-- [ ] **C2** Poll leve após o cadastro (ex.: a cada 30s por alguns minutos) até sair de `registration`.
-- [ ] **C3** Notificar o lojista quando o recebedor ficar `active` (e quando for `refused`).
+- [x] **C1** Tratar eventos de `recipient`/KYC no `pagarme-webhook` (atualizar `recipient_status` + `onboarding_status`). → `recipient.*` + `_shared/pagarme-recipient-status.ts`
+- [x] **C2** Poll leve após o cadastro (ex.: a cada 30s por alguns minutos) até sair de `registration`. → `useRecipientStatusPoll` em `PagarmeConfig`
+- [x] **C3** Notificar o lojista quando o recebedor ficar `active` (e quando for `refused`). → e-mail (`recipient_activated`/`recipient_refused`) + alertas no sino do dashboard
 
 ### Bloco D — Validações e navegação
 
-- [ ] **D1** Validação real de CPF/CNPJ (dígitos verificadores) no form e na edge.
-- [ ] **D2** Validação de banco/agência/conta (lista de bancos, formato).
-- [ ] **D3** Suporte a atualizar dados do titular (não só a conta bancária) em recebedor existente (`PUT /recipients/{id}`).
-- [ ] **D4** Link cruzado entre “Recebimentos Online” (config) e “Recebimentos” (financeiro).
+- [x] **D1** Validação real de CPF/CNPJ (dígitos verificadores) no form e na edge. → `brDocumentValidation.ts` + `_shared/br-document-validate.ts`
+- [x] **D2** Validação de banco/agência/conta (lista de bancos, formato). → `brazilianBanks.ts` + select no form + edge
+- [x] **D3** Suporte a atualizar dados do titular (não só a conta bancária) em recebedor existente (`PUT /recipients/{id}`). → já em `pagarme-create-recipient` (Bloco A)
+- [x] **D4** Link cruzado entre “Recebimentos Online” (config) e “Recebimentos” (financeiro). → `PagarmeConfig` ↔ `Recebimentos`
 
 ### Bloco E — Operacional / deploy
 
-- [ ] **E1** Aplicar migration `20260604190000_pagarme_recipient_onboarding.sql` no projeto Supabase.
-- [ ] **E2** Deploy das functions `pagarme-create-recipient` e `pagarme-recipient-financials`.
-- [ ] **E3** Garantir secrets `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET` e `PAGARME_PLATFORM_RECIPIENT_ID` (se houver comissão).
-- [ ] **E4** Validar split com recebedor real (lembrar: simulador PIX não funciona com split).
+- [x] **E1** Aplicar migrations do recebedor no Supabase (`20260604190000`, `20260605100000`, `20260605120000`). → `db push` remoto up to date (2026-06-05).
+- [x] **E2** Deploy das functions `pagarme-create-recipient`, `pagarme-recipient-financials` e `pagarme-webhook`. → projeto `jyrfjvyeikhqpuwcvdff`.
+- [x] **E3** Garantir secrets `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET`, `PUBLIC_SITE_URL` e `PAGARME_PLATFORM_RECIPIENT_ID` (se houver comissão). → `PAGARME_*` OK; **falta** `PAGARME_PLATFORM_RECIPIENT_ID` no Supabase.
+- [ ] **E4** Validar split com recebedor real (lembrar: simulador PIX não funciona com split). → checklist **Bloco G5** em `ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`.
 
 ### Bloco F — Documentação
 
 - [x] **F1** Atualizar `docs/INTEGRACOES_PAGARME.md` com onboarding de recebedor + painel financeiro.
-- [ ] **F2** Atualizar `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` com bloco de homologação do recebedor (PF/PJ, KYC, saldo).
-- [ ] **F3** Adicionar cenários de suporte em `docs/SUPORTE_PROBLEMAS_COMUNS.md` (recebedor recusado, saldo zerado, repasse não caiu).
+- [x] **F2** Atualizar `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` com bloco de homologação do recebedor (PF/PJ, KYC, saldo). → Bloco G (G1–G6), mapa de functions, deps Bloco F
+- [x] **F3** Adicionar cenários de suporte em `docs/SUPORTE_PROBLEMAS_COMUNS.md` (recebedor recusado, saldo zerado, repasse não caiu). → §11 (11.1–11.5)
 
 ---
 
@@ -172,3 +172,9 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-04 | Bugfix imports | Corrigidos imports faltantes em `pagarme-create-order-payment` e `pagarme-webhook` |
 | 2026-06-04 | Painel financeiro | Edge `pagarme-recipient-financials`, serviço, página `/recebimentos` e item de menu; typecheck verde |
 | 2026-06-04 | Backlog + docs | Backlog de refinamentos (blocos A–F) documentado; `INTEGRACOES_PAGARME.md` atualizado |
+| 2026-06-05 | Bloco A KYC | Migration KYC, edge com `register_information` completo, `RecipientOnboardingForm` PF/PJ, `field_errors` na UI |
+| 2026-06-05 | Bloco B extrato | Bruto/comissão/taxa/líquido no extrato e cards de resumo (`orderPaymentBreakdown.ts`) |
+| 2026-06-05 | Bloco C sync | Webhook `recipient.*`, poll 30s×10, e-mail e notificações do painel |
+| 2026-06-05 | Bloco D validação | CPF/CNPJ, lista de bancos, links cruzados config ↔ financeiro |
+| 2026-06-05 | Bloco E deploy | `db push` OK; deploy `pagarme-create-recipient`, `pagarme-recipient-financials`, `pagarme-webhook`; smoke estendido |
+| 2026-06-05 | Bloco F docs | ROTEIRO Bloco G refinado; SUPORTE §11 recebedor/PIX/repasse |
