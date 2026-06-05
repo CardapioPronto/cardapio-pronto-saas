@@ -121,5 +121,8 @@ verify_jwt = false
 [functions.pagarme-create-order-payment]
 verify_jwt = true
 
+[functions.pagarme-create-recipient]
+verify_jwt = true
+
 [functions.send-delivery-whatsapp]
 verify_jwt = true

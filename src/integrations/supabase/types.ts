@@ -2416,6 +2416,8 @@ export type Database = {
           onboarding_status: string
           provider: string
           recipient_id: string | null
+          recipient_status: string
+          recipient_synced_at: string | null
           restaurant_id: string
           updated_at: string
         }
@@ -2436,6 +2438,8 @@ export type Database = {
           onboarding_status?: string
           provider?: string
           recipient_id?: string | null
+          recipient_status?: string
+          recipient_synced_at?: string | null
           restaurant_id: string
           updated_at?: string
         }
@@ -2456,12 +2460,106 @@ export type Database = {
           onboarding_status?: string
           provider?: string
           recipient_id?: string | null
+          recipient_status?: string
+          recipient_synced_at?: string | null
           restaurant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "restaurant_payment_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_recipient_accounts: {
+        Row: {
+          account_check_digit: string
+          account_number: string
+          account_type: string
+          bank_account_id: string | null
+          bank_code: string
+          birthdate: string | null
+          branch_check_digit: string | null
+          branch_number: string
+          created_at: string
+          email: string
+          holder_document: string
+          holder_document_type: string
+          holder_name: string
+          id: string
+          kyc_status: string | null
+          last_error: string | null
+          last_response: Json
+          mother_name: string | null
+          phone: string | null
+          provider: string
+          recipient_id: string | null
+          recipient_status: string
+          restaurant_id: string
+          synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_check_digit: string
+          account_number: string
+          account_type?: string
+          bank_account_id?: string | null
+          bank_code: string
+          birthdate?: string | null
+          branch_check_digit?: string | null
+          branch_number: string
+          created_at?: string
+          email: string
+          holder_document: string
+          holder_document_type: string
+          holder_name: string
+          id?: string
+          kyc_status?: string | null
+          last_error?: string | null
+          last_response?: Json
+          mother_name?: string | null
+          phone?: string | null
+          provider?: string
+          recipient_id?: string | null
+          recipient_status?: string
+          restaurant_id: string
+          synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_check_digit?: string
+          account_number?: string
+          account_type?: string
+          bank_account_id?: string | null
+          bank_code?: string
+          birthdate?: string | null
+          branch_check_digit?: string | null
+          branch_number?: string
+          created_at?: string
+          email?: string
+          holder_document?: string
+          holder_document_type?: string
+          holder_name?: string
+          id?: string
+          kyc_status?: string | null
+          last_error?: string | null
+          last_response?: Json
+          mother_name?: string | null
+          phone?: string | null
+          provider?: string
+          recipient_id?: string | null
+          recipient_status?: string
+          restaurant_id?: string
+          synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_recipient_accounts_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: true
             referencedRelation: "restaurants"

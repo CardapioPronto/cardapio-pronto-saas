@@ -21,6 +21,8 @@ export interface RestaurantPaymentSettings {
   commission_value: number;
   notes: string | null;
   metadata?: Record<string, unknown>;
+  recipient_status?: string;
+  recipient_synced_at?: string | null;
 }
 
 export interface PublicRestaurantPaymentSettings {
@@ -87,6 +89,8 @@ function normalize(row: Partial<RestaurantPaymentSettingsRow>, restaurantId: str
     commission_value: Number(row.commission_value || 0),
     notes: row.notes ?? null,
     metadata: isRecord(row.metadata) ? row.metadata : {},
+    recipient_status: row.recipient_status ?? "not_created",
+    recipient_synced_at: row.recipient_synced_at ?? null,
   };
 }
 
