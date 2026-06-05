@@ -68,6 +68,22 @@ O lojista **não informa chave de API nem chave PIX** — só dados bancários d
 - **JWT:** desligado na função (`verify_jwt = false`) — correto para chamadas da Pagar.me
 - **Recebedor:** habilitar no painel Pagar.me os eventos `recipient.created`, `recipient.updated` e `recipient.deleted` no mesmo endpoint
 
+### Deploy operacional (recebedor)
+
+```bash
+npx supabase db push
+npx supabase functions deploy pagarme-create-recipient
+npx supabase functions deploy pagarme-recipient-financials
+npx supabase functions deploy pagarme-webhook
+npm run pagarme:smoke-homolog
+```
+
+**Secrets obrigatórios:** `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET`.  
+**Se split com comissão:** `PAGARME_PLATFORM_RECIPIENT_ID` (`rp_...` da plataforma).  
+**E-mails de status do recebedor:** `PUBLIC_SITE_URL` (link para `/pagarme-config`).  
+Homologação manual: `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` — **Bloco G**.  
+Suporte / incidentes: `docs/SUPORTE_PROBLEMAS_COMUNS.md` — **§11**.
+
 ## Homologação vs produção
 
 | Item | Teste | Produção |

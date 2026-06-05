@@ -74,7 +74,7 @@ flowchart TB
 ### Qualidade / entrega
 - [x] **QA-1** `npm run typecheck` verde; sem erros de lint nos arquivos alterados.
 - [ ] **QA-2** Revisão de RLS e de não-exposição de PII no fluxo público.
-- [ ] **QA-3** Atualizar `docs/INTEGRACOES_PAGARME.md` e o roteiro de homologação com o novo fluxo.
+- [x] **QA-3** Atualizar `docs/INTEGRACOES_PAGARME.md` e o roteiro de homologação com o novo fluxo. → Blocos F1–F3 + ROTEIRO G
 - [ ] **QA-4** Itens de homologação (criar recebedor de teste, validar split com recebedor real).
 - [x] **DEPLOY** Aplicar migration e fazer deploy da function `pagarme-create-recipient` no projeto Supabase.
 
@@ -150,16 +150,16 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 
 ### Bloco E — Operacional / deploy
 
-- [ ] **E1** Aplicar migration `20260604190000_pagarme_recipient_onboarding.sql` no projeto Supabase.
-- [ ] **E2** Deploy das functions `pagarme-create-recipient` e `pagarme-recipient-financials`.
-- [ ] **E3** Garantir secrets `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET` e `PAGARME_PLATFORM_RECIPIENT_ID` (se houver comissão).
-- [ ] **E4** Validar split com recebedor real (lembrar: simulador PIX não funciona com split).
+- [x] **E1** Aplicar migrations do recebedor no Supabase (`20260604190000`, `20260605100000`, `20260605120000`). → `db push` remoto up to date (2026-06-05).
+- [x] **E2** Deploy das functions `pagarme-create-recipient`, `pagarme-recipient-financials` e `pagarme-webhook`. → projeto `jyrfjvyeikhqpuwcvdff`.
+- [x] **E3** Garantir secrets `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET`, `PUBLIC_SITE_URL` e `PAGARME_PLATFORM_RECIPIENT_ID` (se houver comissão). → `PAGARME_*` OK; **falta** `PAGARME_PLATFORM_RECIPIENT_ID` no Supabase.
+- [ ] **E4** Validar split com recebedor real (lembrar: simulador PIX não funciona com split). → checklist **Bloco G5** em `ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`.
 
 ### Bloco F — Documentação
 
 - [x] **F1** Atualizar `docs/INTEGRACOES_PAGARME.md` com onboarding de recebedor + painel financeiro.
-- [ ] **F2** Atualizar `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` com bloco de homologação do recebedor (PF/PJ, KYC, saldo).
-- [ ] **F3** Adicionar cenários de suporte em `docs/SUPORTE_PROBLEMAS_COMUNS.md` (recebedor recusado, saldo zerado, repasse não caiu).
+- [x] **F2** Atualizar `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` com bloco de homologação do recebedor (PF/PJ, KYC, saldo). → Bloco G (G1–G6), mapa de functions, deps Bloco F
+- [x] **F3** Adicionar cenários de suporte em `docs/SUPORTE_PROBLEMAS_COMUNS.md` (recebedor recusado, saldo zerado, repasse não caiu). → §11 (11.1–11.5)
 
 ---
 
@@ -176,3 +176,5 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-05 | Bloco B extrato | Bruto/comissão/taxa/líquido no extrato e cards de resumo (`orderPaymentBreakdown.ts`) |
 | 2026-06-05 | Bloco C sync | Webhook `recipient.*`, poll 30s×10, e-mail e notificações do painel |
 | 2026-06-05 | Bloco D validação | CPF/CNPJ, lista de bancos, links cruzados config ↔ financeiro |
+| 2026-06-05 | Bloco E deploy | `db push` OK; deploy `pagarme-create-recipient`, `pagarme-recipient-financials`, `pagarme-webhook`; smoke estendido |
+| 2026-06-05 | Bloco F docs | ROTEIRO Bloco G refinado; SUPORTE §11 recebedor/PIX/repasse |

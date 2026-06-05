@@ -9,7 +9,7 @@
 
 - Marque **`[x]`** em cada item conforme for executando (homologação ou go-live).
 - Itens em **“Pendência de produto”** são gaps conhecidos no código — devem ser corrigidos **antes** de considerar boleto/assinatura 100% prontos para produção comercial ampla.
-- Use em conjunto com: `docs/RUNBOOK_PRODUCAO.md` (secrets e webhooks), `docs/QA_ROTEIROS_MANUAIS.md` (personas) e `docs/SUPORTE_PROBLEMAS_COMUNS.md` (incidentes).
+- Use em conjunto com: `docs/RUNBOOK_PRODUCAO.md` (secrets e webhooks), `docs/QA_ROTEIROS_MANUAIS.md` (personas), `docs/SUPORTE_PROBLEMAS_COMUNS.md` (incidentes) e `docs/PLANO_ONBOARDING_RECEBEDOR_PAGARME.md` (onboarding do recebedor / repasse PIX).
 
 ---
 
@@ -25,7 +25,9 @@
 | Boleto assinatura | `pagarme-create-boleto-pix` (nome legado; hoje só `boleto`) |
 | PIX assinatura | **Não implementado** no fluxo atual (ver Pendências) |
 | PIX pedido (cardápio) | `pagarme-create-order-payment` + webhook `charge.paid` / `order.paid` |
-| Webhook | Obrigatório para boleto, PIX de pedido e renovações; assinatura HMAC com `PAGARME_WEBHOOK_SECRET` e fallback `PAGARME_SECRET_KEY` |
+| Recebedor (repasse) | Lojista cadastra em `/pagarme-config` → `pagarme-create-recipient`; status via webhook `recipient.*` + poll na UI |
+| Painel financeiro lojista | `/recebimentos` + `pagarme-recipient-financials` (saldo/transferências Pagar.me) |
+| Webhook | Obrigatório para boleto, PIX de pedido, renovações e **recebedor**; assinatura HMAC com `PAGARME_WEBHOOK_SECRET` e fallback `PAGARME_SECRET_KEY` |
 | Homologação | Chave `sk_test_…` + simuladores habilitados em [id.pagar.me](https://id.pagar.me/) → Configurações → Meios de pagamento |
 | Produção | Chave `sk_live_…` + webhook recriado/atualizado no painel **produção** + planos re-sincronizados no ambiente live |
 
@@ -44,8 +46,10 @@
 | `pagarme-sync-plan` | Criar/atualizar planos no Pagar.me | Super Admin |
 | `pagarme-webhook` | Eventos assíncronos | `verify_jwt = false` (correto) |
 | `pagarme-create-order-payment` | PIX de pedido do cardápio | `verify_jwt = true` |
+| `pagarme-create-recipient` | Onboarding KYC do recebedor (PF/PJ) | `verify_jwt = true` |
+| `pagarme-recipient-financials` | Saldo e transferências do recebedor | `verify_jwt = true` |
 
-Arquivos: `supabase/functions/pagarme-*/index.ts`.
+Arquivos: `supabase/functions/pagarme-*/index.ts`. Detalhes do recebedor: `docs/INTEGRACOES_PAGARME.md` §3.
 
 ### Frontend
 
@@ -127,9 +131,9 @@ Consultar regras em [Simulador de boleto](https://docs.pagar.me/docs/simulador-d
 | C | Assinatura — cartão | B |
 | D | Assinatura — boleto | B |
 | E | Webhooks e auditoria | C, D |
-| F | PIX — cardápio público | A, E |
-| G | Admin marketplace / recipients | A |
-| H | Cenários de falha (simulador) | C, D, F |
+| F | PIX — cardápio público | A, E, **G** |
+| G | Onboarding recebedor + split (PF/PJ, KYC, saldo) | A, E |
+| H | Cenários de falha (simulador) | C, D, F, G |
 | I | Pendências de código (pré-produção) | — |
 | J | Cutover produção | A–H, I |
 | K | QA final e monitoramento pós-go-live | J |
@@ -383,10 +387,11 @@ Implementação: `supabase/functions/pagarme-webhook/index.ts`.
 
 **Pré-requisitos**
 
-- [ ] Restaurante com `restaurant_payment_settings.onboarding_status = 'approved'`.
+- [ ] **Bloco G concluído** (recebedor `active` ou homologação explícita em sandbox sem split).
+- [ ] Restaurante com `restaurant_payment_settings.onboarding_status = 'approved'` e `recipient_status = 'active'`.
 - [ ] `is_enabled = true`, `enabled_methods` contém `pix`.
 - [ ] Fulfillment permitido (delivery/retirada/mesa conforme config em `PagarmeConfig` ou Admin).
-- [ ] Super Admin definiu `recipient_id` se split estiver ativo.
+- [ ] `recipient_id` preenchido (automático via onboarding ou override no Admin) se `marketplace_mode = split`.
 
 ### F1. PIX sucesso (valor ≤ R$ 500)
 
@@ -418,14 +423,73 @@ Esperado: `op.status = 'paid'`, `o.payment_status = 'paid'`.
 
 ---
 
-## Bloco G — Admin marketplace (opcional no MVP)
+## Bloco G — Onboarding do recebedor + marketplace (repasse PIX)
 
-**Objetivo:** validar split/comissão se a operação comercial usar marketplace.
+**Objetivo:** validar criação do recebedor (PF/PJ), sync de status, painel financeiro e split para o restaurante.
 
-- [ ] **Admin → Pagar.me**: selecionar restaurante → `recipient_id`, `onboarding_status = approved`, comissão se aplicável.
-- [ ] Dono em **Configurações → Integrações / Pagamento online** (`PagarmeConfig`): ativar PIX nos modos de entrega desejados.
-- [ ] Confirmar que **cartão online** no cardápio continua desabilitado na UI (`disabled: true` em `PagarmeConfig`) — comportamento esperado no código atual.
-- [ ] Se usar split: lembrar limitação do simulador PIX + Split (doc Pagar.me).
+**Pré-requisitos operacionais (Bloco E)**
+
+- [ ] `npx supabase db push` sem migrations pendentes (`20260604190000`, `20260605100000`, `20260605120000`).
+- [ ] Deploy: `pagarme-create-recipient`, `pagarme-recipient-financials`, `pagarme-webhook`.
+- [ ] Secrets no Supabase: `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET` (obrigatórios).
+- [ ] Se houver comissão da plataforma: `PAGARME_PLATFORM_RECIPIENT_ID` (`rp_...` da conta Pubfy).
+- [ ] `PUBLIC_SITE_URL` configurado (links nos e-mails `recipient_activated` / `recipient_refused`).
+- [ ] Painel Pagar.me: webhook com eventos `recipient.created`, `recipient.updated`, `recipient.deleted`.
+- [ ] `npm run pagarme:smoke-homolog` verde.
+
+### G1. Cadastro PF (pessoa física)
+
+- [ ] Lojista em **Recebimentos Online** (`/pagarme-config`): CPF válido (dígitos verificadores), KYC completo, banco da lista.
+- [ ] Submit retorna `recipient_status` `registration` ou `affiliation` (não erro 400).
+- [ ] Registro em `restaurant_recipient_accounts` com `recipient_id` (`rp_...`).
+- [ ] Poll na UI (30s × 10) ou webhook `recipient.updated` atualiza status; e-mail ao ficar `active` ou `refused`.
+- [ ] SQL de verificação:
+
+```sql
+SELECT r.recipient_id, r.recipient_status, r.kyc_status, r.holder_document_type,
+       p.onboarding_status, p.recipient_status AS settings_status
+FROM restaurant_recipient_accounts r
+JOIN restaurant_payment_settings p ON p.restaurant_id = r.restaurant_id
+WHERE r.restaurant_id = '<uuid>';
+```
+
+Esperado após homologação: `recipient_status = 'active'`, `onboarding_status = 'approved'`.
+
+### G2. Cadastro PJ (pessoa jurídica)
+
+- [ ] CNPJ válido + ao menos um sócio com CPF/KYC completo (`managing_partners`).
+- [ ] Mesmas validações de persistência e status que G1.
+- [ ] Conferir `managing_partners` persistido (jsonb) e `company_name` / `annual_revenue` preenchidos.
+
+### G3. Painel financeiro
+
+- [ ] **Recebimentos** (`/recebimentos`): extrato local de pedidos; saldo/transferências após recebedor criado.
+- [ ] Cards **bruto / comissão / taxa / líquido** coerentes com `order_payments` (taxa pode aparecer como — até `raw_response` trazer `fee`).
+- [ ] Invocar saldo sem erro (Edge `pagarme-recipient-financials`):
+
+```sql
+SELECT recipient_id, recipient_status, marketplace_mode, commission_type, commission_value
+FROM restaurant_payment_settings
+WHERE restaurant_id = '<uuid>';
+```
+
+### G4. Ativar PIX online
+
+- [ ] Com recebedor `active`: ligar PIX em **Recebimentos Online** (`is_enabled`).
+- [ ] Confirmar que **cartão online** no cardápio continua desabilitado na UI — comportamento esperado.
+
+### G5. Split com recebedor real (E4)
+
+> O simulador PIX da Pagar.me **não funciona com split**. Use recebedor real de teste ou ambiente que aceite cobrança + split.
+
+- [ ] Pedido PIX pago no cardápio com `marketplace_mode = split` e `recipient_id` do restaurante.
+- [ ] `order_payments.status = paid`; pedido segue para cozinha.
+- [ ] Admin: comissão refletida se `commission_type` ≠ `none` e `PAGARME_PLATFORM_RECIPIENT_ID` preenchido.
+- [ ] Saldo do recebedor em `/recebimentos` evolui após liquidação (pode levar horas conforme Pagar.me).
+
+### G6. Admin (override)
+
+- [ ] **Admin → Pagar.me**: status do recebedor, sincronizar, override manual de `recipient_id` se necessário.
 
 ---
 

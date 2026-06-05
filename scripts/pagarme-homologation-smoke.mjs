@@ -69,6 +69,32 @@ async function checkRepoFiles() {
     fs.existsSync(new URL("../src/components/payment/PixPaymentConfirmation.tsx", import.meta.url)),
     "PixPaymentConfirmation.tsx",
   );
+  check(
+    "Edge onboarding recebedor (KYC)",
+    read("supabase/functions/pagarme-create-recipient/index.ts").includes("validateRecipientKyc")
+      && read("supabase/functions/_shared/pagarme-recipient-register.ts").includes("register_information"),
+    "pagarme-create-recipient + register_information",
+  );
+  check(
+    "Edge financeiro do recebedor",
+    fs.existsSync(new URL("../supabase/functions/pagarme-recipient-financials/index.ts", import.meta.url)),
+    "pagarme-recipient-financials",
+  );
+  check(
+    "Webhook eventos recipient.*",
+    read("supabase/functions/pagarme-webhook/index.ts").includes('type.startsWith("recipient.")'),
+    "pagarme-webhook processRecipientEvent",
+  );
+  check(
+    "Migration onboarding recebedor",
+    fs.existsSync(new URL("../supabase/migrations/20260604190000_pagarme_recipient_onboarding.sql", import.meta.url)),
+    "20260604190000_pagarme_recipient_onboarding.sql",
+  );
+  check(
+    "Migration KYC recebedor",
+    fs.existsSync(new URL("../supabase/migrations/20260605100000_recipient_kyc_fields.sql", import.meta.url)),
+    "20260605100000_recipient_kyc_fields.sql",
+  );
 }
 
 await webhookRejectsUnsigned();
