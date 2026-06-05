@@ -42,6 +42,11 @@ function collectErrorMessages(errors: unknown): string[] {
   return [];
 }
 
+export function pagarmeFieldErrors(data: unknown): string[] {
+  const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
+  return collectErrorMessages(payload?.errors);
+}
+
 export function pagarmeErrorMessage(data: unknown, status?: number): string {
   const payload = isRecord(data) ? data as PagarmeErrorPayload : null;
   const fieldErrors = collectErrorMessages(payload?.errors);

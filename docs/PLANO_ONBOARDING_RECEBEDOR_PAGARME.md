@@ -122,11 +122,11 @@ Confirmado na doc oficial ([Criar recebedor](https://docs.pagar.me/reference/cri
 desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto `register_information`
 **completo**. Hoje a function só envia `phone_numbers` — em `sk_live` a criação tende a ser **recusada**.
 
-- [ ] **A1** Form PF: coletar `birthdate`, `mother_name`, `monthly_income`, `professional_occupation` e endereço completo (rua, número, complemento, bairro, cidade, estado, CEP, ponto de referência).
-- [ ] **A2** Form PJ: coletar `company_name`/`trading_name`, `annual_revenue`, endereço da empresa e ao menos um `managing_partners` (sócio) com KYC próprio (nome, documento, nascimento, nome da mãe, renda, ocupação, endereço, `self_declared_legal_representative`).
-- [ ] **A3** Edge `pagarme-create-recipient`: montar `register_information` (PF/PJ) conforme contrato v5; mover `name/email/document/type` para dentro de `register_information`.
-- [ ] **A4** Persistir os novos campos (migration: ampliar `restaurant_recipient_accounts` ou tabela de endereço/KYC) com RLS.
-- [ ] **A5** Tratar mensagens de erro de validação da Pagar.me por campo na UI.
+- [x] **A1** Form PF: coletar `birthdate`, `mother_name`, `monthly_income`, `professional_occupation` e endereço completo (rua, número, complemento, bairro, cidade, estado, CEP, ponto de referência). → `RecipientOnboardingForm.tsx`
+- [x] **A2** Form PJ: coletar `company_name`/`trading_name`, `annual_revenue`, endereço da empresa e ao menos um `managing_partners` (sócio) com KYC próprio (nome, documento, nascimento, nome da mãe, renda, ocupação, endereço, `self_declared_legal_representative`). → `RecipientOnboardingForm.tsx`
+- [x] **A3** Edge `pagarme-create-recipient`: montar `register_information` (PF/PJ) conforme contrato v5; mover `name/email/document/type` para dentro de `register_information`. → `_shared/pagarme-recipient-register.ts`
+- [x] **A4** Persistir os novos campos (migration: ampliar `restaurant_recipient_accounts` ou tabela de endereço/KYC) com RLS. → `20260605100000_recipient_kyc_fields.sql` + `types.ts`
+- [x] **A5** Tratar mensagens de erro de validação da Pagar.me por campo na UI. → `RecipientSubmitError` + lista `field_errors` no form
 - [ ] **A6** Homologar criação real PF e PJ até `status = active`.
 
 ### Bloco B — Extrato: valor bruto x líquido
@@ -172,3 +172,4 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-04 | Bugfix imports | Corrigidos imports faltantes em `pagarme-create-order-payment` e `pagarme-webhook` |
 | 2026-06-04 | Painel financeiro | Edge `pagarme-recipient-financials`, serviço, página `/recebimentos` e item de menu; typecheck verde |
 | 2026-06-04 | Backlog + docs | Backlog de refinamentos (blocos A–F) documentado; `INTEGRACOES_PAGARME.md` atualizado |
+| 2026-06-05 | Bloco A KYC | Migration KYC, edge com `register_information` completo, `RecipientOnboardingForm` PF/PJ, `field_errors` na UI |
