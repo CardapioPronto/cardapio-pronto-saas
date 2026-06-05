@@ -28,7 +28,8 @@ Hoje o PIX do cliente final (pedido do cardápio) é cobrado na conta Pagar.me *
 Permitir que o **dono do restaurante** preencha, dentro do Pubfy, os dados necessários (titular + conta bancária + documento) e que o sistema **crie/atualize automaticamente o recebedor no Pagar.me**, gravando o `recipient_id` e o status de KYC. O super-admin passa a **acompanhar e aprovar** com base nesses dados, em vez de digitar o `rp_...` manualmente.
 
 ### Fora de escopo (próximas entregas)
-- Painel financeiro do lojista (saldo, extrato, liquidações, saque).
+- ~~Painel financeiro do lojista (saldo, extrato, liquidações).~~ → **Entregue** (ver seção 7).
+- Saque manual / antecipação configurável pelo lojista.
 - Cartão de crédito online no cardápio.
 - Webhook de `recipient`/KYC do Pagar.me para atualizar status automaticamente (faremos sincronização sob demanda nesta entrega; webhook fica como melhoria).
 
@@ -75,7 +76,7 @@ flowchart TB
 - [ ] **QA-2** Revisão de RLS e de não-exposição de PII no fluxo público.
 - [ ] **QA-3** Atualizar `docs/INTEGRACOES_PAGARME.md` e o roteiro de homologação com o novo fluxo.
 - [ ] **QA-4** Itens de homologação (criar recebedor de teste, validar split com recebedor real).
-- [ ] **DEPLOY** Aplicar migration e fazer deploy da function `pagarme-create-recipient` no projeto Supabase.
+- [x] **DEPLOY** Aplicar migration e fazer deploy da function `pagarme-create-recipient` no projeto Supabase.
 
 ---
 
@@ -83,7 +84,82 @@ flowchart TB
 
 - **KYC do Pagar.me é assíncrono:** após criar o recebedor, o status pode ficar `registration`/`affiliation`/`active`. O split só funciona com recebedor apto. Por isso `onboarding_status` local começa em `pending` e só vai a `approved` quando o recebedor estiver `active` (sincronização manual nesta entrega; webhook depois).
 - **Simulador PIX + Split:** conforme doc Pagar.me, o simulador de PIX pode não funcionar com split — validar em homologação com recebedor real de teste.
-- **Bug pré-existente (fora do escopo, registrar):** `pagarme-create-order-payment/index.ts` referencia `buildPagarmeOrderLineItems` e `toCents` sem `import` visível — verificar antes do go-live de PIX de pedido.
+- **Bug pré-existente — CORRIGIDO:** imports faltantes adicionados em
+  `pagarme-create-order-payment/index.ts` (`buildPagarmeOrderLineItems`, `toCents`) e em
+  `pagarme-webhook/index.ts` (`reconcileOrderPaymentFromPagarme`, `PagarmeOrderPaymentData`).
+  Sem isso, o webhook de `order.*` e a criação de PIX de pedido lançavam `ReferenceError` em runtime.
+
+---
+
+## 7. Entrega 2 — Painel financeiro do lojista
+
+**Objetivo:** dar visibilidade do dinheiro recebido e do saldo, dentro do produto.
+
+### Checklist
+- [x] **FIN-DB/EF** Edge function `pagarme-recipient-financials`: consulta `GET /recipients/{id}/balance`
+  (saldo disponível, a liberar, transferido) e `GET /recipients/{id}/transfers` (liquidações). Registrada em `config.toml`.
+- [x] **FIN-SVC** `src/services/recipientFinancialsService.ts`: saldo via edge function + extrato a partir de `order_payments` (com número/cliente do pedido) e resumo (total recebido, pedidos pagos, ticket médio).
+- [x] **FIN-UI** Página `src/pages/Recebimentos.tsx`: cards de resumo, saldo Pagar.me, transferências e extrato com filtro de período (7/30/90 dias).
+- [x] **FIN-NAV** Rota `/recebimentos` (`AppRoutes.tsx`) + item "Recebimentos" no menu (`DashboardSidebar.tsx`).
+- [x] **FIN-QA** `npm run typecheck` verde; sem lints.
+- [ ] **FIN-DEPLOY** Deploy da function `pagarme-recipient-financials` e teste com recebedor real.
+
+### Observações
+- O extrato usa dados locais (`order_payments`) — sempre disponível mesmo sem recebedor ativo.
+- O saldo/transferências dependem do recebedor já criado no Pagar.me; sem recebedor, a UI mostra aviso e só o extrato.
+- Saque/antecipação não estão expostos (liquidação é automática `Daily`); ficam como evolução futura.
+
+---
+
+## 8. Backlog de refinamentos (pendências)
+
+> Itens identificados na autorrevisão (04/06/2026). Marcar `[x]` conforme forem concluídos.
+
+### Bloco A — KYC completo do recebedor (CRÍTICO, bloqueia produção real)
+
+Confirmado na doc oficial ([Criar recebedor](https://docs.pagar.me/reference/criar-recebedor-1) e
+[mudanças de contrato v5](https://docs.pagar.me/page/novas-regras-para-criação-de-sellers-de-marketplace-c-v5)):
+desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto `register_information`
+**completo**. Hoje a function só envia `phone_numbers` — em `sk_live` a criação tende a ser **recusada**.
+
+- [ ] **A1** Form PF: coletar `birthdate`, `mother_name`, `monthly_income`, `professional_occupation` e endereço completo (rua, número, complemento, bairro, cidade, estado, CEP, ponto de referência).
+- [ ] **A2** Form PJ: coletar `company_name`/`trading_name`, `annual_revenue`, endereço da empresa e ao menos um `managing_partners` (sócio) com KYC próprio (nome, documento, nascimento, nome da mãe, renda, ocupação, endereço, `self_declared_legal_representative`).
+- [ ] **A3** Edge `pagarme-create-recipient`: montar `register_information` (PF/PJ) conforme contrato v5; mover `name/email/document/type` para dentro de `register_information`.
+- [ ] **A4** Persistir os novos campos (migration: ampliar `restaurant_recipient_accounts` ou tabela de endereço/KYC) com RLS.
+- [ ] **A5** Tratar mensagens de erro de validação da Pagar.me por campo na UI.
+- [ ] **A6** Homologar criação real PF e PJ até `status = active`.
+
+### Bloco B — Extrato: valor bruto x líquido
+
+- [ ] **B1** Renomear no extrato/cards o que hoje é bruto (ex.: “Valor dos pedidos”) para não sugerir líquido.
+- [ ] **B2** Calcular e exibir o **líquido repassado** (descontar comissão da plataforma e taxas Pagar.me) — usar split aplicado e/ou dados do `order_payments.raw_response`.
+- [ ] **B3** Coluna/somatório separando bruto, comissão e líquido.
+
+### Bloco C — Sincronização automática do status do recebedor
+
+- [ ] **C1** Tratar eventos de `recipient`/KYC no `pagarme-webhook` (atualizar `recipient_status` + `onboarding_status`).
+- [ ] **C2** Poll leve após o cadastro (ex.: a cada 30s por alguns minutos) até sair de `registration`.
+- [ ] **C3** Notificar o lojista quando o recebedor ficar `active` (e quando for `refused`).
+
+### Bloco D — Validações e navegação
+
+- [ ] **D1** Validação real de CPF/CNPJ (dígitos verificadores) no form e na edge.
+- [ ] **D2** Validação de banco/agência/conta (lista de bancos, formato).
+- [ ] **D3** Suporte a atualizar dados do titular (não só a conta bancária) em recebedor existente (`PUT /recipients/{id}`).
+- [ ] **D4** Link cruzado entre “Recebimentos Online” (config) e “Recebimentos” (financeiro).
+
+### Bloco E — Operacional / deploy
+
+- [ ] **E1** Aplicar migration `20260604190000_pagarme_recipient_onboarding.sql` no projeto Supabase.
+- [ ] **E2** Deploy das functions `pagarme-create-recipient` e `pagarme-recipient-financials`.
+- [ ] **E3** Garantir secrets `PAGARME_SECRET_KEY`, `PAGARME_WEBHOOK_SECRET` e `PAGARME_PLATFORM_RECIPIENT_ID` (se houver comissão).
+- [ ] **E4** Validar split com recebedor real (lembrar: simulador PIX não funciona com split).
+
+### Bloco F — Documentação
+
+- [x] **F1** Atualizar `docs/INTEGRACOES_PAGARME.md` com onboarding de recebedor + painel financeiro.
+- [ ] **F2** Atualizar `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` com bloco de homologação do recebedor (PF/PJ, KYC, saldo).
+- [ ] **F3** Adicionar cenários de suporte em `docs/SUPORTE_PROBLEMAS_COMUNS.md` (recebedor recusado, saldo zerado, repasse não caiu).
 
 ---
 
@@ -93,3 +169,6 @@ flowchart TB
 |------|------|------------|
 | 2026-06-04 | Branch + plano | Branch `feature/pagarme-recipient-onboarding` criada e plano aprovado |
 | 2026-06-04 | DB + EF + FE | Migration, edge function, serviço e UIs (lojista + admin) implementados; `npm run typecheck` verde |
+| 2026-06-04 | Bugfix imports | Corrigidos imports faltantes em `pagarme-create-order-payment` e `pagarme-webhook` |
+| 2026-06-04 | Painel financeiro | Edge `pagarme-recipient-financials`, serviço, página `/recebimentos` e item de menu; typecheck verde |
+| 2026-06-04 | Backlog + docs | Backlog de refinamentos (blocos A–F) documentado; `INTEGRACOES_PAGARME.md` atualizado |

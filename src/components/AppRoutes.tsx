@@ -43,6 +43,7 @@ const PDV = lazy(() => import('@/pages/PDV'));
 const MenuDigital = lazy(() => import('@/pages/MenuDigital'));
 const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
 const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
+const Recebimentos = lazy(() => import('@/pages/Recebimentos'));
 const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
 const EmailIntegracao = lazy(() => import('@/pages/EmailIntegracao'));
 const Automacoes = lazy(() => import('@/pages/Automacoes'));
@@ -204,6 +205,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage']} requireAny>
           <MainLayout>
             <PagarmeConfig />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/recebimentos" element={
+        <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage', 'reports_view']} requireAny>
+          <MainLayout>
+            <Recebimentos />
           </MainLayout>
         </ProtectedRoute>
       } />
