@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,15 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { RecipientOnboardingForm } from "@/components/payment/RecipientOnboardingForm";
 import { toast } from "@/components/ui/sonner-toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRecipientStatusPoll } from "@/hooks/useRecipientStatusPoll";
 import {
   OnlinePaymentMethod,
   PaymentFulfillment,
   RestaurantPaymentSettings,
   restaurantPaymentService,
 } from "@/services/restaurantPaymentService";
-import { CheckCircle2, Clock, Loader2, QrCode, ShieldCheck } from "lucide-react";
+import {
+  RECIPIENT_STATUS_LABEL,
+  RecipientStatus,
+  restaurantRecipientService,
+} from "@/services/restaurantRecipientService";
+import { Link } from "react-router-dom";
+import { ArrowRight, Banknote, CheckCircle2, Clock, Loader2, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
 
 const METHOD_OPTIONS: Array<{ value: OnlinePaymentMethod; label: string; disabled?: boolean }> = [
   { value: "pix", label: "PIX online" },
@@ -34,11 +42,20 @@ const FULFILLMENT_OPTIONS: Array<{
   { value: "counter", label: "Balcão", field: "allow_counter" },
 ];
 
-const statusLabel: Record<RestaurantPaymentSettings["onboarding_status"], string> = {
-  not_started: "Não solicitado",
-  pending: "Em análise",
-  approved: "Aprovado",
-  rejected: "Reprovado",
+const recipientBadgeVariant = (status: RecipientStatus): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case "active":
+      return "default";
+    case "registration":
+    case "affiliation":
+      return "secondary";
+    case "refused":
+    case "suspended":
+    case "blocked":
+      return "destructive";
+    default:
+      return "outline";
+  }
 };
 
 const PagarmeConfig = () => {
@@ -53,6 +70,12 @@ const PagarmeConfig = () => {
     enabled: !!restaurantId,
   });
 
+  const { data: recipient, isLoading: recipientLoading } = useQuery({
+    queryKey: ["restaurant-recipient-account", restaurantId],
+    queryFn: () => restaurantRecipientService.getAccount(restaurantId),
+    enabled: !!restaurantId,
+  });
+
   useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
@@ -61,7 +84,7 @@ const PagarmeConfig = () => {
     mutationFn: async () => {
       if (!form) throw new Error("Configuração não carregada");
       if (form.is_enabled && form.onboarding_status !== "approved") {
-        throw new Error("A integração precisa ser aprovada pela Pubfy antes da ativação.");
+        throw new Error("O recebedor precisa estar ativo antes de ligar o PIX online.");
       }
       return restaurantPaymentService.saveSettings({
         ...form,
@@ -82,39 +105,17 @@ const PagarmeConfig = () => {
     },
   });
 
-  const requestMutation = useMutation({
-    mutationFn: async () => {
-      const current = form || restaurantPaymentService.toPublic(null);
-      return restaurantPaymentService.saveSettings({
-        ...(settings || {
-          restaurant_id: restaurantId,
-          provider: "pagarme",
-          marketplace_mode: "split",
-          is_enabled: false,
-          onboarding_status: "not_started",
-          recipient_id: null,
-          enabled_methods: ["pix"],
-          allow_delivery: true,
-          allow_pickup: true,
-          allow_table: false,
-          allow_counter: false,
-          commission_type: "none",
-          commission_value: 0,
-          notes: null,
-          metadata: {},
-        }),
-        ...current,
-        restaurant_id: restaurantId,
-        is_enabled: false,
-        onboarding_status: "pending",
-      } as RestaurantPaymentSettings);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["restaurant-payment-settings", restaurantId] });
-      toast.success("Solicitação enviada para análise");
+  const syncMutation = useMutation({
+    mutationFn: async () => restaurantRecipientService.syncStatus(),
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-account", restaurantId] }),
+        queryClient.invalidateQueries({ queryKey: ["restaurant-payment-settings", restaurantId] }),
+      ]);
+      toast.success(`Status atualizado: ${RECIPIENT_STATUS_LABEL[data.recipient_status]}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Erro ao solicitar ativação");
+      toast.error(error.message || "Erro ao sincronizar status");
     },
   });
 
@@ -131,6 +132,34 @@ const PagarmeConfig = () => {
       };
     });
   };
+
+  const recipientStatus: RecipientStatus = recipient?.recipient_status || "not_created";
+  const recipientActive = recipientStatus === "active";
+  const recipientCreated = Boolean(recipient?.recipient_id);
+
+  const invalidateRecipientQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-account", restaurantId] }),
+      queryClient.invalidateQueries({ queryKey: ["restaurant-recipient-details", restaurantId] }),
+      queryClient.invalidateQueries({ queryKey: ["restaurant-payment-settings", restaurantId] }),
+    ]);
+  }, [queryClient, restaurantId]);
+
+  const handleRecipientStatusChange = useCallback(async (newStatus: RecipientStatus) => {
+    await invalidateRecipientQueries();
+    if (newStatus === "active") {
+      toast.success("Recebedor ativo! Você já pode ligar o PIX online.");
+    } else if (newStatus === "refused") {
+      toast.error("Recebedor recusado pelo Pagar.me. Revise os dados ou contate o suporte.");
+    }
+  }, [invalidateRecipientQueries]);
+
+  useRecipientStatusPoll({
+    restaurantId,
+    status: recipientStatus,
+    enabled: !!restaurantId && recipientCreated,
+    onStatusChange: handleRecipientStatusChange,
+  });
 
   if (!restaurantId) {
     return (
@@ -154,20 +183,100 @@ const PagarmeConfig = () => {
     );
   }
 
-  const approved = form.onboarding_status === "approved" && !!form.recipient_id;
-  const canUseOnline = approved && form.is_enabled;
+  const canUseOnline = recipientActive && form.is_enabled;
 
   return (
     <DashboardLayout title="Recebimentos Online">
       <div className="space-y-6">
         <Alert className="border-green/30 bg-green/5">
           <ShieldCheck className="h-4 w-4 text-green" />
-          <AlertTitle>Nenhuma chave Pagar.me é solicitada aqui</AlertTitle>
+          <AlertTitle>Repasse direto para a sua conta</AlertTitle>
           <AlertDescription>
-            Os pagamentos passam pela conta da plataforma Pubfy. O restaurante só precisa solicitar aprovação para receber via PIX online.
+            Você informa apenas os dados bancários do restaurante. O Pagar.me cria seu recebedor e repassa
+            automaticamente o valor de cada pedido pago via PIX para a sua conta. Nenhuma chave de API é solicitada.
           </AlertDescription>
         </Alert>
 
+        {/* Onboarding do recebedor */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5" />
+                  Conta para repasse (recebedor)
+                </CardTitle>
+                <CardDescription>
+                  Dados da conta bancária e KYC do recebedor. Você pode atualizar titular, endereço e conta mesmo após o cadastro inicial.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={recipientBadgeVariant(recipientStatus)}>
+                  {RECIPIENT_STATUS_LABEL[recipientStatus]}
+                </Badge>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/recebimentos">
+                    Ver painel financeiro
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {recipientCreated && (
+              <div className="flex flex-col gap-3 rounded-md border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium">{recipient?.holder_name || "Recebedor cadastrado"}</p>
+                  <p className="text-muted-foreground">
+                    Banco {recipient?.bank_code} · conta final {recipient?.account_last_digits || "••••"} ·{" "}
+                    {recipient?.account_type === "savings" ? "Poupança" : "Corrente"}
+                  </p>
+                  {recipient?.synced_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Última sincronização: {new Date(recipient.synced_at).toLocaleString("pt-BR")}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => syncMutation.mutate()}
+                  disabled={syncMutation.isPending}
+                >
+                  {syncMutation.isPending
+                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Sincronizar status
+                </Button>
+              </div>
+            )}
+
+            {!recipientActive && (
+              <Alert className="border-amber-300/40 bg-amber-50/40 dark:bg-amber-950/10">
+                <Clock className="h-4 w-4" />
+                <AlertTitle>
+                  {recipientCreated ? "Recebedor em validação" : "Cadastre sua conta para começar"}
+                </AlertTitle>
+                <AlertDescription>
+                  {recipientCreated
+                    ? "O Pagar.me está validando os dados (KYC). Esta página atualiza o status automaticamente a cada 30 segundos por até 5 minutos. Você também pode usar “Sincronizar status”."
+                    : "Preencha os dados abaixo. Após o envio, o Pagar.me valida o recebedor (pode levar alguns minutos a algumas horas)."}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!recipientLoading && (
+              <RecipientOnboardingForm
+                restaurantId={restaurantId}
+                recipientCreated={recipientCreated}
+                onSuccess={invalidateRecipientQueries}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* PIX online no checkout */}
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -177,41 +286,25 @@ const PagarmeConfig = () => {
                   PIX online para pedidos
                 </CardTitle>
                 <CardDescription>
-                  Receba pagamentos do cardápio digital sem informar credenciais do Pagar.me.
+                  Receba pagamentos do cardápio digital. Disponível após o recebedor ficar ativo.
                 </CardDescription>
               </div>
-              <Badge variant={canUseOnline ? "default" : approved ? "secondary" : "outline"}>
-                {canUseOnline ? "Ativo" : approved ? "Aprovado" : statusLabel[form.onboarding_status]}
+              <Badge variant={canUseOnline ? "default" : recipientActive ? "secondary" : "outline"}>
+                {canUseOnline ? "Ativo" : recipientActive ? "Pronto" : "Aguardando recebedor"}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!approved ? (
-              <div className="rounded-md border bg-muted/20 p-4">
-                <div className="flex items-start gap-3">
-                  <Clock className="mt-0.5 h-5 w-5 text-muted-foreground" />
-                  <div className="space-y-2">
-                    <p className="font-medium">Ativação sujeita à análise</p>
-                    <p className="text-sm text-muted-foreground">
-                      A Pubfy precisa validar os dados do restaurante e liberar o recebedor antes de exibir PIX online no checkout.
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={() => requestMutation.mutate()}
-                      disabled={requestMutation.isPending || form.onboarding_status === "pending"}
-                    >
-                      {requestMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {form.onboarding_status === "pending" ? "Solicitação em análise" : "Solicitar ativação"}
-                    </Button>
-                  </div>
-                </div>
+            {!recipientActive ? (
+              <div className="rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">
+                Conclua o cadastro do recebedor acima e aguarde a ativação para liberar o PIX online no checkout.
               </div>
             ) : (
               <div className="flex items-center justify-between rounded-md border p-4">
                 <div>
                   <Label className="text-sm font-medium">Oferecer PIX online no checkout</Label>
                   <p className="text-sm text-muted-foreground">
-                    Quando ligado, o pedido pode entrar como aguardando pagamento até o webhook confirmar.
+                    Quando ligado, o pedido entra como aguardando pagamento até o webhook confirmar.
                   </p>
                 </div>
                 <Switch
@@ -227,11 +320,11 @@ const PagarmeConfig = () => {
                 {METHOD_OPTIONS.map(option => (
                   <label
                     key={option.value}
-                    className={`flex items-center gap-3 rounded-md border p-3 ${option.disabled || !approved ? "opacity-60" : "cursor-pointer"}`}
+                    className={`flex items-center gap-3 rounded-md border p-3 ${option.disabled || !recipientActive ? "opacity-60" : "cursor-pointer"}`}
                   >
                     <Checkbox
                       checked={form.enabled_methods.includes(option.value)}
-                      disabled={option.disabled || !approved}
+                      disabled={option.disabled || !recipientActive}
                       onCheckedChange={() => toggleMethod(option.value)}
                     />
                     <span className="text-sm font-medium">{option.label}</span>
@@ -245,10 +338,10 @@ const PagarmeConfig = () => {
               <Label>Onde oferecer pagamento online</Label>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {FULFILLMENT_OPTIONS.map(option => (
-                  <label key={option.value} className={`flex items-center gap-3 rounded-md border p-3 ${!approved ? "opacity-60" : ""}`}>
+                  <label key={option.value} className={`flex items-center gap-3 rounded-md border p-3 ${!recipientActive ? "opacity-60" : ""}`}>
                     <Checkbox
                       checked={Boolean(form[option.field])}
-                      disabled={!approved}
+                      disabled={!recipientActive}
                       onCheckedChange={checked => setForm(prev => prev ? {
                         ...prev,
                         [option.field]: Boolean(checked),
@@ -260,7 +353,7 @@ const PagarmeConfig = () => {
               </div>
             </div>
 
-            {approved && (
+            {recipientActive && (
               <div className="flex justify-end">
                 <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                   {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -275,13 +368,14 @@ const PagarmeConfig = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />
-              Como funciona no dia a dia
+              Como funciona o repasse
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
-            <p>O cliente escolhe PIX online no cardápio.</p>
-            <p>O pedido fica aguardando pagamento até a confirmação.</p>
-            <p>Após o pagamento, o pedido entra no painel da loja.</p>
+          <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-4">
+            <p>1. Você cadastra a conta bancária do restaurante (recebedor).</p>
+            <p>2. O cliente paga o pedido via PIX no cardápio.</p>
+            <p>3. O Pagar.me confirma e o pedido entra no painel da loja.</p>
+            <p>4. O valor é liquidado automaticamente na sua conta pelo Pagar.me.</p>
           </CardContent>
         </Card>
       </div>
