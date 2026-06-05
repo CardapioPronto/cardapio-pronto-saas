@@ -29,8 +29,29 @@ Cliente final paga pedido do cardápio digital.
 | API | `pagarme-create-order-payment` (somente `pix` hoje) |
 | Config loja | `restaurant_payment_settings` + telas `PagarmeConfig` / Admin |
 | Estado | `order_payments` + `orders.payment_status` |
-| Async | `pagarme-webhook` → `processOrderPaymentEvent` |
-| Marketplace | `PAGARME_PLATFORM_RECIPIENT_ID` + split opcional por restaurante |
+| Async | `pagarme-webhook` → `processOrderPaymentEvent` (`reconcileOrderPaymentFromPagarme`) |
+| Marketplace | `PAGARME_PLATFORM_RECIPIENT_ID` + split por restaurante (`recipient_id`) |
+
+### 3. Onboarding do recebedor + financeiro do lojista (B2C)
+
+Fluxo que cria o **recebedor (`recipient`)** do restaurante e dá visibilidade do repasse.
+
+| Etapa | Implementação |
+|-------|----------------|
+| UI onboarding | `PagarmeConfig` (form de titular + conta bancária) |
+| API onboarding | `pagarme-create-recipient` (`action: submit` cria/atualiza, `sync_status` consulta KYC) |
+| Estado recebedor | `restaurant_recipient_accounts` (PII, RLS) + espelho em `restaurant_payment_settings` (`recipient_status`, `recipient_synced_at`) |
+| Admin | `AdminPagarme` mostra `recipient_status` e botão “Sincronizar status” |
+| UI financeiro | `Recebimentos` (`/recebimentos`): saldo, liquidações e extrato |
+| API financeiro | `pagarme-recipient-financials` (`GET /recipients/{id}/balance` + `/transfers`) |
+
+**Modelo de repasse:** automático. A cobrança ocorre na conta da plataforma e o **split** envia a parte do
+restaurante ao seu `recipient_id`; o Pagar.me liquida na conta bancária do recebedor (`transfer_settings` `Daily`).
+O lojista **não informa chave de API nem chave PIX** — só dados bancários do recebedor.
+
+**Status do recebedor (`recipient_status`):** `not_created → registration → affiliation → active`
+(`refused`/`suspended`/`blocked`/`inactive`). PIX online só é liberado com recebedor `active`
+(reflete em `restaurant_payment_settings.onboarding_status = approved`).
 
 ## Webhook
 
@@ -64,6 +85,25 @@ Detalhes e matriz completa: `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`.
 2. Simulador PIX não funciona com Split (doc Pagar.me) — vale para pedidos marketplace.
 3. Status `pending` (boleto/PIX) não libera acesso ao produto até webhook `charge.paid` — intencional.
 4. Planos com PIX precisam ser **re-sincronizados** no Admin após habilitar o método no plano.
+5. **KYC do recebedor incompleto (CRÍTICO):** `pagarme-create-recipient` ainda não envia o `register_information`
+   completo (endereço, renda, ocupação, nascimento, nome da mãe; PJ: sócios/faturamento) exigido pela API v5
+   desde fev/2024. Em `sk_live` a criação pode ser recusada. Backlog Bloco A em
+   `docs/PLANO_ONBOARDING_RECEBEDOR_PAGARME.md`.
+6. **Extrato em valor bruto:** a página `Recebimentos` soma `order_payments.amount` (total do pedido), não o
+   líquido repassado (sem descontar comissão/taxas). Backlog Bloco B.
+7. **Status do recebedor sem webhook:** atualiza só via botão “Sincronizar” (`sync_status`). Backlog Bloco C.
+
+## Onboarding de recebedor — referência rápida
+
+```sql
+-- Estado do recebedor de um restaurante
+SELECT recipient_id, recipient_status, kyc_status, synced_at
+FROM restaurant_recipient_accounts WHERE restaurant_id = '<uuid>';
+
+-- Espelho em settings (usado no checkout/admin)
+SELECT recipient_id, recipient_status, onboarding_status, is_enabled
+FROM restaurant_payment_settings WHERE restaurant_id = '<uuid>';
+```
 
 ## Onde olhar em incidente
 
