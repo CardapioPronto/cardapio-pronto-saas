@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +10,16 @@ import { AnalisePerformance } from "@/components/relatorios/AnalisePerformance";
 import { FinancialDashboard } from "@/components/relatorios/FinancialDashboard";
 import { FeedbackDashboard } from "@/components/relatorios/FeedbackDashboard";
 
+const RELATORIOS_TABS = new Set(["financeiro", "avaliacoes", "relatorios", "exportacao", "performance"]);
+
 const Relatorios = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const activeTab = useMemo(() => {
+    const tab = searchParams.get("tab") || "financeiro";
+    return RELATORIOS_TABS.has(tab) ? tab : "financeiro";
+  }, [searchParams]);
+
   return (
     <DashboardLayout title="Relatórios">
       <div className="space-y-6">
@@ -66,7 +77,11 @@ const Relatorios = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="financeiro" className="space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => navigate(`/relatorios?tab=${value}`, { replace: true })}
+          className="space-y-4"
+        >
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="financeiro" className="shrink-0">Financeiro</TabsTrigger>
             <TabsTrigger value="avaliacoes" className="shrink-0">Avaliações</TabsTrigger>

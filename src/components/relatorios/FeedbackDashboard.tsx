@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { toast } from "@/components/ui/sonner-toast";
+import { orderFeedbackService } from "@/services/orderFeedbackService";
 import { format, subDays } from "date-fns";
 import {
   AlertTriangle,
@@ -47,10 +49,24 @@ export const FeedbackDashboard = () => {
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(subDays(today, 29));
   const [dateTo, setDateTo] = useState(today);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
   const { data, loading, error, refetch } = useFeedbackDashboard({ dateFrom, dateTo });
 
   const summary = data?.summary;
   const recent = data?.recent ?? [];
+
+  const handleResolve = async (feedbackId: string) => {
+    setResolvingId(feedbackId);
+    try {
+      await orderFeedbackService.resolveFeedback(feedbackId);
+      toast.success("Avaliação marcada como resolvida.");
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível resolver a avaliação.");
+    } finally {
+      setResolvingId(null);
+    }
+  };
 
   const handlePreset = (value: string) => {
     const now = new Date();
@@ -194,6 +210,7 @@ export const FeedbackDashboard = () => {
                     <TableHead>Comentário</TableHead>
                     <TableHead className="text-right">Pedido</TableHead>
                     <TableHead className="text-right">Data</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -225,6 +242,24 @@ export const FeedbackDashboard = () => {
                       </TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">
                         {formatDateTime(item.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.rating <= 6 && !item.resolvedAt ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={resolvingId === item.id}
+                            onClick={() => void handleResolve(item.id)}
+                          >
+                            {resolvingId === item.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Resolver
+                          </Button>
+                        ) : item.resolvedAt ? (
+                          <span className="text-xs text-muted-foreground">Resolvida</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

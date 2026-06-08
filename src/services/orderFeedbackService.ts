@@ -111,6 +111,22 @@ export const orderFeedbackService = {
     return data;
   },
 
+  async resolveFeedback(feedbackId: string) {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    if (!authData.user?.id) throw new Error("Usuário não autenticado.");
+
+    const { error } = await supabase
+      .from("order_feedback")
+      .update({
+        resolved_at: new Date().toISOString(),
+        resolved_by: authData.user.id,
+      })
+      .eq("id", feedbackId);
+
+    if (error) throw error;
+  },
+
   async getDashboard(input: { dateFrom: Date; dateTo: Date }) {
     const restaurantId = await getCurrentRestaurantId();
     if (!restaurantId) throw new Error("Restaurante não encontrado.");

@@ -454,7 +454,7 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 - [x] Enviar pesquisa pos-pedido.
 - [x] Coletar nota e comentario.
-- [ ] Alertar dono em nota baixa.
+- [x] Alertar dono em nota baixa.
 - [x] Mostrar media por periodo.
 - [x] Associar avaliacao ao pedido e ao cliente.
 
@@ -465,7 +465,8 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 Evidencia:
 
-- 2026-06-05: Criada base `order_feedback` com RPC publica de avaliacao no acompanhamento do pedido finalizado, vinculo com pedido/cliente e aba "Avaliacoes" em Relatorios com NPS, media, detratores e comentarios recentes. Alerta proativo ao dono segue pendente para proxima fatia.
+- 2026-06-05: Criada base `order_feedback` com RPC publica de avaliacao no acompanhamento do pedido finalizado, vinculo com pedido/cliente e aba "Avaliacoes" em Relatorios com NPS, media, detratores e comentarios recentes.
+- 2026-06-05: Alerta em nota baixa — notificacao no sino do painel, e-mail `order_feedback_low_rating` via edge `order-feedback-notify` + trigger pg_net, botao "Resolver" no relatorio e deep link `/relatorios?tab=avaliacoes`.
 
 ---
 

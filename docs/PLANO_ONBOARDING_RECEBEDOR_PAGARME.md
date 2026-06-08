@@ -73,7 +73,7 @@ flowchart TB
 
 ### Qualidade / entrega
 - [x] **QA-1** `npm run typecheck` verde; sem erros de lint nos arquivos alterados.
-- [ ] **QA-2** Revisão de RLS e de não-exposição de PII no fluxo público.
+- [x] **QA-2** Revisão de RLS e de não-exposição de PII no fluxo público. → `20260605150000_harden_recipient_accounts_rls.sql`; `getAccountDetails` sem `last_response`; ver §5.1
 - [x] **QA-3** Atualizar `docs/INTEGRACOES_PAGARME.md` e o roteiro de homologação com o novo fluxo. → Blocos F1–F3 + ROTEIRO G
 - [ ] **QA-4** Itens de homologação (criar recebedor de teste, validar split com recebedor real).
 - [x] **DEPLOY** Aplicar migration e fazer deploy da function `pagarme-create-recipient` no projeto Supabase.
@@ -87,7 +87,17 @@ flowchart TB
 - **Bug pré-existente — CORRIGIDO:** imports faltantes adicionados em
   `pagarme-create-order-payment/index.ts` (`buildPagarmeOrderLineItems`, `toCents`) e em
   `pagarme-webhook/index.ts` (`reconcileOrderPaymentFromPagarme`, `PagarmeOrderPaymentData`).
-  Sem isso, o webhook de `order.*` e a criação de PIX de pedido lançavam `ReferenceError` em runtime.
+  Sem isso, o webhook de `order.*` e a criação de PIX de pedido lançam `ReferenceError` em runtime.
+
+### 5.1 Segurança — QA-2 (RLS e PII)
+
+| Superfície | Resultado |
+|------------|-----------|
+| Cardápio / pedido público | `get_public_restaurant_payment_settings` expõe só `enabled`, `methods`, `allowedFulfillment`, `onboardingStatus` — sem `recipient_id` nem PII. |
+| `restaurant_recipient_accounts` | RLS `SELECT` para dono, gestores (`settings_manage` / `settings_integrations_manage`) e super-admin; `anon` sem grant; escrita removida do client (só `service_role` nas edge functions). |
+| Edge `pagarme-create-recipient` / `pagarme-recipient-financials` | JWT obrigatório; mutação e financeiro restritos a **dono** ou **super-admin** (não delega submit a funcionário). |
+| Frontend | `getAccountDetails` lista colunas explícitas (exclui `last_response` / `last_error`); conta bancária mascarada em `getAccount`. |
+| Admin | `restaurant_payment_settings` pode exibir `recipient_id` (identificador Pagar.me, não documento/conta). |
 
 ---
 
@@ -178,3 +188,4 @@ desde fev/2024 (Circular 3.978/20 Bacen) a criação de recebedor exige o objeto
 | 2026-06-05 | Bloco D validação | CPF/CNPJ, lista de bancos, links cruzados config ↔ financeiro |
 | 2026-06-05 | Bloco E deploy | `db push` OK; deploy `pagarme-create-recipient`, `pagarme-recipient-financials`, `pagarme-webhook`; smoke estendido |
 | 2026-06-05 | Bloco F docs | ROTEIRO Bloco G refinado; SUPORTE §11 recebedor/PIX/repasse |
+| 2026-06-05 | QA-2 RLS/PII | Migration hardening; select explícito no service; auditoria documentada em §5.1 |

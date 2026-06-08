@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { AlertTriangle, Banknote, BrainCircuit, CheckCircle2, MessageCircle, Package, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Banknote, BrainCircuit, CheckCircle2, MessageCircle, Package, Star, type LucideIcon } from "lucide-react";
 import { getOwnerCopilotAlerts } from "@/services/ownerCopilotService";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
@@ -51,7 +51,7 @@ export function useDashboardNotifications() {
         return null;
       });
 
-      const [ordersResult, threadsResult, instancesResult, paymentSettingsResult, copilotAlerts] = await Promise.all([
+      const [ordersResult, threadsResult, instancesResult, paymentSettingsResult, lowFeedbackResult, copilotAlerts] = await Promise.all([
         supabase
           .from("orders")
           .select("id", { count: "exact", head: true })
@@ -72,6 +72,12 @@ export function useDashboardNotifications() {
           .select("recipient_status, is_enabled, onboarding_status")
           .eq("restaurant_id", user.restaurant_id)
           .maybeSingle(),
+        supabase
+          .from("order_feedback")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", user.restaurant_id)
+          .lte("rating", 6)
+          .is("resolved_at", null),
         copilotAlertsPromise,
       ]);
 
@@ -79,6 +85,7 @@ export function useDashboardNotifications() {
       if (threadsResult.error) throw threadsResult.error;
       if (instancesResult.error) throw instancesResult.error;
       if (paymentSettingsResult.error) throw paymentSettingsResult.error;
+      if (lowFeedbackResult.error) throw lowFeedbackResult.error;
 
       const next: DashboardNotification[] = [];
       const openOrders = ordersResult.count || 0;
@@ -158,6 +165,19 @@ export function useDashboardNotifications() {
           href: "/pagarme-config",
           tone: "danger",
           icon: AlertTriangle,
+        });
+      }
+
+      const openLowFeedback = lowFeedbackResult.count || 0;
+      if (openLowFeedback > 0) {
+        next.push({
+          id: "low-order-feedback",
+          title: "Avaliações baixas",
+          description: "Há clientes insatisfeitos aguardando sua atenção no pós-pedido.",
+          count: openLowFeedback,
+          href: "/relatorios?tab=avaliacoes",
+          tone: "warning",
+          icon: Star,
         });
       }
 
