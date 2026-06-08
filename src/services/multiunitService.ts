@@ -1,8 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import type {
+  CreateRestaurantUnitInput,
+  CreatedRestaurantUnit,
   MultiunitConsolidatedReport,
   RestaurantAccess,
   RestaurantAccessType,
+  SyncGroupMenuInput,
+  SyncGroupMenuResult,
 } from "@/types/multiunit";
 
 type RpcError = { message: string } | null;
@@ -33,6 +37,26 @@ type RpcClient = {
       p_menu_sync_enabled: boolean;
     },
   ): Promise<{ data: unknown; error: RpcError }>;
+  (
+    fn: "create_multiunit_restaurant",
+    args: {
+      p_group_id: string;
+      p_name: string;
+      p_phone: string | null;
+      p_address: string | null;
+      p_cnpj: string | null;
+      p_category: string | null;
+      p_email: string | null;
+    },
+  ): Promise<{ data: unknown; error: RpcError }>;
+  (
+    fn: "sync_restaurant_group_menu",
+    args: {
+      p_group_id: string;
+      p_target_restaurant_ids: string[] | null;
+      p_overwrite_existing: boolean;
+    },
+  ): Promise<{ data: unknown; error: RpcError }>;
 };
 
 const rpc = supabase.rpc.bind(supabase) as unknown as RpcClient;
@@ -52,6 +76,11 @@ const asAccessType = (value: unknown): RestaurantAccessType =>
 
 const asStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String) : [];
+
+const optionalText = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 const normalizeAccess = (value: unknown): RestaurantAccess => {
   const row = asRecord(value);
@@ -157,4 +186,61 @@ export const setRestaurantGroupMenuMatrix = async (input: {
   });
 
   if (error) throw new Error(error.message);
+};
+
+export const createRestaurantUnit = async (
+  input: CreateRestaurantUnitInput,
+): Promise<CreatedRestaurantUnit> => {
+  const { data, error } = await rpc("create_multiunit_restaurant", {
+    p_group_id: input.groupId,
+    p_name: input.name.trim(),
+    p_phone: optionalText(input.phone),
+    p_address: optionalText(input.address),
+    p_cnpj: optionalText(input.cnpj),
+    p_category: optionalText(input.category),
+    p_email: optionalText(input.email),
+  });
+
+  if (error) throw new Error(error.message);
+
+  const row = asRecord(data);
+  const created: CreatedRestaurantUnit = {
+    restaurant_id: String(row.restaurant_id ?? ""),
+    restaurant_name: String(row.restaurant_name ?? input.name),
+    group_id: asStringOrNull(row.group_id),
+    group_name: asStringOrNull(row.group_name),
+    owner_id: asStringOrNull(row.owner_id),
+    created_by: asStringOrNull(row.created_by),
+  };
+
+  if (!created.restaurant_id) {
+    throw new Error("A unidade foi criada, mas o retorno veio incompleto.");
+  }
+
+  return created;
+};
+
+export const syncRestaurantGroupMenu = async (
+  input: SyncGroupMenuInput,
+): Promise<SyncGroupMenuResult> => {
+  const { data, error } = await rpc("sync_restaurant_group_menu", {
+    p_group_id: input.groupId,
+    p_target_restaurant_ids: input.targetRestaurantIds,
+    p_overwrite_existing: input.overwriteExisting,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const row = asRecord(data);
+  return {
+    group_id: asStringOrNull(row.group_id),
+    master_restaurant_id: asStringOrNull(row.master_restaurant_id),
+    units_synced: Number(row.units_synced ?? 0),
+    categories_created: Number(row.categories_created ?? 0),
+    categories_updated: Number(row.categories_updated ?? 0),
+    products_created: Number(row.products_created ?? 0),
+    products_updated: Number(row.products_updated ?? 0),
+    costs_synced: Number(row.costs_synced ?? 0),
+    overwrite_existing: Boolean(row.overwrite_existing),
+  };
 };

@@ -555,6 +555,8 @@ Objetivo: vender para redes pequenas e franquias.
 - [x] Relatorio consolidado.
 - [x] Cardapio matriz opcional.
 - [x] Permissoes por unidade.
+- [x] Cadastro de novas unidades dentro da rede.
+- [x] Sincronizacao controlada do cardapio matriz para filiais.
 
 ### Criterio de aceite
 
@@ -564,6 +566,8 @@ Objetivo: vender para redes pequenas e franquias.
 Evidencia:
 
 - 2026-06-08: Fundacao multiunidade em `restaurant_groups`, `restaurant_group_units` e `restaurant_user_access`; RPCs `get_my_restaurant_access`, `set_active_restaurant`, `get_multiunit_consolidated_report` e `set_restaurant_group_menu_matrix`; `get_user_restaurant_id` e `user_has_restaurant_permission` passam a respeitar acesso multiunidade. App ganhou provider de unidade ativa, seletor no header/sidebar e tela `/multiunidade` com consolidado por rede, filtro de unidades e definicao de cardapio matriz. Implementado sobre a branch `feature/programa-indicacoes-foundation` para manter compatibilidade com o programa de indicacoes.
+- 2026-06-08: Cadastro de nova unidade via `/multiunidade` com RPC `create_multiunit_restaurant`, mantendo a unidade no grupo existente, acesso do dono/gestor e sem gerar atribuicao automatica no programa de indicacoes.
+- 2026-06-08: Sincronizacao do cardapio matriz com RPC `sync_restaurant_group_menu` e acao em `/multiunidade`; cria/atualiza categorias e produtos nas filiais selecionadas, preservando itens locais e saldos de estoque por unidade.
 
 ---
 
