@@ -14,6 +14,7 @@ const Pedidos = lazy(() => import('@/pages/Pedidos'));
 const Cozinha = lazy(() => import('@/pages/Cozinha'));
 const Clientes = lazy(() => import('@/pages/Clientes'));
 const Fidelidade = lazy(() => import('@/pages/Fidelidade'));
+const RecuperacaoCarrinho = lazy(() => import('@/pages/RecuperacaoCarrinho'));
 const FuncionariosV2 = lazy(() => import('@/pages/FuncionariosV2'));
 const Categorias = lazy(() => import('@/pages/Categorias'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
@@ -177,6 +178,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['orders_view', 'reports_view', 'orders_metrics_view', 'settings_manage']} requireAny>
           <MainLayout>
             <Fidelidade />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/recuperacao-carrinho" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'settings_manage']} requireAny>
+          <MainLayout>
+            <RecuperacaoCarrinho />
           </MainLayout>
         </ProtectedRoute>
       } />

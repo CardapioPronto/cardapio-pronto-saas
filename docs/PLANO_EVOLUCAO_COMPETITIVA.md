@@ -452,11 +452,11 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 ### Escopo MVP
 
-- [ ] Enviar pesquisa pos-pedido.
-- [ ] Coletar nota e comentario.
-- [ ] Alertar dono em nota baixa.
-- [ ] Mostrar media por periodo.
-- [ ] Associar avaliacao ao pedido e ao cliente.
+- [x] Enviar pesquisa pos-pedido.
+- [x] Coletar nota e comentario.
+- [x] Alertar dono em nota baixa.
+- [x] Mostrar media por periodo.
+- [x] Associar avaliacao ao pedido e ao cliente.
 
 ### Criterio de aceite
 
@@ -465,7 +465,8 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-05: Criada base `order_feedback` com RPC publica de avaliacao no acompanhamento do pedido finalizado, vinculo com pedido/cliente e aba "Avaliacoes" em Relatorios com NPS, media, detratores e comentarios recentes.
+- 2026-06-05: Alerta em nota baixa — notificacao no sino do painel, e-mail `order_feedback_low_rating` via edge `order-feedback-notify` + trigger pg_net, botao "Resolver" no relatorio e deep link `/relatorios?tab=avaliacoes`.
 
 ---
 
@@ -476,11 +477,11 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 
 ### Escopo MVP
 
-- [ ] Registrar carrinho iniciado com telefone quando informado.
-- [ ] Detectar abandono apos janela configuravel.
-- [ ] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
-- [ ] Cupom opcional de recuperacao.
-- [ ] Relatorio: abandonos, recuperados, receita recuperada.
+- [x] Registrar carrinho iniciado com telefone quando informado.
+- [x] Detectar abandono apos janela configuravel.
+- [x] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
+- [x] Cupom opcional de recuperacao.
+- [x] Relatorio: abandonos, recuperados, receita recuperada.
 
 ### Criterio de aceite
 
@@ -489,7 +490,7 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-05: Tabelas `cart_abandonment_settings` / `cart_abandonment_sessions`, RPC `upsert_public_cart_abandonment_session`, trigger de recuperação em `orders`, edge `cart-abandonment-cron` (pg_cron 5 min), template `cart_abandonment_recovery`, página `/recuperacao-carrinho`, tracking no `CheckoutFlow` com opt-in e-mail/WhatsApp.
 
 ---
 

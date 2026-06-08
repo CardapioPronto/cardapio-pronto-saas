@@ -1737,6 +1737,95 @@ export type Database = {
           },
         ]
       }
+      order_feedback: {
+        Row: {
+          comment: string | null
+          contact_requested: boolean
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_order_id: string | null
+          id: string
+          metadata: Json
+          order_id: string
+          rating: number
+          resolved_at: string | null
+          resolved_by: string | null
+          restaurant_id: string
+          source: string
+          tracking_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          contact_requested?: boolean
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_order_id?: string | null
+          id?: string
+          metadata?: Json
+          order_id: string
+          rating: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          restaurant_id: string
+          source?: string
+          tracking_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          contact_requested?: boolean
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_order_id?: string | null
+          id?: string
+          metadata?: Json
+          order_id?: string
+          rating?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          restaurant_id?: string
+          source?: string
+          tracking_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_feedback_delivery_order_id_fkey"
+            columns: ["delivery_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_feedback_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_feedback_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_feedback_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           addons: Json | null
@@ -3220,6 +3309,15 @@ export type Database = {
         Args: { p_tracking_id: string }
         Returns: Json
       }
+      submit_public_order_feedback: {
+        Args: {
+          p_comment?: string | null
+          p_contact_requested?: boolean
+          p_rating: number
+          p_tracking_id: string
+        }
+        Returns: Json
+      }
       get_public_plan_summaries: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -3306,6 +3404,14 @@ export type Database = {
         Returns: Json
       }
       get_restaurant_financial_dashboard: {
+        Args: {
+          p_from: string
+          p_restaurant_id: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_restaurant_feedback_summary: {
         Args: {
           p_from: string
           p_restaurant_id: string

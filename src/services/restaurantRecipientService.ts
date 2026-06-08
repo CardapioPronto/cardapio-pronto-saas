@@ -289,7 +289,35 @@ export const restaurantRecipientService = {
 
     const { data, error } = await supabase
       .from("restaurant_recipient_accounts")
-      .select("*")
+      .select(
+        [
+          "holder_document",
+          "email",
+          "phone",
+          "birthdate",
+          "mother_name",
+          "monthly_income",
+          "professional_occupation",
+          "annual_revenue",
+          "company_name",
+          "trading_name",
+          "addr_street",
+          "addr_number",
+          "addr_complement",
+          "addr_neighborhood",
+          "addr_city",
+          "addr_state",
+          "addr_zip_code",
+          "addr_reference_point",
+          "managing_partners",
+          "bank_code",
+          "branch_number",
+          "branch_check_digit",
+          "account_number",
+          "account_check_digit",
+          "account_type",
+        ].join(", "),
+      )
       .eq("restaurant_id", restaurantId)
       .maybeSingle();
 

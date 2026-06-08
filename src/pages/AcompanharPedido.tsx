@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { orderFeedbackService } from '@/services/orderFeedbackService';
 import {
   Clock,
   CheckCircle2,
@@ -17,6 +20,8 @@ import {
   MapPin,
   Wifi,
   Share2,
+  Loader2,
+  MessageSquareHeart,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -151,6 +156,11 @@ export default function AcompanharPedido() {
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackContactRequested, setFeedbackContactRequested] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const trackingUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/pedido/${id}` : '';
@@ -202,6 +212,26 @@ export default function AcompanharPedido() {
     setHistory(o.history || []);
     setLive(true);
     setError(null);
+  };
+
+  const handleFeedbackSubmit = async () => {
+    if (!id || feedbackRating === null) return;
+    setFeedbackSubmitting(true);
+
+    try {
+      await orderFeedbackService.submitPublic({
+        trackingId: id,
+        rating: feedbackRating,
+        comment: feedbackComment,
+        contactRequested: feedbackContactRequested,
+      });
+      setFeedbackSubmitted(true);
+      toast.success('Avaliação enviada. Obrigado pelo retorno!');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Não foi possível enviar sua avaliação.');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
   };
 
   // Carga inicial e atualização periódica por RPC pública.
@@ -270,6 +300,7 @@ export default function AcompanharPedido() {
   const statusFlow = order.fulfillment_type === 'delivery' ? STATUS_FLOW : LOCAL_STATUS_FLOW;
   const currentIdx = Math.min(STATUS_INDEX[currentStatus] ?? 0, statusFlow.length - 1);
   const isDelivery = order.fulfillment_type === 'delivery';
+  const canReview = !isCancelled && (currentStatus === 'delivered' || currentStatus === 'finalizado');
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -518,6 +549,80 @@ export default function AcompanharPedido() {
             )}
           </CardContent>
         </Card>
+
+        {canReview && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquareHeart className="h-4 w-4" />
+                Como foi sua experiência?
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {feedbackSubmitted ? (
+                <div className="rounded-md border bg-primary/5 p-4 text-sm">
+                  <p className="font-medium">Avaliação registrada.</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Seu retorno ajuda a loja a melhorar o atendimento.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>Nota de 0 a 10</Label>
+                    <div className="grid grid-cols-6 gap-2 sm:grid-cols-11">
+                      {Array.from({ length: 11 }, (_, value) => (
+                        <Button
+                          key={value}
+                          type="button"
+                          variant={feedbackRating === value ? 'default' : 'outline'}
+                          className="h-10 px-0"
+                          onClick={() => setFeedbackRating(value)}
+                          aria-label={`Dar nota ${value}`}
+                        >
+                          {value}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-comment">Comentário</Label>
+                    <Textarea
+                      id="feedback-comment"
+                      value={feedbackComment}
+                      maxLength={800}
+                      rows={4}
+                      onChange={(event) => setFeedbackComment(event.target.value)}
+                      placeholder="Conte rapidamente o que foi bom ou o que precisa melhorar."
+                    />
+                    <p className="text-xs text-muted-foreground">{feedbackComment.length}/800</p>
+                  </div>
+
+                  <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+                    <Checkbox
+                      checked={feedbackContactRequested}
+                      onCheckedChange={(checked) => setFeedbackContactRequested(checked === true)}
+                    />
+                    <span>
+                      Quero que a loja entre em contato comigo sobre esta experiência.
+                    </span>
+                  </label>
+
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={feedbackRating === null || feedbackSubmitting}
+                    onClick={() => void handleFeedbackSubmit()}
+                  >
+                    {feedbackSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Enviar avaliação
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {isDelivery ? (
           <Card>

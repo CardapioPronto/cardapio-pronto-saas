@@ -46,20 +46,8 @@ const updateStatus = (next: Partial<NetworkStatusSnapshot>) => {
   emit();
 };
 
-const browserReportsOffline = () =>
-  typeof navigator !== "undefined" && navigator.onLine === false;
-
 export function checkNetworkConnectivity(): Promise<boolean> {
   if (currentCheck) return currentCheck;
-
-  if (browserReportsOffline()) {
-    updateStatus({
-      isOnline: false,
-      isChecking: false,
-      lastCheckedAt: new Date().toISOString(),
-    });
-    return Promise.resolve(false);
-  }
 
   updateStatus({ isChecking: true });
 

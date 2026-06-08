@@ -3,8 +3,13 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export function OfflineStatusBanner() {
   const { isOnline, isChecking } = useNetworkStatus();
+  const browserOffline =
+    typeof navigator !== "undefined" && navigator.onLine === false;
 
-  if (isOnline || isChecking) return null;
+  // O banner exige o sinal do navegador e a confirmacao do monitor. Isso evita
+  // falso offline no boot do preview/CI, mantendo resposta imediata ao evento
+  // "offline" e ao reload enquanto a conexao segue indisponivel.
+  if (!browserOffline || isOnline || isChecking) return null;
 
   return (
     <div
