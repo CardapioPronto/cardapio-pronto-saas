@@ -20,7 +20,10 @@ import {
 import { getPublicLoyaltyQuote } from '@/services/loyaltyService';
 import type { PublicLoyaltyQuote } from '@/types/loyalty';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { getCartAbandonmentSessionToken } from '@/lib/cartAbandonmentSession';
+import {
+  getCartAbandonmentSessionToken,
+  rotateCartAbandonmentSessionToken,
+} from '@/lib/cartAbandonmentSession';
 import { cartAbandonmentService } from '@/services/cartAbandonmentService';
 
 interface Props {
@@ -115,7 +118,11 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     acceptsEmailMarketing: false,
     acceptsWhatsappReminder: false,
   });
-  const cartSessionTokenRef = useRef(getCartAbandonmentSessionToken(data.restaurant.id));
+  const initialCartSessionToken = useMemo(
+    () => getCartAbandonmentSessionToken(data.restaurant.id),
+    [data.restaurant.id],
+  );
+  const cartSessionTokenRef = useRef(initialCartSessionToken);
 
   const [address, setAddress] = useState<DeliveryAddressInput>({
     customer_name: '',
@@ -482,6 +489,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         setOnlinePayment(paymentResult);
       }
       clearPendingCheckout(restaurantId);
+      cartSessionTokenRef.current = rotateCartAbandonmentSessionToken(restaurantId);
       setStep('success');
       clear();
     } catch (e: unknown) {

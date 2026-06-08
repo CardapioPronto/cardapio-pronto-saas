@@ -68,9 +68,9 @@ function formatPhoneBR(raw: string): string {
 }
 
 function menuUrl(slug?: string | null, restaurantId?: string) {
-  if (PUBLIC_SITE_URL && slug) return `${PUBLIC_SITE_URL}/${slug}`;
+  if (PUBLIC_SITE_URL && slug) return `${PUBLIC_SITE_URL}/cardapio/${slug}`;
   if (PUBLIC_SITE_URL && restaurantId) return `${PUBLIC_SITE_URL}/cardapio/${restaurantId}`;
-  return slug ? `/${slug}` : "/";
+  return slug ? `/cardapio/${slug}` : "/";
 }
 
 function couponMessage(code?: string | null) {
@@ -131,7 +131,6 @@ async function hasRecentReminder(
     .select("id", { count: "exact", head: true })
     .eq("restaurant_id", restaurantId)
     .eq("phone_normalized", phone)
-    .eq("status", "reminded")
     .gte("reminded_at", since);
 
   return (count || 0) > 0;

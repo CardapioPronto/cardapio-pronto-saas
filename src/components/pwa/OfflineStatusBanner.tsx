@@ -2,14 +2,14 @@ import { WifiOff } from "lucide-react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export function OfflineStatusBanner() {
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isChecking } = useNetworkStatus();
   const browserOffline =
     typeof navigator !== "undefined" && navigator.onLine === false;
 
-  // O banner segue o estado do navegador (offline/online). O probe HTTP em
-  // useNetworkStatus continua guiando filas e sync; evita falso positivo quando
-  // /auth/v1/health falha no preview/CI com navigator.onLine === true.
-  if (!browserOffline || isOnline) return null;
+  // O banner exige o sinal do navegador e a confirmacao do monitor. Isso evita
+  // falso offline no boot do preview/CI, mantendo resposta imediata ao evento
+  // "offline" e ao reload enquanto a conexao segue indisponivel.
+  if (!browserOffline || isOnline || isChecking) return null;
 
   return (
     <div
