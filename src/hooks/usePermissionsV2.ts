@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useUserSession } from "./useUserSession";
+import { useRestaurantAccess } from "./useRestaurantAccess";
 import { PermissionType } from "@/types/employee";
 
 const ALL_PERMISSIONS: PermissionType[] = [
@@ -30,11 +31,21 @@ const MANAGER_PERMISSIONS: PermissionType[] = [
 
 export const usePermissionsV2 = () => {
   const { appUser, loading: sessionLoading } = useUserSession();
+  const {
+    activeRestaurant,
+    activeRestaurantId,
+    loading: restaurantAccessLoading,
+  } = useRestaurantAccess();
   const [userPermissions, setUserPermissions] = useState<PermissionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUserPermissions = useCallback(async () => {
+    if (restaurantAccessLoading) {
+      setLoading(true);
+      return;
+    }
+
     if (!appUser?.id) {
       setUserPermissions([]);
       setLoading(false);
@@ -52,7 +63,14 @@ export const usePermissionsV2 = () => {
         return;
       }
 
-      // Dono: tudo
+      // Multiunidade: a unidade ativa e sua permissao efetiva mandam.
+      if (activeRestaurant) {
+        setUserPermissions(activeRestaurant.permissions as PermissionType[]);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback legado para perfis sem unidade ativa carregada.
       if (appUser.user_type === 'owner') {
         setUserPermissions(ALL_PERMISSIONS);
         setLoading(false);
@@ -62,12 +80,17 @@ export const usePermissionsV2 = () => {
       // Gerente: preset operacional. Se tiver permissões extras gravadas
       // na tabela employee_permissions, são adicionadas (união).
       if (appUser.user_type === 'manager') {
-        const { data: emp } = await supabase
+        let query = supabase
           .from('employees')
           .select('id')
           .eq('user_id', appUser.id)
-          .eq('is_active', true)
-          .maybeSingle();
+          .eq('is_active', true);
+
+        if (activeRestaurantId) {
+          query = query.eq('restaurant_id', activeRestaurantId);
+        }
+
+        const { data: emp } = await query.maybeSingle();
 
         let extra: PermissionType[] = [];
         if (emp?.id) {
@@ -85,12 +108,17 @@ export const usePermissionsV2 = () => {
 
       // Funcionário: só o que estiver explicitamente atribuído
       if (appUser.user_type === 'employee') {
-        const { data: employeeData, error: employeeError } = await supabase
+        let query = supabase
           .from('employees')
           .select('id')
           .eq('user_id', appUser.id)
-          .eq('is_active', true)
-          .maybeSingle();
+          .eq('is_active', true);
+
+        if (activeRestaurantId) {
+          query = query.eq('restaurant_id', activeRestaurantId);
+        }
+
+        const { data: employeeData, error: employeeError } = await query.maybeSingle();
 
         if (employeeError) throw employeeError;
 
@@ -119,7 +147,14 @@ export const usePermissionsV2 = () => {
     } finally {
       setLoading(false);
     }
-  }, [appUser?.id, appUser?.role, appUser?.user_type]);
+  }, [
+    activeRestaurant,
+    activeRestaurantId,
+    appUser?.id,
+    appUser?.role,
+    appUser?.user_type,
+    restaurantAccessLoading,
+  ]);
 
   const hasPermission = (permission: PermissionType): boolean =>
     userPermissions.includes(permission);
@@ -146,7 +181,7 @@ export const usePermissionsV2 = () => {
   return {
     userPermissions,
     userType: appUser?.user_type || null,
-    loading: loading || sessionLoading,
+    loading: loading || sessionLoading || restaurantAccessLoading,
     error,
     hasPermission,
     hasAnyPermission,

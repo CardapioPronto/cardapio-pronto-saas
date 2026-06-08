@@ -44,6 +44,7 @@ const Blog = lazy(() => import('@/pages/Blog'));
 const BlogPost = lazy(() => import('@/pages/BlogPost'));
 const PDV = lazy(() => import('@/pages/PDV'));
 const MenuDigital = lazy(() => import('@/pages/MenuDigital'));
+const Multiunidade = lazy(() => import('@/pages/Multiunidade'));
 const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
 const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
 const Recebimentos = lazy(() => import('@/pages/Recebimentos'));
@@ -313,6 +314,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['orders_manage', 'settings_view']} requireAny>
           <MainLayout>
             <Mesas />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/multiunidade" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'orders_metrics_view', 'settings_view']} requireAny>
+          <MainLayout>
+            <Multiunidade />
           </MainLayout>
         </ProtectedRoute>
       } />

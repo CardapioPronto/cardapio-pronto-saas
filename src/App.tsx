@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
+import { RestaurantAccessProvider } from './hooks/RestaurantAccessProvider';
 import { initSupabase, setupAuthListeners } from './lib/supabase-init';
 import { Toaster } from '@/components/ui/toaster';
 import { Analytics } from '@vercel/analytics/react';
@@ -77,21 +78,23 @@ function App() {
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <div className="min-h-screen bg-background">
-              <BrowserRouter
-                future={{
-                  v7_startTransition: true,
-                  v7_relativeSplatPath: true,
-                }}
-              >
-                <RadixOverlayCleanup />
-                <AppRoutes />
-                <CookieConsentBar />
-                <OfflineStatusBanner />
-              </BrowserRouter>
-              <Toaster />
-              {isProduction && <Analytics />}
-            </div>
+            <RestaurantAccessProvider>
+              <div className="min-h-screen bg-background">
+                <BrowserRouter
+                  future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                  }}
+                >
+                  <RadixOverlayCleanup />
+                  <AppRoutes />
+                  <CookieConsentBar />
+                  <OfflineStatusBanner />
+                </BrowserRouter>
+                <Toaster />
+                {isProduction && <Analytics />}
+              </div>
+            </RestaurantAccessProvider>
           </AuthProvider>
         </QueryClientProvider>
       </HelmetProvider>

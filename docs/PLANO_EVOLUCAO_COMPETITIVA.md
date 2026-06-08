@@ -550,11 +550,11 @@ Objetivo: vender para redes pequenas e franquias.
 
 ### Escopo MVP
 
-- [ ] Usuario com acesso a multiplos restaurantes.
-- [ ] Troca de unidade no painel.
-- [ ] Relatorio consolidado.
-- [ ] Cardapio matriz opcional.
-- [ ] Permissoes por unidade.
+- [x] Usuario com acesso a multiplos restaurantes.
+- [x] Troca de unidade no painel.
+- [x] Relatorio consolidado.
+- [x] Cardapio matriz opcional.
+- [x] Permissoes por unidade.
 
 ### Criterio de aceite
 
@@ -563,7 +563,7 @@ Objetivo: vender para redes pequenas e franquias.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-08: Fundacao multiunidade em `restaurant_groups`, `restaurant_group_units` e `restaurant_user_access`; RPCs `get_my_restaurant_access`, `set_active_restaurant`, `get_multiunit_consolidated_report` e `set_restaurant_group_menu_matrix`; `get_user_restaurant_id` e `user_has_restaurant_permission` passam a respeitar acesso multiunidade. App ganhou provider de unidade ativa, seletor no header/sidebar e tela `/multiunidade` com consolidado por rede, filtro de unidades e definicao de cardapio matriz. Implementado sobre a branch `feature/programa-indicacoes-foundation` para manter compatibilidade com o programa de indicacoes.
 
 ---
 

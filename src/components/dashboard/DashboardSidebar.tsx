@@ -24,6 +24,7 @@ import {
   Wallet,
   ShoppingCart,
   PackagePlus,
+  Network,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useAuth } from "@/hooks/useAuthContext";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { useUserSession } from "@/hooks/useUserSession";
+import { useRestaurantAccess } from "@/hooks/useRestaurantAccess";
 import { PermissionType } from "@/types/employee";
 import { cn } from "@/lib/utils";
 import { PubfyWordmark } from "@/components/brand/PubfyWordmark";
@@ -97,6 +99,7 @@ const communicationLinks: NavItem[] = [
 ];
 
 const adminLinks: NavItem[] = [
+  { to: "/multiunidade", label: "Rede e unidades", icon: Network, permissions: ["reports_view", "orders_metrics_view", "settings_view"] },
   { to: "/funcionarios", label: "Funcionários", icon: UserRound, permissions: ["employees_manage"] },
   { to: "/recebimentos", label: "Recebimentos", icon: Wallet, permissions: ["settings_manage", "settings_integrations_manage", "reports_view"] },
   { to: "/assinaturas", label: "Assinatura", icon: CreditCard, permissions: ["subscription_view"] },
@@ -117,6 +120,7 @@ const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
   const { signOut } = useAuth();
   const { hasAnyPermission, hasPermission, loading } = usePermissionsV2();
   const { appUser } = useUserSession();
+  const { activeRestaurant, hasMultipleRestaurants } = useRestaurantAccess();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -180,6 +184,11 @@ const DashboardSidebar = ({ className, onNavigate }: DashboardSidebarProps) => {
             <p className="truncate text-sm font-medium" title={appUser.name || appUser.email}>
               {appUser.name || appUser.email}
             </p>
+            {activeRestaurant && (
+              <p className="mt-1 truncate text-xs text-muted-foreground" title={activeRestaurant.restaurant_name}>
+                {hasMultipleRestaurants ? activeRestaurant.restaurant_name : "Unidade principal"}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="text-xs">
                 {userTypeLabel(appUser.user_type)}

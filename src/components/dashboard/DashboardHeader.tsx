@@ -14,6 +14,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardNotifications } from "@/hooks/useDashboardNotifications";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import DashboardSidebar from "./DashboardSidebar";
+import { RestaurantUnitSwitcher } from "./RestaurantUnitSwitcher";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cleanupStaleRadixOverlays } from "@/lib/radixOverlayCleanup";
 
@@ -69,6 +70,7 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
         <h1 className="truncate text-xl font-semibold text-navy sm:text-2xl">{title}</h1>
       </div>
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
+        <RestaurantUnitSwitcher />
         <Badge
           variant="outline"
           className={
