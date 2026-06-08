@@ -121,5 +121,17 @@ verify_jwt = false
 [functions.pagarme-create-order-payment]
 verify_jwt = true
 
+[functions.pagarme-create-recipient]
+verify_jwt = true
+
+[functions.pagarme-recipient-financials]
+verify_jwt = true
+
+[functions.order-feedback-notify]
+verify_jwt = false
+
+[functions.cart-abandonment-cron]
+verify_jwt = false
+
 [functions.send-delivery-whatsapp]
 verify_jwt = true

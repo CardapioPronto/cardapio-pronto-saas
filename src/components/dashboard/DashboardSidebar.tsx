@@ -20,6 +20,10 @@ import {
   ChefHat,
   Users,
   Gift,
+  BrainCircuit,
+  Wallet,
+  ShoppingCart,
+  PackagePlus,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -53,11 +57,14 @@ const operationalLinks: NavItem[] = [
   { to: "/cozinha", label: "Cozinha", icon: ChefHat, permissions: ["orders_view"] },
   { to: "/clientes", label: "Clientes", icon: Users, permissions: ["orders_view", "reports_view", "orders_metrics_view"] },
   { to: "/fidelidade", label: "Fidelidade", icon: Gift, permissions: ["orders_view", "reports_view", "orders_metrics_view", "settings_manage"] },
+  { to: "/recuperacao-carrinho", label: "Recuperação", icon: ShoppingCart, permissions: ["reports_view", "settings_manage"] },
   { to: "/produtos", label: "Produtos", icon: Package2, permissions: ["products_view"] },
+  { to: "/insumos", label: "Insumos", icon: PackagePlus, permissions: ["products_view"] },
   { to: "/categorias", label: "Categorias", icon: Tags, permissions: ["products_view"] },
   { to: "/cardapio", label: "Menu Digital", icon: Store, permissions: ["products_view"] },
   { to: "/mesas", label: "Áreas e Mesas", icon: TableIcon, permissions: ["settings_view"] },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3, permissions: ["reports_view"] },
+  { to: "/copiloto", label: "Copiloto", icon: BrainCircuit, permissions: ["reports_view", "orders_metrics_view"] },
 ];
 
 const communicationLinks: NavItem[] = [
@@ -91,6 +98,7 @@ const communicationLinks: NavItem[] = [
 
 const adminLinks: NavItem[] = [
   { to: "/funcionarios", label: "Funcionários", icon: UserRound, permissions: ["employees_manage"] },
+  { to: "/recebimentos", label: "Recebimentos", icon: Wallet, permissions: ["settings_manage", "settings_integrations_manage", "reports_view"] },
   { to: "/assinaturas", label: "Assinatura", icon: CreditCard, permissions: ["subscription_view"] },
   { to: "/configuracoes", label: "Configurações", icon: Settings, permissions: ["settings_view"] },
 ];

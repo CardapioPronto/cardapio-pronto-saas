@@ -28,6 +28,7 @@ import {
 import { useOrdersRealtimeSubscription } from "./useOrdersRealtimeSubscription";
 import { captureCrmLeadFromOrder } from "@/services/crmService";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { usePDVOfflineOrderQueue } from "./usePDVOfflineOrderQueue";
 
 const getCreatedOrderId = (pedido: unknown) => {
   if (!pedido || typeof pedido !== "object") return null;
@@ -41,7 +42,8 @@ const getCreatedOrderId = (pedido: unknown) => {
 };
 
 export const usePDVHook = (restaurantId: string) => {
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isChecking } = useNetworkStatus();
+  const offlineQueue = usePDVOfflineOrderQueue(restaurantId);
   // Estados do PDV
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
   const [mesaSelecionada, setMesaSelecionada] = useState("");
@@ -374,6 +376,49 @@ export const usePDVHook = (restaurantId: string) => {
       toast.error("ID do restaurante não encontrado");
       return false;
     }
+
+    if (isChecking) {
+      toast.info("Aguarde a verificação da conexão antes de finalizar o pedido.");
+      return false;
+    }
+
+    if (!isOnline) {
+      if (tipoPedido !== "balcao") {
+        toast.error("Pedidos de mesa exigem conexão. Altere para balcão para salvar offline.");
+        return false;
+      }
+
+      try {
+        const pedidoOffline = offlineQueue.enqueueOrder({
+          items: itensPedido,
+          total: totalPedido,
+          customer: dadosCliente,
+        });
+
+        setPedidoRecemFinalizado({
+          id: `offline-${pedidoOffline.clientOrderId}`,
+          mesa: "Balcão",
+          cliente: dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined,
+          clientName: dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined,
+          itensPedido: [...itensPedido],
+          status: "pendente",
+          timestamp: new Date(pedidoOffline.createdAt),
+          total: totalPedido,
+          payment_method: null,
+          payment_status: null,
+          source: "app",
+        });
+        setItensPedido([]);
+        setNomeCliente("");
+        setMesaSelecionada("");
+        toast.success("Pedido salvo neste dispositivo. Ele será sincronizado quando a internet voltar.");
+        return true;
+      } catch (error) {
+        console.error("Erro ao salvar pedido offline:", error);
+        toast.error(error instanceof Error ? error.message : "Não foi possível salvar o pedido offline.");
+        return false;
+      }
+    }
     
     try {
       setSalvandoPedido(true);
@@ -549,5 +594,8 @@ export const usePDVHook = (restaurantId: string) => {
     cancelarOverrideEstoque,
     pedidoRecemFinalizado,
     limparPedidoRecemFinalizado,
+    offlineQueue,
+    isOnline,
+    isChecking,
   };
 };

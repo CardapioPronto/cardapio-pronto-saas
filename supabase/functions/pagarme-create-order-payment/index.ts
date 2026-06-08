@@ -2,6 +2,7 @@
 // Creates a Pagar.me payment for a public menu order.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { captureEdgeException } from "../_shared/observability.ts";
+import { buildPagarmeOrderLineItems, toCents } from "../_shared/pagarme-public-order-items.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

@@ -20,6 +20,11 @@ import {
 import { getPublicLoyaltyQuote } from '@/services/loyaltyService';
 import type { PublicLoyaltyQuote } from '@/types/loyalty';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import {
+  getCartAbandonmentSessionToken,
+  rotateCartAbandonmentSessionToken,
+} from '@/lib/cartAbandonmentSession';
+import { cartAbandonmentService } from '@/services/cartAbandonmentService';
 
 interface Props {
   data: MenuData;
@@ -111,7 +116,13 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
     phone: '',
     email: '',
     acceptsEmailMarketing: false,
+    acceptsWhatsappReminder: false,
   });
+  const initialCartSessionToken = useMemo(
+    () => getCartAbandonmentSessionToken(data.restaurant.id),
+    [data.restaurant.id],
+  );
+  const cartSessionTokenRef = useRef(initialCartSessionToken);
 
   const [address, setAddress] = useState<DeliveryAddressInput>({
     customer_name: '',
@@ -150,6 +161,48 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
       setPayment(paymentMethods[0] || 'pix');
     }
   }, [payment, paymentMethods]);
+
+  useEffect(() => {
+    const trackableSteps = new Set(['customer', 'address', 'payment', 'review']);
+    if (!trackableSteps.has(step) || items.length === 0) return;
+
+    const phone = (customer.phone || address.customer_phone || '').replace(/\D/g, '');
+    if (phone.length < 10) return;
+
+    const timer = window.setTimeout(() => {
+      void cartAbandonmentService.upsertPublicSession({
+        restaurantId: data.restaurant.id,
+        sessionToken: cartSessionTokenRef.current,
+        phone: customer.phone || address.customer_phone,
+        customerName: customer.name || address.customer_name,
+        customerEmail: customer.email,
+        acceptsEmail: customer.acceptsEmailMarketing,
+        acceptsWhatsapp: customer.acceptsWhatsappReminder,
+        fulfillmentType,
+        items: items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        subtotal,
+      });
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    step,
+    items,
+    subtotal,
+    customer.name,
+    customer.phone,
+    customer.email,
+    customer.acceptsEmailMarketing,
+    customer.acceptsWhatsappReminder,
+    address.customer_phone,
+    address.customer_name,
+    data.restaurant.id,
+    fulfillmentType,
+  ]);
 
   const moveBack = () => {
     if (step === 'fulfillment') onClose();
@@ -436,6 +489,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         setOnlinePayment(paymentResult);
       }
       clearPendingCheckout(restaurantId);
+      cartSessionTokenRef.current = rotateCartAbandonmentSessionToken(restaurantId);
       setStep('success');
       clear();
     } catch (e: unknown) {
@@ -505,6 +559,15 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                 />
                 Aceito receber novidades e cupons deste restaurante por e-mail.
               </label>
+              <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={customer.acceptsWhatsappReminder}
+                  onChange={e => setCustomer(c => ({ ...c, acceptsWhatsappReminder: e.target.checked }))}
+                  className="mt-0.5"
+                />
+                Aceito receber lembrete deste pedido por WhatsApp se eu não finalizar.
+              </label>
               {fulfillmentType === 'table' && (
                 <p className="text-xs text-muted-foreground">
                   Seu pedido será enviado para a mesa vinculada ao QR Code.
@@ -526,6 +589,15 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
                   className="mt-0.5"
                 />
                 Aceito receber novidades e cupons deste restaurante por e-mail.
+              </label>
+              <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={customer.acceptsWhatsappReminder}
+                  onChange={e => setCustomer(c => ({ ...c, acceptsWhatsappReminder: e.target.checked }))}
+                  className="mt-0.5"
+                />
+                Aceito receber lembrete deste pedido por WhatsApp se eu não finalizar.
               </label>
               <div className="relative">
                 <Field label="CEP *" value={address.zip_code} onChange={v => setAddress(a => ({ ...a, zip_code: v }))} onBlur={handleCepBlur} placeholder="00000-000" />

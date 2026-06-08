@@ -3,14 +3,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "./useCurrentUser";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useNetworkStatus } from "./useNetworkStatus";
 
 export const useSystemInitialization = () => {
   const { user } = useCurrentUser();
+  const { isOnline, isChecking } = useNetworkStatus();
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const initializeSystemConfigurations = useCallback(async () => {
-    if (!user?.restaurant_id) return;
+    if (!user?.restaurant_id || !isOnline || isChecking) return;
 
     setLoading(true);
     try {
@@ -53,7 +55,7 @@ export const useSystemInitialization = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.restaurant_id]);
+  }, [isChecking, isOnline, user?.restaurant_id]);
 
   useEffect(() => {
     if (user?.restaurant_id && !initialized) {

@@ -28,6 +28,16 @@ import {
   tryAccrueReferralCommission,
   tryReverseReferralCommission,
 } from "../_shared/referral-commission.ts";
+import {
+  reconcileOrderPaymentFromPagarme,
+  type PagarmeOrderPaymentData,
+} from "../_shared/pagarme-order-payment-reconcile.ts";
+import {
+  applyRecipientStatusToRestaurant,
+  normalizeRecipientStatus,
+  resolveRestaurantForRecipient,
+  type PagarmeRecipientSnapshot,
+} from "../_shared/pagarme-recipient-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -549,9 +559,108 @@ async function supersedeSubscriptionByPagarmeId(pagarmeSubId: string) {
   }
 }
 
+function recipientConfigUrl(): string {
+  const base = (Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("SITE_URL") || "").replace(/\/+$/, "");
+  return base ? `${base}/pagarme-config` : "/pagarme-config";
+}
+
+async function sendRecipientStatusEmail(
+  restaurantId: string,
+  templateKey: "recipient_activated" | "recipient_refused",
+  variables: Record<string, unknown>,
+) {
+  const { data: restaurant } = await supabase
+    .from("restaurants")
+    .select("id, name, owner_id")
+    .eq("id", restaurantId)
+    .maybeSingle();
+
+  if (!restaurant?.owner_id) return;
+
+  const { data: owner } = await supabase
+    .from("users")
+    .select("email, name")
+    .eq("id", restaurant.owner_id)
+    .maybeSingle();
+
+  if (!owner?.email) return;
+
+  await sendManagedEmail({
+    admin: supabase,
+    restaurantId,
+    templateKey,
+    emailType: "transactional",
+    to: owner.email,
+    recipientName: owner.name,
+    contextType: "recipient_onboarding",
+    contextId: restaurantId,
+    variables: {
+      customer_name: owner.name || "Cliente",
+      restaurant_name: restaurant.name || "Restaurante",
+      config_url: recipientConfigUrl(),
+      ...variables,
+    },
+    metadata: { source: "pagarme_webhook", template_key: templateKey },
+  });
+}
+
+async function processRecipientEvent(type: string, data: PagarmeData): Promise<void> {
+  const recipient = data as PagarmeRecipientSnapshot;
+  const recipientId = recipient.id;
+  if (!recipientId) return;
+
+  const resolved = await resolveRestaurantForRecipient(
+    supabase,
+    recipientId,
+    recipient.metadata,
+  );
+  if (!resolved) return;
+
+  const previousStatus = normalizeRecipientStatus(resolved.previous_status);
+
+  if (type === "recipient.deleted") {
+    await applyRecipientStatusToRestaurant(
+      supabase,
+      resolved.restaurant_id,
+      { ...recipient, status: "inactive" },
+      data as Record<string, unknown>,
+    );
+    return;
+  }
+
+  const result = await applyRecipientStatusToRestaurant(
+    supabase,
+    resolved.restaurant_id,
+    recipient,
+    data as Record<string, unknown>,
+  );
+
+  if (result.recipient_status === "active" && previousStatus !== "active") {
+    await sendRecipientStatusEmail(resolved.restaurant_id, "recipient_activated", {
+      recipient_status: "Ativo",
+      status_message: "Seu recebedor foi aprovado. Você já pode ligar o PIX online.",
+    }).catch((error) => console.error("[pagarme-webhook] recipient activated email failed:", error));
+  }
+
+  if (result.recipient_status === "refused" && previousStatus !== "refused") {
+    const reason = recipient.kyc_details?.status_reason;
+    await sendRecipientStatusEmail(resolved.restaurant_id, "recipient_refused", {
+      recipient_status: "Recusado",
+      status_message: reason
+        ? `Motivo informado pelo Pagar.me: ${reason}. Revise os dados ou contate o suporte.`
+        : "Revise os dados cadastrados ou contate o suporte Pubfy.",
+    }).catch((error) => console.error("[pagarme-webhook] recipient refused email failed:", error));
+  }
+}
+
 async function processEvent(event: PagarmeEvent): Promise<void> {
   const type: string = event.type ?? "";
   const data = event.data ?? {};
+
+  if (type.startsWith("recipient.")) {
+    await processRecipientEvent(type, data);
+    return;
+  }
 
   // Subscription events
   if (type.startsWith("subscription.")) {

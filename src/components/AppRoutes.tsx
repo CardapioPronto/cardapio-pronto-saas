@@ -11,10 +11,12 @@ import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Produtos = lazy(() => import('@/pages/Produtos'));
+const Insumos = lazy(() => import('@/pages/Insumos'));
 const Pedidos = lazy(() => import('@/pages/Pedidos'));
 const Cozinha = lazy(() => import('@/pages/Cozinha'));
 const Clientes = lazy(() => import('@/pages/Clientes'));
 const Fidelidade = lazy(() => import('@/pages/Fidelidade'));
+const RecuperacaoCarrinho = lazy(() => import('@/pages/RecuperacaoCarrinho'));
 const FuncionariosV2 = lazy(() => import('@/pages/FuncionariosV2'));
 const Categorias = lazy(() => import('@/pages/Categorias'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
@@ -44,10 +46,12 @@ const PDV = lazy(() => import('@/pages/PDV'));
 const MenuDigital = lazy(() => import('@/pages/MenuDigital'));
 const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
 const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
+const Recebimentos = lazy(() => import('@/pages/Recebimentos'));
 const IfoodIntegracao = lazy(() => import('@/pages/IfoodIntegracao'));
 const EmailIntegracao = lazy(() => import('@/pages/EmailIntegracao'));
 const Automacoes = lazy(() => import('@/pages/Automacoes'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
+const Copiloto = lazy(() => import('@/pages/Copiloto'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
 const Atendimento = lazy(() => import('@/pages/Atendimento'));
 const Admin = lazy(() => import('@/pages/Admin'));
@@ -170,6 +174,13 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/insumos" element={
+        <ProtectedRoute requiredPermissions={['products_view']}>
+          <MainLayout>
+            <Insumos />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/pedidos" element={
         <ProtectedRoute requiredPermissions={['orders_view']}>
           <MainLayout>
@@ -198,6 +209,13 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/recuperacao-carrinho" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'settings_manage']} requireAny>
+          <MainLayout>
+            <RecuperacaoCarrinho />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/funcionarios" element={
         <ProtectedRoute requiredPermissions={['employees_manage']}>
           <MainLayout>
@@ -223,6 +241,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage']} requireAny>
           <MainLayout>
             <PagarmeConfig />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/recebimentos" element={
+        <ProtectedRoute requiredPermissions={['settings_manage', 'settings_integrations_manage', 'reports_view']} requireAny>
+          <MainLayout>
+            <Recebimentos />
           </MainLayout>
         </ProtectedRoute>
       } />
@@ -267,6 +292,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['reports_view']}>
           <MainLayout>
             <Relatorios />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/copiloto" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'orders_metrics_view']} requireAny>
+          <MainLayout>
+            <Copiloto />
           </MainLayout>
         </ProtectedRoute>
       } />

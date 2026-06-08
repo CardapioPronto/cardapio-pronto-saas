@@ -7,6 +7,7 @@ import { NovoPedido } from "@/features/pdv/components/NovoPedido";
 import { PDVTabs } from "@/features/pdv/components/PDVTabs";
 import { OverrideEstoqueDialog } from "@/features/pdv/components/OverrideEstoqueDialog";
 import { PrintDefaultCopiesDialog } from "@/features/pdv/components/PrintDefaultCopiesDialog";
+import { OfflineOrderQueuePanel } from "@/features/pdv/components/OfflineOrderQueuePanel";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
@@ -108,6 +109,9 @@ export default function PDV() {
     cancelarOverrideEstoque,
     pedidoRecemFinalizado,
     limparPedidoRecemFinalizado,
+    offlineQueue,
+    isOnline,
+    isChecking,
   } = usePDVHook(restaurantId);
 
   useEffect(() => {
@@ -309,6 +313,15 @@ export default function PDV() {
 
       <main className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 lg:p-5">
         <div className="mx-auto h-full w-full max-w-[1800px]">
+          <OfflineOrderQueuePanel
+            orders={offlineQueue.orders}
+            isOnline={isOnline}
+            isChecking={isChecking}
+            isSyncing={offlineQueue.isSyncing}
+            onSync={() => void offlineQueue.syncPendingOrders()}
+            onRetry={(clientOrderId) => void offlineQueue.retryOrder(clientOrderId)}
+            onRemove={offlineQueue.removeOrder}
+          />
           {visualizacaoAtiva === "novo" ? (
             <NovoPedido
               restaurantId={restaurantId}

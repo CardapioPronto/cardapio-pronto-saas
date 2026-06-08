@@ -21,7 +21,12 @@ import {
   RestaurantPaymentSettings,
   restaurantPaymentService,
 } from "@/services/restaurantPaymentService";
-import { CheckCircle, Copy, CreditCard, Loader2, Search, ShieldCheck, Webhook } from "lucide-react";
+import {
+  RECIPIENT_STATUS_LABEL,
+  RecipientStatus,
+  restaurantRecipientService,
+} from "@/services/restaurantRecipientService";
+import { CheckCircle, Copy, CreditCard, Loader2, RefreshCw, Search, ShieldCheck, Webhook } from "lucide-react";
 
 const WEBHOOK_URL = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/pagarme-webhook`;
 
@@ -47,7 +52,25 @@ const emptySettings = (restaurantId: string): RestaurantPaymentSettings => ({
   commission_value: 0,
   notes: null,
   metadata: {},
+  recipient_status: "not_created",
+  recipient_synced_at: null,
 });
+
+const recipientBadgeVariant = (status: RecipientStatus): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case "active":
+      return "default";
+    case "registration":
+    case "affiliation":
+      return "secondary";
+    case "refused":
+    case "suspended":
+    case "blocked":
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
 
 const AdminPagarme = () => {
   const queryClient = useQueryClient();
@@ -121,6 +144,21 @@ const AdminPagarme = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Erro ao salvar");
+    },
+  });
+
+  const syncRecipientMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedRestaurantId) throw new Error("Selecione um restaurante");
+      return restaurantRecipientService.syncStatus(selectedRestaurantId);
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-pagarme-restaurants"] });
+      setDraft(prev => prev ? { ...prev, recipient_status: data.recipient_status } : prev);
+      toast.success(`Status do recebedor: ${RECIPIENT_STATUS_LABEL[data.recipient_status]}`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao sincronizar recebedor");
     },
   });
 
@@ -292,9 +330,40 @@ const AdminPagarme = () => {
                         id="recipient-id"
                         value={draft.recipient_id || ""}
                         onChange={event => setDraft(prev => prev ? { ...prev, recipient_id: event.target.value } : prev)}
-                        placeholder="rp_..."
+                        placeholder="rp_... (preenchido automaticamente no onboarding)"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 rounded-md border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">Status do recebedor (KYC Pagar.me)</Label>
+                        <Badge variant={recipientBadgeVariant((draft.recipient_status as RecipientStatus) || "not_created")}>
+                          {RECIPIENT_STATUS_LABEL[(draft.recipient_status as RecipientStatus) || "not_created"]}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        O recebedor é criado quando o lojista cadastra a conta bancária. Só fica apto a receber quando
+                        estiver “Ativo”.
+                      </p>
+                      {draft.recipient_synced_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Última sincronização: {new Date(draft.recipient_synced_at).toLocaleString("pt-BR")}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => syncRecipientMutation.mutate()}
+                      disabled={syncRecipientMutation.isPending || !draft.recipient_id}
+                    >
+                      {syncRecipientMutation.isPending
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        : <RefreshCw className="mr-2 h-4 w-4" />}
+                      Sincronizar status
+                    </Button>
                   </div>
 
                   <div className="flex items-center justify-between rounded-md border p-4">

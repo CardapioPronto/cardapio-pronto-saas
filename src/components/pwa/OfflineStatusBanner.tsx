@@ -2,9 +2,9 @@ import { WifiOff } from "lucide-react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export function OfflineStatusBanner() {
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isChecking } = useNetworkStatus();
 
-  if (isOnline) return null;
+  if (isOnline || isChecking) return null;
 
   return (
     <div

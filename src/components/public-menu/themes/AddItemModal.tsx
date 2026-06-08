@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Plus, Minus } from 'lucide-react';
 import { formatBRL } from '../cart/cartContextCore';
+import type { PublicMenuUpsellSuggestion } from '@/types/menuTheme';
 
 export interface AddItemModalProduct {
   id: string;
@@ -26,11 +27,20 @@ export interface AddItemModalProduct {
 interface Props {
   product: AddItemModalProduct | null;
   primaryColor: string;
+  suggestions?: PublicMenuUpsellSuggestion[];
   onClose: () => void;
+  onAddSuggestion?: (suggestion: PublicMenuUpsellSuggestion) => void;
   onConfirm: (payload: { quantity: number; observations?: string }) => void;
 }
 
-export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Props) => {
+export const AddItemModal = ({
+  product,
+  primaryColor,
+  suggestions = [],
+  onClose,
+  onAddSuggestion,
+  onConfirm,
+}: Props) => {
   const [quantity, setQuantity] = useState(1);
   const [observations, setObservations] = useState('');
 
@@ -92,6 +102,56 @@ export const AddItemModal = ({ product, primaryColor, onClose, onConfirm }: Prop
             <span className="text-xs opacity-80">
               de <span className="line-through">{formatBRL(product.price)}</span> por {formatBRL(finalUnitPrice)}
             </span>
+          </div>
+        )}
+
+        {suggestions.length > 0 && (
+          <div className="space-y-2">
+            <Label>Também combina</Label>
+            <div className="space-y-2">
+              {suggestions.slice(0, 4).map((suggestion) => {
+                const suggestedProduct = suggestion.product;
+                const price = suggestedProduct.promotion?.final_price ?? suggestedProduct.price;
+
+                return (
+                  <button
+                    key={`${suggestion.source}-${suggestedProduct.id}`}
+                    type="button"
+                    onClick={() => onAddSuggestion?.(suggestion)}
+                    className="flex w-full items-center gap-3 rounded-lg border border-border px-3 py-2 text-left transition hover:bg-muted/50"
+                  >
+                    <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                      {suggestedProduct.image_url ? (
+                        <img
+                          src={suggestedProduct.image_url}
+                          alt={suggestedProduct.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                          sem foto
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{suggestion.title || suggestedProduct.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {suggestion.source === 'sales'
+                          ? 'Clientes também pedem'
+                          : suggestion.description || suggestedProduct.description || suggestedProduct.name}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <span className="text-sm font-semibold" style={{ color: primaryColor }}>
+                        {formatBRL(price)}
+                      </span>
+                      <Plus className="h-4 w-4" style={{ color: primaryColor }} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

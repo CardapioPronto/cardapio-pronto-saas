@@ -5,7 +5,7 @@ import { CartProvider } from '../cart/CartContext';
 import { useCart, formatBRL } from '../cart/cartContextCore';
 import { CheckoutFlow } from '../checkout/CheckoutFlow';
 import { AddItemModal, AddItemModalProduct } from './AddItemModal';
-import { Search, ShoppingBag, MapPin, Phone, Plus, Minus, Home, ClipboardList, ChevronRight, X } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, Phone, Plus, Minus, Home, ClipboardList, ChevronRight, X, Sparkles } from 'lucide-react';
 
 interface Props {
   data: MenuData;
@@ -55,6 +55,40 @@ const DeliveryLayout = ({ data }: Props) => {
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
+
+  const openProduct = (product: MenuData['categories'][number]['products'][number]) => {
+    setSelectedProduct({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      description: product.description,
+      image_url: product.image_url,
+      is_sold_out: product.is_sold_out,
+      promotion: product.promotion
+        ? {
+            id: product.promotion.id,
+            name: product.promotion.name,
+            discount_type: product.promotion.discount_type,
+            discount_value: product.promotion.discount_value,
+            unit_discount: product.promotion.unit_discount,
+            final_price: product.promotion.final_price,
+          }
+        : null,
+    });
+  };
+
+  const selectedSuggestions = useMemo(() => {
+    if (!selectedProduct) return [];
+    const direct = data.upsell?.productModalSuggestions[selectedProduct.id] ?? [];
+    const alsoOrdered = data.upsell?.alsoOrderedSuggestions[selectedProduct.id] ?? [];
+    const seen = new Set<string>();
+
+    return [...direct, ...alsoOrdered].filter((suggestion) => {
+      if (seen.has(suggestion.product.id)) return false;
+      seen.add(suggestion.product.id);
+      return suggestion.product.id !== selectedProduct.id;
+    });
+  }, [data.upsell, selectedProduct]);
 
   return (
     <div className="min-h-screen bg-[hsl(0,0%,96%)] text-foreground">
@@ -169,6 +203,25 @@ const DeliveryLayout = ({ data }: Props) => {
               </div>
             )}
 
+            {!search.trim() && (data.upsell?.featuredProducts?.length ?? 0) > 0 && (
+              <section className="mt-5 rounded-xl bg-card p-4 shadow-sm">
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" style={{ color: primary }} />
+                  <h2 className="text-base font-bold">Destaques de agora</h2>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.upsell!.featuredProducts.map((suggestion) => (
+                    <FeaturedSuggestionCard
+                      key={suggestion.product.id}
+                      suggestion={suggestion}
+                      primary={primary}
+                      onAdd={() => openProduct(suggestion.product)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Categorias e produtos */}
             <div id="menu-categorias" className="mt-6 space-y-8">
               {filteredCategories.length === 0 && (
@@ -189,24 +242,7 @@ const DeliveryLayout = ({ data }: Props) => {
                         key={p.id}
                         product={p}
                         primary={primary}
-                        onAdd={() => setSelectedProduct({
-                          id: p.id,
-                          name: p.name,
-                          price: p.price,
-                          description: p.description,
-                          image_url: p.image_url,
-                          is_sold_out: p.is_sold_out,
-                          promotion: p.promotion
-                            ? {
-                                id: p.promotion.id,
-                                name: p.promotion.name,
-                                discount_type: p.promotion.discount_type,
-                                discount_value: p.promotion.discount_value,
-                                unit_discount: p.promotion.unit_discount,
-                                final_price: p.promotion.final_price,
-                              }
-                            : null,
-                        })}
+                        onAdd={() => openProduct(p)}
                       />
                     ))}
                   </div>
@@ -279,7 +315,17 @@ const DeliveryLayout = ({ data }: Props) => {
       <AddItemModal
         product={selectedProduct}
         primaryColor={primary}
+        suggestions={selectedSuggestions}
         onClose={() => setSelectedProduct(null)}
+        onAddSuggestion={(suggestion) => {
+          addItem({
+            product_id: suggestion.product.id,
+            name: suggestion.product.name,
+            price: suggestion.product.promotion?.final_price ?? suggestion.product.price,
+            image_url: suggestion.product.image_url,
+            quantity: 1,
+          });
+        }}
         onConfirm={({ quantity, observations }) => {
           if (!selectedProduct) return;
           addItem({
@@ -390,6 +436,43 @@ const ProductCard = ({
   );
 };
 
+const FeaturedSuggestionCard = ({
+  suggestion,
+  primary,
+  onAdd,
+}: {
+  suggestion: NonNullable<MenuData['upsell']>['featuredProducts'][number];
+  primary: string;
+  onAdd: () => void;
+}) => {
+  const { product } = suggestion;
+  const price = product.promotion?.final_price ?? product.price;
+
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      className="flex min-w-0 gap-3 rounded-lg border border-border p-3 text-left transition hover:bg-muted/40"
+    >
+      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">sem foto</div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{suggestion.title || product.name}</p>
+        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+          {suggestion.description || product.description || product.name}
+        </p>
+        <p className="mt-1 text-sm font-bold" style={{ color: primary }}>{formatBRL(price)}</p>
+      </div>
+      <Plus className="mt-1 h-4 w-4 flex-shrink-0" style={{ color: primary }} />
+    </button>
+  );
+};
+
 const CategoryDropdown = ({
   categories,
   onSelect,
@@ -439,10 +522,14 @@ const CartPanel = ({
   embedded?: boolean;
   onCheckout: () => void;
 }) => {
-  const { items, subtotal, updateQuantity, removeItem } = useCart();
+  const { items, subtotal, updateQuantity, addItem } = useCart();
   const primary = data.theme.colors.primary;
   const minOrder = data.deliveryConfig?.min_order_value || 0;
   const belowMin = minOrder > 0 && subtotal < minOrder;
+  const cartProductIds = useMemo(() => new Set(items.map((item) => item.product_id)), [items]);
+  const cartSuggestions = (data.upsell?.cartComboSuggestions ?? [])
+    .filter((suggestion) => !cartProductIds.has(suggestion.product.id))
+    .slice(0, 3);
 
   if (items.length === 0) {
     return (
@@ -500,6 +587,35 @@ const CartPanel = ({
         ))}
       </div>
       <div className={`${embedded ? '' : 'px-5'} py-3 space-y-2`}>
+        {cartSuggestions.length > 0 && (
+          <div className="mb-3 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Combine com</p>
+            <div className="space-y-2">
+              {cartSuggestions.map((suggestion) => {
+                const product = suggestion.product;
+                const price = product.promotion?.final_price ?? product.price;
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => addItem({
+                      product_id: product.id,
+                      name: product.name,
+                      price,
+                      image_url: product.image_url,
+                      quantity: 1,
+                    })}
+                    className="flex w-full items-center justify-between gap-2 rounded-md bg-card px-2.5 py-2 text-left text-sm hover:bg-background"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{suggestion.title || product.name}</span>
+                    <span className="shrink-0 font-semibold" style={{ color: primary }}>{formatBRL(price)}</span>
+                    <Plus className="h-3.5 w-3.5 shrink-0" style={{ color: primary }} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
           <span className="font-semibold">{formatBRL(subtotal)}</span>

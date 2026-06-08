@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { AlertTriangle, MessageCircle, Package, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Banknote, BrainCircuit, CheckCircle2, MessageCircle, Package, Star, type LucideIcon } from "lucide-react";
+import { getOwnerCopilotAlerts } from "@/services/ownerCopilotService";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 const REFRESH_INTERVAL_MS = 60_000;
 
@@ -27,10 +29,16 @@ export interface DashboardNotification {
 
 export function useDashboardNotifications() {
   const { user } = useCurrentUser();
+  const { isOnline, isChecking } = useNetworkStatus();
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadNotifications = useCallback(async () => {
+    if (!isOnline || isChecking) {
+      setLoading(false);
+      return;
+    }
+
     if (!user?.restaurant_id) {
       setNotifications([]);
       return;
@@ -38,7 +46,12 @@ export function useDashboardNotifications() {
 
     setLoading(true);
     try {
-      const [ordersResult, threadsResult, instancesResult] = await Promise.all([
+      const copilotAlertsPromise = getOwnerCopilotAlerts().catch((error) => {
+        console.warn("Erro ao carregar alertas do Copiloto:", error);
+        return null;
+      });
+
+      const [ordersResult, threadsResult, instancesResult, paymentSettingsResult, lowFeedbackResult, copilotAlerts] = await Promise.all([
         supabase
           .from("orders")
           .select("id", { count: "exact", head: true })
@@ -54,11 +67,25 @@ export function useDashboardNotifications() {
           .select("id, status, webhook_url")
           .eq("restaurant_id", user.restaurant_id)
           .eq("is_active", true),
+        supabase
+          .from("restaurant_payment_settings")
+          .select("recipient_status, is_enabled, onboarding_status")
+          .eq("restaurant_id", user.restaurant_id)
+          .maybeSingle(),
+        supabase
+          .from("order_feedback")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", user.restaurant_id)
+          .lte("rating", 6)
+          .is("resolved_at", null),
+        copilotAlertsPromise,
       ]);
 
       if (ordersResult.error) throw ordersResult.error;
       if (threadsResult.error) throw threadsResult.error;
       if (instancesResult.error) throw instancesResult.error;
+      if (paymentSettingsResult.error) throw paymentSettingsResult.error;
+      if (lowFeedbackResult.error) throw lowFeedbackResult.error;
 
       const next: DashboardNotification[] = [];
       const openOrders = ordersResult.count || 0;
@@ -108,6 +135,69 @@ export function useDashboardNotifications() {
         });
       }
 
+      const recipientStatus = paymentSettingsResult.data?.recipient_status;
+      if (recipientStatus === "registration" || recipientStatus === "affiliation") {
+        next.push({
+          id: "recipient-kyc-pending",
+          title: "Recebedor em validação",
+          description: "O Pagar.me está analisando os dados bancários para liberar o PIX online.",
+          count: 1,
+          href: "/pagarme-config",
+          tone: "warning",
+          icon: Banknote,
+        });
+      } else if (recipientStatus === "active" && !paymentSettingsResult.data?.is_enabled) {
+        next.push({
+          id: "recipient-ready-pix",
+          title: "PIX online disponível",
+          description: "Seu recebedor foi aprovado. Ative o PIX online em Recebimentos Online.",
+          count: 1,
+          href: "/pagarme-config",
+          tone: "info",
+          icon: CheckCircle2,
+        });
+      } else if (recipientStatus === "refused") {
+        next.push({
+          id: "recipient-refused",
+          title: "Recebedor recusado",
+          description: "O Pagar.me recusou o cadastro. Revise os dados em Recebimentos Online.",
+          count: 1,
+          href: "/pagarme-config",
+          tone: "danger",
+          icon: AlertTriangle,
+        });
+      }
+
+      const openLowFeedback = lowFeedbackResult.count || 0;
+      if (openLowFeedback > 0) {
+        next.push({
+          id: "low-order-feedback",
+          title: "Avaliações baixas",
+          description: "Há clientes insatisfeitos aguardando sua atenção no pós-pedido.",
+          count: openLowFeedback,
+          href: "/relatorios?tab=avaliacoes",
+          tone: "warning",
+          icon: Star,
+        });
+      }
+
+      if (copilotAlerts && copilotAlerts.alerts.length > 0) {
+        const hasHighPriority = copilotAlerts.alerts.some((alert) => alert.priority === "high");
+        const firstAlert = copilotAlerts.alerts[0];
+
+        next.push({
+          id: "owner-copilot-alerts",
+          title: "Copiloto IA",
+          description: firstAlert?.title
+            ? `${firstAlert.title}${copilotAlerts.alerts.length > 1 ? " e outras sugestões aguardam revisão." : " aguarda revisão."}`
+            : "Há recomendações operacionais aguardando revisão.",
+          count: copilotAlerts.alerts.length,
+          href: "/copiloto",
+          tone: hasHighPriority ? "warning" : "info",
+          icon: BrainCircuit,
+        });
+      }
+
       setNotifications(next);
     } catch (error) {
       console.error("Erro ao carregar notificações:", error);
@@ -115,7 +205,7 @@ export function useDashboardNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [user?.restaurant_id]);
+  }, [isChecking, isOnline, user?.restaurant_id]);
 
   useEffect(() => {
     void loadNotifications();

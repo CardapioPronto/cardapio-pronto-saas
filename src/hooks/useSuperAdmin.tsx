@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './useAuthContext';
 import { supabase } from '@/lib/supabase';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 const ADMIN_CHECK_TIMEOUT_MS = 10000;
 
@@ -20,6 +21,7 @@ function withTimeout<T>(operation: PromiseLike<T>, timeoutMs: number, label: str
 
 export function useSuperAdmin() {
   const { user } = useAuth();
+  const { isOnline, isChecking } = useNetworkStatus();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const requestIdRef = useRef(0);
@@ -29,13 +31,19 @@ export function useSuperAdmin() {
 
     async function checkSuperAdminStatus() {
       const requestId = ++requestIdRef.current;
-      setLoading(true);
-      
+
       if (!user) {
         setIsSuperAdmin(false);
         setLoading(false);
         return;
       }
+
+      if (!isOnline || isChecking) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
 
       try {
         // First check the RPC function
@@ -97,7 +105,7 @@ export function useSuperAdmin() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisible);
     };
-  }, [user]);
+  }, [isChecking, isOnline, user]);
 
   return { isSuperAdmin, loading };
 }

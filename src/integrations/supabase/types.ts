@@ -1737,6 +1737,95 @@ export type Database = {
           },
         ]
       }
+      order_feedback: {
+        Row: {
+          comment: string | null
+          contact_requested: boolean
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_order_id: string | null
+          id: string
+          metadata: Json
+          order_id: string
+          rating: number
+          resolved_at: string | null
+          resolved_by: string | null
+          restaurant_id: string
+          source: string
+          tracking_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          contact_requested?: boolean
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_order_id?: string | null
+          id?: string
+          metadata?: Json
+          order_id: string
+          rating: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          restaurant_id: string
+          source?: string
+          tracking_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          contact_requested?: boolean
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_order_id?: string | null
+          id?: string
+          metadata?: Json
+          order_id?: string
+          rating?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          restaurant_id?: string
+          source?: string
+          tracking_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_feedback_delivery_order_id_fkey"
+            columns: ["delivery_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_feedback_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_feedback_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_feedback_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           addons: Json | null
@@ -1890,6 +1979,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          client_order_id: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
@@ -1912,6 +2002,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_order_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
@@ -1934,6 +2025,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_order_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
@@ -2148,6 +2240,45 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      product_financial_settings: {
+        Row: {
+          cost_price: number
+          created_at: string
+          product_id: string
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cost_price: number
+          created_at?: string
+          product_id: string
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cost_price?: number
+          created_at?: string
+          product_id?: string
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_financial_settings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_financial_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -2395,6 +2526,38 @@ export type Database = {
           },
         ]
       }
+      restaurant_financial_settings: {
+        Row: {
+          created_at: string
+          gateway_fee_percent: number
+          ifood_fee_percent: number
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gateway_fee_percent?: number
+          ifood_fee_percent?: number
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gateway_fee_percent?: number
+          ifood_fee_percent?: number
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_financial_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_payment_settings: {
         Row: {
           allow_counter: boolean
@@ -2413,6 +2576,8 @@ export type Database = {
           onboarding_status: string
           provider: string
           recipient_id: string | null
+          recipient_status: string
+          recipient_synced_at: string | null
           restaurant_id: string
           updated_at: string
         }
@@ -2433,6 +2598,8 @@ export type Database = {
           onboarding_status?: string
           provider?: string
           recipient_id?: string | null
+          recipient_status?: string
+          recipient_synced_at?: string | null
           restaurant_id: string
           updated_at?: string
         }
@@ -2453,12 +2620,148 @@ export type Database = {
           onboarding_status?: string
           provider?: string
           recipient_id?: string | null
+          recipient_status?: string
+          recipient_synced_at?: string | null
           restaurant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "restaurant_payment_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_recipient_accounts: {
+        Row: {
+          account_check_digit: string
+          account_number: string
+          account_type: string
+          addr_city: string | null
+          addr_complement: string | null
+          addr_neighborhood: string | null
+          addr_number: string | null
+          addr_reference_point: string | null
+          addr_state: string | null
+          addr_street: string | null
+          addr_zip_code: string | null
+          annual_revenue: number | null
+          bank_account_id: string | null
+          bank_code: string
+          birthdate: string | null
+          branch_check_digit: string | null
+          branch_number: string
+          company_name: string | null
+          created_at: string
+          email: string
+          holder_document: string
+          holder_document_type: string
+          holder_name: string
+          id: string
+          kyc_status: string | null
+          last_error: string | null
+          last_response: Json
+          managing_partners: Json
+          monthly_income: number | null
+          mother_name: string | null
+          phone: string | null
+          professional_occupation: string | null
+          provider: string
+          recipient_id: string | null
+          recipient_status: string
+          restaurant_id: string
+          synced_at: string | null
+          trading_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_check_digit: string
+          account_number: string
+          account_type?: string
+          addr_city?: string | null
+          addr_complement?: string | null
+          addr_neighborhood?: string | null
+          addr_number?: string | null
+          addr_reference_point?: string | null
+          addr_state?: string | null
+          addr_street?: string | null
+          addr_zip_code?: string | null
+          annual_revenue?: number | null
+          bank_account_id?: string | null
+          bank_code: string
+          birthdate?: string | null
+          branch_check_digit?: string | null
+          branch_number: string
+          company_name?: string | null
+          created_at?: string
+          email: string
+          holder_document: string
+          holder_document_type: string
+          holder_name: string
+          id?: string
+          kyc_status?: string | null
+          last_error?: string | null
+          last_response?: Json
+          managing_partners?: Json
+          monthly_income?: number | null
+          mother_name?: string | null
+          phone?: string | null
+          professional_occupation?: string | null
+          provider?: string
+          recipient_id?: string | null
+          recipient_status?: string
+          restaurant_id: string
+          synced_at?: string | null
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_check_digit?: string
+          account_number?: string
+          account_type?: string
+          addr_city?: string | null
+          addr_complement?: string | null
+          addr_neighborhood?: string | null
+          addr_number?: string | null
+          addr_reference_point?: string | null
+          addr_state?: string | null
+          addr_street?: string | null
+          addr_zip_code?: string | null
+          annual_revenue?: number | null
+          bank_account_id?: string | null
+          bank_code?: string
+          birthdate?: string | null
+          branch_check_digit?: string | null
+          branch_number?: string
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          holder_document?: string
+          holder_document_type?: string
+          holder_name?: string
+          id?: string
+          kyc_status?: string | null
+          last_error?: string | null
+          last_response?: Json
+          managing_partners?: Json
+          monthly_income?: number | null
+          mother_name?: string | null
+          phone?: string | null
+          professional_occupation?: string | null
+          provider?: string
+          recipient_id?: string | null
+          recipient_status?: string
+          restaurant_id?: string
+          synced_at?: string | null
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_recipient_accounts_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: true
             referencedRelation: "restaurants"
@@ -3006,6 +3309,15 @@ export type Database = {
         Args: { p_tracking_id: string }
         Returns: Json
       }
+      submit_public_order_feedback: {
+        Args: {
+          p_comment?: string | null
+          p_contact_requested?: boolean
+          p_rating: number
+          p_tracking_id: string
+        }
+        Returns: Json
+      }
       get_public_plan_summaries: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -3089,6 +3401,22 @@ export type Database = {
       }
       get_restaurant_loyalty_dashboard: {
         Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_restaurant_financial_dashboard: {
+        Args: {
+          p_from: string
+          p_restaurant_id: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_restaurant_feedback_summary: {
+        Args: {
+          p_from: string
+          p_restaurant_id: string
+          p_to: string
+        }
         Returns: Json
       }
       get_restaurant_sales_period_metrics: {

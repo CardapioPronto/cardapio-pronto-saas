@@ -364,12 +364,12 @@ Objetivo: transformar dados operacionais em recomendacoes simples.
 
 ### Escopo MVP
 
-- [ ] Gerar resumo diario automatico.
-- [ ] Sugerir produto parado, produto campeao e queda de vendas.
-- [ ] Sugerir campanha com base em clientes inativos.
-- [ ] Sugerir ajuste de cardapio/promocao.
-- [ ] Mostrar "por que estou vendo isso" com dados usados.
-- [ ] Nunca executar mudanca automaticamente sem confirmacao do dono.
+- [x] Gerar resumo diario automatico.
+- [x] Sugerir produto parado, produto campeao e queda de vendas.
+- [x] Sugerir campanha com base em clientes inativos.
+- [x] Sugerir ajuste de cardapio/promocao.
+- [x] Mostrar "por que estou vendo isso" com dados usados.
+- [x] Nunca executar mudanca automaticamente sem confirmacao do dono.
 
 ### Criterio de aceite
 
@@ -378,7 +378,9 @@ Objetivo: transformar dados operacionais em recomendacoes simples.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-04: Bloco 8 iniciado com Copiloto em `/copiloto`, RPC `get_owner_copilot_insights` e recomendações explicáveis usando vendas de hoje, comparação semanal, produto campeão, produto parado e clientes inativos com opt-in. O modo atual é sob demanda; agendamento/envio automático fica para próxima fatia.
+- 2026-06-04: Resumo diário persistido adicionado com `owner_copilot_daily_summaries`, histórico recente no painel e marcação de recomendações como revisadas. O resumo já fica salvo por dia quando o dono abre/atualiza o Copiloto; cron/notificação automática ainda pendente.
+- 2026-06-04: Alertas internos adicionados ao sino do dashboard via RPC `get_owner_copilot_alerts`. O sistema cria o resumo do dia caso ainda nao exista, mostra recomendações de prioridade alta/media pendentes e permite marcar como revisada ou descartada no `/copiloto`.
 
 ---
 
@@ -389,12 +391,12 @@ Objetivo: reduzir risco quando a internet oscila.
 
 ### Escopo MVP
 
-- [ ] Cache local de produtos, categorias e mesas.
-- [ ] Mostrar ultima sincronizacao.
-- [ ] Criar fila local de pedidos de balcao.
-- [ ] Sincronizar quando internet voltar.
-- [ ] Adicionar `client_order_id` para evitar duplicidade.
-- [ ] Mostrar painel de pedidos pendentes de sincronizacao.
+- [x] Cache local de produtos, categorias e mesas.
+- [x] Mostrar ultima sincronizacao.
+- [x] Criar fila local de pedidos de balcao.
+- [x] Sincronizar quando internet voltar.
+- [x] Adicionar `client_order_id` para evitar duplicidade.
+- [x] Mostrar painel de pedidos pendentes de sincronizacao.
 
 ### Fora do MVP
 
@@ -410,7 +412,9 @@ Objetivo: reduzir risco quando a internet oscila.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-04: Bloco 9 iniciado com snapshot local versionado por restaurante para produtos disponíveis, categorias, mesas e áreas do PDV. O Novo Pedido usa a última sincronização salva quando a rede cai, mostra origem/horário dos dados e permite atualização manual online. A finalização de pedidos offline permanece bloqueada até a implementação da fila local e de `client_order_id`.
+- 2026-06-04: Detecção de conectividade reforçada com probe real do endpoint de saúde do Supabase, pois `navigator.onLine` pode permanecer verdadeiro sem acesso à internet. Badge, banner, cache do PDV, polls operacionais e Realtime agora aguardam a conectividade real e pausam chamadas repetitivas enquanto o backend estiver indisponível.
+- 2026-06-04: Fila local de pedidos de balcão adicionada ao PDV, com sincronização automática ao reconectar, painel de pendências/erros e remoção com confirmação. A migration `20260604130000_pos_order_client_order_id.sql` adiciona idempotência por restaurante + `client_order_id` na RPC `create_pos_order`, impedindo duplicidade em retries concorrentes. Pedidos de mesa continuam exigindo conexão.
 
 ---
 
@@ -421,12 +425,12 @@ Objetivo: provar valor economico do Pubfy.
 
 ### Escopo MVP
 
-- [ ] Receita por canal: PDV, cardapio proprio, WhatsApp, iFood.
-- [ ] Taxas estimadas de marketplace/gateway.
-- [ ] Ticket medio por canal.
-- [ ] Produtos com maior receita.
-- [ ] Margem estimada quando houver custo/ficha tecnica.
-- [ ] Calculadora de economia do canal proprio.
+- [x] Receita por canal: PDV, cardapio proprio, WhatsApp, iFood.
+- [x] Taxas estimadas de marketplace/gateway.
+- [x] Ticket medio por canal.
+- [x] Produtos com maior receita.
+- [x] Margem estimada quando houver custo/ficha tecnica.
+- [x] Calculadora de economia do canal proprio.
 
 ### Criterio de aceite
 
@@ -435,7 +439,9 @@ Objetivo: provar valor economico do Pubfy.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-04: Bloco 10 iniciado com a nova aba Financeiro em Relatorios. A migration `20260604140000_create_financial_dashboard_foundation.sql` cria configuracao de taxas estimadas por restaurante e a RPC agregada `get_restaurant_financial_dashboard`, com receita, pedidos, ticket medio, taxas, receita liquida estimada e participacao para PDV, cardapio proprio, WhatsApp e iFood.
+- 2026-06-04: A tela financeira adiciona configuracao das taxas medias de iFood e gateway, calculadora de economia do canal proprio e comparacao de custo estimado sem prometer percentuais padrao. Produtos com maior receita permanecem disponiveis no relatorio avancado, e o filtro de origem passou a incluir WhatsApp.
+- 2026-06-04: A migration `20260604150000_add_product_cost_and_financial_margin.sql` adiciona custo unitario opcional em tabela financeira protegida por RLS e amplia o dashboard com margem bruta estimada, cobertura da receita por custos cadastrados e ranking de margem por produto. Itens sem custo ou sem vinculo com o catalogo ficam fora do calculo, evitando tratar ausencia de dados como custo zero.
 
 ---
 
@@ -446,11 +452,11 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 ### Escopo MVP
 
-- [ ] Enviar pesquisa pos-pedido.
-- [ ] Coletar nota e comentario.
-- [ ] Alertar dono em nota baixa.
-- [ ] Mostrar media por periodo.
-- [ ] Associar avaliacao ao pedido e ao cliente.
+- [x] Enviar pesquisa pos-pedido.
+- [x] Coletar nota e comentario.
+- [x] Alertar dono em nota baixa.
+- [x] Mostrar media por periodo.
+- [x] Associar avaliacao ao pedido e ao cliente.
 
 ### Criterio de aceite
 
@@ -459,7 +465,8 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-05: Criada base `order_feedback` com RPC publica de avaliacao no acompanhamento do pedido finalizado, vinculo com pedido/cliente e aba "Avaliacoes" em Relatorios com NPS, media, detratores e comentarios recentes.
+- 2026-06-05: Alerta em nota baixa — notificacao no sino do painel, e-mail `order_feedback_low_rating` via edge `order-feedback-notify` + trigger pg_net, botao "Resolver" no relatorio e deep link `/relatorios?tab=avaliacoes`.
 
 ---
 
@@ -470,11 +477,11 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 
 ### Escopo MVP
 
-- [ ] Registrar carrinho iniciado com telefone quando informado.
-- [ ] Detectar abandono apos janela configuravel.
-- [ ] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
-- [ ] Cupom opcional de recuperacao.
-- [ ] Relatorio: abandonos, recuperados, receita recuperada.
+- [x] Registrar carrinho iniciado com telefone quando informado.
+- [x] Detectar abandono apos janela configuravel.
+- [x] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
+- [x] Cupom opcional de recuperacao.
+- [x] Relatorio: abandonos, recuperados, receita recuperada.
 
 ### Criterio de aceite
 
@@ -483,7 +490,7 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-05: Tabelas `cart_abandonment_settings` / `cart_abandonment_sessions`, RPC `upsert_public_cart_abandonment_session`, trigger de recuperação em `orders`, edge `cart-abandonment-cron` (pg_cron 5 min), template `cart_abandonment_recovery`, página `/recuperacao-carrinho`, tracking no `CheckoutFlow` com opt-in e-mail/WhatsApp.
 
 ---
 
@@ -494,11 +501,11 @@ Objetivo: aumentar ticket medio.
 
 ### Escopo MVP
 
-- [ ] Produtos em destaque por horario.
-- [ ] Sugestao de adicionais no modal do produto.
-- [ ] Combos sugeridos no carrinho.
-- [ ] "Clientes tambem pedem" com base em dados reais quando houver volume.
-- [ ] Regra manual como fallback.
+- [x] Produtos em destaque por horario.
+- [x] Sugestao de adicionais no modal do produto.
+- [x] Combos sugeridos no carrinho.
+- [x] "Clientes tambem pedem" com base em dados reais quando houver volume.
+- [x] Regra manual como fallback.
 
 ### Criterio de aceite
 
@@ -507,7 +514,7 @@ Objetivo: aumentar ticket medio.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-08: Tabela `menu_upsell_rules`, RPC publica `get_public_menu_upsell`, aba `Upsell` em Cardapio Digital, destaques por horario, sugestoes no modal do produto, combos no carrinho e fallback manual para "clientes tambem pedem". O RPC tambem gera pares reais por coocorrencia de itens em pedidos finalizados dos ultimos 120 dias quando houver pelo menos 3 pedidos em comum.
 
 ---
 
@@ -518,12 +525,12 @@ Objetivo: evoluir estoque para controle de custo real.
 
 ### Escopo MVP
 
-- [ ] Cadastro de insumos.
-- [ ] Unidade de medida.
-- [ ] Receita/ficha tecnica por produto.
-- [ ] Baixa de insumo por pedido finalizado.
-- [ ] Custo estimado do produto.
-- [ ] Margem bruta por produto.
+- [x] Cadastro de insumos.
+- [x] Unidade de medida.
+- [x] Receita/ficha tecnica por produto.
+- [x] Baixa de insumo por pedido finalizado.
+- [x] Custo estimado do produto.
+- [x] Margem bruta por produto.
 
 ### Criterio de aceite
 
@@ -532,7 +539,7 @@ Objetivo: evoluir estoque para controle de custo real.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-08: Tabelas `inventory_ingredients`, `product_recipe_items` e `ingredient_stock_movements`; funcoes `adjust_ingredient_stock`, `apply_ingredients_for_order`, `revert_ingredients_for_order`, trigger `trg_sync_ingredient_stock_from_order_status` em `orders` e RPC `get_recipe_costs`. Tela `/insumos` com cadastro de insumos, ajuste auditavel de saldo, ficha tecnica por produto, custo estimado e margem bruta.
 
 ---
 

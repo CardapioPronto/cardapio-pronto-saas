@@ -13,6 +13,7 @@ que aparecer um caso novo no piloto / produção. Categorias:
 8. [iFood](#8-ifood)
 9. [Performance / lentidão](#9-performance--lentidão)
 10. [Erros do Supabase / banco](#10-erros-do-supabase--banco)
+11. [Recebedor Pagar.me / PIX online (repasse)](#11-recebedor-pagarme--pix-online-repasse)
 
 ---
 
@@ -264,6 +265,115 @@ Conferir permissões na tabela `user_permissions`. Precisa de
 
 Seguir runbook seção 7 (rollback de migration). Nunca tentar `DROP`
 direto sem snapshot.
+
+---
+
+## 11. Recebedor Pagar.me / PIX online (repasse)
+
+Fluxo técnico: `docs/INTEGRACOES_PAGARME.md` §3. Homologação: `docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md` Bloco G.
+
+### 11.1 Recebedor recusado (`recipient_status = refused`)
+
+**Sintoma:** badge "Recusado" em **Recebimentos Online**; notificação no sino; e-mail `recipient_refused`.
+
+**Diagnóstico:**
+
+```sql
+SELECT recipient_id, recipient_status, kyc_status, last_error,
+       last_response->'kyc_details' AS kyc_details
+FROM restaurant_recipient_accounts
+WHERE restaurant_id = '<uuid>';
+```
+
+- Conferir `kyc_details.status_reason` no `last_response` (ex.: `fully_denied`).
+- Verificar se webhook `recipient.updated` chegou (`pagarme_webhook_events`).
+
+**Correção:**
+
+1. Pedir ao lojista revisar CPF/CNPJ, endereço, dados do sócio (PJ) e conta bancária em `/pagarme-config`.
+2. Reenviar formulário (Edge faz `PUT` no recebedor existente).
+3. Se recusa persistir após dados corretos: escalar ao suporte Pagar.me (KYC irreversível em alguns casos).
+4. **Não** ligar PIX online até `recipient_status = active`.
+
+### 11.2 Saldo zerado em Recebimentos (mas há pedidos pagos)
+
+**Sintoma:** extrato mostra pedidos `paid`; cards "Saldo disponível" / "A liberar" em **—** ou R$ 0,00.
+
+**Diagnóstico:**
+
+- Recebedor ainda não criado → aviso na UI; normal até concluir onboarding.
+- Recebedor em `registration` / `affiliation` → saldo Pagar.me pode não refletir repasse ainda.
+- Edge `pagarme-recipient-financials` falhou — ver logs:
+
+```bash
+npx supabase functions logs pagarme-recipient-financials --limit 50
+```
+
+```sql
+SELECT recipient_id, recipient_status FROM restaurant_payment_settings WHERE restaurant_id = '<uuid>';
+```
+
+**Correção:**
+
+1. **Sincronizar status** em Recebimentos Online ou aguardar poll/webhook.
+2. Confirmar `recipient_id` não nulo e recebedor `active` no painel Pagar.me.
+3. Lembrar: extrato local (bruto/comissão) usa `order_payments`; saldo Pagar.me depende da API do recebedor e da liquidação (D+ conforme contrato).
+
+### 11.3 Repasse não caiu na conta bancária do restaurante
+
+**Sintoma:** pedido PIX pago; saldo Pagar.me movimentou; dinheiro não apareceu no banco do lojista.
+
+**Diagnóstico:**
+
+- Split + simulador: simulador PIX **não** funciona com split — homologar com cobrança real de teste (Bloco G5).
+- Conta bancária divergente do titular/KYC.
+- Liquidação automática (`transfer_settings` Daily) — pode levar até o próximo dia útil.
+
+```sql
+SELECT op.status, op.amount, op.paid_at, op.provider_order_id
+FROM order_payments op
+WHERE op.restaurant_id = '<uuid>' AND op.status = 'paid'
+ORDER BY op.paid_at DESC LIMIT 5;
+```
+
+**Correção:**
+
+1. Conferir transferências em `/recebimentos` (últimas liquidações Pagar.me).
+2. Validar dados bancários no cadastro do recebedor; atualizar se necessário e aguardar nova liquidação.
+3. Se comissão configurada: confirmar `PAGARME_PLATFORM_RECIPIENT_ID` no Supabase (split da plataforma).
+4. Escalar ao Pagar.me com `recipient_id` (`rp_...`) e ID do pedido/cobrança (`or_...` / `ch_...`).
+
+### 11.4 PIX online desabilitado / "Aguardando recebedor"
+
+**Sintoma:** checkout sem PIX; toggle desligado em Recebimentos Online.
+
+**Diagnóstico:**
+
+```sql
+SELECT is_enabled, onboarding_status, recipient_status, recipient_id, enabled_methods
+FROM restaurant_payment_settings
+WHERE restaurant_id = '<uuid>';
+```
+
+**Correção:**
+
+1. Concluir onboarding em `/pagarme-config` até `recipient_status = active`.
+2. Ligar "Oferecer PIX online" após aprovação.
+3. Verificar fulfillment (delivery/retirada/mesa) habilitado na mesma tela.
+
+### 11.5 Erro ao cadastrar recebedor (400 / lista de campos)
+
+**Sintoma:** toast com mensagem do Pagar.me; lista vermelha de `field_errors` no formulário.
+
+**Correção:**
+
+1. Corrigir campos indicados (CEP, UF, renda, sócio PJ, etc.).
+2. Validar CPF/CNPJ e banco da lista no front antes de reenviar.
+3. Logs da Edge:
+
+```bash
+npx supabase functions logs pagarme-create-recipient --limit 50
+```
 
 ---
 
