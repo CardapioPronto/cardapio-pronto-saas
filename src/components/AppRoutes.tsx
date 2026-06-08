@@ -10,6 +10,7 @@ import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Produtos = lazy(() => import('@/pages/Produtos'));
+const Insumos = lazy(() => import('@/pages/Insumos'));
 const Pedidos = lazy(() => import('@/pages/Pedidos'));
 const Cozinha = lazy(() => import('@/pages/Cozinha'));
 const Clientes = lazy(() => import('@/pages/Clientes'));
@@ -150,6 +151,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['products_view']}>
           <MainLayout>
             <Produtos />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/insumos" element={
+        <ProtectedRoute requiredPermissions={['products_view']}>
+          <MainLayout>
+            <Insumos />
           </MainLayout>
         </ProtectedRoute>
       } />
