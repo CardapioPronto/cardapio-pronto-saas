@@ -81,10 +81,28 @@ export interface MenuData {
   paymentSettings?: PublicPaymentSettings;
   promotions?: PublicMenuPromotion[];
   orderPromotions?: PublicMenuPromotion[];
+  upsell?: PublicMenuUpsell;
   context?: {
     fulfillmentType?: 'delivery' | 'pickup' | 'table' | 'counter';
     tableId?: string;
   };
+}
+
+export type PublicMenuProduct = MenuData['categories'][number]['products'][number];
+
+export interface PublicMenuUpsellSuggestion {
+  product: PublicMenuProduct;
+  title?: string | null;
+  description?: string | null;
+  source: 'manual' | 'sales';
+  ordersCount?: number;
+}
+
+export interface PublicMenuUpsell {
+  featuredProducts: PublicMenuUpsellSuggestion[];
+  productModalSuggestions: Record<string, PublicMenuUpsellSuggestion[]>;
+  cartComboSuggestions: PublicMenuUpsellSuggestion[];
+  alsoOrderedSuggestions: Record<string, PublicMenuUpsellSuggestion[]>;
 }
 
 export interface PublicMenuPromotion {

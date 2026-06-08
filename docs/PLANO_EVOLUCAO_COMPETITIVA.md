@@ -501,11 +501,11 @@ Objetivo: aumentar ticket medio.
 
 ### Escopo MVP
 
-- [ ] Produtos em destaque por horario.
-- [ ] Sugestao de adicionais no modal do produto.
-- [ ] Combos sugeridos no carrinho.
-- [ ] "Clientes tambem pedem" com base em dados reais quando houver volume.
-- [ ] Regra manual como fallback.
+- [x] Produtos em destaque por horario.
+- [x] Sugestao de adicionais no modal do produto.
+- [x] Combos sugeridos no carrinho.
+- [x] "Clientes tambem pedem" com base em dados reais quando houver volume.
+- [x] Regra manual como fallback.
 
 ### Criterio de aceite
 
@@ -514,7 +514,7 @@ Objetivo: aumentar ticket medio.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-08: Tabela `menu_upsell_rules`, RPC publica `get_public_menu_upsell`, aba `Upsell` em Cardapio Digital, destaques por horario, sugestoes no modal do produto, combos no carrinho e fallback manual para "clientes tambem pedem". O RPC tambem gera pares reais por coocorrencia de itens em pedidos finalizados dos ultimos 120 dias quando houver pelo menos 3 pedidos em comum.
 
 ---
 

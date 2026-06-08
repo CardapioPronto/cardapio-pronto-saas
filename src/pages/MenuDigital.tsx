@@ -9,6 +9,7 @@ import { QRCodeInstructions } from "@/components/menu-digital/QRCodeInstructions
 import { PersonalizacaoTab } from "@/components/menu-digital/PersonalizacaoTab";
 import { CouponsManager } from "@/components/menu-digital/CouponsManager";
 import { PerformanceDashboard } from "@/components/menu-digital/PerformanceDashboard";
+import { MenuUpsellManager } from "@/components/menu-digital/MenuUpsellManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -27,10 +28,11 @@ const MenuDigital = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-7">
                 <TabsTrigger value="themes">Temas</TabsTrigger>
                 <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
                 <TabsTrigger value="cupons">Cupons</TabsTrigger>
+                <TabsTrigger value="upsell">Upsell</TabsTrigger>
                 <TabsTrigger value="performance">Performance</TabsTrigger>
                 <TabsTrigger value="preview">Visualizar</TabsTrigger>
                 <TabsTrigger value="qrcode">QR Code</TabsTrigger>
@@ -46,6 +48,10 @@ const MenuDigital = () => {
 
               <TabsContent value="cupons" className="space-y-4">
                 {activeTab === "cupons" && <CouponsManager />}
+              </TabsContent>
+
+              <TabsContent value="upsell" className="space-y-4">
+                {activeTab === "upsell" && <MenuUpsellManager />}
               </TabsContent>
 
               <TabsContent value="performance" className="space-y-4">

@@ -7,6 +7,9 @@ import {
   DEFAULT_DELIVERY_CONFIG,
   PublicMenuPromotion,
   PublicMenuPromotionApplied,
+  PublicMenuProduct,
+  PublicMenuUpsell,
+  PublicMenuUpsellSuggestion,
 } from '@/types/menuTheme';
 import { restaurantPaymentService } from '@/services/restaurantPaymentService';
 import type { Json } from '@/integrations/supabase/types';
@@ -29,6 +32,17 @@ type PublicRestaurantRow = {
 };
 
 type PublicPaymentSettings = ReturnType<typeof restaurantPaymentService.toPublic>;
+type RpcClient = {
+  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: PostgrestError | null }>;
+};
+
+type RawUpsellEntry = {
+  productId: string;
+  triggerProductId?: string;
+  title?: string | null;
+  description?: string | null;
+  ordersCount?: number;
+};
 
 const isRecord = (value: unknown): value is JsonRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -42,6 +56,119 @@ const toStringRecord = (value: Json | null | undefined): Record<string, string> 
   );
 
 const toJson = (value: Record<string, unknown>): Json => value as unknown as Json;
+
+const asString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() ? value : undefined;
+
+const asNumber = (value: unknown): number | undefined => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const parseUpsellArray = (value: unknown): RawUpsellEntry[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((entry) => {
+    if (!isRecord(entry)) return [];
+    const productId = asString(entry.productId);
+    if (!productId) return [];
+
+    return [{
+      productId,
+      triggerProductId: asString(entry.triggerProductId),
+      title: asString(entry.title) ?? null,
+      description: asString(entry.description) ?? null,
+      ordersCount: asNumber(entry.ordersCount),
+    }];
+  });
+};
+
+const addSuggestion = (
+  target: Record<string, PublicMenuUpsellSuggestion[]>,
+  triggerProductId: string | undefined,
+  suggestion: PublicMenuUpsellSuggestion,
+) => {
+  if (!triggerProductId || suggestion.product.id === triggerProductId) return;
+  const current = target[triggerProductId] ?? [];
+  if (current.some((item) => item.product.id === suggestion.product.id)) return;
+  target[triggerProductId] = [...current, suggestion].slice(0, 4);
+};
+
+const buildPublicUpsell = (
+  raw: unknown,
+  productById: Map<string, PublicMenuProduct>,
+): PublicMenuUpsell => {
+  const source = toRecord(raw as Json);
+  const featuredProducts: PublicMenuUpsellSuggestion[] = [];
+  const cartComboSuggestions: PublicMenuUpsellSuggestion[] = [];
+  const productModalSuggestions: Record<string, PublicMenuUpsellSuggestion[]> = {};
+  const alsoOrderedSuggestions: Record<string, PublicMenuUpsellSuggestion[]> = {};
+
+  for (const entry of parseUpsellArray(source.featured)) {
+    const product = productById.get(entry.productId);
+    if (!product || product.is_sold_out) continue;
+    if (featuredProducts.some((item) => item.product.id === product.id)) continue;
+    featuredProducts.push({
+      product,
+      title: entry.title,
+      description: entry.description,
+      source: 'manual',
+    });
+  }
+
+  for (const entry of parseUpsellArray(source.productModal)) {
+    const product = productById.get(entry.productId);
+    if (!product || product.is_sold_out) continue;
+    addSuggestion(productModalSuggestions, entry.triggerProductId, {
+      product,
+      title: entry.title,
+      description: entry.description,
+      source: 'manual',
+    });
+  }
+
+  for (const entry of parseUpsellArray(source.cartCombos)) {
+    const product = productById.get(entry.productId);
+    if (!product || product.is_sold_out) continue;
+    if (cartComboSuggestions.some((item) => item.product.id === product.id)) continue;
+    cartComboSuggestions.push({
+      product,
+      title: entry.title,
+      description: entry.description,
+      source: 'manual',
+    });
+  }
+
+  for (const entry of parseUpsellArray(source.alsoOrderedManual)) {
+    const product = productById.get(entry.productId);
+    if (!product || product.is_sold_out) continue;
+    addSuggestion(alsoOrderedSuggestions, entry.triggerProductId, {
+      product,
+      title: entry.title,
+      description: entry.description,
+      source: 'manual',
+    });
+  }
+
+  for (const entry of parseUpsellArray(source.alsoOrderedReal)) {
+    const product = productById.get(entry.productId);
+    if (!product || product.is_sold_out) continue;
+    addSuggestion(alsoOrderedSuggestions, entry.triggerProductId, {
+      product,
+      title: 'Clientes também pedem',
+      description: null,
+      source: 'sales',
+      ordersCount: entry.ordersCount,
+    });
+  }
+
+  return {
+    featuredProducts: featuredProducts.slice(0, 6),
+    productModalSuggestions,
+    cartComboSuggestions: cartComboSuggestions.slice(0, 4),
+    alsoOrderedSuggestions,
+  };
+};
 
 const parsePromotionRow = (row: unknown): PublicMenuPromotion | null => {
   if (!isRecord(row)) return null;
@@ -332,6 +459,15 @@ export const menuThemeService = {
         }))
         .filter(cat => cat.products && cat.products.length > 0);
 
+      const productById = new Map<string, PublicMenuProduct>();
+      for (const category of transformedCategories) {
+        for (const product of category.products) {
+          productById.set(product.id, product);
+        }
+      }
+
+      const upsell = await this.getPublicMenuUpsell(restaurant.id, productById);
+
       return {
         restaurant: transformedRestaurant,
         categories: transformedCategories,
@@ -340,6 +476,7 @@ export const menuThemeService = {
         paymentSettings,
         promotions,
         orderPromotions: promotions.filter(p => p.applicable_to === 'order'),
+        upsell,
       };
     } catch (error) {
       console.error('Erro na função getPublicMenuData:', error);
@@ -396,6 +533,23 @@ export const menuThemeService = {
     } catch (error) {
       console.warn('Falha ao buscar promoções públicas', error);
       return [];
+    }
+  },
+
+  async getPublicMenuUpsell(
+    restaurantId: string,
+    productById: Map<string, PublicMenuProduct>,
+  ): Promise<PublicMenuUpsell> {
+    try {
+      const client = supabase as unknown as RpcClient;
+      const { data, error } = await client.rpc('get_public_menu_upsell', {
+        p_restaurant_id: restaurantId,
+      });
+      if (error) throw error;
+      return buildPublicUpsell(data, productById);
+    } catch (error) {
+      console.warn('Falha ao buscar inteligência pública do cardápio', error);
+      return buildPublicUpsell(null, productById);
     }
   },
 
