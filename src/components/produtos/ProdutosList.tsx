@@ -136,6 +136,7 @@ export function ProdutosList({
             <TableHead>Nome</TableHead>
             <TableHead>Categoria</TableHead>
             <TableHead>Preço</TableHead>
+            {canManage && <TableHead>Custo</TableHead>}
             <TableHead>Status</TableHead>
             {showStockColumn && <TableHead>Estoque</TableHead>}
             {canManage && <TableHead className="text-right">Ações</TableHead>}
@@ -165,6 +166,9 @@ export function ProdutosList({
               <TableCell className="font-medium">{produto.name}</TableCell>
               <TableCell>{produto.category?.name || "-"}</TableCell>
               <TableCell>{formatCurrency(produto.price)}</TableCell>
+              {canManage && (
+                <TableCell>{produto.cost_price == null ? "-" : formatCurrency(produto.cost_price)}</TableCell>
+              )}
               <TableCell>
                 {produto.available ? (
                   <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">

@@ -23,6 +23,7 @@ type ProductSupabaseRow = {
     stock_quantity?: number | null;
     stock_min_quantity?: number | null;
     stock_is_fractional?: boolean | null;
+    financial?: { cost_price: number } | Array<{ cost_price: number }> | null;
 };
 
 export function formatProductFromSupabase(data: ProductSupabaseRow[]): Product[] {
@@ -31,6 +32,9 @@ export function formatProductFromSupabase(data: ProductSupabaseRow[]): Product[]
         name: item.name,
         description: item.description ?? "",
         price: item.price,
+        cost_price: Array.isArray(item.financial)
+            ? item.financial[0]?.cost_price ?? null
+            : item.financial?.cost_price ?? null,
         available: item.available,
         image_url: item.image_url ?? null,
         image_storage_path: item.image_storage_path ?? null,

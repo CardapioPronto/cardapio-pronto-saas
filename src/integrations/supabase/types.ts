@@ -2152,6 +2152,45 @@ export type Database = {
         }
         Relationships: []
       }
+      product_financial_settings: {
+        Row: {
+          cost_price: number
+          created_at: string
+          product_id: string
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cost_price: number
+          created_at?: string
+          product_id: string
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cost_price?: number
+          created_at?: string
+          product_id?: string
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_financial_settings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_financial_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           available: boolean
@@ -2394,6 +2433,38 @@ export type Database = {
             columns: ["theme_id"]
             isOneToOne: false
             referencedRelation: "menu_themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_financial_settings: {
+        Row: {
+          created_at: string
+          gateway_fee_percent: number
+          ifood_fee_percent: number
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gateway_fee_percent?: number
+          ifood_fee_percent?: number
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gateway_fee_percent?: number
+          ifood_fee_percent?: number
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_financial_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -3232,6 +3303,14 @@ export type Database = {
       }
       get_restaurant_loyalty_dashboard: {
         Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_restaurant_financial_dashboard: {
+        Args: {
+          p_from: string
+          p_restaurant_id: string
+          p_to: string
+        }
         Returns: Json
       }
       get_restaurant_sales_period_metrics: {

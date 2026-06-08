@@ -5,6 +5,7 @@ export type Product = {
     name: string;
     description: string;
     price: number;
+    cost_price?: number | null;
     available: boolean;
     image_url?: string | null;
     image_storage_path?: string | null;

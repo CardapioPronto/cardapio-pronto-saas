@@ -45,6 +45,9 @@ const PRODUCT_SELECT = `
   stock_quantity,
   stock_min_quantity,
   stock_is_fractional,
+  financial:product_financial_settings!product_financial_settings_product_id_fkey (
+    cost_price
+  ),
   category:categories!products_category_id_fkey (
     id,
     name,
@@ -78,6 +81,28 @@ const isMissingColumnError = (error: unknown) =>
 const getCurrentUserId = async () => {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
+};
+
+const saveProductCost = async (
+  restaurantId: string,
+  productId: string,
+  costPrice?: number | null,
+) => {
+  if (costPrice == null) {
+    return supabase
+      .from("product_financial_settings")
+      .delete()
+      .eq("restaurant_id", restaurantId)
+      .eq("product_id", productId);
+  }
+
+  return supabase
+    .from("product_financial_settings")
+    .upsert({
+      restaurant_id: restaurantId,
+      product_id: productId,
+      cost_price: Number(costPrice),
+    }, { onConflict: "product_id" });
 };
 
 const getStoragePathFromUrl = (imageUrl?: string | null, storagePath?: string | null) => {
@@ -374,6 +399,9 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
     } else if (novoProduto.price <= 0) {
       errors.push("Preço deve ser maior que zero");
     }
+    if (novoProduto.cost_price != null && novoProduto.cost_price < 0) {
+      errors.push("Custo unitário não pode ser negativo");
+    }
 
     if (!novoProduto.category?.id) {
       errors.push("Categoria do produto é obrigatória");
@@ -467,6 +495,14 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         }
       }
 
+      if (insertResult?.id) {
+        const { error: costError } = await saveProductCost(restaurantId, insertResult.id, novoProduto.cost_price);
+        if (costError) {
+          console.error("Erro ao salvar custo unitário do produto:", costError);
+          toast.error("Produto criado, mas não foi possível salvar o custo unitário.");
+        }
+      }
+
       await fetchProdutos();
       await fetchIndicadores();
       toast.success("Produto adicionado com sucesso!");
@@ -497,6 +533,9 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
       errors.push("Preço do produto é obrigatório");
     } else if (produtoAtualizado.price <= 0) {
       errors.push("Preço deve ser maior que zero");
+    }
+    if (produtoAtualizado.cost_price != null && produtoAtualizado.cost_price < 0) {
+      errors.push("Custo unitário não pode ser negativo");
     }
 
     if (!produtoAtualizado.category?.id) {
@@ -596,6 +635,17 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
             "Produto atualizado, mas falhou ao registrar a contagem inicial. Use Ajustar estoque para corrigir.",
           );
         }
+      }
+
+      const { error: costError } = await saveProductCost(
+        restaurantId,
+        produtoAtualizado.id,
+        produtoAtualizado.cost_price,
+      );
+      if (costError) {
+        console.error("Erro ao salvar custo unitário do produto:", costError);
+        toast.error("Produto atualizado, mas não foi possível salvar o custo unitário.");
+        return false;
       }
 
       await fetchProdutos();
