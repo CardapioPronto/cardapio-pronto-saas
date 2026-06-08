@@ -525,12 +525,12 @@ Objetivo: evoluir estoque para controle de custo real.
 
 ### Escopo MVP
 
-- [ ] Cadastro de insumos.
-- [ ] Unidade de medida.
-- [ ] Receita/ficha tecnica por produto.
-- [ ] Baixa de insumo por pedido finalizado.
-- [ ] Custo estimado do produto.
-- [ ] Margem bruta por produto.
+- [x] Cadastro de insumos.
+- [x] Unidade de medida.
+- [x] Receita/ficha tecnica por produto.
+- [x] Baixa de insumo por pedido finalizado.
+- [x] Custo estimado do produto.
+- [x] Margem bruta por produto.
 
 ### Criterio de aceite
 
@@ -539,7 +539,7 @@ Objetivo: evoluir estoque para controle de custo real.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-08: Tabelas `inventory_ingredients`, `product_recipe_items` e `ingredient_stock_movements`; funcoes `adjust_ingredient_stock`, `apply_ingredients_for_order`, `revert_ingredients_for_order`, trigger `trg_sync_ingredient_stock_from_order_status` em `orders` e RPC `get_recipe_costs`. Tela `/insumos` com cadastro de insumos, ajuste auditavel de saldo, ficha tecnica por produto, custo estimado e margem bruta.
 
 ---
 
