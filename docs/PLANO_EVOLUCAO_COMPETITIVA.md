@@ -477,11 +477,11 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 
 ### Escopo MVP
 
-- [ ] Registrar carrinho iniciado com telefone quando informado.
-- [ ] Detectar abandono apos janela configuravel.
-- [ ] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
-- [ ] Cupom opcional de recuperacao.
-- [ ] Relatorio: abandonos, recuperados, receita recuperada.
+- [x] Registrar carrinho iniciado com telefone quando informado.
+- [x] Detectar abandono apos janela configuravel.
+- [x] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
+- [x] Cupom opcional de recuperacao.
+- [x] Relatorio: abandonos, recuperados, receita recuperada.
 
 ### Criterio de aceite
 
@@ -490,7 +490,7 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-05: Tabelas `cart_abandonment_settings` / `cart_abandonment_sessions`, RPC `upsert_public_cart_abandonment_session`, trigger de recuperação em `orders`, edge `cart-abandonment-cron` (pg_cron 5 min), template `cart_abandonment_recovery`, página `/recuperacao-carrinho`, tracking no `CheckoutFlow` com opt-in e-mail/WhatsApp.
 
 ---
 

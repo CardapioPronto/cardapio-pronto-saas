@@ -21,6 +21,7 @@ import {
   Gift,
   BrainCircuit,
   Wallet,
+  ShoppingCart,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,7 @@ const operationalLinks: NavItem[] = [
   { to: "/cozinha", label: "Cozinha", icon: ChefHat, permissions: ["orders_view"] },
   { to: "/clientes", label: "Clientes", icon: Users, permissions: ["orders_view", "reports_view", "orders_metrics_view"] },
   { to: "/fidelidade", label: "Fidelidade", icon: Gift, permissions: ["orders_view", "reports_view", "orders_metrics_view", "settings_manage"] },
+  { to: "/recuperacao-carrinho", label: "Recuperação", icon: ShoppingCart, permissions: ["reports_view", "settings_manage"] },
   { to: "/produtos", label: "Produtos", icon: Package2, permissions: ["products_view"] },
   { to: "/categorias", label: "Categorias", icon: Tags, permissions: ["products_view"] },
   { to: "/cardapio", label: "Menu Digital", icon: Store, permissions: ["products_view"] },

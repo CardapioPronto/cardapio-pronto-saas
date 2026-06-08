@@ -130,5 +130,8 @@ verify_jwt = true
 [functions.order-feedback-notify]
 verify_jwt = false
 
+[functions.cart-abandonment-cron]
+verify_jwt = false
+
 [functions.send-delivery-whatsapp]
 verify_jwt = true
