@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { menuThemeService } from "@/services/menuThemeService";
@@ -7,6 +7,7 @@ import { getThemeConfig } from "@/themes/menuThemes";
 import { PublicMenuRenderer } from "@/components/public-menu/PublicMenuRenderer";
 import { MenuData } from "@/types/menuTheme";
 import { Loader2, AlertCircle, Smartphone } from "lucide-react";
+import { trackPublicMenuEventQuietly } from "@/services/publicMenuAnalyticsService";
 
 const CardapioPublico = () => {
   const params = useParams<{ slug?: string; id?: string }>();
@@ -15,6 +16,7 @@ const CardapioPublico = () => {
   const [themeName, setThemeName] = useState('default');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const trackedMenuViewRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadMenuData = async () => {
@@ -52,6 +54,18 @@ const CardapioPublico = () => {
           paymentSettings: data.paymentSettings,
           context: getPublicMenuContext(),
         });
+
+        if (trackedMenuViewRef.current !== data.restaurant.id) {
+          trackedMenuViewRef.current = data.restaurant.id;
+          trackPublicMenuEventQuietly({
+            restaurantId: data.restaurant.id,
+            eventType: "menu_view",
+            metadata: {
+              category_count: data.categories.length,
+              product_count: data.categories.reduce((sum, category) => sum + category.products.length, 0),
+            },
+          });
+        }
         
         setThemeName(selectedTheme);
         setError(null);

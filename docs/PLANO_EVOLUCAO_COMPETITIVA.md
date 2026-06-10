@@ -661,21 +661,34 @@ Objetivo: medir performance do canal proprio.
 
 ### Escopo MVP
 
-- [ ] Visualizacoes do cardapio.
-- [ ] Cliques em produto.
-- [ ] Produto adicionado ao carrinho.
-- [ ] Checkout iniciado.
-- [ ] Pedido concluido.
-- [ ] Conversao por campanha/origem.
+- [x] Visualizacoes do cardapio.
+- [x] Cliques em produto.
+- [x] Produto adicionado ao carrinho.
+- [x] Checkout iniciado.
+- [x] Pedido concluido.
+- [x] Conversao por campanha/origem.
+- [x] Diagnostico por produto com clique, sacola, pedido e receita.
+- [x] Termos de busca e buscas sem resultado.
+- [x] Comparativo de funil entre periodos.
+- [x] Diagnostico por categoria e por faixa de horario.
 
 ### Criterio de aceite
 
 - Dono consegue ver onde perde clientes no cardapio.
 - Campanhas mostram origem e conversao.
 
+### Backlog futuro
+
+- [ ] Metas de conversao por origem/campanha.
+- [ ] Link builder com UTM e QR rastreavel para Instagram, WhatsApp e Google.
+- [ ] Recomendacoes automaticas do copilot a partir dos gargalos do funil.
+
 Evidencia:
 
-- Pendente.
+- 2026-06-10: Fundacao do funil de conversao do cardapio publico com tabela `public_menu_analytics_events`, RPC anonima `track_public_menu_event` com rate limit e RPC autenticada `get_public_menu_conversion_funnel`. O cardapio publico passou a registrar visualizacao, clique em produto, adicao ao carrinho, checkout iniciado e pedido concluido com origem/UTM. A tela `/relatorios?tab=conversao` exibe cards de conversao, etapas do funil, diagnostico e agrupamento por origem/campanha.
+- 2026-06-10: Fatia 2 adicionou eventos `search_performed` e `search_no_results`, diagnostico por produto no funil e tabela de buscas do cardapio. A aba de conversao agora aponta produtos com clique sem sacola, baixa conversao para carrinho, baixa conclusao de pedido e termos pesquisados que nao retornaram itens.
+- 2026-06-10: Fatia 3 adicionou comparativo automatico com periodo anterior equivalente na aba `/relatorios?tab=conversao`, exibindo variacao de visitas, clique em produto, produto para sacola, checkout para pedido, conversao final e busca sem resultado.
+- 2026-06-10: Fatia 4 adicionou RPC `get_public_menu_segment_diagnostics` e novas secoes em `/relatorios?tab=conversao` para diagnostico por categoria e horarios de conversao, destacando cliques, sacola, pedidos, receita e gargalos por secao do cardapio e hora do dia.
 
 ---
 
