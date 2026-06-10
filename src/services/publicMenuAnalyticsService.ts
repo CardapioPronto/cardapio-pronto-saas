@@ -73,12 +73,39 @@ export type PublicMenuSearchDiagnostic = {
   noResultRate: number;
 };
 
+export type PublicMenuCategoryDiagnostic = {
+  categoryId: string | null;
+  categoryName: string;
+  productClicks: number;
+  addToCart: number;
+  ordersCompleted: number;
+  soldQuantity: number;
+  revenue: number;
+  clickToCartRate: number;
+  cartToOrderRate: number;
+  diagnosticCode: "interest_without_cart" | "low_cart_conversion" | "low_order_conversion" | "healthy";
+};
+
+export type PublicMenuHourlyDiagnostic = {
+  hour: number;
+  label: string;
+  menuViews: number;
+  productClicks: number;
+  addToCart: number;
+  checkoutStarted: number;
+  ordersCompleted: number;
+  revenue: number;
+  conversionRate: number;
+};
+
 export type PublicMenuConversionFunnel = {
   summary: PublicMenuFunnelSummary;
   steps: PublicMenuFunnelStep[];
   sources: PublicMenuFunnelSource[];
   products: PublicMenuProductDiagnostic[];
   searches: PublicMenuSearchDiagnostic[];
+  categories: PublicMenuCategoryDiagnostic[];
+  hourly: PublicMenuHourlyDiagnostic[];
 };
 
 export type PublicMenuPeriodRange = {
@@ -137,6 +164,8 @@ const EMPTY_FUNNEL: PublicMenuConversionFunnel = {
   sources: [],
   products: [],
   searches: [],
+  categories: [],
+  hourly: [],
 };
 
 const isRecord = (value: unknown): value is JsonRecord =>
@@ -224,6 +253,8 @@ const normalizeFunnel = (value: unknown): PublicMenuConversionFunnel => {
   const sources = Array.isArray(value.sources) ? value.sources : [];
   const products = Array.isArray(value.products) ? value.products : [];
   const searches = Array.isArray(value.searches) ? value.searches : [];
+  const categories = Array.isArray(value.categories) ? value.categories : [];
+  const hourly = Array.isArray(value.hourly) ? value.hourly : [];
 
   return {
     summary: {
@@ -277,6 +308,29 @@ const normalizeFunnel = (value: unknown): PublicMenuConversionFunnel => {
       noResults: asNumber(search.noResults),
       maxResultCount: asNumber(search.maxResultCount),
       noResultRate: asNumber(search.noResultRate),
+    })),
+    categories: categories.filter(isRecord).map((category) => ({
+      categoryId: typeof category.categoryId === "string" ? category.categoryId : null,
+      categoryName: asString(category.categoryName, "Sem categoria"),
+      productClicks: asNumber(category.productClicks),
+      addToCart: asNumber(category.addToCart),
+      ordersCompleted: asNumber(category.ordersCompleted),
+      soldQuantity: asNumber(category.soldQuantity),
+      revenue: asNumber(category.revenue),
+      clickToCartRate: asNumber(category.clickToCartRate),
+      cartToOrderRate: asNumber(category.cartToOrderRate),
+      diagnosticCode: asString(category.diagnosticCode, "healthy") as PublicMenuCategoryDiagnostic["diagnosticCode"],
+    })),
+    hourly: hourly.filter(isRecord).map((hour) => ({
+      hour: asNumber(hour.hour),
+      label: asString(hour.label, "00:00"),
+      menuViews: asNumber(hour.menuViews),
+      productClicks: asNumber(hour.productClicks),
+      addToCart: asNumber(hour.addToCart),
+      checkoutStarted: asNumber(hour.checkoutStarted),
+      ordersCompleted: asNumber(hour.ordersCompleted),
+      revenue: asNumber(hour.revenue),
+      conversionRate: asNumber(hour.conversionRate),
     })),
   };
 };
@@ -335,6 +389,30 @@ const requestPublicMenuConversionFunnel = async (
   return normalizeFunnel(data);
 };
 
+const requestPublicMenuSegmentDiagnostics = async (
+  restaurantId: string,
+  dateFrom: Date,
+  dateTo: Date,
+): Promise<Pick<PublicMenuConversionFunnel, "categories" | "hourly">> => {
+  const from = startOfDay(dateFrom);
+  const to = endOfDay(dateTo);
+  if (from > to) throw new Error("A data inicial não pode ser maior que a data final.");
+  assertMaxReportRange(from, to);
+
+  const { data, error } = await db.rpc("get_public_menu_segment_diagnostics", {
+    p_restaurant_id: restaurantId,
+    p_from: from.toISOString(),
+    p_to: to.toISOString(),
+  });
+
+  if (error) throw new Error(error.message || "Erro ao carregar diagnóstico do cardápio.");
+  const normalized = normalizeFunnel(data);
+  return {
+    categories: normalized.categories,
+    hourly: normalized.hourly,
+  };
+};
+
 const getPreviousPeriodRange = (dateFrom: Date, dateTo: Date): PublicMenuPeriodRange => {
   const from = startOfDay(dateFrom);
   const to = endOfDay(dateTo);
@@ -357,7 +435,15 @@ export const getPublicMenuConversionFunnel = async (
   const restaurantId = await getCurrentRestaurantId();
   if (!restaurantId) throw new Error("Restaurante não encontrado.");
 
-  return requestPublicMenuConversionFunnel(restaurantId, dateFrom, dateTo);
+  const [funnel, segments] = await Promise.all([
+    requestPublicMenuConversionFunnel(restaurantId, dateFrom, dateTo),
+    requestPublicMenuSegmentDiagnostics(restaurantId, dateFrom, dateTo),
+  ]);
+
+  return {
+    ...funnel,
+    ...segments,
+  };
 };
 
 export const getPublicMenuConversionFunnelComparison = async (
@@ -368,13 +454,17 @@ export const getPublicMenuConversionFunnelComparison = async (
   if (!restaurantId) throw new Error("Restaurante não encontrado.");
 
   const previousRange = getPreviousPeriodRange(dateFrom, dateTo);
-  const [current, previous] = await Promise.all([
+  const [currentBase, currentSegments, previous] = await Promise.all([
     requestPublicMenuConversionFunnel(restaurantId, dateFrom, dateTo),
+    requestPublicMenuSegmentDiagnostics(restaurantId, dateFrom, dateTo),
     requestPublicMenuConversionFunnel(restaurantId, previousRange.dateFrom, previousRange.dateTo),
   ]);
 
   return {
-    current,
+    current: {
+      ...currentBase,
+      ...currentSegments,
+    },
     previous,
     previousRange,
   };

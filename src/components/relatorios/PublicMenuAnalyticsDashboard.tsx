@@ -5,6 +5,7 @@ import {
   BarChart3,
   CalendarClock,
   CheckCircle2,
+  Clock3,
   Loader2,
   Minus,
   MousePointerClick,
@@ -13,6 +14,7 @@ import {
   SearchX,
   ShoppingCart,
   Store,
+  Tags,
   Target,
   TrendingDown,
   TrendingUp,
@@ -87,6 +89,38 @@ const productDiagnostic = (code: string) => {
   };
 };
 
+const categoryDiagnostic = (code: string) => {
+  if (code === "interest_without_cart") {
+    return {
+      label: "Interesse sem sacola",
+      message: "A categoria atrai cliques, mas não gera sacola.",
+      variant: "destructive" as const,
+    };
+  }
+
+  if (code === "low_cart_conversion") {
+    return {
+      label: "Baixa sacola",
+      message: "A categoria precisa de oferta, foto ou descrição melhor.",
+      variant: "secondary" as const,
+    };
+  }
+
+  if (code === "low_order_conversion") {
+    return {
+      label: "Baixo pedido",
+      message: "A categoria entra na sacola, mas perde na conclusão.",
+      variant: "secondary" as const,
+    };
+  }
+
+  return {
+    label: "Saudável",
+    message: "Sem gargalo relevante no período.",
+    variant: "outline" as const,
+  };
+};
+
 const comparisonTone = (
   current: number,
   previous: number,
@@ -116,6 +150,8 @@ export const PublicMenuAnalyticsDashboard = () => {
   const sources = data?.sources ?? [];
   const products = data?.products ?? [];
   const searches = data?.searches ?? [];
+  const categories = data?.categories ?? [];
+  const hourly = data?.hourly ?? [];
   const previousSummary = comparison?.previous.summary;
 
   const comparisonMetrics = useMemo(() => {
@@ -583,6 +619,108 @@ export const PublicMenuAnalyticsDashboard = () => {
                           <span className="text-xs text-muted-foreground">{percent(search.noResultRate)}</span>
                         </div>
                       </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tags className="h-5 w-5" />
+              Categorias do cardápio
+            </CardTitle>
+            <CardDescription>Onde há atenção, intenção de compra e perda por seção do menu.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead className="text-right">Cliques</TableHead>
+                    <TableHead className="text-right">Sacola</TableHead>
+                    <TableHead className="text-right">Pedidos</TableHead>
+                    <TableHead className="text-right">Clique → sacola</TableHead>
+                    <TableHead className="text-right">Receita</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                        Nenhuma categoria com eventos no período.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    categories.map((category) => {
+                      const diagnosticItem = categoryDiagnostic(category.diagnosticCode);
+                      return (
+                        <TableRow key={category.categoryId || category.categoryName}>
+                          <TableCell className="min-w-36 font-medium">{category.categoryName}</TableCell>
+                          <TableCell className="text-right">{number.format(category.productClicks)}</TableCell>
+                          <TableCell className="text-right">{number.format(category.addToCart)}</TableCell>
+                          <TableCell className="text-right">{number.format(category.ordersCompleted)}</TableCell>
+                          <TableCell className="text-right">{percent(category.clickToCartRate)}</TableCell>
+                          <TableCell className="text-right">{money.format(category.revenue)}</TableCell>
+                          <TableCell className="min-w-44">
+                            <div className="space-y-1">
+                              <Badge variant={diagnosticItem.variant}>{diagnosticItem.label}</Badge>
+                              <p className="text-xs text-muted-foreground">{diagnosticItem.message}</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock3 className="h-5 w-5" />
+              Horários de conversão
+            </CardTitle>
+            <CardDescription>Janelas do dia com mais tráfego, pedidos e conversão no canal próprio.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Hora</TableHead>
+                  <TableHead className="text-right">Visitas</TableHead>
+                  <TableHead className="text-right">Checkout</TableHead>
+                  <TableHead className="text-right">Pedidos</TableHead>
+                  <TableHead className="text-right">Conversão</TableHead>
+                  <TableHead className="text-right">Receita</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {hourly.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                      Nenhum horário com eventos no período.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  hourly.map((hour) => (
+                    <TableRow key={hour.hour}>
+                      <TableCell className="font-medium">{hour.label}</TableCell>
+                      <TableCell className="text-right">{number.format(hour.menuViews)}</TableCell>
+                      <TableCell className="text-right">{number.format(hour.checkoutStarted)}</TableCell>
+                      <TableCell className="text-right">{number.format(hour.ordersCompleted)}</TableCell>
+                      <TableCell className="text-right">{percent(hour.conversionRate)}</TableCell>
+                      <TableCell className="text-right">{money.format(hour.revenue)}</TableCell>
                     </TableRow>
                   ))
                 )}
