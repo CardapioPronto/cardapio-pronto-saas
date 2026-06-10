@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from '@/components/ui/sonner-toast';
-import { Loader2, PackagePlus, Plus, Trash2, UtensilsCrossed } from 'lucide-react';
+import { AlertTriangle, ClipboardCheck, Loader2, PackageCheck, PackagePlus, Plus, ShoppingCart, Trash2, UtensilsCrossed, Wallet } from 'lucide-react';
 
 type Unit = 'g' | 'kg' | 'ml' | 'l' | 'un' | 'porcao';
 
@@ -81,6 +81,7 @@ const units: Array<{ value: Unit; label: string }> = [
 ];
 
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const quantity = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 });
 
 const asNumber = (value: unknown) => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -89,6 +90,8 @@ const asNumber = (value: unknown) => {
 
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
+
+const formatQuantity = (value: number, unit: Unit) => `${quantity.format(value)} ${unit}`;
 
 const Insumos = () => {
   const { user, loading: userLoading } = useCurrentUser();
@@ -107,6 +110,12 @@ const Insumos = () => {
     ingredient_id: '',
     quantity_delta: 0,
     reason: '',
+    notes: '',
+  });
+  const [inventoryCount, setInventoryCount] = useState({
+    ingredient_id: '',
+    counted_quantity: 0,
+    reason: 'Inventário físico',
     notes: '',
   });
   const [recipeForm, setRecipeForm] = useState({
@@ -189,10 +198,63 @@ const Insumos = () => {
     () => new Map(products.map((product) => [product.id, product])),
     [products],
   );
+  const selectedInventoryIngredient = inventoryCount.ingredient_id
+    ? ingredientById.get(inventoryCount.ingredient_id) ?? null
+    : null;
+  const inventoryDelta = selectedInventoryIngredient
+    ? asNumber(inventoryCount.counted_quantity) - selectedInventoryIngredient.current_quantity
+    : 0;
+  const inventoryDeltaValue = selectedInventoryIngredient
+    ? inventoryDelta * selectedInventoryIngredient.unit_cost
+    : 0;
 
   const lowStockCount = ingredients.filter(
     (ingredient) => ingredient.min_quantity != null && ingredient.current_quantity <= ingredient.min_quantity,
   ).length;
+  const stockValue = useMemo(
+    () => ingredients.reduce(
+      (total, ingredient) => total + (ingredient.current_quantity * ingredient.unit_cost),
+      0,
+    ),
+    [ingredients],
+  );
+  const replenishmentItems = useMemo(
+    () => ingredients
+      .filter((ingredient) => ingredient.min_quantity != null && ingredient.current_quantity <= ingredient.min_quantity)
+      .map((ingredient) => {
+        const minQuantity = ingredient.min_quantity ?? 0;
+        const targetQuantity = minQuantity * 2;
+        const suggestedQuantity = Math.max(targetQuantity - ingredient.current_quantity, 0);
+        const shortageQuantity = Math.max(minQuantity - ingredient.current_quantity, 0);
+        const coverageRatio = minQuantity > 0 ? ingredient.current_quantity / minQuantity : 0;
+
+        return {
+          ...ingredient,
+          minQuantity,
+          targetQuantity,
+          suggestedQuantity,
+          shortageQuantity,
+          coverageRatio,
+          estimatedCost: suggestedQuantity * ingredient.unit_cost,
+        };
+      })
+      .filter((item) => item.suggestedQuantity > 0)
+      .sort((a, b) => a.coverageRatio - b.coverageRatio || b.estimatedCost - a.estimatedCost),
+    [ingredients],
+  );
+  const replenishmentCost = useMemo(
+    () => replenishmentItems.reduce((total, item) => total + item.estimatedCost, 0),
+    [replenishmentItems],
+  );
+
+  const handleInventoryIngredientChange = (ingredientId: string) => {
+    const ingredient = ingredientById.get(ingredientId);
+    setInventoryCount((current) => ({
+      ...current,
+      ingredient_id: ingredientId,
+      counted_quantity: ingredient?.current_quantity ?? 0,
+    }));
+  };
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['inventory-ingredients', restaurantId] });
@@ -258,6 +320,61 @@ const Insumos = () => {
     onError: (error) => toast.error(errorMessage(error, 'Erro ao ajustar saldo.')),
   });
 
+  const applyInventoryCount = useMutation({
+    mutationFn: async () => {
+      if (!restaurantId) throw new Error('Restaurante não encontrado.');
+      if (!inventoryCount.ingredient_id) throw new Error('Selecione um insumo.');
+
+      const ingredient = ingredientById.get(inventoryCount.ingredient_id);
+      if (!ingredient) throw new Error('Insumo não encontrado.');
+
+      const countedQuantity = asNumber(inventoryCount.counted_quantity);
+      if (countedQuantity < 0) throw new Error('O saldo contado não pode ser negativo.');
+
+      const quantityDelta = countedQuantity - ingredient.current_quantity;
+      if (quantityDelta === 0) {
+        return { changed: false };
+      }
+
+      const reason = inventoryCount.reason.trim() || 'Inventário físico';
+      const countNotes = [
+        `Saldo anterior: ${formatQuantity(ingredient.current_quantity, ingredient.unit)}`,
+        `Saldo contado: ${formatQuantity(countedQuantity, ingredient.unit)}`,
+        inventoryCount.notes.trim(),
+      ].filter(Boolean).join(' | ');
+
+      const { error } = await db.rpc('adjust_ingredient_stock', {
+        p_args: {
+          restaurant_id: restaurantId,
+          ingredient_id: inventoryCount.ingredient_id,
+          quantity_delta: quantityDelta,
+          movement_type: 'inventory_count',
+          reason,
+          notes: countNotes,
+        },
+      });
+
+      if (error) throw error;
+      return { changed: true };
+    },
+    onSuccess: (result) => {
+      if (!result.changed) {
+        toast.success('Saldo conferido sem diferença.');
+        return;
+      }
+
+      invalidateAll();
+      setInventoryCount({
+        ingredient_id: '',
+        counted_quantity: 0,
+        reason: 'Inventário físico',
+        notes: '',
+      });
+      toast.success('Inventário físico aplicado.');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Erro ao aplicar inventário físico.')),
+  });
+
   const saveRecipeItem = useMutation({
     mutationFn: async () => {
       if (!restaurantId) throw new Error('Restaurante não encontrado.');
@@ -316,7 +433,7 @@ const Insumos = () => {
   return (
     <DashboardLayout title="Insumos e ficha técnica">
       <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Insumos ativos</CardDescription>
@@ -335,11 +452,35 @@ const Insumos = () => {
               <CardTitle>{recipeCosts.filter((item) => item.ingredientCount > 0).length}</CardTitle>
             </CardHeader>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardDescription>Valor em estoque</CardDescription>
+                  <CardTitle>{money.format(stockValue)}</CardTitle>
+                </div>
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardDescription>Reposição sugerida</CardDescription>
+                  <CardTitle>{money.format(replenishmentCost)}</CardTitle>
+                </div>
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Card>
         </div>
 
         <Tabs defaultValue="ingredients" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
             <TabsTrigger value="ingredients">Insumos</TabsTrigger>
+            <TabsTrigger value="replenishment">Reposição</TabsTrigger>
+            <TabsTrigger value="inventory">Inventário</TabsTrigger>
             <TabsTrigger value="recipes">Ficha técnica</TabsTrigger>
             <TabsTrigger value="costs">Custos</TabsTrigger>
             <TabsTrigger value="movements">Movimentos</TabsTrigger>
@@ -453,6 +594,227 @@ const Insumos = () => {
                             <td>{money.format(ingredient.unit_cost)}</td>
                           </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="replenishment" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Itens para repor</CardDescription>
+                  <CardTitle>{replenishmentItems.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Compra estimada</CardDescription>
+                  <CardTitle>{money.format(replenishmentCost)}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Valor em estoque</CardDescription>
+                  <CardTitle>{money.format(stockValue)}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Lista de reposição sugerida</CardTitle>
+                <CardDescription>
+                  Sugestão calculada para levar cada insumo em alerta até 2x o saldo mínimo configurado.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {replenishmentItems.length === 0 ? (
+                  <EmptyState
+                    icon={PackageCheck}
+                    title="Nenhuma reposição necessária"
+                    description="Os insumos com saldo mínimo configurado estão acima do ponto de reposição."
+                  />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b text-left text-muted-foreground">
+                        <tr>
+                          <th className="py-2">Insumo</th>
+                          <th>Saldo atual</th>
+                          <th>Mínimo</th>
+                          <th>Comprar</th>
+                          <th>Custo estimado</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {replenishmentItems.map((item) => (
+                          <tr key={item.id} className="border-b last:border-0">
+                            <td className="py-3 font-medium">{item.name}</td>
+                            <td>{formatQuantity(item.current_quantity, item.unit)}</td>
+                            <td>{formatQuantity(item.minQuantity, item.unit)}</td>
+                            <td>
+                              <Badge variant="outline">
+                                {formatQuantity(item.suggestedQuantity, item.unit)}
+                              </Badge>
+                            </td>
+                            <td>{money.format(item.estimatedCost)}</td>
+                            <td>
+                              <Badge variant={item.current_quantity <= 0 ? 'destructive' : 'secondary'}>
+                                {item.current_quantity <= 0 ? (
+                                  <>
+                                    <AlertTriangle className="mr-1 h-3 w-3" />
+                                    Sem saldo
+                                  </>
+                                ) : (
+                                  'Baixo saldo'
+                                )}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="inventory" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventário físico</CardTitle>
+                <CardDescription>
+                  Informe o saldo contado na operação. A diferença será registrada como movimento auditável.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-5">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Insumo contado</Label>
+                  <Select value={inventoryCount.ingredient_id} onValueChange={handleInventoryIngredientChange}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {ingredients.map((ingredient) => (
+                        <SelectItem key={ingredient.id} value={ingredient.id}>
+                          {ingredient.name} ({formatQuantity(ingredient.current_quantity, ingredient.unit)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Saldo contado</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={inventoryCount.counted_quantity}
+                    onChange={(event) => setInventoryCount({
+                      ...inventoryCount,
+                      counted_quantity: asNumber(event.target.value),
+                    })}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Motivo</Label>
+                  <Input
+                    value={inventoryCount.reason}
+                    onChange={(event) => setInventoryCount({ ...inventoryCount, reason: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-5">
+                  <Label>Observação</Label>
+                  <Textarea
+                    rows={2}
+                    value={inventoryCount.notes}
+                    onChange={(event) => setInventoryCount({ ...inventoryCount, notes: event.target.value })}
+                    placeholder="Ex.: conferência de fechamento, contagem semanal, divergência de embalagem"
+                  />
+                </div>
+
+                <div className="rounded-lg border p-3 md:col-span-3">
+                  {selectedInventoryIngredient ? (
+                    <div className="grid gap-3 text-sm sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Saldo atual</p>
+                        <p className="font-medium">
+                          {formatQuantity(selectedInventoryIngredient.current_quantity, selectedInventoryIngredient.unit)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Diferença</p>
+                        <p className={inventoryDelta < 0 ? 'font-medium text-rose-700' : 'font-medium text-emerald-700'}>
+                          {inventoryDelta > 0 ? '+' : ''}{formatQuantity(inventoryDelta, selectedInventoryIngredient.unit)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Impacto estimado</p>
+                        <p className={inventoryDeltaValue < 0 ? 'font-medium text-rose-700' : 'font-medium text-emerald-700'}>
+                          {money.format(inventoryDeltaValue)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Selecione um insumo para calcular a diferença.</p>
+                  )}
+                </div>
+
+                <div className="flex items-end md:col-span-2">
+                  <Button
+                    onClick={() => applyInventoryCount.mutate()}
+                    disabled={applyInventoryCount.isPending || !selectedInventoryIngredient}
+                  >
+                    {applyInventoryCount.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ClipboardCheck className="mr-2 h-4 w-4" />
+                    )}
+                    Aplicar inventário
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Conferência rápida</CardTitle>
+                <CardDescription>Priorize itens sem saldo ou com alerta de reposição.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {ingredients.length === 0 ? (
+                  <EmptyState icon={ClipboardCheck} title="Nenhum insumo para conferir" description="Cadastre insumos antes de iniciar o inventário." />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b text-left text-muted-foreground">
+                        <tr>
+                          <th className="py-2">Insumo</th>
+                          <th>Saldo atual</th>
+                          <th>Mínimo</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ingredients.map((ingredient) => {
+                          const isLowStock = ingredient.min_quantity != null && ingredient.current_quantity <= ingredient.min_quantity;
+                          return (
+                            <tr key={ingredient.id} className="border-b last:border-0">
+                              <td className="py-3 font-medium">{ingredient.name}</td>
+                              <td>{formatQuantity(ingredient.current_quantity, ingredient.unit)}</td>
+                              <td>{ingredient.min_quantity == null ? '-' : formatQuantity(ingredient.min_quantity, ingredient.unit)}</td>
+                              <td>
+                                <Badge variant={ingredient.current_quantity <= 0 ? 'destructive' : isLowStock ? 'secondary' : 'outline'}>
+                                  {ingredient.current_quantity <= 0 ? 'Sem saldo' : isLowStock ? 'Conferir' : 'Ok'}
+                                </Badge>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
