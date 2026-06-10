@@ -567,6 +567,14 @@ Objetivo: vender para redes pequenas e franquias.
 - Gestor de rede enxerga consolidado sem misturar dados indevidamente.
 - RLS continua impedindo vazamento entre unidades.
 
+### Backlog futuro
+
+- [ ] Metas por unidade.
+- [ ] Comparativo de performance entre mes atual e mes anterior.
+- [ ] Exportacao PDF/CSV do consolidado multiunidade.
+- [ ] Alertas automaticos para filial sem venda ou com baixa prontidao.
+- [ ] Auditoria detalhada de sincronizacoes de cardapio e equipe.
+
 Evidencia:
 
 - 2026-06-08: Fundacao multiunidade em `restaurant_groups`, `restaurant_group_units` e `restaurant_user_access`; RPCs `get_my_restaurant_access`, `set_active_restaurant`, `get_multiunit_consolidated_report` e `set_restaurant_group_menu_matrix`; `get_user_restaurant_id` e `user_has_restaurant_permission` passam a respeitar acesso multiunidade. App ganhou provider de unidade ativa, seletor no header/sidebar e tela `/multiunidade` com consolidado por rede, filtro de unidades e definicao de cardapio matriz. Implementado sobre a branch `feature/programa-indicacoes-foundation` para manter compatibilidade com o programa de indicacoes.
