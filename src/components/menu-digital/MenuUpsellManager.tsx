@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from '@/components/ui/sonner-toast';
-import { Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { AlertTriangle, BarChart3, Loader2, Plus, Sparkles, Target, Trash2 } from 'lucide-react';
 
 type Placement = 'featured' | 'product_modal' | 'cart_combo' | 'also_ordered';
 
@@ -224,6 +224,64 @@ export const MenuUpsellManager = () => {
   });
 
   const selectedPlacement = PLACEMENTS.find((placement) => placement.value === form.placement);
+  const activeRules = useMemo(() => rules.filter((rule) => rule.is_active), [rules]);
+  const activeRulesByPlacement = useMemo(
+    () => PLACEMENTS.map((placement) => ({
+      ...placement,
+      total: activeRules.filter((rule) => rule.placement === placement.value).length,
+    })),
+    [activeRules],
+  );
+  const configuredPlacements = activeRulesByPlacement.filter((placement) => placement.total > 0).length;
+  const productsWithDirectSuggestions = useMemo(() => {
+    const productIds = new Set<string>();
+    activeRules.forEach((rule) => {
+      if (rule.trigger_product_id && placementNeedsTrigger(rule.placement)) {
+        productIds.add(rule.trigger_product_id);
+      }
+    });
+    return productIds;
+  }, [activeRules]);
+  const directCoverage = availableProducts.length > 0
+    ? Math.round((productsWithDirectSuggestions.size / availableProducts.length) * 100)
+    : 0;
+  const rulesWithIssues = useMemo(() => rules.filter((rule) => {
+    const suggestedProduct = productById.get(rule.suggested_product_id);
+    const triggerProduct = rule.trigger_product_id ? productById.get(rule.trigger_product_id) : null;
+
+    return (
+      !suggestedProduct ||
+      suggestedProduct.available === false ||
+      (placementNeedsTrigger(rule.placement) && (!rule.trigger_product_id || !triggerProduct))
+    );
+  }), [productById, rules]);
+  const configurationAlerts = useMemo(() => {
+    const alerts: string[] = [];
+
+    if (availableProducts.length === 0) {
+      alerts.push('Cadastre produtos disponíveis para liberar regras de upsell.');
+    }
+    if (rules.length === 0) {
+      alerts.push('Ainda não há regras manuais configuradas.');
+    }
+    if (activeRules.length === 0 && rules.length > 0) {
+      alerts.push('Todas as regras estão inativas no momento.');
+    }
+    if (!activeRules.some((rule) => rule.placement === 'featured')) {
+      alerts.push('Sem destaque ativo para promover itens estratégicos no topo do cardápio.');
+    }
+    if (!activeRules.some((rule) => rule.placement === 'cart_combo')) {
+      alerts.push('Sem combo ativo no carrinho para aumentar ticket antes do checkout.');
+    }
+    if (availableProducts.length >= 4 && directCoverage < 25) {
+      alerts.push('Poucos produtos possuem sugestão direta no modal ou em "clientes também pedem".');
+    }
+    if (rulesWithIssues.length > 0) {
+      alerts.push(`${rulesWithIssues.length} regra(s) apontam para produto ausente, indisponível ou sem gatilho válido.`);
+    }
+
+    return alerts;
+  }, [activeRules, availableProducts.length, directCoverage, rules.length, rulesWithIssues.length]);
 
   const toggleWeekday = (weekday: number) => {
     setForm((current) => ({
@@ -248,6 +306,95 @@ export const MenuUpsellManager = () => {
           Nova regra
         </Button>
       </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Regras ativas</p>
+              <p className="text-2xl font-bold">{activeRules.length}</p>
+            </div>
+            <Sparkles className="h-5 w-5 text-primary" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Cobertura direta</p>
+              <p className="text-2xl font-bold">{directCoverage}%</p>
+            </div>
+            <Target className="h-5 w-5 text-primary" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Posições usadas</p>
+              <p className="text-2xl font-bold">{configuredPlacements}/{PLACEMENTS.length}</p>
+            </div>
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Atenções</p>
+              <p className="text-2xl font-bold">{configurationAlerts.length}</p>
+            </div>
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Diagnóstico de upsell</CardTitle>
+          <CardDescription>
+            Cobertura e qualidade das regras que aparecem no cardápio público.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Ativas por posição</p>
+            <div className="flex flex-wrap gap-2">
+              {activeRulesByPlacement.map((placement) => (
+                <Badge
+                  key={placement.value}
+                  variant={placement.total > 0 ? 'default' : 'outline'}
+                  className="justify-between gap-2"
+                >
+                  {placement.label}
+                  <span>{placement.total}</span>
+                </Badge>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {productsWithDirectSuggestions.size} de {availableProducts.length} produto(s) disponível(is) possuem sugestão direta.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Oportunidades</p>
+            {configurationAlerts.length === 0 ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Configuração saudável para operar o upsell manual.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {configurationAlerts.map((alert) => (
+                  <div
+                    key={alert}
+                    className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                  >
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{alert}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {isCreating && (
         <Card className="border-primary/20 bg-primary/5">
@@ -472,6 +619,9 @@ export const MenuUpsellManager = () => {
                           <h3 className="font-semibold">{rule.name}</h3>
                           <Badge variant="outline">{placement?.label ?? rule.placement}</Badge>
                           {!rule.is_active && <Badge variant="secondary">Inativa</Badge>}
+                          {rulesWithIssues.some((item) => item.id === rule.id) && (
+                            <Badge variant="destructive">Revisar</Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {triggerProduct ? `${triggerProduct.name} -> ` : ''}
