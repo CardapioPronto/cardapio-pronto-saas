@@ -89,6 +89,26 @@ function uniqueValidPermissions(permissions: unknown): string[] {
   return [...new Set(permissions.map((p) => String(p)).filter((p) => VALID_PERMISSIONS.has(p)))];
 }
 
+async function findAuthUserByEmail(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  email: string,
+) {
+  let page = 1;
+  const perPage = 1000;
+
+  while (page <= 20) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const users = data?.users ?? [];
+    const match = users.find((user) => user.email?.toLowerCase() === email);
+    if (match) return match;
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return null;
+}
+
 async function getCaller(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
@@ -154,14 +174,16 @@ async function getCallerAccess(
 
   if (permissionsError) throw permissionsError;
 
-  const callerPermissions = new Set((permissionRows ?? []).map((row) => row.permission as string));
+  const callerPermissions: Set<string> = new Set(
+    (permissionRows ?? []).map((row) => String(row.permission)),
+  );
   const canManageEmployees = employee.user_type === "manager" || callerPermissions.has("employees_manage");
 
   if (!canManageEmployees) {
     return { allowed: false, isOwnerOrAdmin: false, grantablePermissions: new Set() };
   }
 
-  const grantablePermissions = employee.user_type === "manager"
+  const grantablePermissions: Set<string> = employee.user_type === "manager"
     ? new Set([...MANAGER_GRANTABLE_PERMISSIONS].filter((p) => VALID_PERMISSIONS.has(p)))
     : new Set([...callerPermissions].filter((p) => MANAGER_GRANTABLE_PERMISSIONS.has(p)));
 
@@ -199,9 +221,6 @@ serve(async (req) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(employeeEmail)) {
       return json({ success: false, error: "E-mail do funcionário inválido" }, 400);
     }
-    if (password.length < 8) {
-      return json({ success: false, error: "A senha deve ter pelo menos 8 caracteres" }, 400);
-    }
     if (!requestedRestaurantId) {
       return json({ success: false, error: "Restaurante não informado" }, 400);
     }
@@ -234,13 +253,19 @@ serve(async (req) => {
       callerId: caller.id,
     });
 
-    const { data: existingAuthUsers, error: checkError } = await supabaseAdmin.auth.admin.listUsers();
-    if (checkError) {
-      logger.error("Failed to list auth users", new Error(checkError.message), { restaurant_id: requestedRestaurantId });
-      return json({ success: false, error: checkError.message }, 400);
-    }
+    const { data: existingUserByEmail, error: userByEmailError } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .ilike("email", employeeEmail)
+      .limit(1)
+      .maybeSingle();
 
-    const existingAuthUser = existingAuthUsers?.users?.find((user) => user.email?.toLowerCase() === employeeEmail);
+    if (userByEmailError) throw userByEmailError;
+
+    const existingAuthUser = existingUserByEmail?.id
+      ? { id: existingUserByEmail.id }
+      : await findAuthUserByEmail(supabaseAdmin, employeeEmail);
+
     let authUserId: string;
 
     if (existingAuthUser) {
@@ -258,6 +283,10 @@ serve(async (req) => {
         return json({ success: false, error: "Este usuário já é funcionário deste restaurante" }, 409);
       }
     } else {
+      if (password.length < 8) {
+        return json({ success: false, error: "A senha deve ter pelo menos 8 caracteres" }, 400);
+      }
+
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: employeeEmail,
         password,

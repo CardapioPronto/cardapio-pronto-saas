@@ -1,5 +1,6 @@
 
 import { useUserSession } from "./useUserSession";
+import { useRestaurantAccess } from "./useRestaurantAccess";
 
 /**
  * Hook unificado de usuário. Retorna o perfil do usuário autenticado a partir
@@ -7,9 +8,12 @@ import { useUserSession } from "./useUserSession";
  */
 export function useCurrentUser() {
   const { appUser, loading, error } = useUserSession();
+  const { activeRestaurantId } = useRestaurantAccess();
 
   return {
-    user: appUser,
+    user: appUser && activeRestaurantId
+      ? { ...appUser, restaurant_id: activeRestaurantId }
+      : appUser,
     loading,
     error,
   };

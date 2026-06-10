@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { MailCheck } from "lucide-react";
 import {
   Card,
@@ -18,12 +18,18 @@ import { FormFooter } from "@/components/cadastro/FormFooter";
 import { PublicSeo } from "@/components/seo/PublicSeo";
 import { useActivePlan } from "@/hooks/useActivePlan";
 import { DEFAULT_TRIAL_DAYS, formatTrialPeriodText } from "@/lib/trialDays";
+import { supabase } from "@/lib/supabase";
+import {
+  captureReferralFromSearch,
+  getReferralSignupMetadata,
+} from "@/lib/referralAttribution";
 
 const OWNER_EMAIL_VERIFICATION_TTL_HOURS = 24;
 
 export default function Cadastro() {
   const location = useLocation();
-  const { signUp } = useAuth();
+  const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   const { plan } = useActivePlan();
   const trialDays = plan?.trial_days ?? DEFAULT_TRIAL_DAYS;
   const [name, setName] = useState("");
@@ -39,14 +45,45 @@ export default function Cadastro() {
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
 
+  useEffect(() => {
+    captureReferralFromSearch(location.search);
+  }, [location.search]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      if (user) {
+        const { data, error } = await supabase.rpc("complete_existing_user_owner_signup", {
+          p_restaurant_name: restaurantName.trim(),
+          p_phone: phone.trim() || null,
+          p_address: address.trim(),
+          p_cnpj: cnpj.trim() || null,
+          p_logo_url: logoUrl.trim() || null,
+          p_category: category.trim() || null,
+        });
+
+        if (error) throw error;
+        const result = data as { success?: boolean; already_owner?: boolean; restaurant_id?: string | null };
+        if (!result?.success) {
+          throw new Error("Não foi possível concluir seu cadastro de dono.");
+        }
+
+        window.dispatchEvent(new Event("profile-updated"));
+        toast({
+          title: result.already_owner ? "Conta já vinculada" : "Restaurante criado com sucesso",
+          description: "Seu acesso como dono foi liberado no dashboard.",
+        });
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
       const verificationExpiresAt = new Date(
         Date.now() + OWNER_EMAIL_VERIFICATION_TTL_HOURS * 60 * 60 * 1000,
       ).toISOString();
+
+      const referralMetadata = getReferralSignupMetadata();
 
       const { error: signUpError } = await signUp(email.trim().toLowerCase(), password, {
         name: name.trim(),
@@ -55,6 +92,7 @@ export default function Cadastro() {
         user_type: "owner",
         signup_intent: "owner_signup",
         verification_expires_at: verificationExpiresAt,
+        ...(referralMetadata ?? {}),
         pending_restaurant: {
           name: restaurantName.trim(),
           phone: phone.trim() || null,
@@ -66,6 +104,9 @@ export default function Cadastro() {
       });
 
       if (signUpError) {
+        if (String(signUpError.message || "").toLowerCase().includes("already registered")) {
+          throw new Error("Este e-mail já possui conta. Faça login e volte para /cadastro para concluir o cadastro de dono.");
+        }
         throw signUpError;
       }
 
@@ -164,24 +205,32 @@ export default function Cadastro() {
             </Link>
           </div>
           <CardTitle className="text-2xl font-bold text-center">
-            {trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
+            {user ? "Concluir cadastro do estabelecimento" : trialDays > 0 ? "Começar teste grátis" : "Criar conta"}
           </CardTitle>
           <CardDescription className="text-center">
-            {trialDays > 0
+            {user
+              ? "Use sua conta atual para criar seu restaurante e acessar o dashboard de dono."
+              : trialDays > 0
               ? `${formatTrialPeriodText(trialDays)}, sem necessidade de cartão de crédito`
               : "Crie sua conta para ativar o plano pelo painel de assinaturas"}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <CardContent className="space-y-4">
-            <UserInfoForm
-              name={name}
-              setName={setName}
-              email={email}
-              setEmail={setEmail}
-              password={password}
-              setPassword={setPassword}
-            />
+            {!user ? (
+              <UserInfoForm
+                name={name}
+                setName={setName}
+                email={email}
+                setEmail={setEmail}
+                password={password}
+                setPassword={setPassword}
+              />
+            ) : (
+              <div className="rounded-lg border bg-card p-3 text-sm text-muted-foreground">
+                Você está autenticado como <strong className="text-foreground">{user.email}</strong>.
+              </div>
+            )}
             <RestaurantInfoForm
               restaurantName={restaurantName}
               setRestaurantName={setRestaurantName}
@@ -197,7 +246,25 @@ export default function Cadastro() {
               setCategory={setCategory}
             />
           </CardContent>
-          <FormFooter loading={loading} />
+          {!user ? (
+            <FormFooter loading={loading} />
+          ) : (
+            <CardFooter className="flex flex-col gap-2">
+              <Button
+                type="submit"
+                className="w-full bg-green hover:bg-green-dark text-white"
+                disabled={loading}
+              >
+                {loading ? "Concluindo..." : "Criar meu estabelecimento"}
+              </Button>
+              <p className="text-sm text-center text-navy/70">
+                Quer trocar de conta?{" "}
+                <Link to="/login" className="text-green hover:underline">
+                  Fazer login
+                </Link>
+              </p>
+            </CardFooter>
+          )}
         </form>
       </Card>
     </div>

@@ -6,7 +6,12 @@ export interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, userData: Record<string, unknown>) => Promise<{ error: AuthError | null }>
+  signUp: (
+    email: string,
+    password: string,
+    userData: Record<string, unknown>,
+    options?: { emailRedirectTo?: string },
+  ) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
 }
 

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useUserSession } from "@/hooks/useUserSession";
 import { createLogger } from "@/lib/log";
 import { PublicSeo } from "@/components/seo/PublicSeo";
 
@@ -27,14 +28,22 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, user } = useAuth();
   const { isSuperAdmin, loading: adminLoading } = useSuperAdmin();
+  const { appUser, loading: sessionLoading } = useUserSession();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && !adminLoading) {
-      log.debug("user logged in", { userId: user.id, isSuperAdmin });
-      navigate(isSuperAdmin ? "/admin" : "/dashboard");
+    if (user && !adminLoading && !sessionLoading) {
+      const isAffiliateOnly = appUser?.role === "affiliate";
+      log.debug("user logged in", { userId: user.id, isSuperAdmin, isAffiliateOnly });
+      if (isSuperAdmin) {
+        navigate("/admin");
+      } else if (isAffiliateOnly) {
+        navigate("/indique/painel");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [user, isSuperAdmin, adminLoading, navigate]);
+  }, [user, isSuperAdmin, adminLoading, sessionLoading, appUser?.role, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -313,6 +313,28 @@ serve(async (req) => {
     if (upsertUserError) throw upsertUserError;
 
     await ensureTrialSubscription(supabase, restaurantId);
+
+    const referralCode = cleanText(metadata.referral_code, 32);
+    const referralFirstClickAt = cleanText(metadata.referral_first_click_at, 40);
+    if (referralCode) {
+      const { data: attribution, error: attributionError } = await supabase.rpc(
+        "attribute_restaurant_referral",
+        {
+          p_restaurant_id: restaurantId,
+          p_referral_code: referralCode,
+          p_first_click_at: referralFirstClickAt || new Date().toISOString(),
+        },
+      );
+      if (attributionError) {
+        console.warn("attribute_restaurant_referral:", attributionError.message);
+      } else if (attribution && typeof attribution === "object") {
+        const result = attribution as { attributed?: boolean; reason?: string };
+        if (result.attributed === false && result.reason) {
+          console.info("referral not attributed:", result.reason);
+        }
+      }
+    }
+
     await finalizeMetadata(supabase, user);
 
     return json({

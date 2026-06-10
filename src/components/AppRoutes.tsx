@@ -2,6 +2,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthLayout } from '@/layouts/AuthLayout';
+import { AffiliateLayout } from '@/layouts/AffiliateLayout';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -43,6 +44,7 @@ const Blog = lazy(() => import('@/pages/Blog'));
 const BlogPost = lazy(() => import('@/pages/BlogPost'));
 const PDV = lazy(() => import('@/pages/PDV'));
 const MenuDigital = lazy(() => import('@/pages/MenuDigital'));
+const Multiunidade = lazy(() => import('@/pages/Multiunidade'));
 const Assinaturas = lazy(() => import('@/pages/Assinaturas'));
 const PagarmeConfig = lazy(() => import('@/pages/PagarmeConfig'));
 const Recebimentos = lazy(() => import('@/pages/Recebimentos'));
@@ -65,6 +67,13 @@ const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactReci
 const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
 const AdminWhatsApp = lazy(() => import('@/pages/admin/AdminWhatsApp'));
 const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
+const AdminReferrals = lazy(() => import('@/pages/admin/AdminReferrals'));
+const AffiliateLanding = lazy(() => import('@/pages/affiliate/AffiliateLanding'));
+const AffiliateAccountSignup = lazy(() => import('@/pages/affiliate/AffiliateAccountSignup'));
+const AffiliateSignup = lazy(() => import('@/pages/affiliate/AffiliateSignup'));
+const AffiliateTerms = lazy(() => import('@/pages/affiliate/AffiliateTerms'));
+const AffiliatePanel = lazy(() => import('@/pages/affiliate/AffiliatePanel'));
+const AffiliateMaterials = lazy(() => import('@/pages/affiliate/AffiliateMaterials'));
 
 const RouteFallback = () => <AppBootstrapLoader />;
 
@@ -99,6 +108,11 @@ const AppRoutes = () => {
           <Cadastro />
         </AuthLayout>
       } />
+      <Route path="/indique/criar-conta" element={
+        <AuthLayout>
+          <AffiliateAccountSignup />
+        </AuthLayout>
+      } />
       <Route path="/menu/:id" element={<CardapioPublico />} />
       <Route path="/cardapio/:slug" element={<CardapioPublico />} />
       <Route path="/pedido/:id" element={<AcompanharPedido />} />
@@ -115,6 +129,13 @@ const AppRoutes = () => {
       <Route path="/pdv-online" element={<PDVOnline />} />
       <Route path="/gestao-completa" element={<GestaoCompleta />} />
       <Route path="/precos" element={<Precos />} />
+      <Route path="/indique" element={<AffiliateLayout />}>
+        <Route index element={<AffiliateLanding />} />
+        <Route path="cadastro" element={<AffiliateSignup />} />
+        <Route path="termos" element={<AffiliateTerms />} />
+        <Route path="painel" element={<AffiliatePanel />} />
+        <Route path="materiais" element={<AffiliateMaterials />} />
+      </Route>
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogPost />} />
       
@@ -296,6 +317,13 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/multiunidade" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'orders_metrics_view', 'settings_view']} requireAny>
+          <MainLayout>
+            <Multiunidade />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/atendimento" element={
         <ProtectedRoute
           requiredPermissions={['whatsapp_manage', 'whatsapp_take_conversations', 'whatsapp_reply_as_human', 'whatsapp_view_all_conversations', 'whatsapp_configure_automation']}
@@ -371,6 +399,11 @@ const AppRoutes = () => {
       <Route path="/admin/email" element={
         <AdminProtectedRoute>
           <AdminEmail />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/indicacoes" element={
+        <AdminProtectedRoute>
+          <AdminReferrals />
         </AdminProtectedRoute>
       } />
       

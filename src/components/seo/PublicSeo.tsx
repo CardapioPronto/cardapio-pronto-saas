@@ -12,7 +12,7 @@ function resolveOgImage(ogImagePath?: string): string {
 type PublicSeoProps = {
   title: string;
   description: string;
-  path: string;
+  path?: string;
   /** Páginas autenticadas ou rascunho */
   noIndex?: boolean;
   /** OG/Twitter preview (fallback: favicon) */
@@ -29,7 +29,9 @@ export function PublicSeo({
   noIndex,
   ogImagePath = "/favicon-pubfy.png",
 }: PublicSeoProps) {
-  const url = absoluteUrl(path);
+  const fallbackPath = typeof window !== "undefined" ? window.location?.pathname ?? "/" : "/";
+  const resolvedPath = (path ?? fallbackPath).trim() || "/";
+  const url = /^https?:\/\//i.test(resolvedPath) ? resolvedPath : absoluteUrl(resolvedPath);
   const image = resolveOgImage(ogImagePath);
 
   return (

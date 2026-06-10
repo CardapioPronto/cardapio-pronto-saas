@@ -91,6 +91,9 @@ const Navbar = () => {
           <Link to="/contato" className="text-navy hover:text-orange transition-colors">
             Contato
           </Link>
+          <Link to="/indique" className="text-navy hover:text-orange transition-colors">
+            Indique
+          </Link>
         </nav>
 
         <div className="hidden md:flex items-center space-x-4">
@@ -130,6 +133,9 @@ const Navbar = () => {
             </Link>
             <Link to="/contato" className="text-navy py-2 border-b border-beige">
               Contato
+            </Link>
+            <Link to="/indique" className="text-navy py-2 border-b border-beige">
+              Indique
             </Link>
             <div className="flex flex-col space-y-2 pt-2">
               <Link to="/login">

@@ -124,10 +124,12 @@ export const AddFuncionarioDialog = ({ open, onOpenChange }: AddFuncionarioDialo
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                placeholder="Mínimo 6 caracteres"
-                required
-                minLength={6}
+                placeholder="Obrigatória apenas se o e-mail for novo (mínimo 8 caracteres)"
+                minLength={8}
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Se o e-mail já possui conta no Pubfy, a senha é ignorada.
+              </p>
             </div>
 
             <Separator />

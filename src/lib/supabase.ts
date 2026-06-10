@@ -35,6 +35,18 @@ export const getCurrentUser = async () => {
 
 // Função para obter o ID do restaurante do usuário atual
 export const getCurrentRestaurantId = async () => {
+  try {
+    const rpc = supabase.rpc.bind(supabase) as unknown as (
+      fn: 'get_user_restaurant_id',
+      args?: Record<string, never>,
+    ) => Promise<{ data: string | null; error: { message: string } | null }>;
+
+    const { data, error } = await rpc('get_user_restaurant_id', {});
+    if (!error && data) return data;
+  } catch (error) {
+    console.warn("Fallback ao buscar restaurante ativo:", error);
+  }
+
   const user = await getCurrentUserWithProfile();
   if (!user) return null;  
   return user.restaurant_id;
