@@ -46,6 +46,9 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [ ] Cardápio Digital → QR Code: gerar link para Google Business Profile e
       conferir que a URL possui `utm_source=google`, `utm_medium=business_profile`
       e `utm_campaign`.
+- [ ] Cardápio Digital → QR Code: no kit de divulgação, atualizar o resumo
+      de canais e conferir que visitas, pedidos, conversão e receita aparecem
+      para uma origem que já teve tráfego rastreado.
 - [ ] Cardápio Digital → Categorias: criar/editar/excluir categoria.
 - [ ] Cardápio Digital → Produtos: criar produto com foto, descrição e
       preço; marcar como indisponível e verificar que some do cardápio

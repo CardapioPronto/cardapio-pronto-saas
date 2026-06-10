@@ -1,7 +1,9 @@
 import React from "react";
 import QRCode from "qrcode";
+import { subDays } from "date-fns";
 import { Link } from "react-router-dom";
 import {
+  BarChart3,
   Copy,
   Download,
   ExternalLink,
@@ -10,6 +12,7 @@ import {
   MapPin,
   MessageCircle,
   QrCode,
+  RefreshCw,
   Share2,
   Target,
 } from "lucide-react";
@@ -24,6 +27,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getPublicMenuConversionFunnel,
+  type PublicMenuConversionFunnel,
+  type PublicMenuFunnelSource,
+} from "@/services/publicMenuAnalyticsService";
 
 type ChannelPreset = {
   id: string;
@@ -94,6 +102,12 @@ const CHANNEL_PRESETS: ChannelPreset[] = [
 
 const getPreset = (id: string) => CHANNEL_PRESETS.find((preset) => preset.id === id) || CHANNEL_PRESETS[0];
 
+const numberFormatter = new Intl.NumberFormat("pt-BR");
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
 const sanitizeTrackingValue = (value: string, fallback: string) => {
   const normalized = value
     .trim()
@@ -106,6 +120,23 @@ const sanitizeTrackingValue = (value: string, fallback: string) => {
   return normalized || fallback;
 };
 
+const formatPercent = (value: number) =>
+  `${Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
+
+const emptySourceMetric = (source: string): PublicMenuFunnelSource => ({
+  source,
+  menuViews: 0,
+  productClicks: 0,
+  addToCart: 0,
+  checkoutStarted: 0,
+  ordersCompleted: 0,
+  revenue: 0,
+  conversionRate: 0,
+});
+
 export const MarketingLinkKit = () => {
   const { user } = useCurrentUser();
   const [baseUrl, setBaseUrl] = React.useState("");
@@ -115,6 +146,9 @@ export const MarketingLinkKit = () => {
   const [customMedium, setCustomMedium] = React.useState(CHANNEL_PRESETS[0].medium);
   const [qrCodeUrl, setQrCodeUrl] = React.useState("");
   const [loadingQr, setLoadingQr] = React.useState(false);
+  const [analytics, setAnalytics] = React.useState<PublicMenuConversionFunnel | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = React.useState(false);
+  const [analyticsError, setAnalyticsError] = React.useState<string | null>(null);
 
   const preset = React.useMemo(() => getPreset(selectedPresetId), [selectedPresetId]);
   const source = selectedPresetId === "custom" ? customSource : preset.source;
@@ -134,6 +168,40 @@ export const MarketingLinkKit = () => {
   }, [baseUrl, normalizedCampaign, normalizedMedium, normalizedSource]);
 
   const shareMessage = `${preset.shareText}\n${trackedUrl}`;
+  const analyticsRange = React.useMemo(() => {
+    const dateTo = new Date();
+    return {
+      dateFrom: subDays(dateTo, 29),
+      dateTo,
+    };
+  }, []);
+
+  const loadAnalytics = React.useCallback(async () => {
+    if (!user?.restaurant_id) return;
+
+    setLoadingAnalytics(true);
+    setAnalyticsError(null);
+
+    try {
+      const result = await getPublicMenuConversionFunnel(analyticsRange.dateFrom, analyticsRange.dateTo);
+      setAnalytics(result);
+    } catch (error) {
+      console.error("Erro ao carregar resultado dos canais:", error);
+      setAnalyticsError(error instanceof Error ? error.message : "Nao foi possivel carregar o resultado dos canais.");
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, [analyticsRange.dateFrom, analyticsRange.dateTo, user?.restaurant_id]);
+
+  const selectedSourceMetric = React.useMemo(() => {
+    return analytics?.sources.find((item) => item.source === normalizedSource) || emptySourceMetric(normalizedSource);
+  }, [analytics?.sources, normalizedSource]);
+
+  const topSources = React.useMemo(() => {
+    return [...(analytics?.sources || [])]
+      .sort((a, b) => b.ordersCompleted - a.ordersCompleted || b.menuViews - a.menuViews || b.revenue - a.revenue)
+      .slice(0, 4);
+  }, [analytics?.sources]);
 
   React.useEffect(() => {
     if (!user?.restaurant_id) return;
@@ -153,6 +221,10 @@ export const MarketingLinkKit = () => {
         setBaseUrl(`${window.location.origin}/cardapio/${publicId}`);
       });
   }, [user?.restaurant_id]);
+
+  React.useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   React.useEffect(() => {
     if (!trackedUrl) {
@@ -424,6 +496,75 @@ export const MarketingLinkKit = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-md border bg-muted/20 p-4">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <BarChart3 className="h-4 w-4" />
+                Resultado dos canais nos ultimos 30 dias
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Compare o canal selecionado com as demais origens registradas no cardapio publico.
+              </p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={loadAnalytics} disabled={loadingAnalytics}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loadingAnalytics ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </div>
+
+          {analyticsError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {analyticsError}
+            </div>
+          ) : loadingAnalytics ? (
+            <div className="grid gap-3 md:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-20 animate-pulse rounded-md bg-background" />
+              ))}
+            </div>
+          ) : analytics && analytics.sources.length > 0 ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-4">
+                <div className="rounded-md border bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Visitas do canal</p>
+                  <p className="mt-1 text-xl font-semibold">{numberFormatter.format(selectedSourceMetric.menuViews)}</p>
+                </div>
+                <div className="rounded-md border bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Pedidos do canal</p>
+                  <p className="mt-1 text-xl font-semibold">{numberFormatter.format(selectedSourceMetric.ordersCompleted)}</p>
+                </div>
+                <div className="rounded-md border bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Conversao</p>
+                  <p className="mt-1 text-xl font-semibold">{formatPercent(selectedSourceMetric.conversionRate)}</p>
+                </div>
+                <div className="rounded-md border bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Receita atribuida</p>
+                  <p className="mt-1 text-xl font-semibold">{currencyFormatter.format(selectedSourceMetric.revenue)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {topSources.map((item) => (
+                  <div key={item.source} className="grid gap-2 rounded-md border bg-background p-3 md:grid-cols-[1fr_90px_90px_110px] md:items-center">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={item.source === normalizedSource ? "default" : "outline"}>{item.source}</Badge>
+                      <span className="text-sm text-muted-foreground">{numberFormatter.format(item.menuViews)} visitas</span>
+                    </div>
+                    <span className="text-sm">{numberFormatter.format(item.ordersCompleted)} pedidos</span>
+                    <span className="text-sm">{formatPercent(item.conversionRate)}</span>
+                    <span className="text-sm font-medium md:text-right">{currencyFormatter.format(item.revenue)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border bg-background p-4 text-sm text-muted-foreground">
+              Ainda nao ha visitas rastreadas. Abra o link gerado, faca um pedido de teste e volte aqui para conferir a origem.
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
