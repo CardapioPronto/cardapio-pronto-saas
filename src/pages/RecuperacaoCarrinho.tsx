@@ -16,7 +16,19 @@ import {
   type CartAbandonmentDashboard,
 } from "@/services/cartAbandonmentService";
 import { formatPhone } from "@/utils/phoneValidation";
-import { Loader2, RefreshCw, Save, ShoppingCart, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Mail,
+  MessageCircle,
+  RefreshCw,
+  Save,
+  ShoppingCart,
+  TicketPercent,
+  TrendingUp,
+} from "lucide-react";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const number = new Intl.NumberFormat("pt-BR");
@@ -27,6 +39,11 @@ const STATUS_LABEL: Record<string, string> = {
   reminded: "Lembrete enviado",
   recovered: "Recuperado",
   expired: "Expirado",
+};
+
+type DiagnosticAlert = {
+  severity: "critical" | "attention" | "info";
+  message: string;
 };
 
 const emptyDashboard: CartAbandonmentDashboard = {
@@ -121,10 +138,103 @@ const RecuperacaoCarrinho = () => {
   };
 
   const metrics = data.metrics;
+  const settings = data.settings;
   const periodLabel = useMemo(
     () => `${format(dateFrom, "dd/MM/yyyy")} — ${format(dateTo, "dd/MM/yyyy")}`,
     [dateFrom, dateTo],
   );
+  const channelLabel = useMemo(() => {
+    const channels = [
+      settings.remind_via_email ? "E-mail" : null,
+      settings.remind_via_whatsapp ? "WhatsApp" : null,
+    ].filter(Boolean);
+
+    return channels.length > 0 ? channels.join(" + ") : "Nenhum canal";
+  }, [settings.remind_via_email, settings.remind_via_whatsapp]);
+  const diagnosticAlerts = useMemo<DiagnosticAlert[]>(() => {
+    const alerts: DiagnosticAlert[] = [];
+
+    if (!settings.enabled) {
+      alerts.push({
+        severity: "critical",
+        message: "A recuperação está pausada e não enviará lembretes.",
+      });
+    }
+
+    if (!settings.remind_via_email && !settings.remind_via_whatsapp) {
+      alerts.push({
+        severity: "critical",
+        message: "Nenhum canal de lembrete está ativo.",
+      });
+    }
+
+    if (settings.enabled && metrics.trackedAbandonments > 0 && metrics.reminded === 0) {
+      alerts.push({
+        severity: "attention",
+        message: "Há abandonos no período, mas nenhum lembrete enviado.",
+      });
+    }
+
+    if (settings.abandonment_minutes < 10) {
+      alerts.push({
+        severity: "attention",
+        message: "Janela muito curta pode abordar clientes que ainda estavam decidindo.",
+      });
+    }
+
+    if (settings.abandonment_minutes > 240) {
+      alerts.push({
+        severity: "attention",
+        message: "Janela muito longa reduz a chance de recuperação no mesmo momento de compra.",
+      });
+    }
+
+    if (settings.recovery_window_hours < 24) {
+      alerts.push({
+        severity: "attention",
+        message: "Janela de atribuição menor que 24h pode subestimar recuperações.",
+      });
+    }
+
+    if (!settings.recovery_coupon_code?.trim()) {
+      alerts.push({
+        severity: "info",
+        message: "Sem cupom opcional configurado para reforçar o retorno do cliente.",
+      });
+    }
+
+    if (metrics.reminded >= 5 && metrics.recovered === 0) {
+      alerts.push({
+        severity: "attention",
+        message: "Lembretes enviados sem recuperação; vale revisar mensagem, cupom ou tempo de disparo.",
+      });
+    }
+
+    return alerts;
+  }, [
+    metrics.recovered,
+    metrics.reminded,
+    metrics.trackedAbandonments,
+    settings.abandonment_minutes,
+    settings.enabled,
+    settings.recovery_coupon_code,
+    settings.recovery_window_hours,
+    settings.remind_via_email,
+    settings.remind_via_whatsapp,
+  ]);
+  const criticalAlerts = diagnosticAlerts.filter((alert) => alert.severity === "critical").length;
+  const diagnosticStatus = !settings.enabled
+    ? "Pausada"
+    : criticalAlerts > 0
+      ? "Revisar"
+      : diagnosticAlerts.length > 0
+        ? "Atenção"
+        : "Saudável";
+  const diagnosticBadgeVariant = !settings.enabled || criticalAlerts > 0
+    ? "destructive"
+    : diagnosticAlerts.length > 0
+      ? "secondary"
+      : "default";
 
   return (
     <DashboardLayout title="Recuperação de carrinho">
@@ -175,6 +285,77 @@ const RecuperacaoCarrinho = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>Diagnóstico operacional</CardTitle>
+              <CardDescription>
+                Saúde da automação de recuperação no período selecionado.
+              </CardDescription>
+            </div>
+            <Badge variant={diagnosticBadgeVariant}>{diagnosticStatus}</Badge>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {settings.enabled ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
+                  Status
+                </div>
+                <p className="mt-2 font-semibold">{settings.enabled ? "Ativa" : "Pausada"}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {settings.remind_via_whatsapp ? <MessageCircle className="h-4 w-4 text-emerald-600" /> : <Mail className="h-4 w-4 text-primary" />}
+                  Canais
+                </div>
+                <p className="mt-2 font-semibold">{channelLabel}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Disparo
+                </div>
+                <p className="mt-2 font-semibold">Após {settings.abandonment_minutes} min</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <TicketPercent className="h-4 w-4 text-primary" />
+                  Incentivo
+                </div>
+                <p className="mt-2 font-semibold">{settings.recovery_coupon_code || "Sem cupom"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Pontos de atenção</p>
+              {diagnosticAlerts.length === 0 ? (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  Automação pronta para recuperar carrinhos abandonados.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {diagnosticAlerts.map((alert) => (
+                    <div
+                      key={alert.message}
+                      className={
+                        alert.severity === "critical"
+                          ? "flex gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+                          : alert.severity === "attention"
+                            ? "flex gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                            : "flex gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                      }
+                    >
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{alert.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
