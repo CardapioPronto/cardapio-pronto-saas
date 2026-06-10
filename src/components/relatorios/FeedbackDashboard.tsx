@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "@/components/ui/sonner-toast";
 import { orderFeedbackService } from "@/services/orderFeedbackService";
 import { format, subDays } from "date-fns";
 import {
   AlertTriangle,
+  CheckCircle2,
   Loader2,
   MessageSquareText,
   RefreshCw,
@@ -15,7 +16,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -45,6 +46,11 @@ const ratingLabel = (rating: number) => {
   return "Detrator";
 };
 
+type QualityAlert = {
+  severity: "critical" | "attention" | "info";
+  message: string;
+};
+
 export const FeedbackDashboard = () => {
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(subDays(today, 29));
@@ -54,6 +60,82 @@ export const FeedbackDashboard = () => {
 
   const summary = data?.summary;
   const recent = data?.recent ?? [];
+  const feedbackHealth = useMemo(() => {
+    const total = summary?.total ?? 0;
+    const detractors = summary?.detractors ?? 0;
+    const openLowRating = summary?.openLowRating ?? 0;
+    const contactRequests = summary?.contactRequests ?? 0;
+    const nps = summary?.nps ?? 0;
+    const averageRating = summary?.averageRating ?? 0;
+    const detractorRate = total > 0 ? Math.round((detractors / total) * 100) : 0;
+    const contactRequestRate = total > 0 ? Math.round((contactRequests / total) * 100) : 0;
+    const alerts: QualityAlert[] = [];
+
+    if (total === 0) {
+      alerts.push({
+        severity: "info",
+        message: "Ainda não há avaliações no período para medir satisfação.",
+      });
+    }
+
+    if (openLowRating > 0) {
+      alerts.push({
+        severity: "critical",
+        message: `${number.format(openLowRating)} avaliação(ões) detratora(s) ainda precisam de retorno.`,
+      });
+    }
+
+    if (nps < 0 && total > 0) {
+      alerts.push({
+        severity: "critical",
+        message: "NPS negativo indica risco real de perda de recompra.",
+      });
+    } else if (nps < 50 && total >= 5) {
+      alerts.push({
+        severity: "attention",
+        message: "NPS abaixo de 50 pede investigação dos principais atritos.",
+      });
+    }
+
+    if (averageRating > 0 && averageRating < 7) {
+      alerts.push({
+        severity: "attention",
+        message: "Nota média abaixo de 7 sugere queda perceptível na experiência.",
+      });
+    }
+
+    if (detractorRate >= 30 && total >= 5) {
+      alerts.push({
+        severity: "attention",
+        message: `${number.format(detractorRate)}% das respostas foram detratoras.`,
+      });
+    }
+
+    if (contactRequests > 0) {
+      alerts.push({
+        severity: "info",
+        message: `${number.format(contactRequests)} cliente(s) pediram contato após avaliar.`,
+      });
+    }
+
+    const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
+    const status = total === 0
+      ? "Sem dados"
+      : criticalAlerts > 0
+        ? "Crítico"
+        : alerts.some((alert) => alert.severity === "attention")
+          ? "Atenção"
+          : "Saudável";
+    const badgeVariant = status === "Crítico" ? "destructive" : status === "Atenção" ? "secondary" : "default";
+
+    return {
+      alerts,
+      status,
+      badgeVariant,
+      detractorRate,
+      contactRequestRate,
+    };
+  }, [summary]);
 
   const handleResolve = async (feedbackId: string) => {
     setResolvingId(feedbackId);
@@ -191,6 +273,68 @@ export const FeedbackDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4" />
+              Diagnóstico de qualidade
+            </CardTitle>
+            <CardDescription>
+              Leitura operacional para priorizar recuperação de clientes insatisfeitos.
+            </CardDescription>
+          </div>
+          <Badge variant={feedbackHealth.badgeVariant}>{feedbackHealth.status}</Badge>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Detratores</p>
+              <p className="mt-2 text-xl font-semibold">{number.format(feedbackHealth.detractorRate)}%</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Pedidos de contato</p>
+              <p className="mt-2 text-xl font-semibold">{number.format(feedbackHealth.contactRequestRate)}%</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Pendências críticas</p>
+              <p className="mt-2 text-xl font-semibold">{number.format(summary?.openLowRating ?? 0)}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Volume analisado</p>
+              <p className="mt-2 text-xl font-semibold">{number.format(summary?.total ?? 0)}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Prioridades</p>
+            {feedbackHealth.alerts.length === 0 ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Satisfação saudável no período selecionado.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {feedbackHealth.alerts.map((alert) => (
+                  <div
+                    key={alert.message}
+                    className={
+                      alert.severity === "critical"
+                        ? "flex gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+                        : alert.severity === "attention"
+                          ? "flex gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                          : "flex gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                    }
+                  >
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{alert.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
