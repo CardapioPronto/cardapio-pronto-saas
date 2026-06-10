@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { endOfMonth, format, startOfMonth, subDays } from "date-fns";
 import {
+  AlertTriangle,
   Calculator,
+  CheckCircle2,
   DollarSign,
   Landmark,
   Loader2,
@@ -15,8 +17,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,6 +46,11 @@ const parseMoney = (value: string) => {
   const parsed = Number(value.replace(",", "."));
   if (!Number.isFinite(parsed)) return 0;
   return Math.max(0, parsed);
+};
+
+type FinancialAlert = {
+  severity: "critical" | "attention" | "info";
+  message: string;
 };
 
 export const FinancialDashboard = () => {
@@ -106,6 +114,93 @@ export const FinancialDashboard = () => {
   const summary = data?.summary;
   const settingsConfigured =
     (data?.settings.ifoodFeePercent ?? 0) > 0 || (data?.settings.gatewayFeePercent ?? 0) > 0;
+  const financialHealth = useMemo(() => {
+    const totalRevenue = summary?.totalRevenue ?? 0;
+    const totalOrders = summary?.totalOrders ?? 0;
+    const estimatedFees = summary?.estimatedFees ?? 0;
+    const ownChannelShare = summary?.ownChannelShare ?? 0;
+    const ifoodRevenue = summary?.ifoodRevenue ?? 0;
+    const costCoveragePercent = summary?.costCoveragePercent ?? 0;
+    const grossMarginPercent = summary?.estimatedGrossMarginPercent ?? 0;
+    const estimatedSavings = summary?.estimatedOwnChannelSavings ?? 0;
+    const feeRate = totalRevenue > 0 ? (estimatedFees / totalRevenue) * 100 : 0;
+    const ifoodShare = totalRevenue > 0 ? (ifoodRevenue / totalRevenue) * 100 : 0;
+    const alerts: FinancialAlert[] = [];
+
+    if (totalOrders === 0) {
+      alerts.push({
+        severity: "info",
+        message: "Sem pedidos finalizados no período para leitura financeira.",
+      });
+    }
+
+    if (!settingsConfigured && totalRevenue > 0) {
+      alerts.push({
+        severity: "critical",
+        message: "Configure as taxas para estimar receita líquida e economia com mais precisão.",
+      });
+    }
+
+    if (totalRevenue > 0 && ownChannelShare < 40) {
+      alerts.push({
+        severity: "attention",
+        message: "Canal próprio abaixo de 40% da receita; há espaço para reduzir dependência de terceiros.",
+      });
+    }
+
+    if (ifoodShare >= 50) {
+      alerts.push({
+        severity: "attention",
+        message: "Alta concentração de receita no iFood aumenta exposição a taxas e regras externas.",
+      });
+    }
+
+    if (totalRevenue > 0 && costCoveragePercent < 50) {
+      alerts.push({
+        severity: "attention",
+        message: "Menos de metade da receita tem custo cadastrado; a margem ainda está parcial.",
+      });
+    }
+
+    if (costCoveragePercent > 0 && grossMarginPercent < 20) {
+      alerts.push({
+        severity: grossMarginPercent <= 0 ? "critical" : "attention",
+        message: "Margem bruta estimada baixa nos produtos com custo cadastrado.",
+      });
+    }
+
+    if (feeRate >= 15) {
+      alerts.push({
+        severity: "attention",
+        message: `${percent(feeRate)} da receita está comprometida por taxas estimadas.`,
+      });
+    }
+
+    if (estimatedSavings > 0) {
+      alerts.push({
+        severity: "info",
+        message: `${money.format(estimatedSavings)} de economia estimada reforça o valor do canal próprio.`,
+      });
+    }
+
+    const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
+    const status = totalOrders === 0
+      ? "Sem dados"
+      : criticalAlerts > 0
+        ? "Crítico"
+        : alerts.some((alert) => alert.severity === "attention")
+          ? "Atenção"
+          : "Saudável";
+    const badgeVariant = status === "Crítico" ? "destructive" : status === "Atenção" ? "secondary" : "default";
+
+    return {
+      alerts,
+      status,
+      badgeVariant,
+      feeRate,
+      ifoodShare,
+    };
+  }, [settingsConfigured, summary]);
 
   return (
     <div className="space-y-6">
@@ -215,6 +310,68 @@ export const FinancialDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4" />
+              Diagnóstico financeiro
+            </CardTitle>
+            <CardDescription>
+              Leitura executiva para avaliar margem, taxas e dependência de canais.
+            </CardDescription>
+          </div>
+          <Badge variant={financialHealth.badgeVariant}>{financialHealth.status}</Badge>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Taxas sobre receita</p>
+              <p className="mt-2 text-xl font-semibold">{percent(financialHealth.feeRate)}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Dependência iFood</p>
+              <p className="mt-2 text-xl font-semibold">{percent(financialHealth.ifoodShare)}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Cobertura de custo</p>
+              <p className="mt-2 text-xl font-semibold">{percent(summary?.costCoveragePercent ?? 0)}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">Margem coberta</p>
+              <p className="mt-2 text-xl font-semibold">{percent(summary?.estimatedGrossMarginPercent ?? 0)}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Prioridades</p>
+            {financialHealth.alerts.length === 0 ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Indicadores financeiros saudáveis no período selecionado.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {financialHealth.alerts.map((alert) => (
+                  <div
+                    key={alert.message}
+                    className={
+                      alert.severity === "critical"
+                        ? "flex gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+                        : alert.severity === "attention"
+                          ? "flex gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                          : "flex gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                    }
+                  >
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{alert.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

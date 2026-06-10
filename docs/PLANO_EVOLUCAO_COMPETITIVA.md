@@ -431,17 +431,30 @@ Objetivo: provar valor economico do Pubfy.
 - [x] Produtos com maior receita.
 - [x] Margem estimada quando houver custo/ficha tecnica.
 - [x] Calculadora de economia do canal proprio.
+- [x] Diagnostico executivo de margem, taxas e dependencia de canais.
 
 ### Criterio de aceite
 
 - Dono consegue ver se o canal proprio esta crescendo.
 - Comercial consegue usar dados reais para provar economia.
 
+### Backlog futuro
+
+- [ ] Comparativo periodo atual x periodo anterior para receita, margem, taxas e canal proprio.
+- [ ] Metas financeiras por periodo: faturamento, margem, ticket medio e participacao do canal proprio.
+- [ ] CMV real integrado a ficha tecnica, compras, perdas e inventario.
+- [ ] Fluxo de caixa operacional com recebiveis, repasses, antecipacoes e taxas reais.
+- [ ] DRE simplificada por restaurante e por unidade.
+- [ ] Analise de margem por canal, categoria, produto e horario.
+- [ ] Alertas de queda de margem, alta dependencia de marketplace e custo sem cadastro.
+- [ ] Exportacao PDF/CSV do dashboard financeiro para reuniao gerencial.
+
 Evidencia:
 
 - 2026-06-04: Bloco 10 iniciado com a nova aba Financeiro em Relatorios. A migration `20260604140000_create_financial_dashboard_foundation.sql` cria configuracao de taxas estimadas por restaurante e a RPC agregada `get_restaurant_financial_dashboard`, com receita, pedidos, ticket medio, taxas, receita liquida estimada e participacao para PDV, cardapio proprio, WhatsApp e iFood.
 - 2026-06-04: A tela financeira adiciona configuracao das taxas medias de iFood e gateway, calculadora de economia do canal proprio e comparacao de custo estimado sem prometer percentuais padrao. Produtos com maior receita permanecem disponiveis no relatorio avancado, e o filtro de origem passou a incluir WhatsApp.
 - 2026-06-04: A migration `20260604150000_add_product_cost_and_financial_margin.sql` adiciona custo unitario opcional em tabela financeira protegida por RLS e amplia o dashboard com margem bruta estimada, cobertura da receita por custos cadastrados e ranking de margem por produto. Itens sem custo ou sem vinculo com o catalogo ficam fora do calculo, evitando tratar ausencia de dados como custo zero.
+- 2026-06-10: Aba `Financeiro` ganhou diagnostico executivo com status de saude, percentual de taxas sobre receita, dependencia de iFood, cobertura de custos, margem coberta e alertas para taxas nao configuradas, baixo canal proprio, dependencia de marketplace, baixa cobertura de custo e margem baixa.
 
 ---
 
