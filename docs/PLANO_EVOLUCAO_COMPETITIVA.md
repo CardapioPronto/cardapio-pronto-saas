@@ -457,16 +457,29 @@ Objetivo: medir qualidade e recuperar experiencias ruins.
 - [x] Alertar dono em nota baixa.
 - [x] Mostrar media por periodo.
 - [x] Associar avaliacao ao pedido e ao cliente.
+- [x] Diagnostico operacional de qualidade e risco de recompra.
 
 ### Criterio de aceite
 
 - Restaurante identifica clientes insatisfeitos antes de perder recompra.
 - Avaliacao nao atrapalha o fluxo principal de pedido.
 
+### Backlog futuro
+
+- [ ] Taxa de resposta da pesquisa considerando pedidos elegiveis no periodo.
+- [ ] Motivos estruturados de insatisfacao: atraso, atendimento, produto, embalagem, preco e entrega.
+- [ ] Fluxo de tratativa com status, responsavel, prazo e historico de contato.
+- [ ] Automacao de recuperacao para detratores com cupom, mensagem ou tarefa interna.
+- [ ] Pedido de depoimento publico para promotores, respeitando consentimento.
+- [ ] Analise por canal, horario, produto, categoria e unidade.
+- [ ] Relatorio de recompra apos avaliacao positiva, neutra ou negativa.
+- [ ] Alertas de tendencia quando NPS ou nota media cairem por varios periodos.
+
 Evidencia:
 
 - 2026-06-05: Criada base `order_feedback` com RPC publica de avaliacao no acompanhamento do pedido finalizado, vinculo com pedido/cliente e aba "Avaliacoes" em Relatorios com NPS, media, detratores e comentarios recentes.
 - 2026-06-05: Alerta em nota baixa — notificacao no sino do painel, e-mail `order_feedback_low_rating` via edge `order-feedback-notify` + trigger pg_net, botao "Resolver" no relatorio e deep link `/relatorios?tab=avaliacoes`.
+- 2026-06-10: Aba `Avaliacoes` em Relatorios ganhou diagnostico de qualidade com status de saude, percentual de detratores, pedidos de contato, pendencias criticas e alertas para NPS negativo, baixa nota media, alto volume de detratores ou ausencia de dados.
 
 ---
 
