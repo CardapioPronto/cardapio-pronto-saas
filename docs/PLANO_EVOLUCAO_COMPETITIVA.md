@@ -559,6 +559,7 @@ Objetivo: vender para redes pequenas e franquias.
 - [x] Sincronizacao controlada do cardapio matriz para filiais.
 - [x] Replicacao de acesso da equipe entre unidades.
 - [x] Diagnostico de prontidao operacional por unidade.
+- [x] Checklist acionavel de implantacao por filial.
 
 ### Criterio de aceite
 
@@ -572,6 +573,7 @@ Evidencia:
 - 2026-06-08: Sincronizacao do cardapio matriz com RPC `sync_restaurant_group_menu` e acao em `/multiunidade`; cria/atualiza categorias e produtos nas filiais selecionadas, preservando itens locais e saldos de estoque por unidade.
 - 2026-06-09: Gestao de equipe da rede em `/multiunidade` com RPCs `get_restaurant_group_staff` e `apply_restaurant_group_staff_access`; permite aplicar cargo/permissoes de um colaborador para filiais selecionadas sem remover acessos existentes.
 - 2026-06-09: Diagnostico de prontidao operacional com RPC `get_restaurant_group_readiness` e card em `/multiunidade`; calcula score por filial considerando dados cadastrais, cardapio, equipe, canais, operacao, assinatura e repasse, destacando pendencias antes da unidade entrar em operacao.
+- 2026-06-09: Checklist acionavel de implantacao em `/multiunidade`, com drill-down por filial, checks detalhados e atalhos que trocam a unidade ativa antes de abrir cadastro, produtos, equipe, mesas, canais, assinatura ou repasse.
 
 ---
 

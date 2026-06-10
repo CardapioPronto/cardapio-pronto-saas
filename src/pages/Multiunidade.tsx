@@ -1,7 +1,9 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { endOfDay, format, startOfDay, subDays } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  ArrowRight,
   Building2,
   CheckCircle2,
   ClipboardCheck,
@@ -85,6 +87,16 @@ const readinessBadgeClassName: Record<MultiunitReadinessStatus, string> = {
   critical: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
 };
 
+const readinessActionByCheck: Record<string, { label: string; path: string }> = {
+  profile: { label: "Abrir cadastro", path: "/configuracoes" },
+  menu: { label: "Abrir produtos", path: "/produtos" },
+  staff: { label: "Abrir equipe", path: "/funcionarios" },
+  service: { label: "Abrir mesas", path: "/mesas" },
+  channels: { label: "Abrir canais", path: "/atendimento" },
+  subscription: { label: "Abrir assinatura", path: "/assinaturas" },
+  payment: { label: "Abrir repasse", path: "/recebimentos" },
+};
+
 const uniqueGroups = (restaurants: RestaurantAccess[]) => {
   const map = new Map<string, { id: string; name: string }>();
   restaurants.forEach((restaurant) => {
@@ -117,6 +129,7 @@ const emptyUnitForm: UnitFormState = {
 };
 
 const Multiunidade = () => {
+  const navigate = useNavigate();
   const {
     restaurants,
     activeRestaurantId,
@@ -149,6 +162,7 @@ const Multiunidade = () => {
   const [readiness, setReadiness] = useState<MultiunitReadiness | null>(null);
   const [loadingReadiness, setLoadingReadiness] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [readinessDetailRestaurantId, setReadinessDetailRestaurantId] = useState("");
   const groups = useMemo(() => uniqueGroups(restaurants), [restaurants]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? groups[0] ?? null;
@@ -186,6 +200,12 @@ const Multiunidade = () => {
   const staffTargetRestaurants = selectedStaffMember
     ? groupRestaurants.filter((restaurant) => restaurant.restaurant_id !== selectedStaffMember.source_restaurant_id)
     : groupRestaurants;
+  const selectedReadinessUnit = readiness?.units.find(
+    (unit) => unit.restaurant_id === readinessDetailRestaurantId,
+  ) ?? null;
+  const selectedReadinessChecks = selectedReadinessUnit
+    ? Object.entries(selectedReadinessUnit.checks)
+    : [];
 
   useEffect(() => {
     if (restaurants.length > 0 && selectedRestaurantIds.length === 0) {
@@ -270,6 +290,22 @@ const Multiunidade = () => {
       toast.success("Unidade ativa alterada.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível trocar a unidade.");
+    }
+  };
+
+  const handleOpenReadinessDetail = (restaurantId: string) => {
+    setReadinessDetailRestaurantId(restaurantId);
+  };
+
+  const handleReadinessAction = async (restaurantId: string, path: string) => {
+    try {
+      if (restaurantId !== activeRestaurantId) {
+        await switchRestaurant(restaurantId);
+      }
+      setReadinessDetailRestaurantId("");
+      navigate(path);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível abrir a unidade selecionada.");
     }
   };
 
@@ -979,7 +1015,12 @@ const Multiunidade = () => {
                     const extraMissing = Math.max(unit.missing.length - visibleMissing.length, 0);
 
                     return (
-                      <div key={unit.restaurant_id} className="rounded-md border px-3 py-2">
+                      <button
+                        key={unit.restaurant_id}
+                        type="button"
+                        className="w-full rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted/50"
+                        onClick={() => handleOpenReadinessDetail(unit.restaurant_id)}
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">{unit.restaurant_name}</p>
@@ -999,12 +1040,119 @@ const Multiunidade = () => {
                             {number.format(unit.score)}%
                           </span>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               </CardContent>
             </Card>
+
+            <Dialog
+              open={Boolean(selectedReadinessUnit)}
+              onOpenChange={(open) => {
+                if (!open) setReadinessDetailRestaurantId("");
+              }}
+            >
+              <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <ClipboardCheck className="h-5 w-5" />
+                    {selectedReadinessUnit?.restaurant_name ?? "Prontidão da unidade"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Checklist operacional para deixar a filial pronta para venda.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedReadinessUnit && (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={readinessBadgeClassName[selectedReadinessUnit.status]}>
+                            {readinessLabel[selectedReadinessUnit.status]}
+                          </Badge>
+                          <span className="text-sm font-medium">
+                            {number.format(selectedReadinessUnit.score)}% de prontidão
+                          </span>
+                        </div>
+                        <Progress value={selectedReadinessUnit.score} className="h-2" />
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void handleReadinessAction(selectedReadinessUnit.restaurant_id, "/dashboard")}
+                      >
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Usar unidade
+                      </Button>
+                    </div>
+
+                    {selectedReadinessUnit.missing.length > 0 && (
+                      <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          {selectedReadinessUnit.missing.join(", ")}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="grid gap-2">
+                      {selectedReadinessChecks.map(([checkKey, check]) => {
+                        const action = readinessActionByCheck[checkKey];
+
+                        return (
+                          <div
+                            key={checkKey}
+                            className="grid gap-3 rounded-md border px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+                          >
+                            <div className="flex min-w-0 gap-3">
+                              {check.ok ? (
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                              ) : (
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium">{check.label}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">{check.detail}</p>
+                              </div>
+                            </div>
+
+                            {action && !check.ok && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void handleReadinessAction(selectedReadinessUnit.restaurant_id, action.path)}
+                              >
+                                {action.label}
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setReadinessDetailRestaurantId("")}>
+                    Fechar
+                  </Button>
+                  {selectedReadinessUnit && selectedReadinessUnit.status !== "ready" && (
+                    <Button
+                      type="button"
+                      onClick={() => void handleReadinessAction(selectedReadinessUnit.restaurant_id, "/configuracoes")}
+                    >
+                      Corrigir unidade
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Card>
               <CardHeader>
