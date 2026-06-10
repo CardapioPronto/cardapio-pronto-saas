@@ -41,6 +41,11 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       WhatsApp, horários e logo. Salvar.
 - [ ] Cardápio Digital → Personalização: trocar tema, cor primária,
       banner. Pré-visualização atualiza.
+- [ ] Cardápio Digital → QR Code: gerar link rastreável para Instagram bio,
+      copiar a mensagem pronta e baixar o QR Code da campanha.
+- [ ] Cardápio Digital → QR Code: gerar link para Google Business Profile e
+      conferir que a URL possui `utm_source=google`, `utm_medium=business_profile`
+      e `utm_campaign`.
 - [ ] Cardápio Digital → Categorias: criar/editar/excluir categoria.
 - [ ] Cardápio Digital → Produtos: criar produto com foto, descrição e
       preço; marcar como indisponível e verificar que some do cardápio
@@ -93,6 +98,8 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 
 - [ ] Relatórios → Avançado, período 30 dias: receita, ticket médio e
       produtos mais vendidos batem com os pedidos finalizados.
+- [ ] Relatórios → Conversão: acessar pelo atalho do kit de divulgação e
+      conferir pedidos/origens após abrir o cardápio com um link UTM.
 - [ ] Análise de performance, período 90 dias: alerta "período longo"
       aparece (Bloco 6).
 - [ ] Exportar CSV de pedidos: arquivo abre em planilha sem erro.
