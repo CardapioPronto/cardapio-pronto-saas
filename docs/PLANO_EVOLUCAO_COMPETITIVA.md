@@ -532,16 +532,29 @@ Objetivo: evoluir estoque para controle de custo real.
 - [x] Custo estimado do produto.
 - [x] Margem bruta por produto.
 - [x] Lista de reposicao sugerida por baixo saldo.
+- [x] Inventario fisico com ajuste auditavel de divergencia.
 
 ### Criterio de aceite
 
 - Restaurante consegue responder quanto custa vender cada produto principal.
 - Baixa de insumo e auditavel e reversivel em cancelamento.
 
+### Backlog futuro
+
+- [ ] Alertas automaticos de baixo estoque no painel e por canal configurado.
+- [ ] Previsao de consumo e compra sugerida com base no historico de vendas.
+- [ ] Cadastro de fornecedores, ultimo preco pago e comparativo de cotacoes.
+- [ ] Registro de perdas, validade e descartes por motivo.
+- [ ] Inventario por contagem cega e fechamento por responsavel.
+- [ ] Relatorio de CMV, margem real e variacao de custo por periodo.
+- [ ] Ficha tecnica com rendimento, preparos intermediarios e custo por porcao.
+- [ ] Exportacao da lista de compras em PDF/CSV.
+
 Evidencia:
 
 - 2026-06-08: Tabelas `inventory_ingredients`, `product_recipe_items` e `ingredient_stock_movements`; funcoes `adjust_ingredient_stock`, `apply_ingredients_for_order`, `revert_ingredients_for_order`, trigger `trg_sync_ingredient_stock_from_order_status` em `orders` e RPC `get_recipe_costs`. Tela `/insumos` com cadastro de insumos, ajuste auditavel de saldo, ficha tecnica por produto, custo estimado e margem bruta.
 - 2026-06-10: Aba `Reposicao` em `/insumos`, com valor estimado em estoque, compra sugerida para itens abaixo do minimo e lista operacional calculada para levar cada insumo em alerta ate 2x o saldo minimo configurado.
+- 2026-06-10: Aba `Inventario` em `/insumos`, permitindo informar saldo contado, calcular divergencia e impacto estimado, e registrar a diferenca como movimento `inventory_count` auditavel via `adjust_ingredient_stock`.
 
 ---
 
