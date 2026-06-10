@@ -482,15 +482,28 @@ Objetivo: recuperar pedidos iniciados e nao concluidos.
 - [x] Criar lembrete por e-mail ou WhatsApp quando houver opt-in.
 - [x] Cupom opcional de recuperacao.
 - [x] Relatorio: abandonos, recuperados, receita recuperada.
+- [x] Diagnostico operacional da recuperacao de carrinho.
 
 ### Criterio de aceite
 
 - Restaurante consegue recuperar pelo menos parte dos pedidos iniciados.
 - Mensagens respeitam consentimento e limite de frequencia.
 
+### Backlog futuro
+
+- [ ] Tracking de eventos do funil: carrinho iniciado, checkout iniciado, opt-in, lembrete enviado, clique e recuperacao.
+- [ ] Deep link de recuperacao restaurando carrinho ou cupom automaticamente no cardapio publico.
+- [ ] Atribuicao por canal: e-mail, WhatsApp, organic retorno e cupom.
+- [ ] Teste A/B de assunto, mensagem, cupom e tempo de disparo.
+- [ ] Segmentacao por valor do carrinho, cliente recorrente, primeira compra e canal de atendimento.
+- [ ] Regras de frequencia por cliente com historico unificado de campanhas e automacoes.
+- [ ] Alertas para automacao sem disparo, baixa taxa de recuperacao ou falha recorrente no canal.
+- [ ] Relatorio de ROI com custo de cupom, receita incremental e margem estimada.
+
 Evidencia:
 
 - 2026-06-05: Tabelas `cart_abandonment_settings` / `cart_abandonment_sessions`, RPC `upsert_public_cart_abandonment_session`, trigger de recuperação em `orders`, edge `cart-abandonment-cron` (pg_cron 5 min), template `cart_abandonment_recovery`, página `/recuperacao-carrinho`, tracking no `CheckoutFlow` com opt-in e-mail/WhatsApp.
+- 2026-06-10: Pagina `/recuperacao-carrinho` ganhou diagnostico operacional com status da automacao, canais ativos, janela de disparo, cupom configurado e alertas para recuperacao pausada, falta de canal, ausencia de lembretes, janelas inadequadas e baixa conversao.
 
 ---
 
