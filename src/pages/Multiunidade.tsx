@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowRight,
+  Award,
   Building2,
   CheckCircle2,
   ClipboardCheck,
@@ -67,6 +68,11 @@ const money = new Intl.NumberFormat("pt-BR", {
 });
 
 const number = new Intl.NumberFormat("pt-BR");
+
+const percent = new Intl.NumberFormat("pt-BR", {
+  style: "percent",
+  maximumFractionDigits: 0,
+});
 
 const accessLabel: Record<RestaurantAccess["access_type"], string> = {
   owner: "Dono",
@@ -206,6 +212,25 @@ const Multiunidade = () => {
   const selectedReadinessChecks = selectedReadinessUnit
     ? Object.entries(selectedReadinessUnit.checks)
     : [];
+  const reportBenchmark = useMemo(() => {
+    const units = report?.units ?? [];
+    if (units.length === 0) return null;
+
+    const byRevenue = [...units].sort((a, b) => b.revenue - a.revenue);
+    const byOrders = [...units].sort((a, b) => b.totalOrders - a.totalOrders);
+    const byTicket = [...units].sort((a, b) => b.averageTicket - a.averageTicket);
+    const withoutSales = units
+      .filter((unit) => unit.totalOrders === 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      unitsCount: units.length,
+      topRevenue: byRevenue[0],
+      topOrders: byOrders[0],
+      topTicket: byTicket[0],
+      withoutSales,
+    };
+  }, [report?.units]);
 
   useEffect(() => {
     if (restaurants.length > 0 && selectedRestaurantIds.length === 0) {
@@ -641,6 +666,76 @@ const Multiunidade = () => {
                 <Alert variant="destructive">
                   <AlertDescription>{reportError}</AlertDescription>
                 </Alert>
+              )}
+
+              {reportBenchmark && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold">Comparativo da rede</h3>
+                    <Badge variant="outline" className="text-xs">
+                      {number.format(reportBenchmark.unitsCount)} unidade(s)
+                    </Badge>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-md border px-3 py-3">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Maior faturamento</span>
+                        <Award className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <p className="truncate text-sm font-medium">{reportBenchmark.topRevenue.name}</p>
+                      <p className="mt-1 text-lg font-semibold">
+                        {canViewFinancials ? money.format(reportBenchmark.topRevenue.revenue) : "Protegido"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {canViewFinancials && (summary?.revenue ?? 0) > 0
+                          ? `${percent.format(reportBenchmark.topRevenue.revenue / (summary?.revenue ?? 1))} da rede`
+                          : "Indicador financeiro restrito"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-md border px-3 py-3">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Mais pedidos</span>
+                        <ShoppingBasket className="h-4 w-4 text-primary" />
+                      </div>
+                      <p className="truncate text-sm font-medium">{reportBenchmark.topOrders.name}</p>
+                      <p className="mt-1 text-lg font-semibold">{number.format(reportBenchmark.topOrders.totalOrders)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {number.format(reportBenchmark.topOrders.openOrders)} aberto(s) agora
+                      </p>
+                    </div>
+
+                    <div className="rounded-md border px-3 py-3">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Maior ticket</span>
+                        <TrendingUp className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <p className="truncate text-sm font-medium">{reportBenchmark.topTicket.name}</p>
+                      <p className="mt-1 text-lg font-semibold">
+                        {canViewFinancials ? money.format(reportBenchmark.topTicket.averageTicket) : "Protegido"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {number.format(reportBenchmark.topTicket.finalizedOrders)} finalizado(s)
+                      </p>
+                    </div>
+
+                    <div className="rounded-md border px-3 py-3">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">Sem movimento</span>
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <p className="text-lg font-semibold">
+                        {number.format(reportBenchmark.withoutSales.length)}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {reportBenchmark.withoutSales.length > 0
+                          ? reportBenchmark.withoutSales.slice(0, 2).map((unit) => unit.name).join(", ")
+                          : "Todas as unidades venderam"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <div className="overflow-x-auto rounded-md border">
