@@ -50,6 +50,79 @@ export type SyncGroupMenuResult = {
   overwrite_existing: boolean;
 };
 
+export type MultiunitStaffUnit = {
+  employee_id: string;
+  restaurant_id: string;
+  restaurant_name: string;
+  user_type: RestaurantAccessType;
+  is_active: boolean;
+  permissions: string[];
+};
+
+export type MultiunitStaffMember = {
+  user_id: string;
+  source_employee_id: string;
+  employee_name: string;
+  employee_email: string;
+  user_type: RestaurantAccessType;
+  source_restaurant_id: string;
+  source_restaurant_name: string;
+  permissions: string[];
+  units: MultiunitStaffUnit[];
+};
+
+export type RestaurantGroupStaff = {
+  group_id: string | null;
+  group_name: string | null;
+  staff: MultiunitStaffMember[];
+};
+
+export type ApplyStaffAccessInput = {
+  groupId: string;
+  sourceEmployeeId: string;
+  targetRestaurantIds: string[];
+  isActive?: boolean;
+};
+
+export type ApplyStaffAccessResult = {
+  group_id: string | null;
+  source_employee_id: string | null;
+  targets_count: number;
+  employees_created: number;
+  employees_updated: number;
+  permissions_synced: number;
+};
+
+export type MultiunitReadinessStatus = "ready" | "attention" | "critical";
+
+export type MultiunitReadinessCheck = {
+  ok: boolean;
+  label: string;
+  detail: string;
+};
+
+export type MultiunitUnitReadiness = {
+  restaurant_id: string;
+  restaurant_name: string;
+  score: number;
+  status: MultiunitReadinessStatus;
+  missing: string[];
+  checks: Record<string, MultiunitReadinessCheck>;
+};
+
+export type MultiunitReadiness = {
+  group_id: string | null;
+  group_name: string | null;
+  summary: {
+    units: number;
+    ready_units: number;
+    attention_units: number;
+    critical_units: number;
+    average_score: number;
+  };
+  units: MultiunitUnitReadiness[];
+};
+
 export type MultiunitSummary = {
   units: number;
   revenue: number;

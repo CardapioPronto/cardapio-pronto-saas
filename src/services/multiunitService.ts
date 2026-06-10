@@ -1,8 +1,15 @@
 import { supabase } from "@/lib/supabase";
 import type {
+  ApplyStaffAccessInput,
+  ApplyStaffAccessResult,
   CreateRestaurantUnitInput,
   CreatedRestaurantUnit,
   MultiunitConsolidatedReport,
+  MultiunitReadiness,
+  MultiunitReadinessCheck,
+  MultiunitReadinessStatus,
+  MultiunitStaffMember,
+  RestaurantGroupStaff,
   RestaurantAccess,
   RestaurantAccessType,
   SyncGroupMenuInput,
@@ -57,11 +64,29 @@ type RpcClient = {
       p_overwrite_existing: boolean;
     },
   ): Promise<{ data: unknown; error: RpcError }>;
+  (
+    fn: "get_restaurant_group_staff",
+    args: { p_group_id: string },
+  ): Promise<{ data: unknown; error: RpcError }>;
+  (
+    fn: "apply_restaurant_group_staff_access",
+    args: {
+      p_group_id: string;
+      p_source_employee_id: string;
+      p_target_restaurant_ids: string[];
+      p_is_active: boolean;
+    },
+  ): Promise<{ data: unknown; error: RpcError }>;
+  (
+    fn: "get_restaurant_group_readiness",
+    args: { p_group_id: string },
+  ): Promise<{ data: unknown; error: RpcError }>;
 };
 
 const rpc = supabase.rpc.bind(supabase) as unknown as RpcClient;
 
 const accessTypes = new Set<RestaurantAccessType>(["owner", "manager", "employee", "viewer"]);
+const readinessStatuses = new Set<MultiunitReadinessStatus>(["ready", "attention", "critical"]);
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
@@ -76,6 +101,11 @@ const asAccessType = (value: unknown): RestaurantAccessType =>
 
 const asStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String) : [];
+
+const asReadinessStatus = (value: unknown): MultiunitReadinessStatus =>
+  typeof value === "string" && readinessStatuses.has(value as MultiunitReadinessStatus)
+    ? value as MultiunitReadinessStatus
+    : "critical";
 
 const optionalText = (value: string | null | undefined): string | null => {
   const trimmed = value?.trim() ?? "";
@@ -142,6 +172,77 @@ const normalizeReport = (value: unknown): MultiunitConsolidatedReport => {
             orders: Number(item.orders ?? 0),
           };
         })
+      : [],
+  };
+};
+
+const normalizeStaffMember = (value: unknown): MultiunitStaffMember => {
+  const row = asRecord(value);
+  return {
+    user_id: String(row.user_id ?? ""),
+    source_employee_id: String(row.source_employee_id ?? ""),
+    employee_name: String(row.employee_name ?? "Colaborador"),
+    employee_email: String(row.employee_email ?? ""),
+    user_type: asAccessType(row.user_type),
+    source_restaurant_id: String(row.source_restaurant_id ?? ""),
+    source_restaurant_name: String(row.source_restaurant_name ?? "Unidade"),
+    permissions: asStringArray(row.permissions),
+    units: Array.isArray(row.units)
+      ? row.units.map((unit) => {
+          const item = asRecord(unit);
+          return {
+            employee_id: String(item.employee_id ?? ""),
+            restaurant_id: String(item.restaurant_id ?? ""),
+            restaurant_name: String(item.restaurant_name ?? "Unidade"),
+            user_type: asAccessType(item.user_type),
+            is_active: Boolean(item.is_active),
+            permissions: asStringArray(item.permissions),
+          };
+        }).filter((unit) => unit.employee_id && unit.restaurant_id)
+      : [],
+  };
+};
+
+const normalizeReadinessCheck = (value: unknown): MultiunitReadinessCheck => {
+  const row = asRecord(value);
+  return {
+    ok: Boolean(row.ok),
+    label: String(row.label ?? "Item"),
+    detail: String(row.detail ?? ""),
+  };
+};
+
+const normalizeReadiness = (value: unknown): MultiunitReadiness => {
+  const row = asRecord(value);
+  const summary = asRecord(row.summary);
+
+  return {
+    group_id: asStringOrNull(row.group_id),
+    group_name: asStringOrNull(row.group_name),
+    summary: {
+      units: Number(summary.units ?? 0),
+      ready_units: Number(summary.ready_units ?? 0),
+      attention_units: Number(summary.attention_units ?? 0),
+      critical_units: Number(summary.critical_units ?? 0),
+      average_score: Number(summary.average_score ?? 0),
+    },
+    units: Array.isArray(row.units)
+      ? row.units.map((unit) => {
+          const item = asRecord(unit);
+          const checksRecord = asRecord(item.checks);
+          const checks = Object.fromEntries(
+            Object.entries(checksRecord).map(([key, check]) => [key, normalizeReadinessCheck(check)]),
+          );
+
+          return {
+            restaurant_id: String(item.restaurant_id ?? ""),
+            restaurant_name: String(item.restaurant_name ?? "Unidade"),
+            score: Number(item.score ?? 0),
+            status: asReadinessStatus(item.status),
+            missing: asStringArray(item.missing),
+            checks,
+          };
+        }).filter((unit) => unit.restaurant_id)
       : [],
   };
 };
@@ -243,4 +344,53 @@ export const syncRestaurantGroupMenu = async (
     costs_synced: Number(row.costs_synced ?? 0),
     overwrite_existing: Boolean(row.overwrite_existing),
   };
+};
+
+export const getRestaurantGroupStaff = async (groupId: string): Promise<RestaurantGroupStaff> => {
+  const { data, error } = await rpc("get_restaurant_group_staff", {
+    p_group_id: groupId,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const row = asRecord(data);
+  return {
+    group_id: asStringOrNull(row.group_id),
+    group_name: asStringOrNull(row.group_name),
+    staff: Array.isArray(row.staff)
+      ? row.staff.map(normalizeStaffMember).filter((member) => member.source_employee_id)
+      : [],
+  };
+};
+
+export const applyRestaurantGroupStaffAccess = async (
+  input: ApplyStaffAccessInput,
+): Promise<ApplyStaffAccessResult> => {
+  const { data, error } = await rpc("apply_restaurant_group_staff_access", {
+    p_group_id: input.groupId,
+    p_source_employee_id: input.sourceEmployeeId,
+    p_target_restaurant_ids: input.targetRestaurantIds,
+    p_is_active: input.isActive ?? true,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const row = asRecord(data);
+  return {
+    group_id: asStringOrNull(row.group_id),
+    source_employee_id: asStringOrNull(row.source_employee_id),
+    targets_count: Number(row.targets_count ?? 0),
+    employees_created: Number(row.employees_created ?? 0),
+    employees_updated: Number(row.employees_updated ?? 0),
+    permissions_synced: Number(row.permissions_synced ?? 0),
+  };
+};
+
+export const getRestaurantGroupReadiness = async (groupId: string): Promise<MultiunitReadiness> => {
+  const { data, error } = await rpc("get_restaurant_group_readiness", {
+    p_group_id: groupId,
+  });
+
+  if (error) throw new Error(error.message);
+  return normalizeReadiness(data);
 };

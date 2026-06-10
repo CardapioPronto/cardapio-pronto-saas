@@ -1,8 +1,10 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { endOfDay, format, startOfDay, subDays } from "date-fns";
 import {
+  AlertTriangle,
   Building2,
   CheckCircle2,
+  ClipboardCheck,
   Copy,
   Loader2,
   Network,
@@ -12,6 +14,7 @@ import {
   ShoppingBasket,
   Store,
   TrendingUp,
+  UsersRound,
   Wallet,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -31,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,12 +42,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRestaurantAccess } from "@/hooks/useRestaurantAccess";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import {
+  applyRestaurantGroupStaffAccess,
   createRestaurantUnit,
+  getRestaurantGroupReadiness,
+  getRestaurantGroupStaff,
   getMultiunitConsolidatedReport,
   setRestaurantGroupMenuMatrix,
   syncRestaurantGroupMenu,
 } from "@/services/multiunitService";
-import type { MultiunitConsolidatedReport, RestaurantAccess } from "@/types/multiunit";
+import type {
+  MultiunitConsolidatedReport,
+  MultiunitReadiness,
+  MultiunitReadinessStatus,
+  MultiunitStaffMember,
+  RestaurantAccess,
+} from "@/types/multiunit";
 import { toast } from "sonner";
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -58,6 +71,18 @@ const accessLabel: Record<RestaurantAccess["access_type"], string> = {
   manager: "Gerente",
   employee: "Equipe",
   viewer: "Leitura",
+};
+
+const readinessLabel: Record<MultiunitReadinessStatus, string> = {
+  ready: "Pronta",
+  attention: "Atenção",
+  critical: "Crítica",
+};
+
+const readinessBadgeClassName: Record<MultiunitReadinessStatus, string> = {
+  ready: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
+  attention: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
+  critical: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
 };
 
 const uniqueGroups = (restaurants: RestaurantAccess[]) => {
@@ -115,10 +140,22 @@ const Multiunidade = () => {
   const [syncingMenu, setSyncingMenu] = useState(false);
   const [syncTargetRestaurantIds, setSyncTargetRestaurantIds] = useState<string[]>([]);
   const [overwriteExistingMenu, setOverwriteExistingMenu] = useState(true);
+  const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffMembers, setStaffMembers] = useState<MultiunitStaffMember[]>([]);
+  const [selectedStaffEmployeeId, setSelectedStaffEmployeeId] = useState("");
+  const [staffTargetRestaurantIds, setStaffTargetRestaurantIds] = useState<string[]>([]);
+  const [applyingStaffAccess, setApplyingStaffAccess] = useState(false);
+  const [readiness, setReadiness] = useState<MultiunitReadiness | null>(null);
+  const [loadingReadiness, setLoadingReadiness] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
   const groups = useMemo(() => uniqueGroups(restaurants), [restaurants]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? groups[0] ?? null;
-  const groupRestaurants = restaurants.filter((restaurant) => restaurant.group_id === selectedGroup?.id);
+  const groupRestaurants = useMemo(
+    () => restaurants.filter((restaurant) => restaurant.group_id === selectedGroup?.id),
+    [restaurants, selectedGroup?.id],
+  );
   const currentMaster = groupRestaurants.find((restaurant) => restaurant.is_group_master) ?? groupRestaurants[0] ?? null;
   const currentMasterRestaurantId = currentMaster?.restaurant_id ?? "";
   const currentMasterMenuSyncEnabled = currentMaster?.menu_sync_enabled ?? false;
@@ -137,7 +174,18 @@ const Multiunidade = () => {
     || groupRestaurants.some((restaurant) => restaurant.access_type === "owner")
     || hasAnyPermission(["settings_manage", "settings_establishment_manage"])
   );
+  const canManageGroupStaff = Boolean(selectedGroup) && (
+    isSuperAdmin()
+    || groupRestaurants.some((restaurant) => restaurant.access_type === "owner")
+    || hasAnyPermission(["employees_manage", "settings_manage"])
+  );
   const canSyncMenu = canManageGroupCatalog && Boolean(matrixRestaurantId) && syncableRestaurants.length > 0;
+  const selectedStaffMember = staffMembers.find(
+    (member) => member.source_employee_id === selectedStaffEmployeeId,
+  ) ?? null;
+  const staffTargetRestaurants = selectedStaffMember
+    ? groupRestaurants.filter((restaurant) => restaurant.restaurant_id !== selectedStaffMember.source_restaurant_id)
+    : groupRestaurants;
 
   useEffect(() => {
     if (restaurants.length > 0 && selectedRestaurantIds.length === 0) {
@@ -178,11 +226,36 @@ const Multiunidade = () => {
     }
   }, [canViewFinancials, dateFrom, dateTo, selectedRestaurantIds]);
 
+  const loadReadiness = useCallback(async () => {
+    if (!selectedGroup) {
+      setReadiness(null);
+      return;
+    }
+
+    setLoadingReadiness(true);
+    setReadinessError(null);
+
+    try {
+      const data = await getRestaurantGroupReadiness(selectedGroup.id);
+      setReadiness(data);
+    } catch (error) {
+      setReadinessError(error instanceof Error ? error.message : "Erro ao carregar prontidão das unidades");
+    } finally {
+      setLoadingReadiness(false);
+    }
+  }, [selectedGroup]);
+
   useEffect(() => {
     if (!accessLoading && selectedRestaurantIds.length > 0) {
       void loadReport();
     }
   }, [accessLoading, loadReport, selectedRestaurantIds.length]);
+
+  useEffect(() => {
+    if (!accessLoading && selectedGroup) {
+      void loadReadiness();
+    }
+  }, [accessLoading, loadReadiness, selectedGroup]);
 
   const toggleRestaurant = (restaurantId: string, checked: boolean) => {
     setSelectedRestaurantIds((current) => {
@@ -237,6 +310,7 @@ const Multiunidade = () => {
       });
 
       await refreshAccess();
+      await loadReadiness();
       setSelectedRestaurantIds((current) => Array.from(new Set([...current, created.restaurant_id])));
       setUnitForm(emptyUnitForm);
       setUnitDialogOpen(false);
@@ -307,6 +381,7 @@ const Multiunidade = () => {
 
       setSyncDialogOpen(false);
       await loadReport();
+      await loadReadiness();
       toast.success(
         `Cardápio sincronizado em ${number.format(result.units_synced)} unidade(s): `
         + `${number.format(result.products_created)} produto(s) criado(s), `
@@ -319,7 +394,94 @@ const Multiunidade = () => {
     }
   };
 
+  const getDefaultStaffTargetIds = useCallback((member: MultiunitStaffMember | null) => {
+    if (!member) return [];
+    return groupRestaurants
+      .filter((restaurant) => restaurant.restaurant_id !== member.source_restaurant_id)
+      .map((restaurant) => restaurant.restaurant_id);
+  }, [groupRestaurants]);
+
+  const loadGroupStaff = useCallback(async () => {
+    if (!selectedGroup || !canManageGroupStaff) return;
+
+    setLoadingStaff(true);
+    try {
+      const data = await getRestaurantGroupStaff(selectedGroup.id);
+      const nextStaff = data.staff;
+      const nextSelected = nextStaff.find(
+        (member) => member.source_employee_id === selectedStaffEmployeeId,
+      ) ?? nextStaff[0] ?? null;
+
+      setStaffMembers(nextStaff);
+      setSelectedStaffEmployeeId(nextSelected?.source_employee_id ?? "");
+      setStaffTargetRestaurantIds(getDefaultStaffTargetIds(nextSelected));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar a equipe da rede.");
+    } finally {
+      setLoadingStaff(false);
+    }
+  }, [canManageGroupStaff, selectedGroup, selectedStaffEmployeeId, getDefaultStaffTargetIds]);
+
+  const handleStaffDialogOpenChange = (open: boolean) => {
+    if (applyingStaffAccess) return;
+    setStaffDialogOpen(open);
+    if (open) {
+      void loadGroupStaff();
+    }
+  };
+
+  const handleStaffMemberChange = (sourceEmployeeId: string) => {
+    const member = staffMembers.find((item) => item.source_employee_id === sourceEmployeeId) ?? null;
+    setSelectedStaffEmployeeId(sourceEmployeeId);
+    setStaffTargetRestaurantIds(getDefaultStaffTargetIds(member));
+  };
+
+  const toggleStaffTarget = (restaurantId: string, checked: boolean) => {
+    setStaffTargetRestaurantIds((current) => {
+      if (checked) return Array.from(new Set([...current, restaurantId]));
+      return current.filter((id) => id !== restaurantId);
+    });
+  };
+
+  const handleApplyStaffAccess = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedGroup || !selectedStaffMember) {
+      toast.error("Selecione um colaborador para aplicar acesso.");
+      return;
+    }
+
+    if (staffTargetRestaurantIds.length === 0) {
+      toast.error("Selecione pelo menos uma filial para receber o acesso.");
+      return;
+    }
+
+    setApplyingStaffAccess(true);
+    try {
+      const result = await applyRestaurantGroupStaffAccess({
+        groupId: selectedGroup.id,
+        sourceEmployeeId: selectedStaffMember.source_employee_id,
+        targetRestaurantIds: staffTargetRestaurantIds,
+        isActive: true,
+      });
+
+      await loadGroupStaff();
+      await loadReadiness();
+      toast.success(
+        `Acesso aplicado em ${number.format(result.targets_count)} unidade(s): `
+        + `${number.format(result.employees_created)} criado(s), `
+        + `${number.format(result.employees_updated)} atualizado(s).`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível aplicar o acesso nas unidades.");
+    } finally {
+      setApplyingStaffAccess(false);
+    }
+  };
+
   const summary = report?.summary;
+  const readinessSummary = readiness?.summary;
+  const readinessActionUnits = (readinessSummary?.attention_units ?? 0) + (readinessSummary?.critical_units ?? 0);
   const periodoInvalido = dateFrom > dateTo;
 
   return (
@@ -606,6 +768,243 @@ const Multiunidade = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            <Dialog open={staffDialogOpen} onOpenChange={handleStaffDialogOpenChange}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UsersRound className="h-5 w-5" />
+                    Equipe da rede
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Aplique o acesso de um colaborador nas filiais mantendo cargo e permissões por unidade.
+                  </p>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full" disabled={!canManageGroupStaff || !selectedGroup}>
+                      <UsersRound className="mr-2 h-4 w-4" />
+                      Gerenciar acessos
+                    </Button>
+                  </DialogTrigger>
+                  {!canManageGroupStaff && (
+                    <p className="text-xs text-muted-foreground">
+                      Apenas donos, super admins ou usuários com permissão de funcionários podem gerenciar acessos da rede.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Acesso da equipe por unidade</DialogTitle>
+                  <DialogDescription>
+                    Copie o cargo e as permissões do colaborador de origem para as filiais selecionadas.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form id="multiunit-staff-access-form" className="space-y-4" onSubmit={handleApplyStaffAccess}>
+                  <div className="space-y-2">
+                    <Label>Colaborador de origem</Label>
+                    <Select
+                      value={selectedStaffEmployeeId}
+                      onValueChange={handleStaffMemberChange}
+                      disabled={loadingStaff || staffMembers.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingStaff ? "Carregando equipe..." : "Selecionar colaborador"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffMembers.map((member) => (
+                          <SelectItem key={member.source_employee_id} value={member.source_employee_id}>
+                            {member.employee_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedStaffMember && (
+                    <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{selectedStaffMember.employee_name}</span>
+                        <Badge variant="outline">{accessLabel[selectedStaffMember.user_type]}</Badge>
+                        <Badge variant="secondary">
+                          {number.format(selectedStaffMember.permissions.length)} permissão(ões)
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{selectedStaffMember.employee_email}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Origem: {selectedStaffMember.source_restaurant_name}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Filiais de destino</Label>
+                    <div className="grid max-h-56 gap-2 overflow-y-auto rounded-md border p-2">
+                      {staffTargetRestaurants.map((restaurant) => {
+                        const existingUnit = selectedStaffMember?.units.find(
+                          (unit) => unit.restaurant_id === restaurant.restaurant_id && unit.is_active,
+                        );
+
+                        return (
+                          <label
+                            key={restaurant.restaurant_id}
+                            className="flex min-h-12 items-center gap-3 rounded-md px-2 py-1 text-sm hover:bg-muted"
+                          >
+                            <Checkbox
+                              checked={staffTargetRestaurantIds.includes(restaurant.restaurant_id)}
+                              onCheckedChange={(checked) => toggleStaffTarget(restaurant.restaurant_id, checked === true)}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-medium">{restaurant.restaurant_name}</span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {existingUnit ? `Já possui acesso como ${accessLabel[existingUnit.user_type]}` : "Sem acesso ativo"}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+
+                      {!loadingStaff && staffTargetRestaurants.length === 0 && (
+                        <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+                          Adicione outra unidade à rede para aplicar acessos.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <Alert>
+                    <AlertDescription>
+                      Esta ação não remove acessos existentes em unidades que ficarem desmarcadas.
+                    </AlertDescription>
+                  </Alert>
+                </form>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleStaffDialogOpenChange(false)}
+                    disabled={applyingStaffAccess}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="multiunit-staff-access-form"
+                    disabled={
+                      applyingStaffAccess
+                      || loadingStaff
+                      || !selectedStaffMember
+                      || staffTargetRestaurantIds.length === 0
+                    }
+                  >
+                    {applyingStaffAccess ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UsersRound className="mr-2 h-4 w-4" />}
+                    Aplicar acesso
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardCheck className="h-5 w-5" />
+                    Prontidão das unidades
+                  </CardTitle>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void loadReadiness()}
+                    disabled={loadingReadiness || !selectedGroup}
+                    aria-label="Atualizar prontidão das unidades"
+                  >
+                    {loadingReadiness ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Prontas</p>
+                    <p className="font-semibold">
+                      {number.format(readinessSummary?.ready_units ?? 0)}/{number.format(readinessSummary?.units ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Média</p>
+                    <p className="font-semibold">{number.format(readinessSummary?.average_score ?? 0)}%</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Ações</p>
+                    <p className="flex items-center gap-1 font-semibold">
+                      {readinessActionUnits > 0 && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
+                      {number.format(readinessActionUnits)}
+                    </p>
+                  </div>
+                </div>
+
+                <Progress value={readinessSummary?.average_score ?? 0} className="h-2" />
+
+                {readinessError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{readinessError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {loadingReadiness && !readiness && (
+                  <div className="flex items-center justify-center rounded-md border py-6 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Carregando prontidão...
+                  </div>
+                )}
+
+                {!loadingReadiness && readiness?.units.length === 0 && (
+                  <div className="rounded-md border py-6 text-center text-sm text-muted-foreground">
+                    Nenhuma unidade ativa nesta rede.
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {readiness?.units.map((unit) => {
+                    const visibleMissing = unit.missing.slice(0, 2);
+                    const extraMissing = Math.max(unit.missing.length - visibleMissing.length, 0);
+
+                    return (
+                      <div key={unit.restaurant_id} className="rounded-md border px-3 py-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{unit.restaurant_name}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {visibleMissing.length > 0
+                                ? `${visibleMissing.join(", ")}${extraMissing > 0 ? ` +${extraMissing}` : ""}`
+                                : "Sem pendências críticas."}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className={readinessBadgeClassName[unit.status]}>
+                            {readinessLabel[unit.status]}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Progress value={unit.score} className="h-1.5 flex-1" />
+                          <span className="w-10 text-right text-xs text-muted-foreground">
+                            {number.format(unit.score)}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
