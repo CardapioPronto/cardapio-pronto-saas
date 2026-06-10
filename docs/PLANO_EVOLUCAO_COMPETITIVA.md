@@ -506,15 +506,28 @@ Objetivo: aumentar ticket medio.
 - [x] Combos sugeridos no carrinho.
 - [x] "Clientes tambem pedem" com base em dados reais quando houver volume.
 - [x] Regra manual como fallback.
+- [x] Diagnostico de cobertura e qualidade das regras de upsell.
 
 ### Criterio de aceite
 
 - Dono consegue configurar upsell sem conhecimento tecnico.
 - Cliente recebe sugestoes uteis sem poluir o checkout.
 
+### Backlog futuro
+
+- [ ] Atribuicao por regra: impressoes, cliques, adicoes ao carrinho, conversao e receita incremental.
+- [ ] Teste A/B de sugestoes, titulos e posicoes de exibicao.
+- [ ] Sugestao automatica baseada em margem, estoque disponivel e historico de venda.
+- [ ] Regras por canal: mesa, balcao, delivery e retirada.
+- [ ] Personalizacao por perfil do cliente: recorrente, alto ticket, inativo e primeira compra.
+- [ ] Biblioteca de modelos de upsell por tipo de restaurante.
+- [ ] Agenda sazonal de combos e campanhas por data comemorativa.
+- [ ] Protecao automatica para nao sugerir item indisponivel, com baixo estoque ou baixa margem.
+
 Evidencia:
 
 - 2026-06-08: Tabela `menu_upsell_rules`, RPC publica `get_public_menu_upsell`, aba `Upsell` em Cardapio Digital, destaques por horario, sugestoes no modal do produto, combos no carrinho e fallback manual para "clientes tambem pedem". O RPC tambem gera pares reais por coocorrencia de itens em pedidos finalizados dos ultimos 120 dias quando houver pelo menos 3 pedidos em comum.
+- 2026-06-10: Aba `Upsell` ganhou diagnostico de configuracao com regras ativas, cobertura direta de produtos, posicoes usadas, alertas para lacunas de configuracao e regras que apontam para produto ausente, indisponivel ou sem gatilho valido.
 
 ---
 
