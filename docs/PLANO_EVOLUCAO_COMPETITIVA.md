@@ -531,6 +531,7 @@ Objetivo: evoluir estoque para controle de custo real.
 - [x] Baixa de insumo por pedido finalizado.
 - [x] Custo estimado do produto.
 - [x] Margem bruta por produto.
+- [x] Lista de reposicao sugerida por baixo saldo.
 
 ### Criterio de aceite
 
@@ -540,6 +541,7 @@ Objetivo: evoluir estoque para controle de custo real.
 Evidencia:
 
 - 2026-06-08: Tabelas `inventory_ingredients`, `product_recipe_items` e `ingredient_stock_movements`; funcoes `adjust_ingredient_stock`, `apply_ingredients_for_order`, `revert_ingredients_for_order`, trigger `trg_sync_ingredient_stock_from_order_status` em `orders` e RPC `get_recipe_costs`. Tela `/insumos` com cadastro de insumos, ajuste auditavel de saldo, ficha tecnica por produto, custo estimado e margem bruta.
+- 2026-06-10: Aba `Reposicao` em `/insumos`, com valor estimado em estoque, compra sugerida para itens abaixo do minimo e lista operacional calculada para levar cada insumo em alerta ate 2x o saldo minimo configurado.
 
 ---
 

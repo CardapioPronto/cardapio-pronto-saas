@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from '@/components/ui/sonner-toast';
-import { Loader2, PackagePlus, Plus, Trash2, UtensilsCrossed } from 'lucide-react';
+import { AlertTriangle, Loader2, PackageCheck, PackagePlus, Plus, ShoppingCart, Trash2, UtensilsCrossed, Wallet } from 'lucide-react';
 
 type Unit = 'g' | 'kg' | 'ml' | 'l' | 'un' | 'porcao';
 
@@ -81,6 +81,7 @@ const units: Array<{ value: Unit; label: string }> = [
 ];
 
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const quantity = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 });
 
 const asNumber = (value: unknown) => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -89,6 +90,8 @@ const asNumber = (value: unknown) => {
 
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
+
+const formatQuantity = (value: number, unit: Unit) => `${quantity.format(value)} ${unit}`;
 
 const Insumos = () => {
   const { user, loading: userLoading } = useCurrentUser();
@@ -193,6 +196,41 @@ const Insumos = () => {
   const lowStockCount = ingredients.filter(
     (ingredient) => ingredient.min_quantity != null && ingredient.current_quantity <= ingredient.min_quantity,
   ).length;
+  const stockValue = useMemo(
+    () => ingredients.reduce(
+      (total, ingredient) => total + (ingredient.current_quantity * ingredient.unit_cost),
+      0,
+    ),
+    [ingredients],
+  );
+  const replenishmentItems = useMemo(
+    () => ingredients
+      .filter((ingredient) => ingredient.min_quantity != null && ingredient.current_quantity <= ingredient.min_quantity)
+      .map((ingredient) => {
+        const minQuantity = ingredient.min_quantity ?? 0;
+        const targetQuantity = minQuantity * 2;
+        const suggestedQuantity = Math.max(targetQuantity - ingredient.current_quantity, 0);
+        const shortageQuantity = Math.max(minQuantity - ingredient.current_quantity, 0);
+        const coverageRatio = minQuantity > 0 ? ingredient.current_quantity / minQuantity : 0;
+
+        return {
+          ...ingredient,
+          minQuantity,
+          targetQuantity,
+          suggestedQuantity,
+          shortageQuantity,
+          coverageRatio,
+          estimatedCost: suggestedQuantity * ingredient.unit_cost,
+        };
+      })
+      .filter((item) => item.suggestedQuantity > 0)
+      .sort((a, b) => a.coverageRatio - b.coverageRatio || b.estimatedCost - a.estimatedCost),
+    [ingredients],
+  );
+  const replenishmentCost = useMemo(
+    () => replenishmentItems.reduce((total, item) => total + item.estimatedCost, 0),
+    [replenishmentItems],
+  );
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['inventory-ingredients', restaurantId] });
@@ -316,7 +354,7 @@ const Insumos = () => {
   return (
     <DashboardLayout title="Insumos e ficha técnica">
       <div className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Insumos ativos</CardDescription>
@@ -335,11 +373,34 @@ const Insumos = () => {
               <CardTitle>{recipeCosts.filter((item) => item.ingredientCount > 0).length}</CardTitle>
             </CardHeader>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardDescription>Valor em estoque</CardDescription>
+                  <CardTitle>{money.format(stockValue)}</CardTitle>
+                </div>
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardDescription>Reposição sugerida</CardDescription>
+                  <CardTitle>{money.format(replenishmentCost)}</CardTitle>
+                </div>
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Card>
         </div>
 
         <Tabs defaultValue="ingredients" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
             <TabsTrigger value="ingredients">Insumos</TabsTrigger>
+            <TabsTrigger value="replenishment">Reposição</TabsTrigger>
             <TabsTrigger value="recipes">Ficha técnica</TabsTrigger>
             <TabsTrigger value="costs">Custos</TabsTrigger>
             <TabsTrigger value="movements">Movimentos</TabsTrigger>
@@ -451,6 +512,89 @@ const Insumos = () => {
                             </td>
                             <td>{ingredient.min_quantity ?? '-'}</td>
                             <td>{money.format(ingredient.unit_cost)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="replenishment" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Itens para repor</CardDescription>
+                  <CardTitle>{replenishmentItems.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Compra estimada</CardDescription>
+                  <CardTitle>{money.format(replenishmentCost)}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Valor em estoque</CardDescription>
+                  <CardTitle>{money.format(stockValue)}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Lista de reposição sugerida</CardTitle>
+                <CardDescription>
+                  Sugestão calculada para levar cada insumo em alerta até 2x o saldo mínimo configurado.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {replenishmentItems.length === 0 ? (
+                  <EmptyState
+                    icon={PackageCheck}
+                    title="Nenhuma reposição necessária"
+                    description="Os insumos com saldo mínimo configurado estão acima do ponto de reposição."
+                  />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b text-left text-muted-foreground">
+                        <tr>
+                          <th className="py-2">Insumo</th>
+                          <th>Saldo atual</th>
+                          <th>Mínimo</th>
+                          <th>Comprar</th>
+                          <th>Custo estimado</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {replenishmentItems.map((item) => (
+                          <tr key={item.id} className="border-b last:border-0">
+                            <td className="py-3 font-medium">{item.name}</td>
+                            <td>{formatQuantity(item.current_quantity, item.unit)}</td>
+                            <td>{formatQuantity(item.minQuantity, item.unit)}</td>
+                            <td>
+                              <Badge variant="outline">
+                                {formatQuantity(item.suggestedQuantity, item.unit)}
+                              </Badge>
+                            </td>
+                            <td>{money.format(item.estimatedCost)}</td>
+                            <td>
+                              <Badge variant={item.current_quantity <= 0 ? 'destructive' : 'secondary'}>
+                                {item.current_quantity <= 0 ? (
+                                  <>
+                                    <AlertTriangle className="mr-1 h-3 w-3" />
+                                    Sem saldo
+                                  </>
+                                ) : (
+                                  'Baixo saldo'
+                                )}
+                              </Badge>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
