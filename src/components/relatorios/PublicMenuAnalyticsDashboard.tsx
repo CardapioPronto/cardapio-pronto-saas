@@ -8,6 +8,7 @@ import {
   MousePointerClick,
   Percent,
   RefreshCw,
+  SearchX,
   ShoppingCart,
   Store,
   Target,
@@ -40,6 +41,46 @@ const sourceLabel = (source: string) => {
   return source;
 };
 
+const productDiagnostic = (code: string) => {
+  if (code === "clicked_not_added") {
+    return {
+      label: "Sem sacola",
+      message: "Recebe clique, mas não vira item na sacola.",
+      variant: "destructive" as const,
+    };
+  }
+
+  if (code === "low_cart_conversion") {
+    return {
+      label: "Baixa sacola",
+      message: "Clique alto com baixa intenção de compra.",
+      variant: "secondary" as const,
+    };
+  }
+
+  if (code === "low_order_conversion") {
+    return {
+      label: "Baixo pedido",
+      message: "Entra na sacola, mas perde antes da conclusão.",
+      variant: "secondary" as const,
+    };
+  }
+
+  if (code === "interest_without_sale") {
+    return {
+      label: "Sem venda",
+      message: "Tem interesse, mas não aparece em pedidos concluídos.",
+      variant: "secondary" as const,
+    };
+  }
+
+  return {
+    label: "Saudável",
+    message: "Sem gargalo relevante no período.",
+    variant: "outline" as const,
+  };
+};
+
 export const PublicMenuAnalyticsDashboard = () => {
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(subDays(today, 29));
@@ -49,6 +90,8 @@ export const PublicMenuAnalyticsDashboard = () => {
   const summary = data?.summary;
   const steps = data?.steps ?? [];
   const sources = data?.sources ?? [];
+  const products = data?.products ?? [];
+  const searches = data?.searches ?? [];
 
   const diagnostic = useMemo(() => {
     const visits = summary?.menuViews ?? 0;
@@ -67,6 +110,15 @@ export const PublicMenuAnalyticsDashboard = () => {
         icon: MousePointerClick,
         message: "Poucos visitantes estão abrindo produtos. Revise fotos, nomes e destaque das categorias.",
         variant: "destructive" as const,
+      };
+    }
+
+    if ((summary?.searches ?? 0) >= 3 && (summary?.searchNoResultRate ?? 0) >= 30) {
+      return {
+        status: "Busca",
+        icon: SearchX,
+        message: "Muitas buscas não encontram produto. Pode existir demanda reprimida ou nome de produto difícil de achar.",
+        variant: "secondary" as const,
       };
     }
 
@@ -181,7 +233,7 @@ export const PublicMenuAnalyticsDashboard = () => {
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Visualizações</CardTitle>
@@ -234,6 +286,19 @@ export const PublicMenuAnalyticsDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{percent(summary?.viewToOrderRate ?? 0)}</div>
             <p className="text-xs text-muted-foreground">{number.format(summary?.ordersCompleted ?? 0)} pedidos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Busca sem resultado</CardTitle>
+            <SearchX className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{percent(summary?.searchNoResultRate ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">
+              {number.format(summary?.searchesWithoutResults ?? 0)} de {number.format(summary?.searches ?? 0)} buscas
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -301,6 +366,105 @@ export const PublicMenuAnalyticsDashboard = () => {
                       <TableCell className="text-right">{number.format(source.ordersCompleted)}</TableCell>
                       <TableCell className="text-right">{percent(source.conversionRate)}</TableCell>
                       <TableCell className="text-right">{money.format(source.revenue)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Diagnóstico por produto</CardTitle>
+            <CardDescription>Produtos com maior chance de ajuste em foto, preço, descrição ou oferta.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead className="text-right">Cliques</TableHead>
+                    <TableHead className="text-right">Sacola</TableHead>
+                    <TableHead className="text-right">Pedidos</TableHead>
+                    <TableHead className="text-right">Clique → sacola</TableHead>
+                    <TableHead className="text-right">Receita</TableHead>
+                    <TableHead>Diagnóstico</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                        Nenhum produto com eventos suficientes no período.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    products.map((product) => {
+                      const diagnosticItem = productDiagnostic(product.diagnosticCode);
+                      return (
+                        <TableRow key={product.productId}>
+                          <TableCell className="min-w-44 font-medium">{product.productName}</TableCell>
+                          <TableCell className="min-w-32 text-muted-foreground">
+                            {product.categoryName || "-"}
+                          </TableCell>
+                          <TableCell className="text-right">{number.format(product.productClicks)}</TableCell>
+                          <TableCell className="text-right">{number.format(product.addToCart)}</TableCell>
+                          <TableCell className="text-right">{number.format(product.ordersCompleted)}</TableCell>
+                          <TableCell className="text-right">{percent(product.clickToCartRate)}</TableCell>
+                          <TableCell className="text-right">{money.format(product.revenue)}</TableCell>
+                          <TableCell className="min-w-44">
+                            <div className="space-y-1">
+                              <Badge variant={diagnosticItem.variant}>{diagnosticItem.label}</Badge>
+                              <p className="text-xs text-muted-foreground">{diagnosticItem.message}</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Busca do cardápio</CardTitle>
+            <CardDescription>Termos que indicam demanda ou dificuldade de encontrar itens.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Termo</TableHead>
+                  <TableHead className="text-right">Buscas</TableHead>
+                  <TableHead className="text-right">Sem resultado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {searches.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
+                      Nenhuma busca registrada no período.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  searches.map((search) => (
+                    <TableRow key={search.query}>
+                      <TableCell className="max-w-40 truncate font-medium">{search.query}</TableCell>
+                      <TableCell className="text-right">{number.format(search.searches)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col items-end">
+                          <span>{number.format(search.noResults)}</span>
+                          <span className="text-xs text-muted-foreground">{percent(search.noResultRate)}</span>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

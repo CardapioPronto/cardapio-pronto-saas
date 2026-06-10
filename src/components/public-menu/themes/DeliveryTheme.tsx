@@ -27,6 +27,7 @@ const DeliveryLayout = ({ data }: Props) => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<AddItemModalProduct | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const lastSearchTrackingRef = useRef('');
   const { count, subtotal, addItem } = useCart();
 
   const primary = data.theme.colors.primary;
@@ -47,6 +48,33 @@ const DeliveryLayout = ({ data }: Props) => {
       }))
       .filter(c => c.products.length > 0);
   }, [data.categories, search]);
+
+  const searchResultCount = useMemo(
+    () => filteredCategories.reduce((sum, category) => sum + category.products.length, 0),
+    [filteredCategories],
+  );
+
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 2) return;
+
+    const eventKey = `${query.toLowerCase()}::${searchResultCount}`;
+    const timer = window.setTimeout(() => {
+      if (lastSearchTrackingRef.current === eventKey) return;
+      lastSearchTrackingRef.current = eventKey;
+      trackPublicMenuEventQuietly({
+        restaurantId: data.restaurant.id,
+        eventType: searchResultCount > 0 ? 'search_performed' : 'search_no_results',
+        metadata: {
+          query,
+          result_count: searchResultCount,
+          category_count: filteredCategories.length,
+        },
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [data.restaurant.id, filteredCategories.length, search, searchResultCount]);
 
   const scrollToCategory = (id: string) => {
     setActiveCategory(id);

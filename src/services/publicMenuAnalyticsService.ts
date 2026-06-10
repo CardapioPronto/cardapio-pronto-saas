@@ -7,7 +7,9 @@ export type PublicMenuAnalyticsEventType =
   | "product_click"
   | "add_to_cart"
   | "checkout_started"
-  | "order_completed";
+  | "order_completed"
+  | "search_performed"
+  | "search_no_results";
 
 export type PublicMenuFunnelSummary = {
   menuViews: number;
@@ -15,11 +17,14 @@ export type PublicMenuFunnelSummary = {
   addToCart: number;
   checkoutStarted: number;
   ordersCompleted: number;
+  searches: number;
+  searchesWithoutResults: number;
   viewToProductRate: number;
   productToCartRate: number;
   cartToCheckoutRate: number;
   checkoutToOrderRate: number;
   viewToOrderRate: number;
+  searchNoResultRate: number;
 };
 
 export type PublicMenuFunnelStep = {
@@ -41,10 +46,39 @@ export type PublicMenuFunnelSource = {
   conversionRate: number;
 };
 
+export type PublicMenuProductDiagnostic = {
+  productId: string;
+  productName: string;
+  categoryName: string | null;
+  productClicks: number;
+  addToCart: number;
+  ordersCompleted: number;
+  soldQuantity: number;
+  revenue: number;
+  clickToCartRate: number;
+  cartToOrderRate: number;
+  diagnosticCode:
+    | "clicked_not_added"
+    | "low_cart_conversion"
+    | "low_order_conversion"
+    | "interest_without_sale"
+    | "healthy";
+};
+
+export type PublicMenuSearchDiagnostic = {
+  query: string;
+  searches: number;
+  noResults: number;
+  maxResultCount: number;
+  noResultRate: number;
+};
+
 export type PublicMenuConversionFunnel = {
   summary: PublicMenuFunnelSummary;
   steps: PublicMenuFunnelStep[];
   sources: PublicMenuFunnelSource[];
+  products: PublicMenuProductDiagnostic[];
+  searches: PublicMenuSearchDiagnostic[];
 };
 
 type RpcClient = {
@@ -74,17 +108,22 @@ const EMPTY_SUMMARY: PublicMenuFunnelSummary = {
   addToCart: 0,
   checkoutStarted: 0,
   ordersCompleted: 0,
+  searches: 0,
+  searchesWithoutResults: 0,
   viewToProductRate: 0,
   productToCartRate: 0,
   cartToCheckoutRate: 0,
   checkoutToOrderRate: 0,
   viewToOrderRate: 0,
+  searchNoResultRate: 0,
 };
 
 const EMPTY_FUNNEL: PublicMenuConversionFunnel = {
   summary: EMPTY_SUMMARY,
   steps: [],
   sources: [],
+  products: [],
+  searches: [],
 };
 
 const isRecord = (value: unknown): value is JsonRecord =>
@@ -170,6 +209,8 @@ const normalizeFunnel = (value: unknown): PublicMenuConversionFunnel => {
   const summary = isRecord(value.summary) ? value.summary : {};
   const steps = Array.isArray(value.steps) ? value.steps : [];
   const sources = Array.isArray(value.sources) ? value.sources : [];
+  const products = Array.isArray(value.products) ? value.products : [];
+  const searches = Array.isArray(value.searches) ? value.searches : [];
 
   return {
     summary: {
@@ -178,11 +219,14 @@ const normalizeFunnel = (value: unknown): PublicMenuConversionFunnel => {
       addToCart: asNumber(summary.addToCart),
       checkoutStarted: asNumber(summary.checkoutStarted),
       ordersCompleted: asNumber(summary.ordersCompleted),
+      searches: asNumber(summary.searches),
+      searchesWithoutResults: asNumber(summary.searchesWithoutResults),
       viewToProductRate: asNumber(summary.viewToProductRate),
       productToCartRate: asNumber(summary.productToCartRate),
       cartToCheckoutRate: asNumber(summary.cartToCheckoutRate),
       checkoutToOrderRate: asNumber(summary.checkoutToOrderRate),
       viewToOrderRate: asNumber(summary.viewToOrderRate),
+      searchNoResultRate: asNumber(summary.searchNoResultRate),
     },
     steps: steps.filter(isRecord).map((step) => ({
       position: asNumber(step.position),
@@ -200,6 +244,26 @@ const normalizeFunnel = (value: unknown): PublicMenuConversionFunnel => {
       ordersCompleted: asNumber(source.ordersCompleted),
       revenue: asNumber(source.revenue),
       conversionRate: asNumber(source.conversionRate),
+    })),
+    products: products.filter(isRecord).map((product) => ({
+      productId: asString(product.productId),
+      productName: asString(product.productName, "Produto"),
+      categoryName: typeof product.categoryName === "string" ? product.categoryName : null,
+      productClicks: asNumber(product.productClicks),
+      addToCart: asNumber(product.addToCart),
+      ordersCompleted: asNumber(product.ordersCompleted),
+      soldQuantity: asNumber(product.soldQuantity),
+      revenue: asNumber(product.revenue),
+      clickToCartRate: asNumber(product.clickToCartRate),
+      cartToOrderRate: asNumber(product.cartToOrderRate),
+      diagnosticCode: asString(product.diagnosticCode, "healthy") as PublicMenuProductDiagnostic["diagnosticCode"],
+    })),
+    searches: searches.filter(isRecord).map((search) => ({
+      query: asString(search.query),
+      searches: asNumber(search.searches),
+      noResults: asNumber(search.noResults),
+      maxResultCount: asNumber(search.maxResultCount),
+      noResultRate: asNumber(search.noResultRate),
     })),
   };
 };
