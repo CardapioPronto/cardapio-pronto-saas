@@ -1,0 +1,314 @@
+import { useMemo, useState } from "react";
+import { format, subDays } from "date-fns";
+import {
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  Loader2,
+  MousePointerClick,
+  Percent,
+  RefreshCw,
+  ShoppingCart,
+  Store,
+  Target,
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { usePublicMenuConversionFunnel } from "@/hooks/usePublicMenuConversionFunnel";
+
+const number = new Intl.NumberFormat("pt-BR");
+
+const money = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+const percent = (value: number) => `${Number(value || 0).toFixed(1).replace(".", ",")}%`;
+
+const sourceLabel = (source: string) => {
+  if (!source || source === "direct") return "Direto";
+  if (source.includes("instagram")) return "Instagram";
+  if (source.includes("whatsapp") || source.includes("wa.me")) return "WhatsApp";
+  if (source.includes("google")) return "Google";
+  return source;
+};
+
+export const PublicMenuAnalyticsDashboard = () => {
+  const today = new Date();
+  const [dateFrom, setDateFrom] = useState(subDays(today, 29));
+  const [dateTo, setDateTo] = useState(today);
+  const { data, loading, error, refetch } = usePublicMenuConversionFunnel({ dateFrom, dateTo });
+
+  const summary = data?.summary;
+  const steps = data?.steps ?? [];
+  const sources = data?.sources ?? [];
+
+  const diagnostic = useMemo(() => {
+    const visits = summary?.menuViews ?? 0;
+    if (visits === 0) {
+      return {
+        status: "Sem dados",
+        icon: BarChart3,
+        message: "Ainda não há eventos do cardápio no período selecionado.",
+        variant: "secondary" as const,
+      };
+    }
+
+    if ((summary?.viewToProductRate ?? 0) < 35) {
+      return {
+        status: "Vitrine",
+        icon: MousePointerClick,
+        message: "Poucos visitantes estão abrindo produtos. Revise fotos, nomes e destaque das categorias.",
+        variant: "destructive" as const,
+      };
+    }
+
+    if ((summary?.productToCartRate ?? 0) < 35) {
+      return {
+        status: "Oferta",
+        icon: ShoppingCart,
+        message: "Há clique em produto, mas baixa adição à sacola. Avalie preço, descrição e disponibilidade.",
+        variant: "secondary" as const,
+      };
+    }
+
+    if ((summary?.checkoutToOrderRate ?? 0) < 60 && (summary?.checkoutStarted ?? 0) > 0) {
+      return {
+        status: "Checkout",
+        icon: AlertTriangle,
+        message: "Clientes chegam ao checkout, mas parte relevante não conclui. Verifique formas de pagamento e campos obrigatórios.",
+        variant: "secondary" as const,
+      };
+    }
+
+    return {
+      status: "Saudável",
+      icon: CheckCircle2,
+      message: "O funil do cardápio está sem gargalo crítico no período.",
+      variant: "default" as const,
+    };
+  }, [summary]);
+
+  const handlePreset = (value: string) => {
+    const now = new Date();
+    if (value === "hoje") {
+      setDateFrom(now);
+      setDateTo(now);
+      return;
+    }
+    if (value === "7dias") {
+      setDateFrom(subDays(now, 6));
+      setDateTo(now);
+      return;
+    }
+    setDateFrom(subDays(now, 29));
+    setDateTo(now);
+  };
+
+  const DiagnosticIcon = diagnostic.icon;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Funil do cardápio
+          </CardTitle>
+          <CardDescription>
+            Conversão do canal próprio por etapa, origem e campanha.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+            <div className="space-y-2">
+              <Label>Período rápido</Label>
+              <Select defaultValue="30dias" onValueChange={handlePreset}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hoje">Hoje</SelectItem>
+                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="conversion-date-from">Data inicial</Label>
+              <Input
+                id="conversion-date-from"
+                type="date"
+                value={format(dateFrom, "yyyy-MM-dd")}
+                onChange={(event) => event.target.value && setDateFrom(new Date(`${event.target.value}T12:00:00`))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="conversion-date-to">Data final</Label>
+              <Input
+                id="conversion-date-to"
+                type="date"
+                value={format(dateTo, "yyyy-MM-dd")}
+                onChange={(event) => event.target.value && setDateTo(new Date(`${event.target.value}T12:00:00`))}
+              />
+            </div>
+            <Button variant="outline" onClick={() => void refetch()} disabled={loading || dateFrom > dateTo}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Atualizar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Alert>
+        <DiagnosticIcon className="h-4 w-4" />
+        <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span>{diagnostic.message}</span>
+          <Badge variant={diagnostic.variant}>{diagnostic.status}</Badge>
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Visualizações</CardTitle>
+            <Store className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{number.format(summary?.menuViews ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">Sessões no cardápio</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clique em produto</CardTitle>
+            <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{percent(summary?.viewToProductRate ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">{number.format(summary?.productClicks ?? 0)} sessões</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Adição à sacola</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{percent(summary?.productToCartRate ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">{number.format(summary?.addToCart ?? 0)} sessões</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Checkout</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{percent(summary?.cartToCheckoutRate ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">{number.format(summary?.checkoutStarted ?? 0)} iniciados</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Conversão final</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{percent(summary?.viewToOrderRate ?? 0)}</div>
+            <p className="text-xs text-muted-foreground">{number.format(summary?.ordersCompleted ?? 0)} pedidos</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Etapas do funil</CardTitle>
+            <CardDescription>Leitura por sessão no período selecionado.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {steps.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma etapa registrada no período.</p>
+            ) : (
+              steps.map((step) => (
+                <div key={step.eventType} className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{step.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {step.position === 1
+                          ? "Base do funil"
+                          : `${percent(step.rateFromPrevious)} da etapa anterior`}
+                      </p>
+                    </div>
+                    <div className="text-right text-sm font-semibold">
+                      {number.format(step.total)}
+                    </div>
+                  </div>
+                  <Progress value={Math.min(100, step.position === 1 ? 100 : step.rateFromPrevious)} className="h-2" />
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Origem e campanha</CardTitle>
+            <CardDescription>Conversão agrupada pelo tráfego de entrada.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Origem</TableHead>
+                  <TableHead className="text-right">Visitas</TableHead>
+                  <TableHead className="text-right">Pedidos</TableHead>
+                  <TableHead className="text-right">Conversão</TableHead>
+                  <TableHead className="text-right">Receita</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sources.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                      Nenhuma origem registrada no período.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sources.map((source) => (
+                    <TableRow key={source.source}>
+                      <TableCell className="font-medium">{sourceLabel(source.source)}</TableCell>
+                      <TableCell className="text-right">{number.format(source.menuViews)}</TableCell>
+                      <TableCell className="text-right">{number.format(source.ordersCompleted)}</TableCell>
+                      <TableCell className="text-right">{percent(source.conversionRate)}</TableCell>
+                      <TableCell className="text-right">{money.format(source.revenue)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};

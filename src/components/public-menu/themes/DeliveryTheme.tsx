@@ -6,6 +6,7 @@ import { useCart, formatBRL } from '../cart/cartContextCore';
 import { CheckoutFlow } from '../checkout/CheckoutFlow';
 import { AddItemModal, AddItemModalProduct } from './AddItemModal';
 import { Search, ShoppingBag, MapPin, Phone, Plus, Minus, Home, ClipboardList, ChevronRight, X, Sparkles } from 'lucide-react';
+import { trackPublicMenuEventQuietly } from '@/services/publicMenuAnalyticsService';
 
 interface Props {
   data: MenuData;
@@ -26,7 +27,7 @@ const DeliveryLayout = ({ data }: Props) => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<AddItemModalProduct | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const { count, addItem } = useCart();
+  const { count, subtotal, addItem } = useCart();
 
   const primary = data.theme.colors.primary;
   const searchInputStyle: CSSProperties & Record<'--tw-ring-color', string> = {
@@ -57,6 +58,19 @@ const DeliveryLayout = ({ data }: Props) => {
   };
 
   const openProduct = (product: MenuData['categories'][number]['products'][number]) => {
+    const category = data.categories.find((item) =>
+      item.products.some((categoryProduct) => categoryProduct.id === product.id),
+    );
+    trackPublicMenuEventQuietly({
+      restaurantId: data.restaurant.id,
+      eventType: 'product_click',
+      productId: product.id,
+      metadata: {
+        category_id: category?.id,
+        category_name: category?.name,
+        product_name: product.name,
+      },
+    });
     setSelectedProduct({
       id: product.id,
       name: product.name,
@@ -75,6 +89,18 @@ const DeliveryLayout = ({ data }: Props) => {
           }
         : null,
     });
+  };
+
+  const openCheckout = () => {
+    trackPublicMenuEventQuietly({
+      restaurantId: data.restaurant.id,
+      eventType: 'checkout_started',
+      metadata: {
+        item_count: count,
+        subtotal,
+      },
+    });
+    setCheckoutOpen(true);
   };
 
   const selectedSuggestions = useMemo(() => {
@@ -255,7 +281,7 @@ const DeliveryLayout = ({ data }: Props) => {
           <aside className="hidden lg:block sticky top-24">
             <CartPanel
               data={data}
-              onCheckout={() => setCheckoutOpen(true)}
+              onCheckout={openCheckout}
             />
           </aside>
         </div>
@@ -295,7 +321,7 @@ const DeliveryLayout = ({ data }: Props) => {
                 embedded
                 onCheckout={() => {
                   setMobileCartOpen(false);
-                  setCheckoutOpen(true);
+                  openCheckout();
                 }}
               />
             </div>
@@ -325,6 +351,16 @@ const DeliveryLayout = ({ data }: Props) => {
             image_url: suggestion.product.image_url,
             quantity: 1,
           });
+          trackPublicMenuEventQuietly({
+            restaurantId: data.restaurant.id,
+            eventType: 'add_to_cart',
+            productId: suggestion.product.id,
+            metadata: {
+              product_name: suggestion.product.name,
+              quantity: 1,
+              interaction_source: 'product_modal_suggestion',
+            },
+          });
         }}
         onConfirm={({ quantity, observations }) => {
           if (!selectedProduct) return;
@@ -335,6 +371,17 @@ const DeliveryLayout = ({ data }: Props) => {
             image_url: selectedProduct.image_url,
             quantity,
             observations,
+          });
+          trackPublicMenuEventQuietly({
+            restaurantId: data.restaurant.id,
+            eventType: 'add_to_cart',
+            productId: selectedProduct.id,
+            metadata: {
+              product_name: selectedProduct.name,
+              quantity,
+              has_observations: Boolean(observations?.trim()),
+              interaction_source: 'product_modal',
+            },
           });
           setSelectedProduct(null);
         }}
@@ -598,13 +645,25 @@ const CartPanel = ({
                   <button
                     key={product.id}
                     type="button"
-                    onClick={() => addItem({
-                      product_id: product.id,
-                      name: product.name,
-                      price,
-                      image_url: product.image_url,
-                      quantity: 1,
-                    })}
+                    onClick={() => {
+                      addItem({
+                        product_id: product.id,
+                        name: product.name,
+                        price,
+                        image_url: product.image_url,
+                        quantity: 1,
+                      });
+                      trackPublicMenuEventQuietly({
+                        restaurantId: data.restaurant.id,
+                        eventType: 'add_to_cart',
+                        productId: product.id,
+                        metadata: {
+                          product_name: product.name,
+                          quantity: 1,
+                          interaction_source: 'cart_combo_suggestion',
+                        },
+                      });
+                    }}
                     className="flex w-full items-center justify-between gap-2 rounded-md bg-card px-2.5 py-2 text-left text-sm hover:bg-background"
                   >
                     <span className="min-w-0 flex-1 truncate">{suggestion.title || product.name}</span>

@@ -25,6 +25,7 @@ import {
   rotateCartAbandonmentSessionToken,
 } from '@/lib/cartAbandonmentSession';
 import { cartAbandonmentService } from '@/services/cartAbandonmentService';
+import { trackPublicMenuEventQuietly } from '@/services/publicMenuAnalyticsService';
 
 interface Props {
   data: MenuData;
@@ -488,6 +489,21 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
         });
         setOnlinePayment(paymentResult);
       }
+      trackPublicMenuEventQuietly({
+        restaurantId,
+        eventType: 'order_completed',
+        orderId: result.order_id,
+        metadata: {
+          tracking_id: result.id,
+          delivery_order_id: result.delivery_order_id,
+          fulfillment_type: fulfillmentType,
+          payment_method: payment,
+          item_count: items.reduce((sum, item) => sum + item.quantity, 0),
+          subtotal,
+          total: result.total,
+          discount_amount: result.discount_amount,
+        },
+      });
       clearPendingCheckout(restaurantId);
       cartSessionTokenRef.current = rotateCartAbandonmentSessionToken(restaurantId);
       setStep('success');

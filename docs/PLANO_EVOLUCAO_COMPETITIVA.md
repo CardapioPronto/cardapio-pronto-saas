@@ -661,21 +661,29 @@ Objetivo: medir performance do canal proprio.
 
 ### Escopo MVP
 
-- [ ] Visualizacoes do cardapio.
-- [ ] Cliques em produto.
-- [ ] Produto adicionado ao carrinho.
-- [ ] Checkout iniciado.
-- [ ] Pedido concluido.
-- [ ] Conversao por campanha/origem.
+- [x] Visualizacoes do cardapio.
+- [x] Cliques em produto.
+- [x] Produto adicionado ao carrinho.
+- [x] Checkout iniciado.
+- [x] Pedido concluido.
+- [x] Conversao por campanha/origem.
 
 ### Criterio de aceite
 
 - Dono consegue ver onde perde clientes no cardapio.
 - Campanhas mostram origem e conversao.
 
+### Backlog futuro
+
+- [ ] Ranking de produtos com maior clique e menor adicao ao carrinho.
+- [ ] Eventos de busca, busca sem resultado e categoria sem engajamento.
+- [ ] Comparativo de funil entre periodos.
+- [ ] Metas de conversao por origem/campanha.
+- [ ] Link builder com UTM e QR rastreavel para Instagram, WhatsApp e Google.
+
 Evidencia:
 
-- Pendente.
+- 2026-06-10: Fundacao do funil de conversao do cardapio publico com tabela `public_menu_analytics_events`, RPC anonima `track_public_menu_event` com rate limit e RPC autenticada `get_public_menu_conversion_funnel`. O cardapio publico passou a registrar visualizacao, clique em produto, adicao ao carrinho, checkout iniciado e pedido concluido com origem/UTM. A tela `/relatorios?tab=conversao` exibe cards de conversao, etapas do funil, diagnostico e agrupamento por origem/campanha.
 
 ---
 
