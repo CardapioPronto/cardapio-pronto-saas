@@ -1,4 +1,4 @@
-import { endOfDay, startOfDay } from "date-fns";
+import { differenceInCalendarDays, endOfDay, format, startOfDay, subDays } from "date-fns";
 import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
 import { assertMaxReportRange } from "@/lib/reportLimits";
 
@@ -79,6 +79,19 @@ export type PublicMenuConversionFunnel = {
   sources: PublicMenuFunnelSource[];
   products: PublicMenuProductDiagnostic[];
   searches: PublicMenuSearchDiagnostic[];
+};
+
+export type PublicMenuPeriodRange = {
+  dateFrom: Date;
+  dateTo: Date;
+  days: number;
+  label: string;
+};
+
+export type PublicMenuConversionComparison = {
+  current: PublicMenuConversionFunnel;
+  previous: PublicMenuConversionFunnel;
+  previousRange: PublicMenuPeriodRange;
 };
 
 type RpcClient = {
@@ -302,13 +315,11 @@ export const trackPublicMenuEventQuietly = (input: TrackPublicMenuEventInput) =>
   });
 };
 
-export const getPublicMenuConversionFunnel = async (
+const requestPublicMenuConversionFunnel = async (
+  restaurantId: string,
   dateFrom: Date,
   dateTo: Date,
-): Promise<PublicMenuConversionFunnel> => {
-  const restaurantId = await getCurrentRestaurantId();
-  if (!restaurantId) throw new Error("Restaurante não encontrado.");
-
+) => {
   const from = startOfDay(dateFrom);
   const to = endOfDay(dateTo);
   if (from > to) throw new Error("A data inicial não pode ser maior que a data final.");
@@ -322,4 +333,49 @@ export const getPublicMenuConversionFunnel = async (
 
   if (error) throw new Error(error.message || "Erro ao carregar funil de conversão.");
   return normalizeFunnel(data);
+};
+
+const getPreviousPeriodRange = (dateFrom: Date, dateTo: Date): PublicMenuPeriodRange => {
+  const from = startOfDay(dateFrom);
+  const to = endOfDay(dateTo);
+  const days = differenceInCalendarDays(to, from) + 1;
+  const previousTo = subDays(from, 1);
+  const previousFrom = subDays(previousTo, days - 1);
+
+  return {
+    dateFrom: previousFrom,
+    dateTo: previousTo,
+    days,
+    label: `${format(previousFrom, "dd/MM/yyyy")} a ${format(previousTo, "dd/MM/yyyy")}`,
+  };
+};
+
+export const getPublicMenuConversionFunnel = async (
+  dateFrom: Date,
+  dateTo: Date,
+): Promise<PublicMenuConversionFunnel> => {
+  const restaurantId = await getCurrentRestaurantId();
+  if (!restaurantId) throw new Error("Restaurante não encontrado.");
+
+  return requestPublicMenuConversionFunnel(restaurantId, dateFrom, dateTo);
+};
+
+export const getPublicMenuConversionFunnelComparison = async (
+  dateFrom: Date,
+  dateTo: Date,
+): Promise<PublicMenuConversionComparison> => {
+  const restaurantId = await getCurrentRestaurantId();
+  if (!restaurantId) throw new Error("Restaurante não encontrado.");
+
+  const previousRange = getPreviousPeriodRange(dateFrom, dateTo);
+  const [current, previous] = await Promise.all([
+    requestPublicMenuConversionFunnel(restaurantId, dateFrom, dateTo),
+    requestPublicMenuConversionFunnel(restaurantId, previousRange.dateFrom, previousRange.dateTo),
+  ]);
+
+  return {
+    current,
+    previous,
+    previousRange,
+  };
 };

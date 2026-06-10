@@ -3,8 +3,10 @@ import { format, subDays } from "date-fns";
 import {
   AlertTriangle,
   BarChart3,
+  CalendarClock,
   CheckCircle2,
   Loader2,
+  Minus,
   MousePointerClick,
   Percent,
   RefreshCw,
@@ -12,6 +14,8 @@ import {
   ShoppingCart,
   Store,
   Target,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +36,8 @@ const money = new Intl.NumberFormat("pt-BR", {
 });
 
 const percent = (value: number) => `${Number(value || 0).toFixed(1).replace(".", ",")}%`;
+
+type ComparisonTone = "positive" | "negative" | "neutral";
 
 const sourceLabel = (source: string) => {
   if (!source || source === "direct") return "Direto";
@@ -81,17 +87,85 @@ const productDiagnostic = (code: string) => {
   };
 };
 
+const comparisonTone = (
+  current: number,
+  previous: number,
+  direction: "higher-is-better" | "lower-is-better" = "higher-is-better",
+): ComparisonTone => {
+  const diff = current - previous;
+  if (Math.abs(diff) < 0.1) return "neutral";
+  const improved = direction === "higher-is-better" ? diff > 0 : diff < 0;
+  return improved ? "positive" : "negative";
+};
+
+const formatComparisonDelta = (current: number, previous: number, mode: "count" | "percent") => {
+  const diff = current - previous;
+  const prefix = diff > 0 ? "+" : "";
+  if (mode === "count") return `${prefix}${number.format(diff)}`;
+  return `${prefix}${diff.toFixed(1).replace(".", ",")} p.p.`;
+};
+
 export const PublicMenuAnalyticsDashboard = () => {
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(subDays(today, 29));
   const [dateTo, setDateTo] = useState(today);
-  const { data, loading, error, refetch } = usePublicMenuConversionFunnel({ dateFrom, dateTo });
+  const { data, comparison, loading, error, refetch } = usePublicMenuConversionFunnel({ dateFrom, dateTo });
 
   const summary = data?.summary;
   const steps = data?.steps ?? [];
   const sources = data?.sources ?? [];
   const products = data?.products ?? [];
   const searches = data?.searches ?? [];
+  const previousSummary = comparison?.previous.summary;
+
+  const comparisonMetrics = useMemo(() => {
+    if (!summary || !previousSummary) return [];
+
+    return [
+      {
+        label: "Visitas",
+        current: number.format(summary.menuViews),
+        previous: number.format(previousSummary.menuViews),
+        delta: formatComparisonDelta(summary.menuViews, previousSummary.menuViews, "count"),
+        tone: comparisonTone(summary.menuViews, previousSummary.menuViews),
+      },
+      {
+        label: "Clique em produto",
+        current: percent(summary.viewToProductRate),
+        previous: percent(previousSummary.viewToProductRate),
+        delta: formatComparisonDelta(summary.viewToProductRate, previousSummary.viewToProductRate, "percent"),
+        tone: comparisonTone(summary.viewToProductRate, previousSummary.viewToProductRate),
+      },
+      {
+        label: "Produto para sacola",
+        current: percent(summary.productToCartRate),
+        previous: percent(previousSummary.productToCartRate),
+        delta: formatComparisonDelta(summary.productToCartRate, previousSummary.productToCartRate, "percent"),
+        tone: comparisonTone(summary.productToCartRate, previousSummary.productToCartRate),
+      },
+      {
+        label: "Checkout para pedido",
+        current: percent(summary.checkoutToOrderRate),
+        previous: percent(previousSummary.checkoutToOrderRate),
+        delta: formatComparisonDelta(summary.checkoutToOrderRate, previousSummary.checkoutToOrderRate, "percent"),
+        tone: comparisonTone(summary.checkoutToOrderRate, previousSummary.checkoutToOrderRate),
+      },
+      {
+        label: "Conversão final",
+        current: percent(summary.viewToOrderRate),
+        previous: percent(previousSummary.viewToOrderRate),
+        delta: formatComparisonDelta(summary.viewToOrderRate, previousSummary.viewToOrderRate, "percent"),
+        tone: comparisonTone(summary.viewToOrderRate, previousSummary.viewToOrderRate),
+      },
+      {
+        label: "Busca sem resultado",
+        current: percent(summary.searchNoResultRate),
+        previous: percent(previousSummary.searchNoResultRate),
+        delta: formatComparisonDelta(summary.searchNoResultRate, previousSummary.searchNoResultRate, "percent"),
+        tone: comparisonTone(summary.searchNoResultRate, previousSummary.searchNoResultRate, "lower-is-better"),
+      },
+    ];
+  }, [previousSummary, summary]);
 
   const diagnostic = useMemo(() => {
     const visits = summary?.menuViews ?? 0;
@@ -232,6 +306,50 @@ export const PublicMenuAnalyticsDashboard = () => {
           <Badge variant={diagnostic.variant}>{diagnostic.status}</Badge>
         </AlertDescription>
       </Alert>
+
+      {comparison && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              Comparativo com período anterior
+            </CardTitle>
+            <CardDescription>
+              Período comparado: {comparison.previousRange.label}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+              {comparisonMetrics.map((metric) => {
+                const Icon = metric.tone === "positive"
+                  ? TrendingUp
+                  : metric.tone === "negative"
+                    ? TrendingDown
+                    : Minus;
+                const badgeVariant = metric.tone === "negative"
+                  ? "destructive"
+                  : metric.tone === "positive"
+                    ? "default"
+                    : "outline";
+
+                return (
+                  <div key={metric.label} className="rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
+                      <Badge variant={badgeVariant} className="gap-1">
+                        <Icon className="h-3 w-3" />
+                        {metric.delta}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 text-xl font-bold">{metric.current}</div>
+                    <p className="text-xs text-muted-foreground">Anterior: {metric.previous}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <Card>

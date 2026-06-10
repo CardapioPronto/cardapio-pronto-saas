@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  getPublicMenuConversionFunnel,
+  getPublicMenuConversionFunnelComparison,
+  type PublicMenuConversionComparison,
   type PublicMenuConversionFunnel,
 } from "@/services/publicMenuAnalyticsService";
 
@@ -11,6 +12,7 @@ type Params = {
 
 export const usePublicMenuConversionFunnel = ({ dateFrom, dateTo }: Params) => {
   const [data, setData] = useState<PublicMenuConversionFunnel | null>(null);
+  const [comparison, setComparison] = useState<PublicMenuConversionComparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,11 +21,13 @@ export const usePublicMenuConversionFunnel = ({ dateFrom, dateTo }: Params) => {
     setError(null);
 
     try {
-      const result = await getPublicMenuConversionFunnel(dateFrom, dateTo);
-      setData(result);
+      const result = await getPublicMenuConversionFunnelComparison(dateFrom, dateTo);
+      setData(result.current);
+      setComparison(result);
     } catch (err) {
       console.error("Erro ao carregar funil do cardápio:", err);
       setError(err instanceof Error ? err.message : "Erro ao carregar funil do cardápio.");
+      setComparison(null);
     } finally {
       setLoading(false);
     }
@@ -33,5 +37,5 @@ export const usePublicMenuConversionFunnel = ({ dateFrom, dateTo }: Params) => {
     void refetch();
   }, [refetch]);
 
-  return { data, loading, error, refetch };
+  return { data, comparison, loading, error, refetch };
 };
