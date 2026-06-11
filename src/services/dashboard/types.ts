@@ -29,10 +29,12 @@ export interface PopularProduct {
 export interface DashboardOverview {
   restaurantName: string;
   isRestaurantActive: boolean | null;
+  restaurantProfileCompleted: boolean;
   publicMenuSlug: string | null;
   totalProducts: number;
   availableProducts: number;
   unavailableProducts: number;
+  totalOrders: number;
   totalCategories: number;
   ordersToday: number;
   openOrders: number;

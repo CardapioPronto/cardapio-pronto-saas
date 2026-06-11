@@ -12,14 +12,24 @@ type OrderTodayRow = { status: string | null };
 type TableStatusRow = { status: string | null };
 type ThreadSummaryRow = { status: string | null; unread_count: number | null };
 type WhatsAppInstanceSummaryRow = { status: string | null; webhook_url: string | null };
+type RestaurantSummaryRow = {
+  name: string | null;
+  active: boolean | null;
+  slug: string | null;
+  address: string | null;
+  phone: string | null;
+  phone_whatsapp: string | null;
+};
 
 const emptyOverview: DashboardOverview = {
   restaurantName: 'Restaurante',
   isRestaurantActive: null,
+  restaurantProfileCompleted: false,
   publicMenuSlug: null,
   totalProducts: 0,
   availableProducts: 0,
   unavailableProducts: 0,
+  totalOrders: 0,
   totalCategories: 0,
   ordersToday: 0,
   openOrders: 0,
@@ -55,6 +65,7 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       productsResult,
       categoriesResult,
       ordersResult,
+      totalOrdersResult,
       ordersTodayResult,
       tablesResult,
       threadsResult,
@@ -63,7 +74,7 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
     ] = await Promise.all([
       db
         .from('restaurants')
-        .select('name, active, slug')
+        .select('name, active, slug, address, phone, phone_whatsapp')
         .eq('id', restaurantId)
         .maybeSingle(),
       db
@@ -79,6 +90,10 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
         .select('id, status, created_at')
         .eq('restaurant_id', restaurantId)
         .in('status', OPEN_ORDER_STATUSES),
+      db
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId),
       db
         .from('orders')
         .select('id, status')
@@ -110,6 +125,7 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
       productsResult.error,
       categoriesResult.error,
       ordersResult.error,
+      totalOrdersResult.error,
       ordersTodayResult.error,
       tablesResult.error,
       threadsResult.error,
@@ -125,20 +141,30 @@ export const getDashboardOverview = async (restaurantId: string): Promise<Dashbo
     const tables = (tablesResult.error ? [] : tablesResult.data || []) as TableStatusRow[];
     const threads = (threadsResult.error ? [] : threadsResult.data || []) as ThreadSummaryRow[];
     const instances = (instancesResult.error ? [] : instancesResult.data || []) as WhatsAppInstanceSummaryRow[];
+    const restaurant = (restaurantResult.error ? null : restaurantResult.data) as RestaurantSummaryRow | null;
 
     const availableProducts = products.filter((product) => product.available !== false).length;
     const ordersToday = ordersTodayRows.filter((order) => !CANCELED_STATUSES.includes(order.status || '')).length;
     const openOrdersToday = orders.filter((order) => new Date(order.created_at || 0) >= startOfToday).length;
     const overdueOpenOrders = Math.max(0, orders.length - openOrdersToday);
     const whatsappConnectedInstances = instances.filter((instance) => instance.status === 'CONNECTED').length;
+    const restaurantName = restaurant?.name || 'Restaurante';
+    const restaurantProfileCompleted = Boolean(
+      restaurantName.trim() &&
+      restaurant?.active === true &&
+      restaurant?.address?.trim() &&
+      (restaurant?.phone?.trim() || restaurant?.phone_whatsapp?.trim())
+    );
 
     return {
-      restaurantName: restaurantResult.error ? 'Restaurante' : restaurantResult.data?.name || 'Restaurante',
-      isRestaurantActive: restaurantResult.error || !restaurantResult.data ? null : restaurantResult.data.active === true,
-      publicMenuSlug: restaurantResult.error ? null : restaurantResult.data?.slug || restaurantId,
+      restaurantName,
+      isRestaurantActive: restaurantResult.error || !restaurantResult.data ? null : restaurant?.active === true,
+      restaurantProfileCompleted,
+      publicMenuSlug: restaurantResult.error ? null : restaurant?.slug || restaurantId,
       totalProducts: products.length,
       availableProducts,
       unavailableProducts: Math.max(0, products.length - availableProducts),
+      totalOrders: totalOrdersResult.error ? 0 : totalOrdersResult.count || 0,
       totalCategories: categoriesResult.error ? 0 : categoriesResult.count || 0,
       ordersToday,
       openOrders: orders.length,

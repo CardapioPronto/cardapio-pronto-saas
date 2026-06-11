@@ -10,6 +10,7 @@ import { RecentSales as RecentSalesComponent } from "@/components/dashboard/Rece
 import { PopularProducts as PopularProductsComponent } from "@/components/dashboard/PopularProducts";
 import { DashboardExecutiveSummary } from "@/components/dashboard/DashboardExecutiveSummary";
 import { OperationsOverview } from "@/components/dashboard/OperationsOverview";
+import { OnboardingChecklistCard } from "@/components/dashboard/OnboardingChecklistCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardSkeleton = () => (
@@ -50,6 +51,8 @@ const Dashboard = () => {
     <DashboardLayout title="Dashboard">
       <div className="space-y-5">
         <DashboardExecutiveSummary overview={overview} />
+
+        <OnboardingChecklistCard overview={overview} />
 
         <OperationsOverview overview={overview} />
 
