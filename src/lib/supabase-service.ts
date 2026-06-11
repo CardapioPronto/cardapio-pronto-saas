@@ -145,7 +145,8 @@ export class SupabaseService<T extends TableNames> {
     queryFn: (query: SupabaseQuery) => Promise<CustomQueryResult> | CustomQueryResult,
   ): Promise<ServiceResponse<R>> {
     try {
-      const query = supabase.from(this.table) as unknown as SupabaseQuery;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const query = supabase.from(this.table) as any;
       const { data, error } = await queryFn(query);
       return { data: data as unknown as R, error };
     } catch (error) {
