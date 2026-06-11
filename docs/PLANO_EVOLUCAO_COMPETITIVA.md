@@ -737,7 +737,7 @@ Objetivo: reduzir dependencia de implantacao manual.
 - [x] Checklist dentro do app: dados do restaurante, produtos, QR, pedido teste.
 - [ ] Tutoriais curtos por tela.
 - [x] Estado de progresso da implantacao.
-- [ ] Botao de suporte com contexto da tela.
+- [x] Botao de suporte com contexto da tela.
 - [ ] Base de problemas comuns.
 
 ### Criterio de aceite
@@ -748,6 +748,7 @@ Objetivo: reduzir dependencia de implantacao manual.
 Evidencia:
 
 - 2026-06-10: Fatia 1 adicionou card de implantacao guiada no Dashboard com progresso, proximos passos e atalhos para completar dados do restaurante, cadastrar produtos/categorias, abrir QR Code/link rastreavel e fazer pedido de teste. O Dashboard passou a carregar sinais de perfil completo e total de pedidos, e o Cardapio Digital aceita link direto por aba com `?tab=qrcode`.
+- 2026-06-11: Fatia 2 adicionou botao global de suporte no cabecalho do dashboard, abrindo modal com descricao do usuario, tela atual, URL, usuario, restaurante, versao, status online e navegador, com acoes para copiar contexto ou abrir e-mail preenchido.
 
 ---
 

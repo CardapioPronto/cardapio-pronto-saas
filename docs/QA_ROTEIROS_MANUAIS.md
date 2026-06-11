@@ -37,6 +37,8 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [ ] Dashboard: card **Implantação guiada** aparece com progresso,
       próximo passo e atalhos para Configurações, Produtos/Categorias,
       QR Code e PDV.
+- [ ] Dashboard: botão de suporte no topo abre modal com contexto da tela,
+      permite descrever o problema, copiar o contexto e abrir e-mail preenchido.
 
 ### 1.2 Configuração do restaurante
 
