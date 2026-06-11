@@ -67,8 +67,8 @@ const coreFeatures = [
   },
   {
     icon: Wifi,
-    title: "PWA e indicador offline",
-    description: "Aplicação instalável, cache de assets, indicador online/offline e bloqueios claros para ações que exigem internet.",
+    title: "PWA e offline parcial",
+    description: "Aplicação instalável, indicador online/offline, catálogo local do PDV e fila para pedido de balcão quando a conexão cair.",
   },
   {
     icon: Store,

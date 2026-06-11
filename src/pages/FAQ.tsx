@@ -30,7 +30,7 @@ const buildFaqs = (trialDays: number) => [
   },
   {
     question: "O sistema funciona offline?",
-    answer: "O PDV do Pubfy requer conexão com a internet para funcionar completamente. No entanto, estamos desenvolvendo um modo offline para operações básicas que sincronizará quando a conexão for restabelecida."
+    answer: "O Pubfy funciona melhor com internet, mas o PWA mantém a interface carregável após o primeiro acesso e o PDV já permite salvar pedidos de balcão offline para sincronizar quando a conexão voltar. Pedidos de mesa, pagamentos online, WhatsApp, iFood, relatórios e configurações continuam exigindo conexão."
   },
   {
     question: "Quais métodos de pagamento são aceitos para a assinatura?",

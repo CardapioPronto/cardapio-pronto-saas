@@ -41,6 +41,8 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       permite descrever o problema, copiar o contexto e abrir e-mail preenchido.
 - [ ] Dashboard/PDV/Cardápio: botão de suporte exibe tutoriais curtos e
       problemas comuns coerentes com a tela atual.
+- [ ] Dashboard/PDV/Cozinha: indicador online/offline aparece no topo;
+      ao desconectar a rede, muda para Offline e o banner global é exibido.
 
 ### 1.2 Configuração do restaurante
 
