@@ -51,7 +51,7 @@ export const PrintTestButton = ({
 
     const selectedTemplates = templates.length > 0 ? templates : ["kitchen"];
 
-    for (const template of selectedTemplates) {
+    for (const template of selectedTemplates as Array<"kitchen" | "cashier" | "customer">) {
       await printOrder(testOrder, {
         restaurantName: 'Restaurante Demo',
         paperSize,

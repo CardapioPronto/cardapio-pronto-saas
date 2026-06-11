@@ -43,6 +43,7 @@ type SubscriptionStatusRow = {
   is_trial: boolean | null;
   trial_ends_at: string | null;
   current_period_end?: string | null;
+  next_billing_at?: string | null;
 };
 
 export const useSubscriptionStatus = () => {

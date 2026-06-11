@@ -41,7 +41,7 @@ export function PrintDefaultCopiesDialog({
   const handlePrint = async () => {
     if (!pedido) return;
 
-    for (const template of selectedTemplates) {
+    for (const template of selectedTemplates as Array<"kitchen" | "cashier" | "customer">) {
       await printOrder(pedido, {
         restaurantName,
         paperSize,

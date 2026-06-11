@@ -1189,7 +1189,7 @@ export function EmailOperationsPanel({ scope }: Props) {
                       <CardTitle>Campanhas</CardTitle>
                       <CardDescription>Rascunhos e envios recentes.</CardDescription>
                     </div>
-                    <Button size="icon" variant="outline" onClick={handleCreateCampaign} disabled={!campaignEntitlement?.campaignsEnabled}>
+                    <Button size="icon" variant="outline" onClick={() => handleCreateCampaign()} disabled={!campaignEntitlement?.campaignsEnabled}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
