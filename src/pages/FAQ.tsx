@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { PublicSeo } from "@/components/seo/PublicSeo";
 import { useActivePlan } from "@/hooks/useActivePlan";
 import { DEFAULT_TRIAL_DAYS, formatTrialDurationText } from "@/lib/trialDays";
+import { Helmet } from "react-helmet-async";
 
 const buildFaqs = (trialDays: number) => [
   {
@@ -70,6 +71,17 @@ const FaqPage = () => {
       description="Respostas sobre teste grátis, cardápio digital, QR Code, personalização e suporte do Pubfy."
       path="/faq"
     />
+    <Helmet>
+      <script type="application/ld+json">{JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: { "@type": "Answer", text: faq.answer }
+        }))
+      })}</script>
+    </Helmet>
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow bg-offwhite py-12">

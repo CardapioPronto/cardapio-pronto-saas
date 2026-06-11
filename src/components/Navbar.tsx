@@ -108,7 +108,13 @@ const Navbar = () => {
         </div>
 
         {/* Mobile menu button */}
-        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden flex items-center text-navy">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="md:hidden flex items-center text-navy"
+          aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={isOpen}
+          type="button"
+        >
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>

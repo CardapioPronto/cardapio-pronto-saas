@@ -1,0 +1,19 @@
+# Pubfy
+
+> Pubfy é a plataforma brasileira de cardápio digital, PDV, CRM, fidelidade e automações para restaurantes que vendem direto pelo WhatsApp, mesa e delivery.
+
+Pubfy reúne canal próprio com QR Code, PDV completo, gestão de mesas, integração com iFood, campanhas de marketing, programa de fidelidade e relatórios por canal — sem comissão por pedido.
+
+## Pages
+
+- [Home](/): Visão geral da plataforma, recursos e benefícios.
+- [Preços](/precos): Planos e valores do Pubfy.
+- [FAQ](/faq): Perguntas frequentes sobre teste grátis, QR Code, suporte e mais.
+- [Blog](/blog): Conteúdo para donos de restaurante sobre vendas, marketing e operação.
+- [Demonstração](/demonstracao): Agende uma demonstração guiada.
+- [Contato](/contato): Fale com a equipe Pubfy.
+- [Teste grátis](/teste-gratis): Comece o período de teste sem cartão.
+
+## Optional
+
+- [Cadastro](/cadastro): Criar uma conta.
