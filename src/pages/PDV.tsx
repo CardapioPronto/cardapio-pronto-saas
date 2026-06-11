@@ -8,6 +8,7 @@ import { PDVTabs } from "@/features/pdv/components/PDVTabs";
 import { OverrideEstoqueDialog } from "@/features/pdv/components/OverrideEstoqueDialog";
 import { PrintDefaultCopiesDialog } from "@/features/pdv/components/PrintDefaultCopiesDialog";
 import { OfflineOrderQueuePanel } from "@/features/pdv/components/OfflineOrderQueuePanel";
+import { SupportContextButton } from "@/components/support/SupportContextButton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 import { usePDVHook } from "@/features/pdv/hooks/usePDVHook";
@@ -286,6 +287,7 @@ export default function PDV() {
                 </button>
               )}
             </div>
+            <SupportContextButton title="PDV" />
             <Button
               type="button"
               variant="outline"

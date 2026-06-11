@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SupportContextButton } from "@/components/support/SupportContextButton";
 import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
@@ -399,6 +400,7 @@ const Cozinha = () => {
               <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
               Atualizar
             </Button>
+            <SupportContextButton title="Cozinha" />
             <Button type="button" size="sm" variant="outline" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize className="mr-2 h-4 w-4" /> : <Expand className="mr-2 h-4 w-4" />}
               {isFullscreen ? "Sair" : "Tela cheia"}
