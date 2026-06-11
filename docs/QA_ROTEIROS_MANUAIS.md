@@ -39,6 +39,8 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       QR Code e PDV.
 - [ ] Dashboard: botão de suporte no topo abre modal com contexto da tela,
       permite descrever o problema, copiar o contexto e abrir e-mail preenchido.
+- [ ] Dashboard/PDV/Cardápio: botão de suporte exibe tutoriais curtos e
+      problemas comuns coerentes com a tela atual.
 
 ### 1.2 Configuração do restaurante
 

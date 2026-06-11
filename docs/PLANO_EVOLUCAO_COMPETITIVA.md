@@ -735,20 +735,34 @@ Objetivo: reduzir dependencia de implantacao manual.
 ### Escopo MVP
 
 - [x] Checklist dentro do app: dados do restaurante, produtos, QR, pedido teste.
-- [ ] Tutoriais curtos por tela.
+- [x] Tutoriais curtos por tela.
 - [x] Estado de progresso da implantacao.
 - [x] Botao de suporte com contexto da tela.
-- [ ] Base de problemas comuns.
+- [x] Base de problemas comuns.
 
 ### Criterio de aceite
 
 - Novo restaurante entende o proximo passo sem call para tudo.
 - Suporte recebe contexto suficiente para resolver mais rapido.
 
+### Backlog futuro
+
+- [ ] Persistir progresso do onboarding por restaurante, com etapas concluidas, data de conclusao e responsavel.
+- [ ] Criar central de ajuda completa dentro do app, com busca por palavra-chave, categorias e artigos detalhados.
+- [ ] Permitir que o Super Admin edite tutoriais, problemas comuns e links de ajuda sem precisar publicar nova versao.
+- [ ] Adicionar videos curtos ou GIFs por tela para acelerar implantacao de clientes menos tecnicos.
+- [ ] Medir uso do suporte contextual: telas mais acessadas, problemas mais copiados e artigos que resolvem sem chamado.
+- [ ] Criar abertura de chamado integrada ao painel, com prioridade, anexos, status e historico por restaurante.
+- [ ] Sugerir automaticamente o proximo passo do onboarding com base no comportamento real do restaurante.
+- [ ] Enviar lembretes por e-mail/WhatsApp quando uma etapa critica de implantacao ficar parada.
+- [ ] Criar trilhas de onboarding por perfil: salao, delivery, multiunidade, franquia e operacao com pagamento online.
+- [ ] Exibir saude da conta para o Super Admin: clientes travados, etapas pendentes e risco de churn por baixa ativacao.
+
 Evidencia:
 
 - 2026-06-10: Fatia 1 adicionou card de implantacao guiada no Dashboard com progresso, proximos passos e atalhos para completar dados do restaurante, cadastrar produtos/categorias, abrir QR Code/link rastreavel e fazer pedido de teste. O Dashboard passou a carregar sinais de perfil completo e total de pedidos, e o Cardapio Digital aceita link direto por aba com `?tab=qrcode`.
 - 2026-06-11: Fatia 2 adicionou botao global de suporte no cabecalho do dashboard, abrindo modal com descricao do usuario, tela atual, URL, usuario, restaurante, versao, status online e navegador, com acoes para copiar contexto ou abrir e-mail preenchido.
+- 2026-06-11: Fatia 3 adicionou base contextual de ajuda no modal de suporte, com tutoriais curtos e problemas comuns por tela para Dashboard, PDV, Pedidos, Cozinha, Cardapio, Produtos/Categorias, Relatorios, Atendimento, Automacoes, Assinaturas/Pagamentos e Configuracoes.
 
 ---
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Copy, Headphones, Mail } from "lucide-react";
+import { Copy, Headphones, Lightbulb, ListChecks, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getSupportKnowledgeForPath } from "@/components/support/supportKnowledgeBase";
 
 const SUPPORT_EMAIL = "contato@pubfy.com.br";
 
@@ -43,6 +45,7 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
   const { user } = useCurrentUser();
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState("");
+  const knowledge = React.useMemo(() => getSupportKnowledgeForPath(location.pathname), [location.pathname]);
 
   const context = React.useMemo(() => {
     const timestamp = new Intl.DateTimeFormat("pt-BR", {
@@ -91,15 +94,58 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
           <Headphones className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Suporte com contexto</DialogTitle>
           <DialogDescription>
-            Envie a descricao junto com os dados tecnicos da tela atual.
+            Veja orientacoes rapidas ou envie a descricao junto com os dados tecnicos da tela atual.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="rounded-md border bg-muted/25 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-medium">{knowledge.title}</h3>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <ListChecks className="h-3.5 w-3.5" />
+                  Passos rapidos
+                </div>
+                <ol className="space-y-2 text-sm text-muted-foreground">
+                  {knowledge.tutorials.map((step, index) => (
+                    <li key={step} className="flex gap-2">
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-background text-xs font-medium text-foreground">
+                        {index + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Headphones className="h-3.5 w-3.5" />
+                  Problemas comuns
+                </div>
+                <div className="space-y-2">
+                  {knowledge.commonIssues.map((issue) => (
+                    <div key={issue.title} className="rounded-md border bg-background p-3">
+                      <p className="text-sm font-medium">{issue.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{issue.resolution}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="space-y-2">
             <Label htmlFor="support-user-message">O que aconteceu?</Label>
             <Textarea
