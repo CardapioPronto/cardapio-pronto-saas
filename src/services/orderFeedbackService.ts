@@ -81,7 +81,7 @@ const normalizeFeedbackDashboard = (value: Json): FeedbackDashboardData => {
       contactRequests: asNumber(summary.contactRequests),
       nps: asNumber(summary.nps),
     },
-    recent: recent.filter(isRecord).map((item) => ({
+    recent: (recent.filter(isRecord) as Record<string, unknown>[]).map((item) => ({
       id: String(item.id ?? ""),
       orderId: String(item.orderId ?? ""),
       trackingId: String(item.trackingId ?? ""),

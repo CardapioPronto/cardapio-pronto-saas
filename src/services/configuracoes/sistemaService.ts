@@ -63,7 +63,7 @@ export async function obterConfiguracoesSistema(restauranteId?: string | null): 
       dark_mode: data.dark_mode ?? false,
       language: data.language ?? "pt-BR",
       auto_print: data.auto_print ?? false,
-      print_paper_size: data.print_paper_size ?? "80mm",
+      print_paper_size: (data.print_paper_size ?? "80mm") as "58mm" | "80mm" | "a4",
       print_default_kitchen: data.print_default_kitchen ?? true,
       print_default_cashier: data.print_default_cashier ?? false,
       print_default_customer: data.print_default_customer ?? false,
