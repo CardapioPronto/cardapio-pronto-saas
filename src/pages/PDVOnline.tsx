@@ -95,7 +95,7 @@ const PDVOnline = () => {
               <div className="overflow-hidden rounded-lg bg-white text-navy shadow-2xl shadow-black/25">
                 <div className="flex items-center justify-between border-b border-gray-100 bg-offwhite px-5 py-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">PDV Pubfy</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-navy/75">PDV Pubfy</p>
                     <p className="font-semibold">Operação de hoje</p>
                   </div>
                   <span className="rounded-md bg-green px-3 py-1 text-xs font-semibold text-white">Online</span>
@@ -135,7 +135,7 @@ const PDVOnline = () => {
                         <div key={code} className="flex items-center justify-between gap-4 rounded-md border border-gray-100 p-3">
                           <div>
                             <p className="font-semibold text-navy">{code} - {source}</p>
-                            <p className="mt-1 text-xs text-navy/60">{items}</p>
+                            <p className="mt-1 text-xs text-navy/75">{items}</p>
                           </div>
                           <span className={`shrink-0 rounded-md px-3 py-1 text-xs font-semibold ${color}`}>{status}</span>
                         </div>

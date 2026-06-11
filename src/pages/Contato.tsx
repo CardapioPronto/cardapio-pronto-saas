@@ -162,7 +162,7 @@ const Contato = () => {
                     <Sparkles className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-sm text-navy/60">Canal recomendado</p>
+                    <p className="text-sm text-navy/75">Canal recomendado</p>
                     <h2 className="text-2xl font-semibold">Envie uma mensagem</h2>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ const Contato = () => {
                   </div>
                   <h3 className="font-semibold text-navy mb-2">Email</h3>
                   <p className="text-navy/70 mb-4">contato@pubfy.com.br</p>
-                  <p className="text-sm text-navy/60">Resposta em até 24 horas</p>
+                  <p className="text-sm text-navy/75">Resposta em até 24 horas</p>
                 </CardContent>
               </Card>
               
@@ -197,7 +197,7 @@ const Contato = () => {
                   </div>
                   <h3 className="font-semibold text-navy mb-2">Telefone</h3>
                   <p className="text-navy/70 mb-4">(11) 4321-1234</p>
-                  <p className="text-sm text-navy/60">Seg-Sex: 9h às 18h</p>
+                  <p className="text-sm text-navy/75">Seg-Sex: 9h às 18h</p>
                 </CardContent>
               </Card>
               
@@ -208,7 +208,7 @@ const Contato = () => {
                   </div>
                   <h3 className="font-semibold text-navy mb-2">Chat ao Vivo</h3>
                   <p className="text-navy/70 mb-4">Atendimento online</p>
-                  <p className="text-sm text-navy/60">Disponível para clientes</p>
+                  <p className="text-sm text-navy/75">Disponível para clientes</p>
                 </CardContent>
               </Card>
             </div>
@@ -290,7 +290,7 @@ const Contato = () => {
                       />
                     </div>
 
-                    <div className="text-sm text-navy/60">
+                    <div className="text-sm text-navy/75">
                       Ao enviar este formulário, você concorda com nossa{" "}
                       <a href="/privacidade" className="text-green underline-offset-4 hover:underline">
                         política de privacidade

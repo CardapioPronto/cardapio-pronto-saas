@@ -104,7 +104,7 @@ const CardapioDigital = () => {
                     <div className="overflow-hidden rounded-lg bg-navy text-white">
                       <div className="h-36 bg-[url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=700&q=85')] bg-cover bg-center" />
                       <div className="p-4">
-                        <p className="text-xs uppercase tracking-wide text-white/60">Cardapio Pubfy</p>
+                        <p className="text-xs uppercase tracking-wide text-white/85">Cardapio Pubfy</p>
                         <h2 className="mt-1 text-xl font-bold">Pizzaria da Vila</h2>
                         <div className="mt-3 flex gap-2 text-xs">
                           <span className="rounded-md bg-green px-2 py-1">Aberto</span>
@@ -131,7 +131,7 @@ const CardapioDigital = () => {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-navy">{name}</p>
-                            <p className="mt-1 truncate text-xs text-navy/60">{description}</p>
+                            <p className="mt-1 truncate text-xs text-navy/75">{description}</p>
                             <p className="mt-2 text-sm font-bold text-green">{price}</p>
                           </div>
                         </div>

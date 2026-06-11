@@ -57,7 +57,7 @@ const LandingCTA = () => {
             </ul>
             <div className="mt-6 rounded-md bg-offwhite p-4">
               <p className="text-sm font-semibold text-navy">Sem compromisso</p>
-              <p className="mt-1 text-sm text-navy/60">
+              <p className="mt-1 text-sm text-navy/75">
                 {trialDays > 0
                   ? "Teste gratuito, sem cartão, com caminho claro para ativar a operação."
                   : "Conta criada em minutos, com caminho claro para ativar a operação."}

@@ -82,7 +82,7 @@ const Testimonials = () => {
                       </div>
                       <div>
                         <p className="font-medium text-navy">{testimonial.author_name}</p>
-                        <p className="text-sm text-navy/60">
+                        <p className="text-sm text-navy/75">
                           {[testimonial.author_role, testimonial.restaurant_name].filter(Boolean).join(" · ")}
                         </p>
                         {testimonial.public_note && (

@@ -61,7 +61,7 @@ const Hero = () => {
           <div className="overflow-hidden rounded-lg border border-white/20 bg-white shadow-2xl shadow-black/30">
             <div className="flex items-center justify-between border-b border-gray-100 bg-offwhite/70 px-5 py-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">Painel operacional</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-navy/75">Painel operacional</p>
                 <p className="font-semibold text-navy">Pedidos de hoje</p>
               </div>
               <div className="rounded-md bg-green px-3 py-1 text-xs font-semibold text-white">Ao vivo</div>
@@ -76,7 +76,7 @@ const Hero = () => {
                     ["Leads capturados", "42"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-gray-100 bg-white p-4">
-                      <p className="text-xs text-navy/55">{label}</p>
+                      <p className="text-xs text-navy/75">{label}</p>
                       <p className="mt-1 text-xl font-bold text-navy">{value}</p>
                     </div>
                   ))}
@@ -111,7 +111,7 @@ const Hero = () => {
                     <div key={origin} className="flex items-center justify-between rounded-md border border-gray-100 p-3">
                       <div>
                         <p className="font-medium text-navy">{origin}</p>
-                        <p className="text-xs text-navy/55">{items}</p>
+                        <p className="text-xs text-navy/75">{items}</p>
                       </div>
                       <span className={`rounded-md px-3 py-1 text-xs font-semibold ${color}`}>{status}</span>
                     </div>
@@ -124,13 +124,13 @@ const Hero = () => {
           <div className="grid grid-cols-2 gap-4 lg:pb-10">
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
               <p className="text-3xl font-bold">{formatTrialDurationText(trialDays)}</p>
-              <p className="mt-1 text-sm text-white/72">
+              <p className="mt-1 text-sm text-white/85">
                 {trialDays > 0 ? "para testar sem cartão" : "cadastro direto para ativação"}
               </p>
             </div>
             <div className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur">
               <p className="text-3xl font-bold">Canal próprio</p>
-              <p className="mt-1 text-sm text-white/72">base de clientes, cupons e recompra</p>
+              <p className="mt-1 text-sm text-white/85">base de clientes, cupons e recompra</p>
             </div>
           </div>
         </div>

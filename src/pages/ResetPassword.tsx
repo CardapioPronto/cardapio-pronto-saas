@@ -188,12 +188,12 @@ const ResetPassword = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-navy/50 hover:text-navy"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-navy/75 hover:text-navy"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-navy/60">
+                <p className="text-xs text-navy/75">
                   Mín. 8 caracteres, com maiúscula, minúscula e número.
                 </p>
               </div>

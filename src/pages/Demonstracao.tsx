@@ -197,7 +197,7 @@ const Demonstracao = () => {
                       />
                     </div>
 
-                    <div className="text-sm text-navy/60">
+                    <div className="text-sm text-navy/75">
                       Ao enviar este formulário, você concorda com nossa
                       política de privacidade e termos de uso.
                     </div>

@@ -75,7 +75,7 @@ const Pricing = () => {
 
             <div className="p-8 pt-12 text-center">
               <h3 className="text-2xl font-bold text-navy">{planName}</h3>
-              <p className="mt-2 text-sm text-navy/60">
+              <p className="mt-2 text-sm text-navy/75">
                 Ferramentas essenciais para operar e vender melhor
               </p>
 
@@ -84,21 +84,21 @@ const Pricing = () => {
                   <Skeleton className="h-16 w-40" />
                 ) : (
                   <>
-                    <span className="text-2xl font-medium text-navy/60">R$</span>
+                    <span className="text-2xl font-medium text-navy/75">R$</span>
                     <span className="text-6xl font-bold text-navy mx-1">
                       {displayPrice.toFixed(2).replace(".", ",")}
                     </span>
-                    <span className="text-navy/60">/mês</span>
+                    <span className="text-navy/75">/mês</span>
                   </>
                 )}
               </div>
 
               {annual ? (
-                <p className="mt-2 text-sm text-navy/60">
+                <p className="mt-2 text-sm text-navy/75">
                   Cobrado <strong>R$ {yearlyTotal.toFixed(2).replace(".", ",")}/ano</strong>
                 </p>
               ) : (
-                <p className="mt-2 text-sm text-navy/60">
+                <p className="mt-2 text-sm text-navy/75">
                   ou <strong>R$ {yearlyPerMonth.toFixed(2).replace(".", ",")}/mês</strong> no plano anual
                 </p>
               )}
@@ -107,7 +107,7 @@ const Pricing = () => {
                 <Sparkles size={14} />
                 <span className="text-sm font-semibold">{formatTrialDaysBadge(trialDays)}</span>
               </div>
-              <p className="mt-2 text-xs text-navy/60">
+              <p className="mt-2 text-xs text-navy/75">
                 {trialDays > 0
                   ? "Teste completo, sem compromisso. Não pedimos cartão."
                   : "Contratação simples, com pagamento pelo painel de assinaturas."}
@@ -144,7 +144,7 @@ const Pricing = () => {
             </div>
           </div>
 
-          <p className="text-center mt-6 text-sm text-navy/60">
+          <p className="text-center mt-6 text-sm text-navy/75">
             Sem burocracia. Cancele quando quiser.
           </p>
         </div>
