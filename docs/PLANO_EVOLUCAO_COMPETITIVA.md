@@ -710,6 +710,16 @@ Objetivo: aumentar aquisicao para o canal proprio.
 
 - Restaurante consegue divulgar link proprio e medir retorno.
 
+### Backlog futuro
+
+- [ ] Biblioteca de campanhas salvas para reutilizar links e QR Codes antigos.
+- [ ] Download de materiais prontos em PDF/A4 para mesa, balcao, embalagem e delivery.
+- [ ] Checklist guiado para configurar Google Business Profile com campos recomendados.
+- [ ] Templates de bio do Instagram, texto de stories e mensagem de WhatsApp por tipo de restaurante.
+- [ ] Metas por canal, como pedidos esperados por mes para Instagram, Google e WhatsApp.
+- [ ] Comparativo por campanha especifica, alem do agrupamento por origem.
+- [ ] Sugestoes automaticas do copiloto com base no desempenho dos canais.
+
 Evidencia:
 
 - 2026-06-10: Fatia 1 adicionou kit de links rastreaveis em Cardapio Digital > QR Code, com presets para Instagram bio, Instagram stories, Google Business, WhatsApp status, QR delivery e campanha personalizada. O kit gera URL com UTM, QR Code da campanha, texto pronto para compartilhamento e atalho para o relatorio de conversao por origem.
@@ -724,9 +734,9 @@ Objetivo: reduzir dependencia de implantacao manual.
 
 ### Escopo MVP
 
-- [ ] Checklist dentro do app: dados do restaurante, produtos, QR, pedido teste.
+- [x] Checklist dentro do app: dados do restaurante, produtos, QR, pedido teste.
 - [ ] Tutoriais curtos por tela.
-- [ ] Estado de progresso da implantacao.
+- [x] Estado de progresso da implantacao.
 - [ ] Botao de suporte com contexto da tela.
 - [ ] Base de problemas comuns.
 
@@ -737,7 +747,7 @@ Objetivo: reduzir dependencia de implantacao manual.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-10: Fatia 1 adicionou card de implantacao guiada no Dashboard com progresso, proximos passos e atalhos para completar dados do restaurante, cadastrar produtos/categorias, abrir QR Code/link rastreavel e fazer pedido de teste. O Dashboard passou a carregar sinais de perfil completo e total de pedidos, e o Cardapio Digital aceita link direto por aba com `?tab=qrcode`.
 
 ---
 

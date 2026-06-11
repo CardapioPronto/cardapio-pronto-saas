@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
+import { useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 // cache-bust: refresh dynamic import after dev server restart
 import { MenuThemeSelector } from "@/components/menu-digital/MenuThemeSelector";
@@ -14,8 +14,15 @@ import { MenuUpsellManager } from "@/components/menu-digital/MenuUpsellManager";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+const MENU_DIGITAL_TABS = new Set(["themes", "personalizacao", "cupons", "upsell", "performance", "preview", "qrcode"]);
+
 const MenuDigital = () => {
-  const [activeTab, setActiveTab] = useState("themes");
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const activeTab = useMemo(() => {
+    const tab = searchParams.get("tab") || "themes";
+    return MENU_DIGITAL_TABS.has(tab) ? tab : "themes";
+  }, [searchParams]);
 
   return (
     <DashboardLayout title="Cardápio Digital">
@@ -28,7 +35,11 @@ const MenuDigital = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => navigate(`/cardapio?tab=${value}`, { replace: true })}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2 md:grid-cols-7">
                 <TabsTrigger value="themes">Temas</TabsTrigger>
                 <TabsTrigger value="personalizacao">Personalização</TabsTrigger>

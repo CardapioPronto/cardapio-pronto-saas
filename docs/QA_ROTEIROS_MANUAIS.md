@@ -34,6 +34,9 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [ ] Após confirmar e-mail, restaurante e assinatura **trial** são
       criados automaticamente (verificar via Admin → Assinaturas).
 - [ ] Login em `/login` redireciona para `/dashboard`.
+- [ ] Dashboard: card **Implantação guiada** aparece com progresso,
+      próximo passo e atalhos para Configurações, Produtos/Categorias,
+      QR Code e PDV.
 
 ### 1.2 Configuração do restaurante
 
