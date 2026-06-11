@@ -699,11 +699,12 @@ Objetivo: aumentar aquisicao para o canal proprio.
 
 ### Escopo MVP
 
-- [ ] Links rastreaveis para bio do Instagram.
-- [ ] UTM por campanha.
-- [ ] Kit de divulgacao com QR e link.
-- [ ] Orientacao para Google Business Profile.
-- [ ] Relatorio de pedidos por origem.
+- [x] Links rastreaveis para bio do Instagram.
+- [x] UTM por campanha.
+- [x] Kit de divulgacao com QR e link.
+- [x] Orientacao para Google Business Profile.
+- [x] Relatorio de pedidos por origem.
+- [x] Resumo de resultado por canal dentro do kit de divulgacao.
 
 ### Criterio de aceite
 
@@ -711,7 +712,8 @@ Objetivo: aumentar aquisicao para o canal proprio.
 
 Evidencia:
 
-- Pendente.
+- 2026-06-10: Fatia 1 adicionou kit de links rastreaveis em Cardapio Digital > QR Code, com presets para Instagram bio, Instagram stories, Google Business, WhatsApp status, QR delivery e campanha personalizada. O kit gera URL com UTM, QR Code da campanha, texto pronto para compartilhamento e atalho para o relatorio de conversao por origem.
+- 2026-06-10: Fatia 2 adicionou resumo de resultado dos ultimos 30 dias no kit de divulgacao, destacando visitas, pedidos, conversao e receita do canal selecionado, alem de ranking das principais origens.
 
 ---
 
