@@ -464,7 +464,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
           tracking_id: result.id,
           delivery_order_id: result.delivery_order_id,
           order_number: result.order_number,
-          fulfillment_type,
+          fulfillment_type: fulfillmentType,
           total: result.total,
         });
       }

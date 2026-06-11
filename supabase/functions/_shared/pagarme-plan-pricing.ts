@@ -1,5 +1,7 @@
 import type { BillingCycle } from "./pagarme-checkout-subscription.ts";
 
+declare const Deno: { env: { get(key: string): string | undefined } };
+
 function envGet(key: string): string | undefined {
   if (typeof Deno !== "undefined" && Deno.env?.get) {
     return Deno.env.get(key);

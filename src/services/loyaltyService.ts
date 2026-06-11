@@ -72,7 +72,7 @@ export async function saveLoyaltySettings(patch: LoyaltySettingsPatch) {
   const restaurantId = await requireRestaurantId();
   const { data, error } = await supabase.rpc("save_restaurant_loyalty_settings", {
     p_restaurant_id: restaurantId,
-    p_patch: patch,
+    p_patch: patch as never,
   });
 
   if (error) throw error;

@@ -341,7 +341,7 @@ export const restaurantRecipientService = {
       };
     }
 
-    return mapRowToDetails(data as Record<string, unknown>, summary);
+    return mapRowToDetails(data as unknown as Record<string, unknown>, summary);
   },
 
   async submit(input: RecipientSubmitInput, restaurantId?: string): Promise<RecipientSubmitResponse> {

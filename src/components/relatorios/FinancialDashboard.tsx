@@ -191,7 +191,7 @@ export const FinancialDashboard = () => {
         : alerts.some((alert) => alert.severity === "attention")
           ? "Atenção"
           : "Saudável";
-    const badgeVariant = status === "Crítico" ? "destructive" : status === "Atenção" ? "secondary" : "default";
+    const badgeVariant = (status === "Crítico" ? "destructive" : status === "Atenção" ? "secondary" : "default") as "default" | "destructive" | "secondary";
 
     return {
       alerts,

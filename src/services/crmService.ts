@@ -88,7 +88,7 @@ export async function updateCrmCustomerProfile(
   const { data, error } = await supabase.rpc("update_crm_customer_profile", {
     p_restaurant_id: restaurantId,
     p_phone_normalized: phoneNormalized,
-    p_patch: patch,
+    p_patch: patch as never,
   });
 
   if (error) throw error;
@@ -106,5 +106,5 @@ export async function captureCrmLeadFromOrder(
   });
 
   if (error) throw error;
-  return data as CrmLeadCaptureResult;
+  return data as unknown as CrmLeadCaptureResult;
 }

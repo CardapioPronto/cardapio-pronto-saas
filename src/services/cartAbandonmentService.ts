@@ -93,7 +93,7 @@ function normalizeDashboard(value: Json): CartAbandonmentDashboard {
       activeSessions: asNumber(metrics.activeSessions),
       recoveryRate: asNumber(metrics.recoveryRate),
     },
-    recent: recent.filter(isRecord).map((item) => ({
+    recent: (recent.filter(isRecord) as Record<string, unknown>[]).map((item) => ({
       id: String(item.id ?? ""),
       customerName: asStringOrNull(item.customerName),
       customerPhone: String(item.customerPhone ?? ""),
