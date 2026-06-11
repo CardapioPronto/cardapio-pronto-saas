@@ -12,6 +12,11 @@
   <url><loc>https://pubfy.com.br/cardapio-digital</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://pubfy.com.br/pdv-online</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://pubfy.com.br/gestao-completa</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://pubfy.com.br/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://pubfy.com.br/cadastro</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://pubfy.com.br/esqueci-senha</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://pubfy.com.br/reset-password</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://pubfy.com.br/teste-gratis</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://pubfy.com.br/termos</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
   <url><loc>https://pubfy.com.br/privacidade</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
   <url><loc>https://pubfy.com.br/cookies</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
