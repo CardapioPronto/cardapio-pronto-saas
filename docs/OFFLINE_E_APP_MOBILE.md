@@ -2,117 +2,122 @@
 
 ## Status atual
 
-O sistema ainda nao oferece modo offline real para o PDV.
+O Pubfy ja possui base PWA instalavel pelo navegador, com `manifest.webmanifest`, icones, metadados mobile e `service-worker.js` registrado em producao.
 
-Hoje o PDV depende de internet para carregar restaurante, produtos, mesas, usuario autenticado, historico de pedidos e para salvar pedidos no Supabase. Tambem nao ha configuracao de PWA, service worker, manifesto web, Capacitor, pasta Android ou pasta iOS no projeto.
+O app shell pode continuar abrindo apos o primeiro acesso, mesmo com conexao instavel. APIs, Supabase, pagamentos, WhatsApp, iFood, relatorios, edicao de cardapio e rotinas administrativas continuam exigindo internet.
 
-A FAQ ja comunica esse limite corretamente. A pagina de funcionalidades foi ajustada para marcar o modo offline como recurso em desenvolvimento, evitando prometer uma capacidade que ainda nao esta pronta.
+O PDV ja possui suporte offline parcial:
 
-## O que da para implementar
+- Catalogo local por restaurante com produtos, categorias, areas e mesas.
+- Indicador online/offline baseado em probe real do Supabase, nao apenas `navigator.onLine`.
+- Banner global de perda de conexao.
+- Fila local para pedido de balcao offline, com sincronizacao quando a conexao voltar.
+- Bloqueio claro para pedido de mesa offline, pois ainda ha risco de conflito operacional.
 
-### Fase 1: PWA instalavel
+Ainda nao ha app nativo com Capacitor, projeto Android/iOS, publicacao em loja ou modo offline completo para todos os canais.
+
+## Estado por fase
+
+### Fase 1: PWA instalavel - concluida
 
 Objetivo: permitir instalar o Pubfy no celular ou tablet pelo navegador e manter a aplicacao carregavel.
 
-- Adicionar `manifest.webmanifest` com nome, icones, cor de tema e modo `standalone`.
-- Adicionar service worker via `vite-plugin-pwa`.
-- Cachear os assets da aplicacao para abrir a interface mesmo sem conexao.
-- Exibir indicador de conexao online/offline.
-- Bloquear acoes que ainda dependem da internet com mensagens claras.
+- [x] Adicionar `manifest.webmanifest` com nome, icones, cor de tema e modo `standalone`.
+- [x] Adicionar service worker conservador para app shell e assets estaticos.
+- [x] Cachear assets da aplicacao para abrir a interface mesmo sem conexao apos primeiro acesso.
+- [x] Exibir indicador de conexao online/offline.
+- [x] Bloquear acoes que ainda dependem da internet com mensagens claras.
 
-Resultado: experiencia de "app instalado", mas ainda sem venda offline completa.
+Resultado: experiencia de app instalado, sem prometer operacao offline completa.
 
-### Fase 2: cache local dos dados essenciais do PDV
+### Fase 2: cache local dos dados essenciais do PDV - implementada
 
-Objetivo: deixar o operador montar pedidos mesmo sem internet.
+Objetivo: deixar o operador navegar pelo PDV com dados ja sincronizados quando a conexao cair.
 
-- Persistir em IndexedDB os produtos disponiveis, categorias, mesas e dados basicos do restaurante.
-- Atualizar o cache quando a conexao estiver online.
-- Mostrar ao operador quando os dados foram sincronizados pela ultima vez.
-- Usar os dados locais no PDV quando o Supabase estiver indisponivel.
+- [x] Persistir produtos disponiveis, categorias, mesas e areas por restaurante.
+- [x] Atualizar o cache quando a conexao estiver online.
+- [x] Mostrar ao operador quando os dados foram sincronizados pela ultima vez.
+- [x] Usar dados locais no PDV quando o Supabase estiver indisponivel.
 
-Resultado: o usuario consegue navegar pelo PDV e montar comandas offline usando o ultimo cardapio sincronizado.
+Resultado: o usuario consegue consultar o ultimo catalogo sincronizado e montar comandas com os dados disponiveis localmente.
 
-### Fase 3: fila offline de pedidos
+### Fase 3: fila offline de pedidos - parcial
 
-Objetivo: permitir finalizar pedidos offline sem perder venda.
+Objetivo: permitir registrar vendas simples sem perder pedido quando a internet cair.
 
-- Criar tabela/local store de `offline_orders` no IndexedDB.
-- Ao finalizar pedido offline, salvar um pedido local com `local_id`, itens, total, mesa, cliente, funcionario e data.
-- Marcar o pedido como `pending_sync`.
-- Mostrar um painel de pedidos pendentes de sincronizacao no PDV.
-- Quando voltar a internet, enviar os pedidos ao Supabase na ordem correta.
-- Apos sincronizar, gravar o `remote_order_id` retornado pelo banco.
+- [x] Criar fila local de pedidos offline no dispositivo.
+- [x] Salvar pedido de balcao offline com identificador unico do cliente.
+- [x] Mostrar painel de pedidos pendentes de sincronizacao no PDV.
+- [x] Sincronizar pedidos pendentes quando a internet voltar.
+- [x] Evitar duplicidade com `client_order_id`.
+- [ ] Expandir para pedidos de mesa com tratamento de conflito.
+- [ ] Registrar auditoria detalhada dos erros de sincronizacao para suporte.
 
-Resultado: pedidos de mesa e balcao podem ser registrados offline e sincronizados depois.
+Resultado atual: pedidos de balcao podem ser salvos offline e sincronizados depois. Pedidos de mesa continuam exigindo conexao.
 
 ### Fase 4: consistencia e conflitos
 
-Objetivo: evitar duplicidade e inconsistencias.
+Objetivo: tornar a sincronizacao confiavel para uso operacional mais amplo.
 
-- Usar um `client_order_id` unico em cada pedido local e criar restricao unica no banco.
-- Tratar reenvio seguro: se a conexao cair durante a sincronizacao, o mesmo pedido nao deve duplicar.
-- Revalidar mesa, usuario, produtos e totais no servidor.
-- Definir regra de conflito para mesas: se a mesa mudou online enquanto o app estava offline, manter o pedido e sinalizar revisao.
-- Registrar erros de sincronizacao com detalhes acionaveis para suporte.
+- [x] Usar `client_order_id` unico em cada pedido local e restricao unica no banco.
+- [x] Reenvio seguro para pedidos de balcao.
+- [ ] Revalidar mesa, usuario, produtos e totais com relatorio visivel quando houver divergencia.
+- [ ] Definir regra de conflito para mesas: se a mesa mudou online enquanto o app estava offline, manter o pedido e sinalizar revisao.
+- [ ] Criar painel administrativo de pedidos offline com falha por restaurante/dispositivo.
 
-Resultado: sincronizacao confiavel para uso operacional.
+Resultado esperado: sincronizacao confiavel para pedido de mesa, revisao assistida e suporte com contexto.
 
-### Fase 5: app Android primeiro
+### Fase 5: app Android
 
 Objetivo: publicar como aplicativo nativo usando a base React/Vite atual.
 
-- Adicionar Capacitor.
-- Configurar `capacitor.config.ts`.
-- Gerar projeto Android.
-- Ajustar build para servir os assets do `dist`.
-- Testar login, rotas, cache, IndexedDB, permissao de rede e tela cheia em aparelho real.
-- Publicar build interno na Google Play Console.
+- [ ] Adicionar Capacitor.
+- [ ] Configurar `capacitor.config.ts`.
+- [ ] Gerar projeto Android.
+- [ ] Ajustar build para servir os assets do `dist`.
+- [ ] Testar login, rotas, cache, IndexedDB, permissao de rede e tela cheia em aparelho real.
+- [ ] Publicar build interno na Google Play Console.
 
-Resultado: app Android instalavel pela loja ou por distribuicao interna.
+Resultado esperado: app Android instalavel pela loja ou por distribuicao interna.
 
 ### Fase 6: iOS
 
 Objetivo: reaproveitar a mesma base para App Store.
 
-- Gerar projeto iOS com Capacitor.
-- Testar IndexedDB, armazenamento local, safe areas e comportamento de rede no Safari/WebView.
-- Criar certificados, provisioning profiles e build no Xcode.
-- Publicar via TestFlight antes da App Store.
+- [ ] Gerar projeto iOS com Capacitor.
+- [ ] Testar IndexedDB, armazenamento local, safe areas e comportamento de rede no Safari/WebView.
+- [ ] Criar certificados, provisioning profiles e build no Xcode.
+- [ ] Publicar via TestFlight antes da App Store.
 
-Resultado: app iOS com a mesma experiencia operacional.
+Resultado esperado: app iOS com a mesma experiencia operacional.
 
-## Recomendacao de escopo inicial
+## Recomendacao comercial
 
-Comecar por Android + PWA + offline apenas para pedidos de balcao e mesa. Nao incluir inicialmente pagamento online, WhatsApp, iFood, imagens novas, relatorios ou edicao de cardapio em modo offline.
+Comunicar o recurso como PWA instalavel com operacao offline parcial no PDV, deixando claro que o modo offline completo esta restrito por escopo.
 
-Essas partes devem continuar exigindo internet, porque dependem de servicos externos, webhooks, gateways de pagamento ou dados agregados.
+Pode ser prometido hoje:
 
-## Mudancas principais no codigo
+- App instalavel pelo navegador em Android/tablet.
+- Interface aberta mesmo com conexao instavel apos primeiro acesso.
+- Indicador online/offline e banner de perda de conexao.
+- Catalogo local do PDV.
+- Pedido de balcao salvo offline e sincronizado depois.
 
-- Criar um modulo local de armazenamento, por exemplo `src/features/offline/`, usando IndexedDB.
-- Adaptar `useProdutos` e `useMesas` para preencher cache local quando online.
-- Adaptar `usePDVHook.finalizarPedido` para salvar na fila local quando offline.
-- Adaptar `pedidoService` para aceitar `client_order_id` e sincronizar pedidos pendentes.
-- Criar uma migration no Supabase adicionando `client_order_id` em `orders` com indice unico por restaurante.
-- Adicionar componentes de status no PDV: conectado, offline, sincronizando, erro de sincronizacao.
-- Adicionar service worker e manifesto PWA.
-- Adicionar Capacitor para Android.
+Nao prometer ainda:
 
-## Riscos importantes
+- Pedido de mesa offline completo.
+- Pagamento online offline.
+- WhatsApp, iFood ou webhooks offline.
+- Edicao de cardapio offline.
+- Relatorios offline.
+- App nativo Android/iOS publicado em loja.
 
-- Autenticacao: se o usuario nunca abriu o app online, nao havera sessao local para operar.
-- Dados desatualizados: produtos ou precos podem mudar enquanto o app esta offline.
-- Mesas: o estado da mesa pode conflitar entre dispositivos.
-- Duplicidade: sem `client_order_id`, pedidos podem ser criados duas vezes ao reconectar.
-- Impressao: impressoras termicas podem exigir integracao nativa ou ponte local dependendo do modelo.
+## Proximos passos recomendados
 
-## Caminho sugerido
-
-1. Corrigir comunicacao publica, deixando offline como recurso em desenvolvimento.
-2. Implementar PWA instalavel.
-3. Implementar cache local de produtos, categorias e mesas.
-4. Implementar fila offline de pedidos de balcao.
-5. Expandir para pedidos de mesa com tratamento de conflito.
-6. Adicionar Capacitor e gerar Android.
-7. Testar em operacao real antes de prometer sincronizacao automatica completa.
+1. Adicionar prompt guiado "Instalar app" no dashboard quando o navegador permitir.
+2. Criar diagnostico PWA/offline com service worker ativo, ultima sincronizacao e fila pendente.
+3. Adicionar aviso de nova versao quando o service worker atualizar assets.
+4. Expandir fila offline para mesa com revisao de conflito.
+5. Criar monitoramento por restaurante dos pedidos offline com erro.
+6. Testar em aparelho Android real durante um turno piloto.
+7. Avaliar Capacitor somente depois da estabilidade do PWA em piloto.

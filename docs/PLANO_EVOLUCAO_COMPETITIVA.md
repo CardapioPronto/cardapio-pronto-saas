@@ -261,7 +261,18 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 
 - Operador consegue instalar o Pubfy no Android como app pelo navegador.
 - App abre a interface mesmo com conexao instavel.
-- Nenhuma venda offline e prometida ainda.
+- Nenhuma venda offline completa e prometida no escopo do PWA base.
+
+### Backlog futuro
+
+- [ ] Prompt guiado "Instalar app" no Dashboard quando o navegador permitir `beforeinstallprompt`.
+- [ ] Tela de diagnostico PWA/offline com service worker ativo, ultima sincronizacao do PDV e pedidos pendentes.
+- [ ] Aviso de nova versao disponivel quando o service worker atualizar assets.
+- [ ] Versionamento do cache do service worker por release para reduzir risco de shell antigo.
+- [ ] Expansao do offline para pedidos de mesa com tratamento de conflito.
+- [ ] Monitoramento por restaurante/dispositivo dos pedidos offline com falha de sincronizacao.
+- [ ] Teste E2E especifico para app shell offline, badge de conexao e fila local do PDV.
+- [ ] Avaliar Capacitor/Android somente apos estabilidade do PWA em piloto.
 
 Evidencia:
 
@@ -270,6 +281,7 @@ Evidencia:
 - 2026-06-02: Indicador online/offline adicionado ao cabecalho operacional, exibindo estado de conexao nas telas protegidas sem prometer operacao offline.
 - 2026-06-02: Aviso global de perda de conexao adicionado e validado com Playwright em build de producao/preview: app shell permanece carregado offline apos primeiro acesso, e o estado volta ao normal quando a conexao retorna.
 - 2026-06-02: Acoes criticas que dependem de internet agora exibem bloqueio claro quando offline: finalizar pedido no PDV, alterar status, atualizar historico, aplicar cupom, buscar CEP e confirmar pedido no checkout publico.
+- 2026-06-11: Revisao do Bloco 4 criou `NetworkStatusBadge` reutilizavel, levou o indicador online/offline para Dashboard, PDV e Cozinha, atualizou `docs/OFFLINE_E_APP_MOBILE.md` com o estado real do PWA/catalogo local/fila offline parcial do PDV e alinhou landing/FAQ para prometer apenas offline parcial.
 
 ---
 

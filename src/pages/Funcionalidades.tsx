@@ -73,15 +73,16 @@ const features = [
     ]
   },
   {
-    title: "Modo Offline (em desenvolvimento)",
+    title: "PWA e Offline Parcial",
     icon: <Wifi className="h-10 w-10 text-green" />,
-    description: "Estamos preparando uma operação offline para vendas básicas no PDV, com fila local e sincronização quando a conexão voltar.",
+    description: "Instale o Pubfy no navegador, acompanhe o status da conexão e salve pedidos de balcão no PDV quando a internet cair.",
     benefits: [
-      "Planejado para pedidos de balcão e mesa",
+      "Pedido de balcão offline no PDV",
       "Fila local de pedidos pendentes",
       "Sincronização ao reconectar",
+      "Catálogo local do último acesso",
       "Redução do risco de perda de vendas",
-      "Base para aplicativo Android e iOS"
+      "Base para futuro aplicativo Android e iOS"
     ]
   },
   {

@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Menu, Bell, CheckCircle2, Loader2, Settings, Wifi, WifiOff } from "lucide-react";
+import { Menu, Bell, CheckCircle2, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -12,9 +12,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardNotifications } from "@/hooks/useDashboardNotifications";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import DashboardSidebar from "./DashboardSidebar";
 import { RestaurantUnitSwitcher } from "./RestaurantUnitSwitcher";
+import { NetworkStatusBadge } from "@/components/pwa/NetworkStatusBadge";
 import { SupportContextButton } from "@/components/support/SupportContextButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cleanupStaleRadixOverlays } from "@/lib/radixOverlayCleanup";
@@ -29,7 +29,6 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   const location = useLocation();
   const { user } = useCurrentUser();
   const { notifications, unreadCount, loading } = useDashboardNotifications();
-  const { isOnline, isChecking } = useNetworkStatus();
 
   useEffect(() => {
     setMenuOpen(false);
@@ -73,24 +72,7 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
         <RestaurantUnitSwitcher />
         <SupportContextButton title={title} />
-        <Badge
-          variant="outline"
-          className={
-            isChecking
-              ? "hidden border-amber-200 bg-amber-50 text-amber-700 sm:inline-flex"
-              : isOnline
-              ? "hidden border-emerald-200 bg-emerald-50 text-emerald-700 sm:inline-flex"
-              : "border-red-200 bg-red-50 text-red-700"
-          }
-          aria-live="polite"
-        >
-          {isChecking
-            ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-            : isOnline
-              ? <Wifi className="mr-1 h-3.5 w-3.5" />
-              : <WifiOff className="mr-1 h-3.5 w-3.5" />}
-          {isChecking ? "Verificando" : isOnline ? "Online" : "Offline"}
-        </Badge>
+        <NetworkStatusBadge hideStableStateOnMobile />
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">

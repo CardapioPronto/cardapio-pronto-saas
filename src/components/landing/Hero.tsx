@@ -48,7 +48,7 @@ const Hero = () => {
           </div>
 
           <div className="mt-8 grid gap-3 text-sm text-white/90 sm:grid-cols-3">
-            {["CRM e captura de leads", "Campanhas e fidelidade", "PWA com suporte offline"].map((item) => (
+            {["CRM e captura de leads", "Campanhas e fidelidade", "PWA e offline parcial"].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle2 size={17} className="shrink-0 text-green-light" />
                 <span>{item}</span>
