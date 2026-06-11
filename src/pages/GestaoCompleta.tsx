@@ -98,7 +98,7 @@ const GestaoCompleta = () => {
               <div className="rounded-lg bg-white p-5 shadow-2xl">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-navy/50">Painel executivo</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-navy/75">Painel executivo</p>
                     <p className="font-semibold text-navy">Visão da operação</p>
                   </div>
                   <span className="rounded-md bg-navy px-3 py-1 text-xs font-semibold text-white">Hoje</span>
@@ -110,7 +110,7 @@ const GestaoCompleta = () => {
                     ["Ticket médio", "R$ 38,57", "+7%"],
                   ].map(([label, value, delta]) => (
                     <div key={label} className="rounded-md border border-gray-100 bg-offwhite p-4">
-                      <p className="text-xs text-navy/60">{label}</p>
+                      <p className="text-xs text-navy/75">{label}</p>
                       <p className="mt-2 text-2xl font-bold text-navy">{value}</p>
                       <p className="mt-1 text-xs font-semibold text-green">{delta}</p>
                     </div>
@@ -131,7 +131,7 @@ const GestaoCompleta = () => {
                         <div key={name}>
                           <div className="flex justify-between text-sm">
                             <span className="font-medium text-navy">{name}</span>
-                            <span className="text-navy/60">{qty}</span>
+                            <span className="text-navy/75">{qty}</span>
                           </div>
                           <div className="mt-2 h-2 rounded-full bg-offwhite">
                             <div className="h-2 rounded-full bg-green" style={{ width }} />

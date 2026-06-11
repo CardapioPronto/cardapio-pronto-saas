@@ -75,7 +75,7 @@ const Navbar = () => {
                     </span>
                     <span>
                       <span className="block text-sm font-semibold">{item.title}</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-navy/60">{item.description}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-navy/75">{item.description}</span>
                     </span>
                   </Link>
                 ))}

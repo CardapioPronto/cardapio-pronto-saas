@@ -81,7 +81,7 @@ export default function Sobre() {
                     <Sparkles className="h-6 w-6 text-orange" />
                   </div>
                   <div>
-                    <p className="text-sm text-white/60">Nossa visão</p>
+                    <p className="text-sm text-white/85">Nossa visão</p>
                     <h2 className="text-2xl font-semibold">Operação digital, atendimento humano.</h2>
                   </div>
                 </div>

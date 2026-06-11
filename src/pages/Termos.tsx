@@ -91,7 +91,7 @@ export default function Termos() {
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/80 md:text-lg">
               Regras de uso da Pubfy. Leia com atenção antes de utilizar a Plataforma.
             </p>
-            <p className="mt-4 text-sm text-white/60">Última atualização: maio de 2026</p>
+            <p className="mt-4 text-sm text-white/85">Última atualização: maio de 2026</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/privacidade">
                 <Button size="sm" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">

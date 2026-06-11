@@ -155,7 +155,7 @@ const Features = () => {
                   </div>
                   <div className="border-b border-gray-100 pb-4">
                     <p className="font-medium text-navy">{item}</p>
-                    <p className="mt-1 text-sm text-navy/60">
+                    <p className="mt-1 text-sm text-navy/75">
                       {index === 0 && "Telefone, origem e opt-in ajudam a criar relacionamento."}
                       {index === 1 && "Status, impressão e comandas reduzem ruído na operação."}
                       {index === 2 && "Cupons rastreáveis transformam base própria em receita recorrente."}
