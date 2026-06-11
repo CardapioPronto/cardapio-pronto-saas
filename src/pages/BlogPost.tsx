@@ -91,6 +91,24 @@ export default function BlogPost() {
         path={path}
         ogImagePath={post.cover_image_url || '/favicon-pubfy.png'}
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: post.title,
+          description: postSeoDescription(post),
+          image: post.cover_image_url || 'https://pubfy.com.br/favicon-pubfy.png',
+          datePublished: post.published_at || post.created_at,
+          dateModified: post.updated_at || post.published_at || post.created_at,
+          author: { "@type": "Organization", name: "Pubfy" },
+          publisher: {
+            "@type": "Organization",
+            name: "Pubfy",
+            logo: { "@type": "ImageObject", url: "https://pubfy.com.br/favicon-pubfy.png" }
+          },
+          mainEntityOfPage: `https://pubfy.com.br/blog/${post.slug}`
+        })}</script>
+      </Helmet>
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="flex-grow">
