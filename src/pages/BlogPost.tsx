@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { PublicSeo } from '@/components/seo/PublicSeo';
 import type { BlogPost as BlogPostRecord } from '@/types/blog';
+import { Helmet } from 'react-helmet-async';
 
 function postSeoDescription(post: Pick<BlogPostRecord, 'excerpt' | 'content'>): string {
   const ex = post.excerpt?.trim();
