@@ -10,7 +10,7 @@ export interface AuthContextType {
     email: string,
     password: string,
     userData: Record<string, unknown>,
-    options?: { emailRedirectTo?: string },
+    options?: { emailRedirectTo?: string; captchaToken?: string },
   ) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
 }

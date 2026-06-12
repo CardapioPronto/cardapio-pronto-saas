@@ -10,12 +10,18 @@ export const signIn = async (email: string, password: string) => {
   return await supabase.auth.signInWithPassword({ email, password });
 };
 
-export const signUp = async (email: string, password: string, userData: Record<string, unknown>) => {
+export const signUp = async (
+  email: string,
+  password: string,
+  userData: Record<string, unknown>,
+  options?: { captchaToken?: string },
+) => {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: userData
+      data: userData,
+      captchaToken: options?.captchaToken,
     }
   });
   

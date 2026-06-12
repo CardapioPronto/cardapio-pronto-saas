@@ -23,6 +23,7 @@ import {
   captureReferralFromSearch,
   getReferralSignupMetadata,
 } from "@/lib/referralAttribution";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 
 const OWNER_EMAIL_VERIFICATION_TTL_HOURS = 24;
 
@@ -44,6 +45,8 @@ export default function Cadastro() {
 
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   useEffect(() => {
     captureReferralFromSearch(location.search);
@@ -51,6 +54,16 @@ export default function Cadastro() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user && !captchaToken) {
+      toast({
+        variant: "destructive",
+        title: "Verificação pendente",
+        description: "Aguarde a verificação de segurança antes de criar a conta.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -101,6 +114,8 @@ export default function Cadastro() {
           logo_url: logoUrl.trim() || null,
           category: category.trim() || null,
         },
+      }, {
+        captchaToken: captchaToken ?? undefined,
       });
 
       if (signUpError) {
@@ -117,6 +132,8 @@ export default function Cadastro() {
 
       setVerificationSent(true);
     } catch (error) {
+      setCaptchaToken(null);
+      setCaptchaResetKey((current) => current + 1);
       const errorMessage = error instanceof Error 
         ? error.message 
         : "Ocorreu um erro ao criar sua conta. Tente novamente.";
@@ -245,9 +262,17 @@ export default function Cadastro() {
               category={category}
               setCategory={setCategory}
             />
+            {!user && (
+              <TurnstileWidget
+                key={captchaResetKey}
+                action="owner_signup"
+                onToken={setCaptchaToken}
+                className="min-h-[65px]"
+              />
+            )}
           </CardContent>
           {!user ? (
-            <FormFooter loading={loading} />
+            <FormFooter loading={loading} disabled={!captchaToken} />
           ) : (
             <CardFooter className="flex flex-col gap-2">
               <Button

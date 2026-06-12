@@ -10,5 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_SENTRY_RELEASE?: string;
   readonly VITE_SENTRY_TRACES_SAMPLE_RATE?: string;
   readonly VITE_PUBLIC_SITE_URL?: string;
+  readonly VITE_TURNSTILE_SITE_KEY?: string;
 }
 

@@ -7,6 +7,7 @@ import { PublicSeo } from "@/components/seo/PublicSeo";
 import { UserInfoForm } from "@/components/cadastro/UserInfoForm";
 import { useAuth } from "@/hooks/useAuthContext";
 import { toast } from "@/hooks/use-toast";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 
 export default function AffiliateAccountSignup() {
   const location = useLocation();
@@ -16,9 +17,21 @@ export default function AffiliateAccountSignup() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (!captchaToken) {
+      toast({
+        variant: "destructive",
+        title: "Verificação pendente",
+        description: "Aguarde a verificação de segurança antes de criar a conta.",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await signUp(
@@ -31,6 +44,7 @@ export default function AffiliateAccountSignup() {
         },
         {
           emailRedirectTo: `${window.location.origin}/indique/cadastro`,
+          captchaToken,
         },
       );
       if (error) throw error;
@@ -41,6 +55,8 @@ export default function AffiliateAccountSignup() {
       });
       setVerificationSent(true);
     } catch (error) {
+      setCaptchaToken(null);
+      setCaptchaResetKey((current) => current + 1);
       toast({
         variant: "destructive",
         title: "Erro no cadastro",
@@ -119,12 +135,18 @@ export default function AffiliateAccountSignup() {
                 password={password}
                 setPassword={setPassword}
               />
+              <TurnstileWidget
+                key={captchaResetKey}
+                action="affiliate_signup"
+                onToken={setCaptchaToken}
+                className="min-h-[65px]"
+              />
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
               <Button
                 type="submit"
                 className="w-full bg-green hover:bg-green-dark text-white"
-                disabled={loading}
+                disabled={loading || !captchaToken}
               >
                 {loading ? "Criando conta..." : "Criar conta de afiliado"}
               </Button>

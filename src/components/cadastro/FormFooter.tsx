@@ -6,15 +6,16 @@ import { CardFooter } from "@/components/ui/card";
 
 interface FormFooterProps {
   loading: boolean;
+  disabled?: boolean;
 }
 
-export function FormFooter({ loading }: FormFooterProps) {
+export function FormFooter({ loading, disabled = false }: FormFooterProps) {
   return (
     <CardFooter className="flex flex-col">
       <Button
         type="submit"
         className="w-full bg-green hover:bg-green-dark text-white"
-        disabled={loading}
+        disabled={loading || disabled}
       >
         {loading ? "Criando conta..." : "Criar conta grátis"}
       </Button>

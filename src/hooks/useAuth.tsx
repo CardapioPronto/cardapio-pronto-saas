@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     userData: Record<string, unknown>,
-    options?: { emailRedirectTo?: string },
+    options?: { emailRedirectTo?: string; captchaToken?: string },
   ) => {
     const redirectUrl = options?.emailRedirectTo || `${window.location.origin}/dashboard`;
     const { error } = await supabase.auth.signUp({
@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         data: userData,
         emailRedirectTo: redirectUrl,
+        captchaToken: options?.captchaToken,
       },
     });
     if (error) {
