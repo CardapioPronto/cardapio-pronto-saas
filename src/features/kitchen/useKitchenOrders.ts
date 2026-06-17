@@ -8,9 +8,31 @@ import { KITCHEN_QUEUE_STATUSES, type KitchenOrder } from "./types";
 
 const SOUND_STORAGE_KEY = "pubfy:kitchen-sound-enabled";
 
-const shouldNotifyOrder = (order: { source?: string | null; order_type?: string | null }) =>
-  order.order_type === "delivery" ||
-  ["cardapio", "ifood", "whatsapp"].includes(order.source || "");
+type KitchenOrderRealtimePayload = {
+  total?: number;
+  source?: string | null;
+  order_type?: string | null;
+  status?: PedidoStatus | string | null;
+};
+
+const shouldNotifyOrder = (order: KitchenOrderRealtimePayload) => {
+  if (order.status && !KITCHEN_QUEUE_STATUSES.includes(order.status as PedidoStatus)) {
+    return false;
+  }
+
+  return true;
+};
+
+const getOrderNotificationDescription = (order: KitchenOrderRealtimePayload) => {
+  if (order.source === "ifood") return "Pedido recebido pelo iFood";
+  if (order.source === "whatsapp") return "Pedido recebido pelo WhatsApp";
+  if (order.source === "cardapio") return "Pedido recebido pelo cardápio digital";
+  if (order.source === "app" || order.source === "pdv" || ["mesa", "balcao"].includes(order.order_type || "")) {
+    return "Pedido recebido pelo PDV";
+  }
+
+  return "Pedido recebido pelo sistema";
+};
 
 export function useKitchenOrders(restaurantId?: string | null) {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
@@ -63,7 +85,7 @@ export function useKitchenOrders(restaurantId?: string | null) {
       window.clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = null;
     }
-      void loadOrders();
+    void loadOrders();
   }, [loadOrders]);
 
   const playNotification = useCallback(() => {
@@ -133,15 +155,15 @@ export function useKitchenOrders(restaurantId?: string | null) {
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            const nextOrder = payload.new as { total?: number; source?: string | null; order_type?: string | null };
+            const nextOrder = payload.new as KitchenOrderRealtimePayload;
             reloadRef.current();
-            if (shouldNotifyOrder(nextOrder)) playNotification();
+            const shouldNotify = shouldNotifyOrder(nextOrder);
+
+            if (!shouldNotify) return;
+
+            playNotification();
             toast.success("Novo pedido na cozinha", {
-              description: nextOrder.source === "ifood"
-                ? "Pedido recebido pelo iFood"
-                : nextOrder.source === "whatsapp"
-                  ? "Pedido recebido pelo WhatsApp"
-                  : "Pedido recebido pelo sistema",
+              description: getOrderNotificationDescription(nextOrder),
             });
             return;
           }

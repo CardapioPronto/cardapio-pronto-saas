@@ -29,19 +29,19 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 
 ### 1.1 Onboarding inicial
 
-- [ ] Cadastro em `/cadastro` com e-mail válido → recebe e-mail de
+- [x] Cadastro em `/cadastro` com e-mail válido → recebe e-mail de
       confirmação no domínio configurado em **Site URL** do Auth.
-- [ ] Após confirmar e-mail, restaurante e assinatura **trial** são
+- [x] Após confirmar e-mail, restaurante e assinatura **trial** são
       criados automaticamente (verificar via Admin → Assinaturas).
-- [ ] Login em `/login` redireciona para `/dashboard`.
-- [ ] Dashboard: card **Implantação guiada** aparece com progresso,
+- [x] Login em `/login` redireciona para `/dashboard`.
+- [x] Dashboard: card **Implantação guiada** aparece com progresso,
       próximo passo e atalhos para Configurações, Produtos/Categorias,
       QR Code e PDV.
-- [ ] Dashboard: botão de suporte no topo abre modal com contexto da tela,
+- [x] Dashboard: botão de suporte no topo abre modal com contexto da tela,
       permite descrever o problema, copiar o contexto e abrir e-mail preenchido.
-- [ ] Dashboard/PDV/Cardápio: botão de suporte exibe tutoriais curtos e
+- [x] Dashboard/PDV/Cardápio: botão de suporte exibe tutoriais curtos e
       problemas comuns coerentes com a tela atual.
-- [ ] Dashboard/PDV/Cozinha: indicador online/offline aparece no topo;
+- [x] Dashboard/PDV/Cozinha: indicador online/offline aparece no topo;
       ao desconectar a rede, muda para Offline e o banner global é exibido.
 
 ### 1.2 Configuração do restaurante
@@ -93,8 +93,8 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 > Checklist completo (simuladores, boleto, webhook, PIX cardápio e cutover
 > live): **`docs/ROTEIRO_PAGARME_HOMOLOGACAO_PRODUCAO.md`**.
 
-- [ ] Assinaturas: visualizar alert de trial com dias restantes.
-- [ ] Mudar para plano pago via Pagar.me — cartão de teste **sucesso**
+- [x] Assinaturas: visualizar alert de trial com dias restantes.
+- [x] Mudar para plano pago via Pagar.me — cartão de teste **sucesso**
       `4000000000000010` (validade futura, ex. `12/30`, CVV `123`) em loja
       de teste. Após pagamento, alert muda para "Plano ativo".
 - [ ] (Opcional) Cartão de falha `4000000000000028` → erro na UI, sem
@@ -134,16 +134,16 @@ Cobre o turno do operador no balcão/mesa.
 
 ### 2.1 Login e permissões
 
-- [ ] Login com usuário **funcionário** → vê apenas Dashboard, PDV,
+- [x] Login com usuário **funcionário** → vê apenas Dashboard, PDV,
       Pedidos e Cozinha (sem assinatura/configurações).
-- [ ] Sem permissão `orders_metrics_view`, valores monetários ficam
+- [x] Sem permissão `orders_metrics_view`, valores monetários ficam
       ocultos na lista de pedidos (visto no Bloco 6).
 
 ### 2.2 Operação no PDV
 
-- [ ] PDV → escolher Mesa 1 → adicionar 3 produtos diferentes.
+- [x] PDV → escolher Mesa 1 → adicionar 3 produtos diferentes.
 - [ ] Aplicar cupom `BEMVINDO10` → desconto reflete no total.
-- [ ] Finalizar como "pago em dinheiro" → pedido vai para Cozinha.
+- [x] Finalizar como "pago em dinheiro" → pedido vai para Cozinha.
 - [ ] Repetir com pagamento via cartão online (Pagar.me) → status fica
       `aguardando_pagamento`, muda para `pendente` quando webhook chega.
 - [ ] Cancelar pedido aberto → mesa volta para `livre`.
@@ -156,7 +156,7 @@ Cobre o turno do operador no balcão/mesa.
 
 ### 2.3 Pedidos do dia
 
-- [ ] Pedidos → filtro "Hoje": ver todos os pedidos da operação.
+- [x] Pedidos → filtro "Hoje": ver todos os pedidos da operação.
 - [ ] Buscar pedido por número → consulta retorna em < 2s.
 - [ ] Atualizar status de um pedido manualmente (Em preparo → Pronto →
       Finalizado).
@@ -178,16 +178,16 @@ parede.
 
 - [ ] Abrir `/cozinha` em monitor 1080p → cards de pedidos cabem na
       tela sem scroll.
-- [ ] Cards em "Pendente" e "Em preparo" claramente diferenciados por
+- [x] Cards em "Pendente" e "Em preparo" claramente diferenciados por
       cor.
 - [ ] Notificação sonora dispara ao chegar pedido novo.
 
 ### 3.2 Fluxo de status
 
-- [ ] Pedido novo → operador da cozinha clica "Iniciar preparo" → card
+- [x] Pedido novo → operador da cozinha clica "Iniciar preparo" → card
       muda para coluna "Em preparo".
-- [ ] Finalizar item por item ou pedido completo → muda para "Pronto".
-- [ ] Pronto sai da fila e aparece em Pedidos com `status = pronto`.
+- [x] Finalizar item por item ou pedido completo → muda para "Pronto".
+- [x] Pronto sai da fila e aparece em Pedidos com `status = pronto`.
 
 ### 3.3 Comunicação
 
