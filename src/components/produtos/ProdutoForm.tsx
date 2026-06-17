@@ -185,6 +185,29 @@ export const ProdutoForm = ({
           <Label htmlFor="disponivel">Disponível para venda</Label>
         </div>
 
+        <div className="rounded-lg border border-border p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="multi-flavor-enabled" className="text-sm font-medium">
+                Combinar sabores
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Permite que o cliente escolha este item junto de outro produto da mesma categoria, como pizzas de dois sabores.
+              </p>
+            </div>
+            <Switch
+              id="multi-flavor-enabled"
+              checked={Boolean(produto.multi_flavor_enabled)}
+              onCheckedChange={(value) =>
+                onChangeProduto({
+                  ...produto,
+                  multi_flavor_enabled: value,
+                })
+              }
+            />
+          </div>
+        </div>
+
         {stockControlEnabled && (
           <div className="rounded-lg border border-border p-4 space-y-4">
             <div className="flex items-start justify-between gap-3">

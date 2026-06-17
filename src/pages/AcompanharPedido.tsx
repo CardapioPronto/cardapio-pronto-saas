@@ -49,6 +49,9 @@ interface TrackingOrderItem {
   quantity: number | string;
   price: number | string;
   observations?: string | null;
+  flavor_selection?: {
+    flavors?: Array<{ name?: string | null }>;
+  } | null;
 }
 
 interface TrackingPayment {
@@ -504,6 +507,11 @@ export default function AcompanharPedido() {
                   <div key={item.id} className="flex justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-medium">{item.quantity}x {item.name || item.product_name}</p>
+                      {item.flavor_selection?.flavors && item.flavor_selection.flavors.length > 1 && (
+                        <p className="text-xs text-muted-foreground">
+                          Sabores: {item.flavor_selection.flavors.map((flavor) => flavor.name).filter(Boolean).join(' / ')}
+                        </p>
+                      )}
                       {item.observations && (
                         <p className="text-xs text-muted-foreground">Obs: {item.observations}</p>
                       )}

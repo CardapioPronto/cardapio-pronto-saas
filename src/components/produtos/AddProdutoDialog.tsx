@@ -35,6 +35,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId, isSaving = false 
     stock_quantity: 0,
     stock_min_quantity: null,
     stock_is_fractional: false,
+    multi_flavor_enabled: false,
   });
   
   const { categorias, loading } = useCategorias();
@@ -62,6 +63,7 @@ export const AddProdutoDialog = ({ onAddProduto, restaurantId, isSaving = false 
       stock_quantity: 0,
       stock_min_quantity: null,
       stock_is_fractional: false,
+      multi_flavor_enabled: false,
     });
   };
   

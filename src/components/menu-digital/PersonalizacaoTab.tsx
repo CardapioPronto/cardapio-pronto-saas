@@ -3,6 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { menuThemeService } from '@/services/menuThemeService';
 import { DeliveryConfig, DEFAULT_DELIVERY_CONFIG } from '@/types/menuTheme';
+import {
+  DEFAULT_MULTI_FLAVOR_CONFIG,
+  type MultiFlavorConfig,
+  type MultiFlavorPricingStrategy,
+} from '@/lib/multiFlavor';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { reorderItemsBatch } from '@/hooks/useOrderPosition';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,9 +91,19 @@ export const PersonalizacaoTab = () => {
     enabled: !!restaurantId,
   });
 
+  const { data: multiFlavorConfigData, isLoading: loadingMultiFlavor } = useQuery({
+    queryKey: ['multi-flavor-config', restaurantId],
+    queryFn: async () => {
+      if (!restaurantId) return DEFAULT_MULTI_FLAVOR_CONFIG;
+      return menuThemeService.getMultiFlavorConfig(restaurantId);
+    },
+    enabled: !!restaurantId,
+  });
+
   /* ---- Local form state ---- */
   const [info, setInfo] = useState<RestaurantInfoForm>(emptyInfo);
   const [delivery, setDelivery] = useState<DeliveryConfig>(DEFAULT_DELIVERY_CONFIG);
+  const [multiFlavor, setMultiFlavor] = useState<MultiFlavorConfig>(DEFAULT_MULTI_FLAVOR_CONFIG);
 
   useEffect(() => {
     if (restaurant) {
@@ -108,6 +123,10 @@ export const PersonalizacaoTab = () => {
   useEffect(() => {
     if (deliveryConfigData) setDelivery(deliveryConfigData);
   }, [deliveryConfigData]);
+
+  useEffect(() => {
+    if (multiFlavorConfigData) setMultiFlavor(multiFlavorConfigData);
+  }, [multiFlavorConfigData]);
 
   /* ---- Upload handlers ---- */
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -174,6 +193,20 @@ export const PersonalizacaoTab = () => {
     },
   });
 
+  const saveMultiFlavorMutation = useMutation({
+    mutationFn: async () => {
+      if (!restaurantId) throw new Error('Restaurante não encontrado');
+      return menuThemeService.saveMultiFlavorConfig(restaurantId, multiFlavor);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['multi-flavor-config', restaurantId] });
+      toast({ title: 'Sucesso', description: 'Configurações de sabores combinados salvas.' });
+    },
+    onError: (err: unknown) => {
+      toast({ variant: 'destructive', title: 'Erro', description: errorMessage(err, 'Falha ao salvar') });
+    },
+  });
+
   const togglePayment = (value: DeliveryConfig['payment_methods'][number]) => {
     setDelivery(prev => {
       const exists = prev.payment_methods.includes(value);
@@ -186,7 +219,7 @@ export const PersonalizacaoTab = () => {
     });
   };
 
-  if (userLoading || loadingRestaurant || loadingDelivery) {
+  if (userLoading || loadingRestaurant || loadingDelivery || loadingMultiFlavor) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -495,6 +528,68 @@ export const PersonalizacaoTab = () => {
 
       {/* Slug do Cardápio */}
       {restaurantId && <SlugEditor restaurantId={restaurantId} currentSlug={restaurant?.slug ?? undefined} />}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sabores combinados</CardTitle>
+          <CardDescription>
+            Permita itens de dois sabores e escolha como o valor final será calculado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div className="space-y-0.5">
+              <Label className="text-sm">Habilitar no cardápio público</Label>
+              <p className="text-xs text-muted-foreground">
+                A opção aparece apenas em produtos marcados como “Combinar sabores”.
+              </p>
+            </div>
+            <Switch
+              checked={multiFlavor.enabled}
+              onCheckedChange={v => setMultiFlavor(p => ({ ...p, enabled: v }))}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[1fr_1.4fr]">
+            <div className="space-y-2">
+              <Label>Regra de preço</Label>
+              <Select
+                value={multiFlavor.pricing_strategy}
+                onValueChange={(value) =>
+                  setMultiFlavor(p => ({
+                    ...p,
+                    pricing_strategy: value as MultiFlavorPricingStrategy,
+                    max_flavors: 2,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="highest">Cobrar maior sabor</SelectItem>
+                  <SelectItem value="average">Cobrar proporcional</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Alert>
+              <AlertDescription className="text-sm">
+                “Maior sabor” é o padrão comercial mais seguro para pizzas de dois sabores. “Proporcional” cobra a média dos sabores escolhidos.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveMultiFlavorMutation.mutate()} disabled={saveMultiFlavorMutation.isPending}>
+              {saveMultiFlavorMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...</>
+              ) : (
+                <><Save className="h-4 w-4 mr-2" /> Salvar sabores</>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Horário de Funcionamento */}
       {restaurantId && <HoursManager restaurantId={restaurantId} />}

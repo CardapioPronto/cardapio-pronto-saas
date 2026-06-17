@@ -26,6 +26,7 @@ import {
 } from '@/lib/cartAbandonmentSession';
 import { cartAbandonmentService } from '@/services/cartAbandonmentService';
 import { trackPublicMenuEventQuietly } from '@/services/publicMenuAnalyticsService';
+import { formatMultiFlavorNames } from '@/lib/multiFlavor';
 
 interface Props {
   data: MenuData;
@@ -184,6 +185,7 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
           name: item.name,
           quantity: item.quantity,
           price: item.price,
+          flavor_selection: item.flavor_selection,
         })),
         subtotal,
       });
@@ -670,7 +672,14 @@ export const CheckoutFlow = ({ data, onClose }: Props) => {
               <Section title="Itens">
                 {items.map(i => (
                   <div key={i.id} className="flex justify-between gap-3">
-                    <span>{i.quantity}x {i.name}</span>
+                    <span className="min-w-0">
+                      <span className="block">{i.quantity}x {i.name}</span>
+                      {i.flavor_selection && (
+                        <span className="block text-xs text-muted-foreground">
+                          Sabores: {formatMultiFlavorNames(i.flavor_selection.flavors)}
+                        </span>
+                      )}
+                    </span>
                     <span>{formatBRL(i.price * i.quantity)}</span>
                   </div>
                 ))}

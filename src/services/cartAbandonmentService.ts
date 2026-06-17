@@ -1,6 +1,7 @@
 import { endOfDay, startOfDay, subDays } from "date-fns";
 import { supabase, getCurrentRestaurantId } from "@/lib/supabase";
 import type { Json } from "@/integrations/supabase/types";
+import type { MultiFlavorSelection } from "@/lib/multiFlavor";
 import { assertMaxReportRange } from "@/lib/reportLimits";
 
 export type CartAbandonmentSettings = {
@@ -130,7 +131,7 @@ export type UpsertCartSessionInput = {
   acceptsEmail?: boolean;
   acceptsWhatsapp?: boolean;
   fulfillmentType?: string;
-  items: Array<{ name: string; quantity: number; price: number }>;
+  items: Array<{ name: string; quantity: number; price: number; flavor_selection?: MultiFlavorSelection }>;
   subtotal: number;
 };
 
@@ -155,6 +156,7 @@ export const cartAbandonmentService = {
           name: item.name,
           quantity: item.quantity,
           price: item.price,
+          flavor_selection: item.flavor_selection,
         })),
       },
     });

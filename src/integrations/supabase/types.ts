@@ -2554,6 +2554,7 @@ export type Database = {
         Row: {
           addons: Json | null
           created_at: string
+          flavor_selection: Json | null
           id: string
           observations: string | null
           order_id: string
@@ -2567,6 +2568,7 @@ export type Database = {
         Insert: {
           addons?: Json | null
           created_at?: string
+          flavor_selection?: Json | null
           id?: string
           observations?: string | null
           order_id: string
@@ -2580,6 +2582,7 @@ export type Database = {
         Update: {
           addons?: Json | null
           created_at?: string
+          flavor_selection?: Json | null
           id?: string
           observations?: string | null
           order_id?: string
@@ -3118,6 +3121,7 @@ export type Database = {
           image_uploaded_at: string | null
           image_uploaded_by: string | null
           image_url: string | null
+          multi_flavor_enabled: boolean
           name: string
           order_position: number | null
           price: number
@@ -3140,6 +3144,7 @@ export type Database = {
           image_uploaded_at?: string | null
           image_uploaded_by?: string | null
           image_url?: string | null
+          multi_flavor_enabled?: boolean
           name: string
           order_position?: number | null
           price: number
@@ -3162,6 +3167,7 @@ export type Database = {
           image_uploaded_at?: string | null
           image_uploaded_by?: string | null
           image_url?: string | null
+          multi_flavor_enabled?: boolean
           name?: string
           order_position?: number | null
           price?: number

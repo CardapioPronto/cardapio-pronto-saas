@@ -23,6 +23,7 @@ type ProductSupabaseRow = {
     stock_quantity?: number | null;
     stock_min_quantity?: number | null;
     stock_is_fractional?: boolean | null;
+    multi_flavor_enabled?: boolean | null;
     financial?: { cost_price: number } | Array<{ cost_price: number }> | null;
 };
 
@@ -50,5 +51,6 @@ export function formatProductFromSupabase(data: ProductSupabaseRow[]): Product[]
         stock_quantity: item.stock_quantity ?? 0,
         stock_min_quantity: item.stock_min_quantity ?? null,
         stock_is_fractional: item.stock_is_fractional ?? false,
+        multi_flavor_enabled: item.multi_flavor_enabled ?? false,
     }));
 }

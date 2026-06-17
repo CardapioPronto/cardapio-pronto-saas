@@ -9,6 +9,13 @@ export interface KitchenOrderItem {
   quantity: number;
   price: number;
   observations?: string | null;
+  flavorSelection?: {
+    flavors?: Array<{
+      name?: string | null;
+      portion?: number | null;
+    }>;
+    pricing_strategy?: string | null;
+  } | null;
   addons: Array<{
     name: string;
     quantity?: number | null;

@@ -5,6 +5,15 @@ export type { CartItem } from './cartContextCore';
 
 const STORAGE_KEY_PREFIX = 'pubfy_cart_';
 
+const flavorFingerprint = (item: Pick<CartItem, 'flavor_selection'>) => {
+  if (!item.flavor_selection) return 'single';
+  const flavorIds = item.flavor_selection.flavors
+    .map((flavor) => flavor.product_id)
+    .sort()
+    .join('|');
+  return `${item.flavor_selection.pricing_strategy}:${flavorIds}:${item.flavor_selection.unit_price}`;
+};
+
 interface CartProviderProps {
   restaurantId: string;
   children: ReactNode;
@@ -34,7 +43,11 @@ export const CartProvider = ({ restaurantId, children }: CartProviderProps) => {
     setItems(prev => {
       // Mescla por product_id + observations vazias
       const existingIdx = prev.findIndex(
-        p => p.product_id === item.product_id && !p.observations && !item.observations
+        p =>
+          p.product_id === item.product_id &&
+          !p.observations &&
+          !item.observations &&
+          flavorFingerprint(p) === flavorFingerprint(item)
       );
       if (existingIdx >= 0) {
         const next = [...prev];

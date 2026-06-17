@@ -163,7 +163,16 @@ export function ProdutosList({
                   className="w-12 h-12 object-cover rounded-md"
                 />
               </TableCell>
-              <TableCell className="font-medium">{produto.name}</TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <p className="font-medium">{produto.name}</p>
+                  {produto.multi_flavor_enabled && (
+                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">
+                      Combina sabores
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>{produto.category?.name || "-"}</TableCell>
               <TableCell>{formatCurrency(produto.price)}</TableCell>
               {canManage && (

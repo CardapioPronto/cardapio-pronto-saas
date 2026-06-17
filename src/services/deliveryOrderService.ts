@@ -223,6 +223,7 @@ export const deliveryOrderService = {
         product_id: i.product_id,
         quantity: i.quantity,
         observations: i.observations || null,
+        flavor_selection: i.flavor_selection || null,
       })),
     };
 
@@ -270,6 +271,7 @@ export const deliveryOrderService = {
               quantity: i.quantity,
               price: i.price,
               observations: i.observations || null,
+              flavor_selection: i.flavor_selection || null,
             })),
             event: 'created',
           },

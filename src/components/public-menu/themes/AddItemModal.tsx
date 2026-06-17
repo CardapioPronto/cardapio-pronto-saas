@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,6 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Plus, Minus } from 'lucide-react';
 import { formatBRL } from '../cart/cartContextCore';
 import type { PublicMenuUpsellSuggestion } from '@/types/menuTheme';
+import {
+  calculateMultiFlavorUnitPrice,
+  formatMultiFlavorNames,
+  normalizeMultiFlavorConfig,
+  type MultiFlavorConfig,
+  type MultiFlavorSelection,
+  type MultiFlavorSelectionFlavor,
+} from '@/lib/multiFlavor';
 
 export interface AddItemModalProduct {
   id: string;
@@ -13,6 +21,8 @@ export interface AddItemModalProduct {
   price: number;
   description?: string;
   image_url?: string;
+  category_id?: string;
+  multi_flavor_enabled?: boolean;
   is_sold_out?: boolean;
   promotion?: {
     id: string;
@@ -28,21 +38,33 @@ interface Props {
   product: AddItemModalProduct | null;
   primaryColor: string;
   suggestions?: PublicMenuUpsellSuggestion[];
+  flavorOptions?: AddItemModalProduct[];
+  multiFlavorConfig?: MultiFlavorConfig;
   onClose: () => void;
   onAddSuggestion?: (suggestion: PublicMenuUpsellSuggestion) => void;
-  onConfirm: (payload: { quantity: number; observations?: string }) => void;
+  onConfirm: (payload: {
+    quantity: number;
+    observations?: string;
+    unitPrice: number;
+    displayName?: string;
+    flavorSelection?: MultiFlavorSelection;
+  }) => void;
 }
 
 export const AddItemModal = ({
   product,
   primaryColor,
   suggestions = [],
+  flavorOptions = [],
+  multiFlavorConfig,
   onClose,
   onAddSuggestion,
   onConfirm,
 }: Props) => {
   const [quantity, setQuantity] = useState(1);
   const [observations, setObservations] = useState('');
+  const [combiningFlavors, setCombiningFlavors] = useState(false);
+  const [secondaryFlavorId, setSecondaryFlavorId] = useState<string>('');
 
   const open = product !== null;
 
@@ -53,28 +75,116 @@ export const AddItemModal = ({
       setTimeout(() => {
         setQuantity(1);
         setObservations('');
+        setCombiningFlavors(false);
+        setSecondaryFlavorId('');
       }, 150);
     }
   };
 
   const handleConfirm = () => {
     if (product?.is_sold_out) return;
-    onConfirm({ quantity, observations: observations.trim() || undefined });
+    const flavorSelection = buildFlavorSelection();
+    onConfirm({
+      quantity,
+      observations: observations.trim() || undefined,
+      unitPrice: flavorSelection?.unit_price ?? finalUnitPrice,
+      displayName: flavorSelection ? formatMultiFlavorNames(flavorSelection.flavors) : undefined,
+      flavorSelection,
+    });
     setQuantity(1);
     setObservations('');
+    setCombiningFlavors(false);
+    setSecondaryFlavorId('');
   };
 
-  if (!product) return null;
-
-  const finalUnitPrice = product.promotion?.final_price ?? product.price;
-  const total = finalUnitPrice * quantity;
-  const hasPromotion = !!product.promotion && product.promotion.unit_discount > 0;
-  const isSoldOut = Boolean(product.is_sold_out);
-  const promotionLabel = product.promotion
+  const normalizedMultiFlavorConfig = normalizeMultiFlavorConfig(multiFlavorConfig);
+  const finalUnitPrice = product?.promotion?.final_price ?? product?.price ?? 0;
+  const hasPromotion = !!product?.promotion && product.promotion.unit_discount > 0;
+  const isSoldOut = Boolean(product?.is_sold_out);
+  const availableFlavorOptions = useMemo(
+    () =>
+      product
+        ? flavorOptions.filter(
+            option =>
+              option.id !== product.id &&
+              option.multi_flavor_enabled &&
+              !option.is_sold_out &&
+              option.category_id === product.category_id,
+          )
+        : [],
+    [flavorOptions, product],
+  );
+  const canCombineFlavors =
+    normalizedMultiFlavorConfig.enabled &&
+    Boolean(product?.multi_flavor_enabled) &&
+    availableFlavorOptions.length > 0;
+  const selectedSecondaryFlavor = useMemo(
+    () => availableFlavorOptions.find((option) => option.id === secondaryFlavorId) ?? null,
+    [availableFlavorOptions, secondaryFlavorId],
+  );
+  const promotionLabel = product?.promotion
     ? product.promotion.discount_type === 'percentage'
       ? `${product.promotion.discount_value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% OFF`
       : `${formatBRL(product.promotion.discount_value)} OFF`
     : null;
+
+  const selectedFlavorProducts = useMemo(() => {
+    if (!product || !combiningFlavors || !selectedSecondaryFlavor) return [];
+    return [product, selectedSecondaryFlavor];
+  }, [combiningFlavors, product, selectedSecondaryFlavor]);
+
+  const currentUnitPrice = useMemo(() => {
+    if (selectedFlavorProducts.length < 2) return finalUnitPrice;
+    const portion = 1 / selectedFlavorProducts.length;
+    const flavors = selectedFlavorProducts.map((flavor): MultiFlavorSelectionFlavor => ({
+      product_id: flavor.id,
+      name: flavor.name,
+      price: flavor.price,
+      final_price: flavor.promotion?.final_price ?? flavor.price,
+      portion,
+    }));
+    return calculateMultiFlavorUnitPrice(flavors, normalizedMultiFlavorConfig.pricing_strategy);
+  }, [finalUnitPrice, normalizedMultiFlavorConfig.pricing_strategy, selectedFlavorProducts]);
+
+  const total = currentUnitPrice * quantity;
+
+  function buildFlavorSelection(): MultiFlavorSelection | undefined {
+    if (selectedFlavorProducts.length < 2) return undefined;
+    const portion = 1 / selectedFlavorProducts.length;
+    const flavors = selectedFlavorProducts.map((flavor): MultiFlavorSelectionFlavor => ({
+      product_id: flavor.id,
+      name: flavor.name,
+      price: flavor.price,
+      final_price: flavor.promotion?.final_price ?? flavor.price,
+      portion,
+    }));
+    return {
+      mode: 'combined',
+      pricing_strategy: normalizedMultiFlavorConfig.pricing_strategy,
+      base_unit_price: calculateMultiFlavorUnitPrice(flavors, normalizedMultiFlavorConfig.pricing_strategy, false),
+      unit_price: calculateMultiFlavorUnitPrice(flavors, normalizedMultiFlavorConfig.pricing_strategy),
+      flavors,
+    };
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    setCombiningFlavors(false);
+    setSecondaryFlavorId('');
+  }, [open, product?.id]);
+
+  useEffect(() => {
+    if (!canCombineFlavors) {
+      setCombiningFlavors(false);
+      setSecondaryFlavorId('');
+      return;
+    }
+    if (combiningFlavors && !secondaryFlavorId && availableFlavorOptions[0]) {
+      setSecondaryFlavorId(availableFlavorOptions[0].id);
+    }
+  }, [availableFlavorOptions, canCombineFlavors, combiningFlavors, secondaryFlavorId]);
+
+  if (!product) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -102,6 +212,70 @@ export const AddItemModal = ({
             <span className="text-xs opacity-80">
               de <span className="line-through">{formatBRL(product.price)}</span> por {formatBRL(finalUnitPrice)}
             </span>
+          </div>
+        )}
+
+        {canCombineFlavors && (
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Sabores</Label>
+                <p className="text-xs text-muted-foreground">
+                  {normalizedMultiFlavorConfig.pricing_strategy === 'highest'
+                    ? 'Valor pelo sabor mais caro.'
+                    : 'Valor proporcional entre os sabores.'}
+                </p>
+              </div>
+              <div className="flex rounded-lg border border-border p-1">
+                <button
+                  type="button"
+                  onClick={() => setCombiningFlavors(false)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${!combiningFlavors ? 'text-white' : 'text-foreground hover:bg-muted'}`}
+                  style={!combiningFlavors ? { backgroundColor: primaryColor } : undefined}
+                >
+                  1 sabor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCombiningFlavors(true)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${combiningFlavors ? 'text-white' : 'text-foreground hover:bg-muted'}`}
+                  style={combiningFlavors ? { backgroundColor: primaryColor } : undefined}
+                >
+                  2 sabores
+                </button>
+              </div>
+            </div>
+
+            {combiningFlavors && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Segundo sabor</p>
+                <div className="grid max-h-40 gap-2 overflow-y-auto pr-1">
+                  {availableFlavorOptions.map((option) => {
+                    const price = option.promotion?.final_price ?? option.price;
+                    const selected = option.id === secondaryFlavorId;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setSecondaryFlavorId(option.id)}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm transition ${
+                          selected ? 'border-transparent text-white' : 'border-border hover:bg-muted/50'
+                        }`}
+                        style={selected ? { backgroundColor: primaryColor } : undefined}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{option.name}</span>
+                        <span className="shrink-0 text-xs font-semibold">{formatBRL(price)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedFlavorProducts.length === 2 && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatMultiFlavorNames(selectedFlavorProducts)}: {formatBRL(currentUnitPrice)}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -205,7 +379,7 @@ export const AddItemModal = ({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isSoldOut}
+            disabled={isSoldOut || (combiningFlavors && !selectedSecondaryFlavor)}
             className="text-white hover:opacity-90"
             style={{ backgroundColor: primaryColor }}
           >

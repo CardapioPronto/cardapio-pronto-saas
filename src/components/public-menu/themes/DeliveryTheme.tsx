@@ -7,6 +7,7 @@ import { CheckoutFlow } from '../checkout/CheckoutFlow';
 import { AddItemModal, AddItemModalProduct } from './AddItemModal';
 import { Search, ShoppingBag, MapPin, Phone, Plus, Minus, Home, ClipboardList, ChevronRight, X, Sparkles } from 'lucide-react';
 import { trackPublicMenuEventQuietly } from '@/services/publicMenuAnalyticsService';
+import { formatMultiFlavorNames } from '@/lib/multiFlavor';
 
 interface Props {
   data: MenuData;
@@ -105,6 +106,8 @@ const DeliveryLayout = ({ data }: Props) => {
       price: product.price,
       description: product.description,
       image_url: product.image_url,
+      category_id: product.category_id,
+      multi_flavor_enabled: product.multi_flavor_enabled,
       is_sold_out: product.is_sold_out,
       promotion: product.promotion
         ? {
@@ -143,6 +146,31 @@ const DeliveryLayout = ({ data }: Props) => {
       return suggestion.product.id !== selectedProduct.id;
     });
   }, [data.upsell, selectedProduct]);
+
+  const selectedFlavorOptions = useMemo<AddItemModalProduct[]>(() => {
+    if (!selectedProduct?.category_id) return [];
+    const category = data.categories.find((item) => item.id === selectedProduct.category_id);
+    return (category?.products ?? []).map((product) => ({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      description: product.description,
+      image_url: product.image_url,
+      category_id: product.category_id,
+      multi_flavor_enabled: product.multi_flavor_enabled,
+      is_sold_out: product.is_sold_out,
+      promotion: product.promotion
+        ? {
+            id: product.promotion.id,
+            name: product.promotion.name,
+            discount_type: product.promotion.discount_type,
+            discount_value: product.promotion.discount_value,
+            unit_discount: product.promotion.unit_discount,
+            final_price: product.promotion.final_price,
+          }
+        : null,
+    }));
+  }, [data.categories, selectedProduct?.category_id]);
 
   return (
     <div className="min-h-screen bg-[hsl(0,0%,96%)] text-foreground">
@@ -370,6 +398,8 @@ const DeliveryLayout = ({ data }: Props) => {
         product={selectedProduct}
         primaryColor={primary}
         suggestions={selectedSuggestions}
+        flavorOptions={selectedFlavorOptions}
+        multiFlavorConfig={data.multiFlavorConfig}
         onClose={() => setSelectedProduct(null)}
         onAddSuggestion={(suggestion) => {
           addItem({
@@ -390,15 +420,16 @@ const DeliveryLayout = ({ data }: Props) => {
             },
           });
         }}
-        onConfirm={({ quantity, observations }) => {
+        onConfirm={({ quantity, observations, unitPrice, displayName, flavorSelection }) => {
           if (!selectedProduct) return;
           addItem({
             product_id: selectedProduct.id,
-            name: selectedProduct.name,
-            price: selectedProduct.promotion?.final_price ?? selectedProduct.price,
+            name: displayName || selectedProduct.name,
+            price: unitPrice,
             image_url: selectedProduct.image_url,
             quantity,
             observations,
+            flavor_selection: flavorSelection,
           });
           trackPublicMenuEventQuietly({
             restaurantId: data.restaurant.id,
@@ -408,6 +439,8 @@ const DeliveryLayout = ({ data }: Props) => {
               product_name: selectedProduct.name,
               quantity,
               has_observations: Boolean(observations?.trim()),
+              multi_flavor: Boolean(flavorSelection),
+              flavor_count: flavorSelection?.flavors.length ?? 1,
               interaction_source: 'product_modal',
             },
           });
@@ -633,6 +666,11 @@ const CartPanel = ({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{item.name}</p>
               <p className="text-xs text-muted-foreground">{formatBRL(item.price)}</p>
+              {item.flavor_selection && (
+                <p className="text-xs text-muted-foreground">
+                  Sabores: {formatMultiFlavorNames(item.flavor_selection.flavors)}
+                </p>
+              )}
               {item.observations && (
                 <p className="text-xs text-muted-foreground italic mt-0.5">Obs: {item.observations}</p>
               )}

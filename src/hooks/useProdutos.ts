@@ -45,6 +45,7 @@ const PRODUCT_SELECT = `
   stock_quantity,
   stock_min_quantity,
   stock_is_fractional,
+  multi_flavor_enabled,
   financial:product_financial_settings!product_financial_settings_product_id_fkey (
     cost_price
   ),
@@ -175,6 +176,7 @@ const withProductAuditFields = <T extends Record<string, unknown>>(
     stock_quantity: _stockQuantity,
     stock_min_quantity: _stockMinQuantity,
     stock_is_fractional: _stockIsFractional,
+    multi_flavor_enabled: _multiFlavorEnabled,
     ...legacyPayload
   } = payload;
 
@@ -444,6 +446,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         stock_is_fractional: stockTrackingEnabled
           ? Boolean(novoProduto.stock_is_fractional)
           : false,
+        multi_flavor_enabled: Boolean(novoProduto.multi_flavor_enabled),
       };
 
       let { data: insertResult, error } = await supabase
@@ -575,6 +578,7 @@ export const useProdutos = (restaurantId: string, options: UseProdutosOptions = 
         stock_is_fractional: stockTrackingEnabled
           ? Boolean(produtoAtualizado.stock_is_fractional)
           : false,
+        multi_flavor_enabled: Boolean(produtoAtualizado.multi_flavor_enabled),
       };
 
       let { error } = await supabase

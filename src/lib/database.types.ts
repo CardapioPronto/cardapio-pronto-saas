@@ -40,6 +40,7 @@ export interface Database {
           price: number;
           category: string;
           image_url: string | null;
+          multi_flavor_enabled: boolean;
           available: boolean;
           restaurant_id: string;
           created_at: string;
@@ -52,6 +53,7 @@ export interface Database {
           price: number;
           category: string;
           image_url?: string | null;
+          multi_flavor_enabled?: boolean;
           available?: boolean;
           restaurant_id: string;
           created_at?: string;
@@ -64,6 +66,7 @@ export interface Database {
           price?: number;
           category?: string;
           image_url?: string | null;
+          multi_flavor_enabled?: boolean;
           available?: boolean;
           restaurant_id?: string;
           updated_at?: string;
@@ -128,6 +131,7 @@ export interface Database {
           price: number;
           observations: string | null;
           created_at: string;
+          flavor_selection: Json | null;
         };
         Insert: {
           id?: string;
@@ -138,6 +142,7 @@ export interface Database {
           price: number;
           observations?: string | null;
           created_at?: string;
+          flavor_selection?: Json | null;
         };
         Update: {
           id?: string;
@@ -147,6 +152,7 @@ export interface Database {
           quantity?: number;
           price?: number;
           observations?: string | null;
+          flavor_selection?: Json | null;
         };
       };
       menus: {

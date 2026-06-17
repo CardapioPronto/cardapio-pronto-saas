@@ -21,6 +21,7 @@ export type Product = {
     stock_quantity?: number;
     stock_min_quantity?: number | null;
     stock_is_fractional?: boolean;
+    multi_flavor_enabled?: boolean;
 };
 
 export type StockMovementType =

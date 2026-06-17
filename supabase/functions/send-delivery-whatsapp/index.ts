@@ -23,6 +23,7 @@ interface ItemPayload {
   price: number;
   observations?: string | null;
   addons?: Array<{ name: string; price?: number }> | null;
+  flavor_selection?: FlavorSelection | null;
 }
 
 interface RequestBody {
@@ -80,6 +81,13 @@ interface OrderItemRow {
   price: number | string | null;
   observations?: string | null;
   addons?: Array<{ name: string; price?: number }> | null;
+  flavor_selection?: FlavorSelection | null;
+}
+
+interface FlavorSelection {
+  mode?: string;
+  pricing_strategy?: string;
+  flavors?: Array<{ name?: string; portion?: number | null }>;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -158,7 +166,7 @@ async function loadOrderItems(
 ): Promise<ItemPayload[]> {
   const { data: items, error } = await supabase
     .from('order_items')
-    .select('product_id, product_name, quantity, price, observations, addons')
+    .select('product_id, product_name, quantity, price, observations, addons, flavor_selection')
     .eq('order_id', orderId)
     .order('created_at', { ascending: true });
 
@@ -172,7 +180,16 @@ async function loadOrderItems(
     price: Number(item.price || 0),
     observations: item.observations,
     addons: Array.isArray(item.addons) ? item.addons : [],
+    flavor_selection: item.flavor_selection || null,
   }));
+}
+
+function formatFlavorSelection(selection?: FlavorSelection | null): string | null {
+  const flavors = Array.isArray(selection?.flavors) ? selection.flavors : [];
+  const names = flavors
+    .map((flavor) => String(flavor.name || '').trim())
+    .filter(Boolean);
+  return names.length > 1 ? names.join(' / ') : null;
 }
 
 function buildOrderMessage(order: DeliveryOrderPayload, items: ItemPayload[]): string {
@@ -191,6 +208,8 @@ function buildOrderMessage(order: DeliveryOrderPayload, items: ItemPayload[]): s
   lines.push(`🛒 *Itens do pedido:*`);
   for (const it of items) {
     lines.push(`• ${it.quantity}x ${it.name} — ${brl(it.price * it.quantity)}`);
+    const flavors = formatFlavorSelection(it.flavor_selection);
+    if (flavors) lines.push(`   Sabores: ${flavors}`);
     if (it.addons && it.addons.length) {
       for (const a of it.addons) {
         lines.push(`   ➕ ${a.name}${a.price ? ` (+${brl(a.price)})` : ''}`);

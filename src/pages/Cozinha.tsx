@@ -154,6 +154,11 @@ const KitchenOrderCard = ({ order, now, canManage, updating, onChangeStatus }: K
                 <span className="rounded bg-background px-2 py-0.5 text-sm font-semibold">{item.quantity}x</span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium leading-snug">{item.productName}</p>
+                  {item.flavorSelection?.flavors && item.flavorSelection.flavors.length > 1 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Sabores: {item.flavorSelection.flavors.map((flavor) => flavor.name).filter(Boolean).join(" / ")}
+                    </p>
+                  )}
                   {item.observations && (
                     <p className="mt-1 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
                       Obs: {item.observations}

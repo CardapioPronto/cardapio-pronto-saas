@@ -11,6 +11,11 @@ import {
   PublicMenuUpsell,
   PublicMenuUpsellSuggestion,
 } from '@/types/menuTheme';
+import {
+  DEFAULT_MULTI_FLAVOR_CONFIG,
+  normalizeMultiFlavorConfig,
+  type MultiFlavorConfig,
+} from '@/lib/multiFlavor';
 import { restaurantPaymentService } from '@/services/restaurantPaymentService';
 import type { Json } from '@/integrations/supabase/types';
 import type { PostgrestError } from '@supabase/supabase-js';
@@ -264,6 +269,9 @@ const toDeliveryConfig = (value: Json | null | undefined): DeliveryConfig => {
   };
 };
 
+const toMultiFlavorConfig = (value: Json | null | undefined): MultiFlavorConfig =>
+  normalizeMultiFlavorConfig(toRecord(value) as Partial<MultiFlavorConfig>);
+
 export const menuThemeService = {
   // Buscar todos os temas disponíveis
   async getAvailableThemes(): Promise<MenuTheme[]> {
@@ -390,7 +398,7 @@ export const menuThemeService = {
 
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('id, name, description, price, image_url, available, category_id, order_position, stock_tracking_enabled, stock_quantity')
+        .select('id, name, description, price, image_url, available, category_id, order_position, stock_tracking_enabled, stock_quantity, multi_flavor_enabled')
         .eq('restaurant_id', restaurant.id)
         .eq('available', true)
         .not('category_id', 'is', null)
@@ -407,6 +415,7 @@ export const menuThemeService = {
 
       // Buscar configuração de delivery (restaurant_settings)
       const deliveryConfig = await this.getDeliveryConfig(restaurant.id);
+      const multiFlavorConfig = await this.getMultiFlavorConfig(restaurant.id);
       const paymentSettings = await this.getPublicPaymentSettings(restaurant.id);
       const promotions = await this.getPublicPromotions(restaurant.id);
       
@@ -450,6 +459,7 @@ export const menuThemeService = {
               category_id: product.category_id || undefined,
               order_position: product.order_position,
               is_sold_out: isSoldOut,
+              multi_flavor_enabled: Boolean(product.multi_flavor_enabled),
               promotion: pickApplicablePromotion(
                 { id: product.id, price, category_id: product.category_id },
                 promotions,
@@ -473,6 +483,7 @@ export const menuThemeService = {
         categories: transformedCategories,
         config,
         deliveryConfig,
+        multiFlavorConfig,
         paymentSettings,
         promotions,
         orderPromotions: promotions.filter(p => p.applicable_to === 'order'),
@@ -520,6 +531,43 @@ export const menuThemeService = {
       );
     if (error) throw error;
     return config;
+  },
+
+  async getMultiFlavorConfig(restaurantId: string): Promise<MultiFlavorConfig> {
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_settings')
+        .select('setting_value')
+        .eq('restaurant_id', restaurantId)
+        .eq('setting_key', 'multi_flavor_config')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Erro ao buscar multi_flavor_config:', error);
+        return DEFAULT_MULTI_FLAVOR_CONFIG;
+      }
+      if (!data) return DEFAULT_MULTI_FLAVOR_CONFIG;
+      return toMultiFlavorConfig(data.setting_value);
+    } catch (e) {
+      console.warn('Falha em getMultiFlavorConfig', e);
+      return DEFAULT_MULTI_FLAVOR_CONFIG;
+    }
+  },
+
+  async saveMultiFlavorConfig(restaurantId: string, config: MultiFlavorConfig) {
+    const normalized = normalizeMultiFlavorConfig(config);
+    const { error } = await supabase
+      .from('restaurant_settings')
+      .upsert(
+        {
+          restaurant_id: restaurantId,
+          setting_key: 'multi_flavor_config',
+          setting_value: toJson(normalized as unknown as Record<string, unknown>),
+        },
+        { onConflict: 'restaurant_id,setting_key' }
+      );
+    if (error) throw error;
+    return normalized;
   },
 
   async getPublicPromotions(restaurantId: string): Promise<PublicMenuPromotion[]> {

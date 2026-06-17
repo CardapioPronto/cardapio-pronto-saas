@@ -1,4 +1,6 @@
 
+import type { MultiFlavorConfig } from '@/lib/multiFlavor';
+
 export interface MenuTheme {
   id: string;
   name: string;
@@ -74,10 +76,12 @@ export interface MenuData {
       category_id?: string;
       order_position?: number | null;
       promotion?: PublicMenuPromotionApplied | null;
+      multi_flavor_enabled?: boolean;
     }>;
   }>;
   theme: ThemeConfig;
   deliveryConfig?: DeliveryConfig;
+  multiFlavorConfig?: MultiFlavorConfig;
   paymentSettings?: PublicPaymentSettings;
   promotions?: PublicMenuPromotion[];
   orderPromotions?: PublicMenuPromotion[];

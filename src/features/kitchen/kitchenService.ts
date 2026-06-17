@@ -28,6 +28,7 @@ type KitchenOrderRow = {
     price: number;
     observations: string | null;
     addons?: unknown;
+    flavor_selection?: unknown;
   }> | null;
   mesa?: {
     id: string;
@@ -66,6 +67,32 @@ const normalizeAddons = (addons: unknown): KitchenOrderItem["addons"] => {
     .filter(Boolean) as KitchenOrderItem["addons"];
 };
 
+const normalizeFlavorSelection = (value: unknown): KitchenOrderItem["flavorSelection"] => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const flavors = Array.isArray(row.flavors)
+    ? row.flavors
+        .map((flavor) => {
+          if (!flavor || typeof flavor !== "object") return null;
+          const flavorRow = flavor as Record<string, unknown>;
+          const name = String(flavorRow.name || "").trim();
+          if (!name) return null;
+          return {
+            name,
+            portion: typeof flavorRow.portion === "number" ? flavorRow.portion : null,
+          };
+        })
+        .filter(Boolean) as NonNullable<KitchenOrderItem["flavorSelection"]>["flavors"]
+    : [];
+
+  return flavors.length > 1
+    ? {
+        flavors,
+        pricing_strategy: typeof row.pricing_strategy === "string" ? row.pricing_strategy : null,
+      }
+    : null;
+};
+
 const mapOrder = (order: KitchenOrderRow, notes?: string | null): KitchenOrder => ({
   id: order.id,
   orderNumber: order.order_number,
@@ -87,6 +114,7 @@ const mapOrder = (order: KitchenOrderRow, notes?: string | null): KitchenOrder =
     quantity: Number(item.quantity || 0),
     price: Number(item.price || 0),
     observations: item.observations,
+    flavorSelection: normalizeFlavorSelection(item.flavor_selection),
     addons: normalizeAddons(item.addons),
   })),
 });
@@ -114,7 +142,8 @@ export async function listKitchenOrders(restaurantId: string) {
         quantity,
         price,
         observations,
-        addons
+        addons,
+        flavor_selection
       ),
       mesa:mesas (
         id,

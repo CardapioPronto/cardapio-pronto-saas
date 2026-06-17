@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react"
+import type { MultiFlavorSelection } from "@/lib/multiFlavor"
 
 export interface CartItem {
   id: string
@@ -8,6 +9,7 @@ export interface CartItem {
   quantity: number
   image_url?: string
   observations?: string
+  flavor_selection?: MultiFlavorSelection
 }
 
 export interface CartContextValue {
