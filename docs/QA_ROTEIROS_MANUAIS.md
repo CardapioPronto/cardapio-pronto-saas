@@ -46,11 +46,11 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 
 ### 1.2 Configuração do restaurante
 
-- [ ] Configurações → Estabelecimento: alterar nome, endereço, telefone
+- [x] Configurações → Estabelecimento: alterar nome, endereço, telefone
       WhatsApp, horários e logo. Salvar.
 - [ ] Cardápio Digital → Personalização: trocar tema, cor primária,
       banner. Pré-visualização atualiza.
-- [ ] Cardápio Digital → QR Code: gerar link rastreável para Instagram bio,
+- [x] Cardápio Digital → QR Code: gerar link rastreável para Instagram bio,
       copiar a mensagem pronta e baixar o QR Code da campanha.
 - [ ] Cardápio Digital → QR Code: gerar link para Google Business Profile e
       conferir que a URL possui `utm_source=google`, `utm_medium=business_profile`
@@ -58,8 +58,8 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [ ] Cardápio Digital → QR Code: no kit de divulgação, atualizar o resumo
       de canais e conferir que visitas, pedidos, conversão e receita aparecem
       para uma origem que já teve tráfego rastreado.
-- [ ] Cardápio Digital → Categorias: criar/editar/excluir categoria.
-- [ ] Cardápio Digital → Produtos: criar produto com foto, descrição e
+- [x] Cardápio Digital → Categorias: criar/editar/excluir categoria.
+- [x] Cardápio Digital → Produtos: criar produto com foto, descrição e
       preço; marcar como indisponível e verificar que some do cardápio
       público.
 - [ ] Cardápio Digital → Personalização: ativar **Controle de estoque**.
@@ -78,9 +78,9 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 
 ### 1.3 Mesas e PDV
 
-- [ ] Mesas/Áreas: criar área, adicionar 4 mesas. Marcar uma como
+- [x] Mesas/Áreas: criar área, adicionar 4 mesas. Marcar uma como
       ocupada manualmente e verificar status.
-- [ ] PDV: lançar pedido em mesa, finalizar, conferir aparição em
+- [x] PDV: lançar pedido em mesa, finalizar, conferir aparição em
       Pedidos com `status = finalizado` e mesa volta a `livre`.
 - [ ] PDV: tentar vender produto com controle ligado e saldo insuficiente.
       Usuário sem `products_manage` vê bloqueio sem opção de forçar venda.
@@ -108,7 +108,7 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 
 ### 1.5 Relatórios
 
-- [ ] Relatórios → Avançado, período 30 dias: receita, ticket médio e
+- [x] Relatórios → Avançado, período 30 dias: receita, ticket médio e
       produtos mais vendidos batem com os pedidos finalizados.
 - [ ] Relatórios → Conversão: acessar pelo atalho do kit de divulgação e
       conferir pedidos/origens após abrir o cardápio com um link UTM.
@@ -164,7 +164,7 @@ Cobre o turno do operador no balcão/mesa.
 
 ### 2.4 Emissão de nota / comprovante
 
-- [ ] Pedido finalizado: abrir detalhes → imprimir/visualizar
+- [x] Pedido finalizado: abrir detalhes → imprimir/visualizar
       comprovante (Receipt). Itens, total e mesa aparecem corretos.
 
 ---
@@ -176,11 +176,11 @@ parede.
 
 ### 3.1 Tela
 
-- [ ] Abrir `/cozinha` em monitor 1080p → cards de pedidos cabem na
+- [x] Abrir `/cozinha` em monitor 1080p → cards de pedidos cabem na
       tela sem scroll.
 - [x] Cards em "Pendente" e "Em preparo" claramente diferenciados por
       cor.
-- [ ] Notificação sonora dispara ao chegar pedido novo.
+- [x] Notificação sonora dispara ao chegar pedido novo.
 
 ### 3.2 Fluxo de status
 
@@ -191,7 +191,7 @@ parede.
 
 ### 3.3 Comunicação
 
-- [ ] Observações do cliente aparecem destacadas no card.
+- [x] Observações do cliente aparecem destacadas no card.
 - [ ] Pedidos com `source = ifood` exibem badge iFood.
 
 ---
@@ -202,7 +202,7 @@ Pessoa que abre o link do restaurante no celular.
 
 ### 4.1 Acesso
 
-- [ ] Abrir `https://app.pubfy.com.br/<slug>` (mobile) → cardápio
+- [x] Abrir `https://pubfy.com.br/cardapio/<slug>` (mobile) → cardápio
       carrega em < 3s com tema correto.
 - [ ] Banner do restaurante visível.
 - [ ] Categorias listadas na ordem configurada.
@@ -212,15 +212,15 @@ Pessoa que abre o link do restaurante no celular.
 
 ### 4.2 Pedido
 
-- [ ] Abrir produto → modal mostra descrição, preço final, observação.
-- [ ] Adicionar ao carrinho → contador no topo atualiza.
+- [x] Abrir produto → modal mostra descrição, preço final, observação.
+- [x] Adicionar ao carrinho → contador no topo atualiza.
 - [ ] Produto esgotado não permite clicar em **Adicionar** nem concluir a
       inclusão pelo modal.
-- [ ] Ajustar quantidade no carrinho → total recalcula.
+- [x] Ajustar quantidade no carrinho → total recalcula.
 - [ ] Aplicar cupom `BEMVINDO10` → desconto aplicado. Caso haja
       promoção de pedido ativa, mensagem "Cupom e promoção não somam"
       aparece (Bloco 7).
-- [ ] Preencher dados (nome, telefone, endereço) → validações de campo
+- [x] Preencher dados (nome, telefone, endereço) → validações de campo
       funcionam.
 
 ### 4.3 Pagamento
@@ -241,7 +241,7 @@ Pessoa que abre o link do restaurante no celular.
 ### 4.5 Acessibilidade
 
 - [ ] Tab key navega botões em ordem lógica.
-- [ ] Cores de texto/botão têm contraste suficiente (target WCAG AA).
+- [x] Cores de texto/botão têm contraste suficiente (target WCAG AA).
 - [ ] Mensagens de erro são lidas por screen reader (campo aria-live).
 
 ---

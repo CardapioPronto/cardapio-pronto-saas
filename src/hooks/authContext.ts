@@ -5,7 +5,11 @@ export interface AuthContextType {
   session: Session | null
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signIn: (
+    email: string,
+    password: string,
+    options?: { captchaToken?: string },
+  ) => Promise<{ error: AuthError | null }>
   signUp: (
     email: string,
     password: string,

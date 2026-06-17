@@ -6,8 +6,16 @@ import { supabase as supabaseClient } from '@/integrations/supabase/client';
 export const supabase = supabaseClient;
 
 // Helpers para gerenciar a autenticação
-export const signIn = async (email: string, password: string) => {
-  return await supabase.auth.signInWithPassword({ email, password });
+export const signIn = async (
+  email: string,
+  password: string,
+  options?: { captchaToken?: string },
+) => {
+  const credentials = options?.captchaToken
+    ? { email, password, options: { captchaToken: options.captchaToken } }
+    : { email, password };
+
+  return await supabase.auth.signInWithPassword(credentials);
 };
 
 export const signUp = async (

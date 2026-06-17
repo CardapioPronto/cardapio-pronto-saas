@@ -18,6 +18,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUserSession } from "@/hooks/useUserSession";
 import { createLogger } from "@/lib/log";
 import { PublicSeo } from "@/components/seo/PublicSeo";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 
 const log = createLogger("login");
 
@@ -26,6 +27,8 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const { signIn, user } = useAuth();
   const { isSuperAdmin, loading: adminLoading } = useSuperAdmin();
   const { appUser, loading: sessionLoading } = useUserSession();
@@ -47,11 +50,21 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!captchaToken) {
+      toast({
+        variant: "destructive",
+        title: "Verificação pendente",
+        description: "Aguarde a validação de segurança para acessar sua conta.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       log.debug("attempting login", { email });
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email, password, { captchaToken });
       
       if (error) {
         throw new Error(error.message || "Credenciais inválidas. Por favor, tente novamente.");
@@ -70,6 +83,8 @@ const Login = () => {
         title: "Erro no login",
         description: error instanceof Error ? error.message : "Ocorreu um erro inesperado.",
       });
+      setCaptchaToken("");
+      setCaptchaResetKey((currentKey) => currentKey + 1);
       setLoading(false);
     }
   };
@@ -124,12 +139,18 @@ const Login = () => {
                 required
               />
             </div>
+            <TurnstileWidget
+              key={captchaResetKey}
+              action="login"
+              onToken={(token) => setCaptchaToken(token ?? "")}
+              className="min-h-[65px]"
+            />
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button 
               type="submit" 
               className="w-full bg-green hover:bg-green-dark text-white"
-              disabled={loading}
+              disabled={loading || !captchaToken}
             >
               {loading ? "Entrando..." : "Entrar"}
             </Button>

@@ -11,8 +11,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fonte única da verdade: useUserSession já gerencia getSession + onAuthStateChange.
   const { session, authUser, loading } = useUserSession();
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = useCallback(async (
+    email: string,
+    password: string,
+    options?: { captchaToken?: string },
+  ) => {
+    const credentials = options?.captchaToken
+      ? { email, password, options: { captchaToken: options.captchaToken } }
+      : { email, password };
+
+    const { error } = await supabase.auth.signInWithPassword(credentials);
     if (error) {
       log.capture(error, { action: 'signIn', email });
     }
