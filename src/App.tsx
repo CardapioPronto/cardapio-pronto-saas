@@ -14,6 +14,7 @@ import { captureException } from '@/lib/observability';
 import { CookieConsentBar } from '@/components/legal/CookieConsentBar';
 import { AppBootstrapLoader } from '@/components/brand/AppBootstrapLoader';
 import { OfflineStatusBanner } from '@/components/pwa/OfflineStatusBanner';
+import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { RadixOverlayCleanup } from '@/components/RadixOverlayCleanup';
 
 // Create a client
@@ -89,6 +90,7 @@ function App() {
                   <RadixOverlayCleanup />
                   <AppRoutes />
                   <CookieConsentBar />
+                  <PWAUpdatePrompt />
                   <OfflineStatusBanner />
                 </BrowserRouter>
                 <Toaster />

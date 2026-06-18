@@ -11,6 +11,7 @@ import { PopularProducts as PopularProductsComponent } from "@/components/dashbo
 import { DashboardExecutiveSummary } from "@/components/dashboard/DashboardExecutiveSummary";
 import { OperationsOverview } from "@/components/dashboard/OperationsOverview";
 import { OnboardingChecklistCard } from "@/components/dashboard/OnboardingChecklistCard";
+import { PWAInstallDiagnosticCard } from "@/components/dashboard/PWAInstallDiagnosticCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardSkeleton = () => (
@@ -53,6 +54,8 @@ const Dashboard = () => {
         <DashboardExecutiveSummary overview={overview} />
 
         <OnboardingChecklistCard overview={overview} />
+
+        <PWAInstallDiagnosticCard restaurantId={user?.restaurant_id || null} />
 
         <OperationsOverview overview={overview} />
 

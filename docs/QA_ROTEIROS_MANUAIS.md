@@ -43,6 +43,13 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       problemas comuns coerentes com a tela atual.
 - [x] Dashboard/PDV/Cozinha: indicador online/offline aparece no topo;
       ao desconectar a rede, muda para Offline e o banner global é exibido.
+- [ ] Dashboard: card **App e offline** aparece com status de conexão,
+      service worker, fila PDV, última sincronização e versão do cache.
+- [ ] Dashboard: quando o navegador liberar instalação PWA, botão
+      **Instalar app** abre o prompt nativo; após instalar, o card muda para
+      estado instalado.
+- [ ] Dashboard: ao publicar nova versão do service worker, aviso
+      **Nova versão disponível** aparece e o botão **Atualizar** recarrega o app.
 
 ### 1.2 Configuração do restaurante
 

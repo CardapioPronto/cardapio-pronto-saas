@@ -6,6 +6,8 @@ O Pubfy ja possui base PWA instalavel pelo navegador, com `manifest.webmanifest`
 
 O app shell pode continuar abrindo apos o primeiro acesso, mesmo com conexao instavel. APIs, Supabase, pagamentos, WhatsApp, iFood, relatorios, edicao de cardapio e rotinas administrativas continuam exigindo internet.
 
+O Dashboard tambem exibe o card **App e offline**, com prompt de instalacao quando o navegador libera, estado do service worker, versao/cache do PWA, status de conexao, ultima sincronizacao local do PDV e fila offline pendente neste dispositivo.
+
 O PDV ja possui suporte offline parcial:
 
 - Catalogo local por restaurante com produtos, categorias, areas e mesas.
@@ -27,6 +29,10 @@ Objetivo: permitir instalar o Pubfy no celular ou tablet pelo navegador e manter
 - [x] Cachear assets da aplicacao para abrir a interface mesmo sem conexao apos primeiro acesso.
 - [x] Exibir indicador de conexao online/offline.
 - [x] Bloquear acoes que ainda dependem da internet com mensagens claras.
+- [x] Adicionar prompt guiado de instalacao no Dashboard quando o navegador permitir `beforeinstallprompt`.
+- [x] Criar diagnostico PWA/offline no Dashboard com service worker ativo, ultima sincronizacao local e fila pendente.
+- [x] Versionar caches do service worker por release.
+- [x] Avisar quando uma nova versao do service worker estiver pronta para ativacao.
 
 Resultado: experiencia de app instalado, sem prometer operacao offline completa.
 
@@ -114,10 +120,8 @@ Nao prometer ainda:
 
 ## Proximos passos recomendados
 
-1. Adicionar prompt guiado "Instalar app" no dashboard quando o navegador permitir.
-2. Criar diagnostico PWA/offline com service worker ativo, ultima sincronizacao e fila pendente.
-3. Adicionar aviso de nova versao quando o service worker atualizar assets.
-4. Expandir fila offline para mesa com revisao de conflito.
-5. Criar monitoramento por restaurante dos pedidos offline com erro.
-6. Testar em aparelho Android real durante um turno piloto.
-7. Avaliar Capacitor somente depois da estabilidade do PWA em piloto.
+1. Expandir fila offline para mesa com revisao de conflito.
+2. Criar monitoramento por restaurante dos pedidos offline com erro.
+3. Automatizar a versao do service worker no pipeline de release.
+4. Testar em aparelho Android real durante um turno piloto.
+5. Avaliar Capacitor somente depois da estabilidade do PWA em piloto.

@@ -62,6 +62,395 @@ Nao competir apenas como "cardapio digital". O diferencial deve estar em:
 
 ---
 
+## Revisao de maturidade operacional — 2026-06-18
+
+Objetivo desta revisao: transformar a auditoria de maturidade em blocos de
+execucao antes de abrir venda comercial ampla. O produto ja tem escopo forte e
+varios blocos competitivos implementados tecnicamente, mas ainda precisa provar
+operacao real com restaurante, credenciais finais, suporte e fluxo fiscal
+definido.
+
+### Veredito atual
+
+O Pubfy esta apto para **piloto real assistido**. Ainda nao deve ser vendido
+como **producao comercial ampla** antes de completar pelo menos um turno real
+sem bug critico e validar as integracoes externas com secrets finais.
+
+Notas de referencia:
+
+- Tecnico: 8/10.
+- Produto: 8/10.
+- Operacao real: 6,5/10.
+- Competitividade atual: 7,5/10.
+- Competitividade esperada apos fiscal/parceiro, piloto e integracoes reais: 8,5+/10.
+
+### Evidencias automatizadas da auditoria
+
+- [x] `npm run typecheck` passou.
+- [x] `npm run lint` passou.
+- [x] `npm run test` passou com 91 testes em 21 arquivos.
+- [x] `npm run preflight:prod` passou.
+- [x] `npm run build` passou.
+- [x] `npm run test:e2e` passou com 6 testes.
+- [x] `npm audit --omit=dev --audit-level=high` retornou 0 vulnerabilidades.
+- [x] `npx supabase migration list` mostrou local/remoto alinhados ate `20260617153000`.
+- [~] Build/testes com Vite/esbuild exigiram execucao fora do sandbox local por `spawn EPERM`; isso parece limitacao do ambiente, nao erro da aplicacao.
+- [ ] Atualizar `caniuse-lite`/Browserslist em janela controlada e repetir validacoes.
+
+### Leitura competitiva resumida
+
+- Anota AI: forte em atendimento automatizado, cardapio, PDV, QR mesa,
+  pagamento online, cupons/cashback, recuperador de vendas, KDS, estoque,
+  fiscal e financeiro. O Pubfy ja encosta em varias frentes, mas ainda perde
+  em marca, escala, suporte e fiscal validado.
+- Consumer: forte em PDV completo, delivery, iFood, estoque, financeiro,
+  suporte, migracao, integracao com maquininhas e offline mais maduro. O Pubfy
+  precisa fortalecer offline, maquininha/fiscal/hardware e prova de campo.
+- Saipos: forte em gestao completa, +100 integracoes, fiscal, financeiro,
+  CMV, app entregador, roteirizacao e suporte 24/7. O Pubfy deve evitar brigar
+  so em "sistema completo" e posicionar melhor canal proprio + dados + IA.
+- Tagme: forte em hospitalidade premium, reservas, lista de espera, Google,
+  menu, CRM e experiencia de salao para marcas grandes. O Pubfy pode competir
+  melhor em pequenos/medios com operacao + venda direta, mas reservas/lista
+  seguem como evolucao futura.
+
+### Ordem recomendada pos-auditoria
+
+| Ordem | Bloco | Prioridade | Motivo |
+| --- | --- | --- | --- |
+| M1 | Piloto real assistido | P0 | Sem piloto, maturidade operacional continua presumida |
+| M2 | Integracoes live e webhooks finais | P0 | Pagamento, e-mail, WhatsApp e iFood sao pontos de falha externa |
+| M3 | Fiscal/NFC-e via parceiro | P0 | Remove barreira central para vender PDV completo |
+| M4 | Staging, release e observabilidade | P0 | Permite operar sem improviso e reduzir risco de deploy |
+| M5 | E2E dos fluxos criticos | P0 | Protege checkout, PDV, cozinha, assinatura e permissoes |
+| M6 | QA em hardware real | P0 | Restaurante opera em celular, tablet, notebook, TV e impressora |
+| M7 | Offline, impressao e maquininha | P1 | Aproxima o Pubfy de sistemas de PDV maduros |
+| M8 | Onboarding, migracao e suporte escalavel | P1 | Reduz friccao comercial e dependencia do fundador/time tecnico |
+| M9 | Comercial, pricing e prova social | P1 | Diferencia Pubfy sem depender so de preco baixo |
+| M10 | Expansoes competitivas selecionadas | P2 | Reservas, lista, roteirizacao e Google podem abrir novos nichos |
+
+---
+
+## Blocos de maturidade pos-auditoria
+
+Os blocos abaixo complementam os blocos 1-18 ja implementados ou planejados.
+Eles devem ser tratados como a nova trilha de go-live e escala comercial.
+
+### M1 — Piloto real assistido
+
+Prioridade: P0  
+Objetivo: provar que o sistema funciona em operacao real, com dono, operador,
+cozinha e cliente final.
+
+#### Escopo MVP
+
+- [ ] Escolher 1 restaurante real com dono disponivel para feedback diario.
+- [ ] Definir escopo do piloto: salao, delivery ou ambos.
+- [ ] Definir canais ativos: cardapio proprio, PDV, WhatsApp, iFood,
+      pagamento online, estoque e cozinha.
+- [ ] Rodar `docs/ONBOARDING_RESTAURANTE.md` antes de abrir o turno.
+- [ ] Rodar `docs/QA_ROTEIROS_MANUAIS.md` com evidencias.
+- [ ] Acompanhar as primeiras 48 horas com monitoramento ativo.
+- [ ] Registrar bugs por severidade e pedidos reais de melhoria.
+- [ ] Coletar depoimento, NPS do dono e NPS dos operadores.
+
+#### Criterio de aceite
+
+- 1 turno real completo sem bug critico.
+- Pedidos criados, acompanhados, impressos/visualizados e finalizados.
+- Checkout publico e PDV validados no mesmo restaurante.
+- Cozinha validada em dispositivo real.
+- Suporte sabe resolver os problemas comuns do piloto.
+
+#### Evidencia
+
+- Pendente.
+
+---
+
+### M2 — Integracoes live e webhooks finais
+
+Prioridade: P0  
+Objetivo: validar todos os pontos dependentes de terceiros em ambiente real ou
+homologacao equivalente.
+
+#### Escopo MVP
+
+- [ ] Pagar.me live configurado com `PAGARME_SECRET_KEY`,
+      `PAGARME_WEBHOOK_SECRET` e `PAGARME_PLATFORM_RECIPIENT_ID`.
+- [ ] Webhook Pagar.me cadastrado e rejeitando payload sem assinatura.
+- [ ] Pedido publico com Pix real de baixo valor.
+- [ ] Pedido publico com cartao real/controlado.
+- [ ] Assinatura real de baixo valor e cancelamento/reembolso documentado.
+- [ ] Resend com dominio validado em SPF/DKIM.
+- [ ] Webhook Resend validado para delivered/bounce/complaint.
+- [ ] WhatsApp/Evolution/n8n com instancia real e fallback sem bloquear pedido.
+- [ ] iFood com credenciais reais, polling, importacao e mapeamento de itens.
+- [ ] Registrar IDs de pedido, webhook, e-mail e logs como evidencia.
+
+#### Criterio de aceite
+
+- Falha de WhatsApp/e-mail nao impede pedido.
+- Falha de pagamento online mostra mensagem clara e nao cria estado ambiguo.
+- Webhooks aceitam somente payload assinado.
+- iFood nao expoe segredo e nao quebra a operacao quando item vem sem mapeamento.
+
+#### Evidencia
+
+- Base tecnica validada por `npm run preflight:prod`.
+- Pendente validacao operacional com credenciais finais.
+
+---
+
+### M3 — Fiscal/NFC-e via parceiro
+
+Prioridade: P0  
+Objetivo: remover a maior barreira para vender Pubfy como PDV completo.
+
+#### Escopo MVP
+
+- [ ] Decidir parceiro fiscal ou implementacao propria.
+- [ ] Mapear requisitos por estado/regime inicialmente atendidos.
+- [ ] Definir evento fiscal: emitir NFC-e a partir de pedido finalizado.
+- [ ] Criar modelo de dados: status fiscal, chave, numero, serie, XML/PDF,
+      erro, tentativa, cancelamento e inutilizacao quando aplicavel.
+- [ ] Criar tela de configuracao fiscal por restaurante.
+- [ ] Criar acao "Emitir nota" no pedido finalizado.
+- [ ] Criar fila/retry para falhas temporarias do provedor.
+- [ ] Documentar limites: estados suportados, certificados, contingencia,
+      cancelamento e responsabilidade contabil.
+- [ ] Bloquear promessa comercial de fiscal ate haver piloto fiscal validado.
+
+#### Criterio de aceite
+
+- Restaurante piloto consegue emitir uma NFC-e real ou homologada pelo parceiro.
+- Pedido mostra status fiscal compreensivel.
+- Falha fiscal nao corrompe pedido nem pagamento.
+- Comercial sabe dizer exatamente o que e suportado.
+
+#### Evidencia
+
+- Bloco 7 existe como pendente neste documento.
+- Pendente decisao de parceiro e desenho tecnico.
+
+---
+
+### M4 — Staging, release e observabilidade
+
+Prioridade: P0  
+Objetivo: criar rotina profissional de publicacao, monitoramento e rollback.
+
+#### Escopo MVP
+
+- [ ] Criar ambiente de staging separado do banco/projeto de producao.
+- [ ] Separar secrets de staging e producao.
+- [ ] Definir checklist de release: migration, build, testes, smoke e rollback.
+- [ ] Configurar Sentry frontend e Edge com ambiente/release corretos.
+- [ ] Configurar alertas para erro de Edge Function e erro React.
+- [ ] Validar backup/PITR e restauracao em procedimento controlado.
+- [ ] Criar rotina de snapshot antes de migration arriscada.
+- [ ] Praticar rollback de frontend no Lovable.
+- [ ] Praticar rollback por migration inversa em staging.
+
+#### Criterio de aceite
+
+- Toda release passa por staging antes de producao.
+- Erro controlado aparece no Sentry com release.
+- Existe responsavel e canal de incidente.
+- Backup/rollback nao ficam apenas documentados; foram praticados.
+
+#### Evidencia
+
+- `docs/RUNBOOK_PRODUCAO.md` ja documenta secrets, webhooks, backup, rollback
+  e rotacao.
+- Pendente criacao operacional de staging dedicado e validacao de alertas.
+
+---
+
+### M5 — E2E dos fluxos criticos
+
+Prioridade: P0  
+Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
+
+#### Escopo MVP
+
+- [ ] E2E cadastro dono -> confirmacao -> restaurante -> trial -> dashboard.
+- [ ] E2E checkout publico com produto, cupom, endereco e pedido na entrega.
+- [ ] E2E checkout publico com pagamento online em modo homologacao.
+- [ ] E2E PDV: mesa/balcao, cupom, finalizar, cancelar e reabrir.
+- [ ] E2E Cozinha: pedido entra, muda para preparo e pronto.
+- [ ] E2E permissoes: funcionario sem acesso nao ve financeiro/configuracoes.
+- [ ] E2E assinatura: trial ativo, expirado, active, past_due e bloqueio.
+- [ ] E2E iFood/WhatsApp podem ser simulados com mocks ou ambiente de homolog.
+
+#### Criterio de aceite
+
+- CI falha quando checkout, PDV, cozinha ou assinatura quebram.
+- Os testes nao dependem de dados manuais fragilizados.
+- A massa de teste pode ser recriada de forma idempotente.
+
+#### Evidencia
+
+- Suite atual passou com 6 testes E2E de smoke publico/PWA.
+- Pendente ampliar para fluxos autenticados e transacionais.
+
+---
+
+### M6 — QA em hardware real
+
+Prioridade: P0  
+Objetivo: validar o ambiente onde restaurante realmente trabalha.
+
+#### Escopo MVP
+
+- [ ] Cardapio publico em Android e iPhone reais.
+- [ ] Checkout publico em internet movel instavel.
+- [ ] PDV em tablet 10", notebook pequeno e desktop.
+- [ ] Cozinha em monitor/TV 1080p e tablet.
+- [ ] Impressao em pelo menos uma impressora termica 58mm e uma 80mm.
+- [ ] Teste de queda de internet durante PDV.
+- [ ] Teste de reconexao e sincronizacao da fila offline parcial.
+- [ ] Teste de acessibilidade basica: tab, foco, contraste e mensagens de erro.
+
+#### Criterio de aceite
+
+- Textos nao sobrepoem nem estouram nas telas principais.
+- Operador consegue usar PDV/cozinha sem zoom manual.
+- Impressao e reimpressao sao previsiveis.
+- Queda de rede mostra mensagens claras e nao perde pedido ja confirmado.
+
+#### Evidencia
+
+- Pendente QA fisico.
+
+---
+
+### M7 — Offline, impressao e maquininha
+
+Prioridade: P1  
+Objetivo: aproximar o Pubfy de sistemas de PDV maduros em rotina de loja.
+
+#### Escopo MVP
+
+- [ ] Evoluir offline do PDV alem de pedido de balcao, com estrategia clara
+      para mesa, conflito e estoque.
+- [ ] Criar diagnostico de fila offline: pendentes, falhas, ultima tentativa,
+      dispositivo e usuario.
+- [ ] Avisar quando catalogo local esta antigo.
+- [ ] Melhorar impressao com perfis por via, tamanho e destino operacional.
+- [ ] Documentar modelos de impressora testados.
+- [ ] Avaliar integracao com maquininha/parceiro ou concilicao manual
+      estruturada.
+- [ ] Criar fechamento de caixa basico se a estrategia comercial exigir PDV
+      presencial completo.
+
+#### Criterio de aceite
+
+- Restaurante nao para completamente em queda curta de internet.
+- Operador entende o que esta pendente de sincronizacao.
+- Impressao falha sem bloquear venda.
+- Pagamento presencial fica conciliavel.
+
+#### Evidencia
+
+- PWA/offline parcial e impressao MVP ja implementados.
+- Pendente expansao para operacao mais robusta.
+
+---
+
+### M8 — Onboarding, migracao e suporte escalavel
+
+Prioridade: P1  
+Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
+
+#### Escopo MVP
+
+- [ ] Persistir checklist de onboarding por restaurante.
+- [ ] Criar status de saude da conta para Super Admin: travado, ativo,
+      risco, pronto para venda.
+- [ ] Criar importacao assistida de cardapio por CSV.
+- [ ] Criar importacao assistida de clientes por CSV com opt-in claro.
+- [ ] Criar "setup rapido" por segmento: pizzaria, hamburgueria, cafeteria,
+      sushi, bar, marmitaria.
+- [ ] Criar abertura de chamado dentro do app com contexto, anexos e status.
+- [ ] Criar central de ajuda editavel pelo Super Admin.
+- [ ] Criar rotina de acompanhamento dos primeiros 7 dias.
+
+#### Criterio de aceite
+
+- Restaurante publica cardapio e faz pedido teste no mesmo dia.
+- Suporte recebe contexto suficiente sem pedir print de tudo.
+- Implantacao nao depende de mexer no banco manualmente.
+
+#### Evidencia
+
+- Botao de suporte contextual e base de problemas comuns ja existem.
+- Pendente persistencia, importacao e gestao de chamados.
+
+---
+
+### M9 — Comercial, pricing e prova social
+
+Prioridade: P1  
+Objetivo: posicionar o Pubfy como plataforma moderna de venda direta, nao
+apenas alternativa barata.
+
+#### Escopo MVP
+
+- [ ] Definir promessa comercial principal: canal proprio + operacao + CRM.
+- [ ] Separar claramente o que esta incluso, em beta e fora do escopo.
+- [ ] Definir precos por publico: solo/pequeno, profissional, multiunidade.
+- [ ] Criar comparativo honesto contra alternativas: marketplace, planilha,
+      sistema legado e concorrentes SaaS.
+- [ ] Criar case do restaurante piloto com numeros reais.
+- [ ] Coletar depoimento do dono e do operador.
+- [ ] Criar landing com prova operacional: pedido real, cardapio, PDV,
+      cozinha, recuperacao e dashboard.
+- [ ] Criar materiais para afiliados/revendedores com limites claros.
+
+#### Criterio de aceite
+
+- Comercial consegue explicar o diferencial em 30 segundos.
+- Nao ha promessa de fiscal/offline/maquininha sem suporte real.
+- O primeiro case prova economia, recorrencia ou ganho operacional.
+
+#### Evidencia
+
+- Programa de indicacao e materiais de afiliado ja existem.
+- Pendente case e reposicionamento pos-piloto.
+
+---
+
+### M10 — Expansoes competitivas selecionadas
+
+Prioridade: P2  
+Objetivo: escolher evolucoes que aumentem competitividade sem diluir foco.
+
+#### Backlog candidato
+
+- [ ] Reservas online simples.
+- [ ] Lista de espera digital.
+- [ ] Integracao mais profunda com Google Business Profile.
+- [ ] Roteirizacao ou app simples do entregador.
+- [ ] Totem/autoatendimento web para tablet.
+- [ ] Fechamento de caixa e sangria/suprimento.
+- [ ] CMV real com compras e fornecedores.
+- [ ] Biblioteca de campanhas prontas por data comemorativa.
+- [ ] Sugestoes automaticas do copiloto baseadas no funil de conversao.
+- [ ] Metas por unidade e alertas para multiunidade.
+
+#### Criterio de priorizacao
+
+- Priorizar apenas se o piloto pedir ou se destravar venda clara.
+- Nao iniciar antes de M1-M5 estarem encaminhados.
+- Evitar competir frontalmente com suites grandes sem ter prova de campo.
+
+#### Evidencia
+
+- Pendente selecao apos piloto.
+
+---
+
 ## Ordem recomendada
 
 | Ordem | Bloco | Prioridade | Motivo |
@@ -265,13 +654,13 @@ Objetivo: melhorar experiencia mobile e preparar app/offline.
 
 ### Backlog futuro
 
-- [ ] Prompt guiado "Instalar app" no Dashboard quando o navegador permitir `beforeinstallprompt`.
-- [ ] Tela de diagnostico PWA/offline com service worker ativo, ultima sincronizacao do PDV e pedidos pendentes.
-- [ ] Aviso de nova versao disponivel quando o service worker atualizar assets.
-- [ ] Versionamento do cache do service worker por release para reduzir risco de shell antigo.
+- [x] Prompt guiado "Instalar app" no Dashboard quando o navegador permitir `beforeinstallprompt`.
+- [x] Tela de diagnostico PWA/offline com service worker ativo, ultima sincronizacao do PDV e pedidos pendentes.
+- [x] Aviso de nova versao disponivel quando o service worker atualizar assets.
+- [x] Versionamento do cache do service worker por release para reduzir risco de shell antigo.
 - [ ] Expansao do offline para pedidos de mesa com tratamento de conflito.
 - [ ] Monitoramento por restaurante/dispositivo dos pedidos offline com falha de sincronizacao.
-- [ ] Teste E2E especifico para app shell offline, badge de conexao e fila local do PDV.
+- [~] Teste E2E especifico para app shell offline, badge de conexao e fila local do PDV. Parcial: cobre shell offline, metadados do service worker e aviso de nova versao; falta fluxo autenticado para badge/fila local do PDV.
 - [ ] Avaliar Capacitor/Android somente apos estabilidade do PWA em piloto.
 
 Evidencia:
@@ -282,6 +671,7 @@ Evidencia:
 - 2026-06-02: Aviso global de perda de conexao adicionado e validado com Playwright em build de producao/preview: app shell permanece carregado offline apos primeiro acesso, e o estado volta ao normal quando a conexao retorna.
 - 2026-06-02: Acoes criticas que dependem de internet agora exibem bloqueio claro quando offline: finalizar pedido no PDV, alterar status, atualizar historico, aplicar cupom, buscar CEP e confirmar pedido no checkout publico.
 - 2026-06-11: Revisao do Bloco 4 criou `NetworkStatusBadge` reutilizavel, levou o indicador online/offline para Dashboard, PDV e Cozinha, atualizou `docs/OFFLINE_E_APP_MOBILE.md` com o estado real do PWA/catalogo local/fila offline parcial do PDV e alinhou landing/FAQ para prometer apenas offline parcial.
+- 2026-06-18: Bloco 4 evoluido com card `App e offline` no Dashboard, prompt guiado de instalacao PWA, diagnostico local de service worker/cache/fila/ultima sincronizacao, aviso global de nova versao e service worker com caches versionados por release. Evidencias: `npm run typecheck`, `npm run lint:src`, `npm run build` e `npx playwright test e2e/pwa-offline.spec.ts` com 2 testes passando. Marcacao: itens de instalacao/diagnostico/update/cache `[x]`; E2E do PWA `[~]`, pois ainda falta cobertura autenticada para badge/fila local do PDV.
 
 ---
 
@@ -782,6 +1172,14 @@ Evidencia:
 
 Antes de marcar um bloco como concluido:
 
+Legenda de status das tarefas:
+
+- [x] Totalmente concluida e validada com evidencia.
+- [~] Parcialmente concluida: implementada em parte, validada em parte ou pendente de um fluxo complementar.
+- [ ] Pendente.
+
+Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar uma linha de evidencia com implementacao, validacoes executadas e pendencias restantes.
+
 - [ ] RLS revisada em tabelas novas.
 - [ ] Migrations aplicadas e documentadas.
 - [ ] Types Supabase/TypeScript atualizados.
@@ -800,5 +1198,7 @@ Antes de marcar um bloco como concluido:
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-18 | Bloco 4 — PWA instalavel | Implementado parcialmente `[~]` | `[x]` Prompt de instalacao no Dashboard, diagnostico PWA/offline, cache de service worker versionado e aviso de nova versao. `[~]` E2E PWA: shell/metadados/update cobertos; pendente teste autenticado para badge/fila local do PDV. Evidencias: `typecheck`, `lint:src`, `build`, `playwright e2e/pwa-offline.spec.ts` 2/2. |
+| 2026-06-18 | Revisao de maturidade operacional | Criado | Auditoria pos-implementacoes registrada com veredito de piloto assistido, evidencias automatizadas, leitura competitiva e blocos M1-M10 para go-live/escala comercial. |
 | 2026-05-28 | Plano inicial | Criado | Backlog competitivo registrado para execucao incremental. |
 | 2026-05-28 | Bloco 1 — CRM de clientes | Implementado tecnicamente | Migration + tela `/clientes` + servico frontend. Pendente aplicar migration e validar no piloto. |
