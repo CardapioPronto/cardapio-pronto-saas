@@ -1,15 +1,101 @@
 import type { DadosClientePedido, ItemPedido, ProdutoSimplificado } from "../types";
+import { getLocalDeviceInfo } from "@/lib/localDevice";
+import type { MesaStatus } from "@/types/mesa";
 
 const QUEUE_VERSION = 1;
 const STORAGE_KEY_PREFIX = "pubfy:pdv-offline-orders";
 
-export type PDVOfflineOrderStatus = "pending" | "syncing" | "error";
+export type PDVOfflineOrderStatus = "pending" | "syncing" | "review" | "error";
+
+export type PDVOfflineOrderOperator = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+};
+
+export type PDVOfflineTableSnapshot = {
+  id: string;
+  number: string;
+  name?: string | null;
+  status: MesaStatus;
+  updatedAt: string;
+};
+
+export type PDVOfflineTableConflict = {
+  detectedAt: string;
+  reason: string;
+  canConfirm: boolean;
+  currentStatus?: MesaStatus | null;
+  currentUpdatedAt?: string | null;
+};
+
+export type PDVOfflineCurrentTableState = {
+  number: string;
+  status: MesaStatus;
+  isActive: boolean;
+  updatedAt: string;
+};
+
+export type PDVOfflineTableValidation = {
+  outcome: "safe" | "review" | "blocked";
+  conflict: PDVOfflineTableConflict | null;
+};
+
+export function evaluatePDVOfflineTableSnapshot(
+  snapshot: PDVOfflineTableSnapshot,
+  current: PDVOfflineCurrentTableState | null,
+  detectedAt = new Date().toISOString(),
+): PDVOfflineTableValidation {
+  if (!current || !current.isActive) {
+    return {
+      outcome: "blocked",
+      conflict: {
+        detectedAt,
+        reason: `A Mesa ${snapshot.number} nao existe mais ou foi desativada.`,
+        canConfirm: false,
+        currentStatus: current?.status ?? null,
+        currentUpdatedAt: current?.updatedAt ?? null,
+      },
+    };
+  }
+
+  if (current.status === "indisponivel") {
+    return {
+      outcome: "blocked",
+      conflict: {
+        detectedAt,
+        reason: `A Mesa ${current.number} esta indisponivel e nao pode receber o pedido.`,
+        canConfirm: false,
+        currentStatus: current.status,
+        currentUpdatedAt: current.updatedAt,
+      },
+    };
+  }
+
+  const statusChanged = current.status !== snapshot.status;
+  const versionChanged = current.updatedAt !== snapshot.updatedAt;
+  if (statusChanged || versionChanged) {
+    return {
+      outcome: "review",
+      conflict: {
+        detectedAt,
+        reason: `A Mesa ${current.number} mudou de ${snapshot.status} para ${current.status} desde o ultimo acesso. Revise antes de sincronizar.`,
+        canConfirm: true,
+        currentStatus: current.status,
+        currentUpdatedAt: current.updatedAt,
+      },
+    };
+  }
+
+  return { outcome: "safe", conflict: null };
+}
 
 export type PDVOfflineOrder = {
   version: number;
   clientOrderId: string;
   restaurantId: string;
-  orderType: "balcao";
+  orderType: "balcao" | "mesa";
+  table?: PDVOfflineTableSnapshot | null;
   items: ItemPedido[];
   total: number;
   customer: DadosClientePedido;
@@ -18,6 +104,12 @@ export type PDVOfflineOrder = {
   attempts: number;
   lastAttemptAt: string | null;
   lastError: string | null;
+  deviceId?: string | null;
+  deviceLabel?: string | null;
+  operatorUserId?: string | null;
+  operatorName?: string | null;
+  operatorEmail?: string | null;
+  tableConflict?: PDVOfflineTableConflict | null;
 };
 
 const storageKey = (restaurantId: string) =>
@@ -51,9 +143,16 @@ const isValidOrder = (value: unknown, restaurantId: string): value is PDVOffline
   if (!value || typeof value !== "object") return false;
   const order = value as Partial<PDVOfflineOrder>;
 
+  const hasValidOrderType = order.orderType === "balcao"
+    || (order.orderType === "mesa"
+      && Boolean(order.table)
+      && typeof order.table?.id === "string"
+      && typeof order.table?.number === "string"
+      && typeof order.table?.updatedAt === "string");
+
   return order.version === QUEUE_VERSION
     && order.restaurantId === restaurantId
-    && order.orderType === "balcao"
+    && hasValidOrderType
     && typeof order.clientOrderId === "string"
     && typeof order.createdAt === "string"
     && Array.isArray(order.items);
@@ -105,15 +204,26 @@ export function writePDVOfflineOrderQueue(
 
 export function enqueuePDVOfflineOrder(params: {
   restaurantId: string;
+  orderType?: "balcao" | "mesa";
+  table?: PDVOfflineTableSnapshot | null;
   items: ItemPedido[];
   total: number;
   customer: DadosClientePedido;
+  operator?: PDVOfflineOrderOperator | null;
 }): PDVOfflineOrder {
+  const device = getLocalDeviceInfo();
+  const orderType = params.orderType ?? "balcao";
+
+  if (orderType === "mesa" && !params.table) {
+    throw new Error("Selecione uma mesa valida antes de salvar offline.");
+  }
+
   const order: PDVOfflineOrder = {
     version: QUEUE_VERSION,
     clientOrderId: createPDVClientOrderId(),
     restaurantId: params.restaurantId,
-    orderType: "balcao",
+    orderType,
+    table: orderType === "mesa" ? params.table : null,
     items: params.items.map((item) => toQueueItem(item, params.restaurantId)),
     total: params.total,
     customer: {
@@ -126,6 +236,12 @@ export function enqueuePDVOfflineOrder(params: {
     attempts: 0,
     lastAttemptAt: null,
     lastError: null,
+    deviceId: device?.id ?? null,
+    deviceLabel: device?.label ?? null,
+    operatorUserId: params.operator?.id ?? null,
+    operatorName: params.operator?.name ?? null,
+    operatorEmail: params.operator?.email ?? null,
+    tableConflict: null,
   };
 
   const current = readPDVOfflineOrderQueue(params.restaurantId);

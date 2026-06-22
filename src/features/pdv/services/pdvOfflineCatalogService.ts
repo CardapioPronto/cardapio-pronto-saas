@@ -8,6 +8,8 @@ const CACHE_VERSION = 1;
 const CACHE_KEY_PREFIX = "pubfy:pdv-catalog";
 const PRODUCT_BATCH_SIZE = 500;
 const MAX_CACHED_PRODUCTS = 5000;
+export const PDV_CATALOG_STALE_AFTER_MS = 8 * 60 * 60 * 1000;
+export const PDV_CATALOG_EXPIRED_AFTER_MS = 24 * 60 * 60 * 1000;
 
 const PRODUCT_SELECT = `
   id,
@@ -47,6 +49,15 @@ export type PDVOfflineCatalogSnapshot = {
   areas: Area[];
 };
 
+export type PDVOfflineCatalogFreshness = {
+  status: "missing" | "fresh" | "stale" | "expired";
+  ageMs: number | null;
+  ageHours: number | null;
+  label: string;
+  isStale: boolean;
+  isExpired: boolean;
+};
+
 const getCacheKey = (restaurantId: string) =>
   `${CACHE_KEY_PREFIX}:v${CACHE_VERSION}:${restaurantId}`;
 
@@ -81,6 +92,51 @@ export function readPDVOfflineCatalog(
     console.warn("Não foi possível ler o cache local do PDV:", error);
     return null;
   }
+}
+
+export function getPDVOfflineCatalogFreshness(
+  syncedAt: string | null | undefined,
+  now = Date.now(),
+): PDVOfflineCatalogFreshness {
+  if (!syncedAt) {
+    return {
+      status: "missing",
+      ageMs: null,
+      ageHours: null,
+      label: "Sem sincronizacao local",
+      isStale: false,
+      isExpired: false,
+    };
+  }
+
+  const syncedTime = new Date(syncedAt).getTime();
+  if (Number.isNaN(syncedTime)) {
+    return {
+      status: "missing",
+      ageMs: null,
+      ageHours: null,
+      label: "Sincronizacao local indisponivel",
+      isStale: false,
+      isExpired: false,
+    };
+  }
+
+  const ageMs = Math.max(0, now - syncedTime);
+  const ageHours = Math.floor(ageMs / (60 * 60 * 1000));
+  const isExpired = ageMs >= PDV_CATALOG_EXPIRED_AFTER_MS;
+  const isStale = ageMs >= PDV_CATALOG_STALE_AFTER_MS;
+  const label = ageHours < 1
+    ? "Atualizado ha menos de 1 hora"
+    : `Atualizado ha ${ageHours}h`;
+
+  return {
+    status: isExpired ? "expired" : isStale ? "stale" : "fresh",
+    ageMs,
+    ageHours,
+    label,
+    isStale,
+    isExpired,
+  };
 }
 
 export function writePDVOfflineCatalog(snapshot: PDVOfflineCatalogSnapshot) {

@@ -95,7 +95,7 @@ Notas de referencia:
 - [x] `npm audit --omit=dev --audit-level=high` retornou 0 vulnerabilidades.
 - [x] `npx supabase migration list` mostrou local/remoto alinhados ate `20260617153000`.
 - [~] Build/testes com Vite/esbuild exigiram execucao fora do sandbox local por `spawn EPERM`; isso parece limitacao do ambiente, nao erro da aplicacao.
-- [ ] Atualizar `caniuse-lite`/Browserslist em janela controlada e repetir validacoes.
+- [x] Atualizar `caniuse-lite`/Browserslist em janela controlada e repetir validacoes.
 
 ### Leitura competitiva resumida
 
@@ -332,12 +332,12 @@ Objetivo: aproximar o Pubfy de sistemas de PDV maduros em rotina de loja.
 
 #### Escopo MVP
 
-- [ ] Evoluir offline do PDV alem de pedido de balcao, com estrategia clara
+- [~] Evoluir offline do PDV alem de pedido de balcao, com estrategia clara
       para mesa, conflito e estoque.
-- [ ] Criar diagnostico de fila offline: pendentes, falhas, ultima tentativa,
+- [x] Criar diagnostico de fila offline: pendentes, falhas, ultima tentativa,
       dispositivo e usuario.
-- [ ] Avisar quando catalogo local esta antigo.
-- [ ] Melhorar impressao com perfis por via, tamanho e destino operacional.
+- [x] Avisar quando catalogo local esta antigo.
+- [~] Melhorar impressao com perfis por via, tamanho e destino operacional.
 - [ ] Documentar modelos de impressora testados.
 - [ ] Avaliar integracao com maquininha/parceiro ou concilicao manual
       estruturada.
@@ -354,7 +354,9 @@ Objetivo: aproximar o Pubfy de sistemas de PDV maduros em rotina de loja.
 #### Evidencia
 
 - PWA/offline parcial e impressao MVP ja implementados.
-- Pendente expansao para operacao mais robusta.
+- 2026-06-18: M7 iniciado com diagnostico offline ampliado. Pedidos offline de balcao agora registram dispositivo local, operador, tentativas, ultima tentativa e erro; o painel do PDV e o card `App e offline` exibem esse contexto. O PDV tambem alerta quando o catalogo local passa de 8 horas sem sincronizar. Evidencias: `npm run typecheck`, `npm run lint:src`, `npm run build` e `npx playwright test e2e/pwa-offline.spec.ts` com 2 testes passando.
+- 2026-06-22: Fila offline expandida para pedidos de mesa. O dispositivo salva snapshot de mesa/status/versao; ao reconectar, mesa inalterada sincroniza normalmente, mesa alterada entra em `review` e exige confirmacao, e mesa desativada/indisponivel permanece bloqueada. Produtos, estoque e total continuam revalidados pela RPC transacional antes da criacao. Evidencias: `npm run typecheck`, `npm run lint:src`, `npm run test` com 94 testes em 22 arquivos, `npm run build` e `npx playwright test e2e/pwa-offline.spec.ts` com 2/2 testes passando.
+- Marcacao: diagnostico de fila e alerta de catalogo antigo `[x]`; offline alem de balcao permanece `[~]` apesar da mesa offline implementada, pois faltam piloto em dois dispositivos e relatorio detalhado de divergencia de estoque/produto; impressao `[~]` porque ha perfis por via/tamanho no navegador, mas faltam destino fisico por impressora e modelos testados; maquininha/caixa seguem pendentes.
 
 ---
 
@@ -1198,6 +1200,8 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-22 | M7 — Mesa offline e conflito | Implementado parcialmente `[~]` | `[x]` Pedido de mesa salvo offline. `[x]` Validacao de status/versao ao reconectar. `[x]` Estado `review`, confirmacao explicita e bloqueio para mesa indisponivel. `[~]` Revalidacao de estoque/produto usa RPC, mas falta relatorio detalhado e piloto em dois dispositivos. Evidencias: `typecheck`, `lint:src`, 94/94 testes, `build`, Playwright PWA 2/2. |
+| 2026-06-18 | M7 — Offline, impressao e maquininha | Implementado parcialmente `[~]` | `[x]` Diagnostico da fila offline com pendentes, falhas, ultima tentativa, dispositivo e operador. `[x]` Alerta de catalogo local antigo. `[~]` Offline alem de balcao e impressao operacional avancada. `[ ]` Maquininha, modelos fisicos testados e fechamento de caixa. Evidencias: `typecheck`, `lint:src`, `build`, `playwright e2e/pwa-offline.spec.ts` 2/2. |
 | 2026-06-18 | Bloco 4 — PWA instalavel | Implementado parcialmente `[~]` | `[x]` Prompt de instalacao no Dashboard, diagnostico PWA/offline, cache de service worker versionado e aviso de nova versao. `[~]` E2E PWA: shell/metadados/update cobertos; pendente teste autenticado para badge/fila local do PDV. Evidencias: `typecheck`, `lint:src`, `build`, `playwright e2e/pwa-offline.spec.ts` 2/2. |
 | 2026-06-18 | Revisao de maturidade operacional | Criado | Auditoria pos-implementacoes registrada com veredito de piloto assistido, evidencias automatizadas, leitura competitiva e blocos M1-M10 para go-live/escala comercial. |
 | 2026-05-28 | Plano inicial | Criado | Backlog competitivo registrado para execucao incremental. |

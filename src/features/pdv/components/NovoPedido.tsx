@@ -11,10 +11,11 @@ import { ListaProdutos } from "./ListaProdutos";
 import { ComandaPedido } from "./ComandaPedido";
 import { FiltroProdutos } from "./FiltroProdutos";
 import { usePDVOfflineCatalog } from "../hooks/usePDVOfflineCatalog";
+import { getPDVOfflineCatalogFreshness } from "../services/pdvOfflineCatalogService";
 import { formatPhone, validatePhone } from "@/utils/phoneValidation";
 import { Product } from "@/types";
 import { DadosClientePedido, ItemPedido } from "../types";
-import { Database, PackageSearch, RefreshCw, UserRound, WifiOff } from "lucide-react";
+import { AlertTriangle, Database, PackageSearch, RefreshCw, UserRound, WifiOff } from "lucide-react";
 import { PrintPaperSize } from "@/hooks/usePrint";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +97,7 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
   const [aceitaMarketing, setAceitaMarketing] = useState(false);
   const [telefoneError, setTelefoneError] = useState("");
   const [mesaError, setMesaError] = useState("");
+  const catalogFreshness = getPDVOfflineCatalogFreshness(ultimaSincronizacao);
 
   useEffect(() => {
     if (tipoPedido !== "mesa" || mesaSelecionada) {
@@ -226,6 +228,17 @@ export const NovoPedido: React.FC<NovoPedidoProps> = ({
             {catalogError && (
               <Alert variant={possuiDadosLocais ? "default" : "destructive"}>
                 <AlertDescription>{catalogError}</AlertDescription>
+              </Alert>
+            )}
+            {catalogFreshness.isStale && (
+              <Alert
+                variant={catalogFreshness.isExpired ? "destructive" : "default"}
+                className={catalogFreshness.isExpired ? undefined : "border-amber-200 bg-amber-50 text-amber-950"}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Catalogo local antigo: {catalogFreshness.label}. Atualize os dados antes de vender se produtos, mesas ou precos mudaram recentemente.
+                </AlertDescription>
               </Alert>
             )}
             <FiltroProdutos

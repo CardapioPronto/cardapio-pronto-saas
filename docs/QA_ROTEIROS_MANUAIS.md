@@ -44,7 +44,7 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
 - [x] Dashboard/PDV/Cozinha: indicador online/offline aparece no topo;
       ao desconectar a rede, muda para Offline e o banner global é exibido.
 - [ ] Dashboard: card **App e offline** aparece com status de conexão,
-      service worker, fila PDV, última sincronização e versão do cache.
+      service worker, dispositivo local, fila PDV, última sincronização e versão do cache.
 - [ ] Dashboard: quando o navegador liberar instalação PWA, botão
       **Instalar app** abre o prompt nativo; após instalar, o card muda para
       estado instalado.
@@ -89,6 +89,24 @@ Cobre tarefas exclusivas de quem assinou o plano e configura a operação.
       ocupada manualmente e verificar status.
 - [x] PDV: lançar pedido em mesa, finalizar, conferir aparição em
       Pedidos com `status = finalizado` e mesa volta a `livre`.
+- [ ] PDV: abrir sem internet após uma sincronização anterior → catálogo
+      local aparece com última sincronização; se estiver antigo, alerta de
+      catálogo local antigo aparece antes da lista de produtos.
+- [ ] PDV: salvar pedido de balcão offline → painel de sincronização mostra
+      pedido pendente com dispositivo, operador, tentativas e horário.
+- [ ] PDV: reconectar internet → pedido offline sincroniza sem duplicar; se
+      falhar, erro fica visível no painel e permite tentar novamente.
+- [ ] PDV: selecionar uma mesa com dados sincronizados, desconectar a rede e
+      salvar pedido → fila mostra **Mesa N** sem exigir troca para balcão.
+- [ ] PDV: reconectar sem alterar a mesa em outro dispositivo → pedido de mesa
+      sincroniza automaticamente e ocupa/vincula a mesa sem duplicar.
+- [ ] PDV: enquanto o primeiro dispositivo está offline, alterar status da
+      mesma mesa em outro dispositivo; ao reconectar → pedido entra em
+      **Revisar mesa** e não sincroniza automaticamente.
+- [ ] PDV: confirmar **Revisar e sincronizar** → diálogo explica o conflito,
+      servidor revalida mesa/produtos/estoque e só então cria o pedido.
+- [ ] PDV: marcar a mesa como indisponível antes da reconexão → confirmação
+      fica bloqueada e o pedido permanece local para correção ou remoção.
 - [ ] PDV: tentar vender produto com controle ligado e saldo insuficiente.
       Usuário sem `products_manage` vê bloqueio sem opção de forçar venda.
 - [ ] PDV: com usuário gestor (`products_manage`), repetir venda sem saldo,

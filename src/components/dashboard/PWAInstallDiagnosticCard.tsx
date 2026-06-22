@@ -6,9 +6,11 @@ import {
   Clock3,
   Database,
   Download,
+  Laptop,
   PackageCheck,
   RefreshCw,
   Smartphone,
+  UserRound,
   Wifi,
 } from "lucide-react";
 
@@ -19,6 +21,7 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { usePWAInstallPrompt } from "@/hooks/usePWAInstallPrompt";
 import { useServiceWorkerStatus } from "@/hooks/useServiceWorkerStatus";
 import {
+  getPDVOfflineCatalogFreshness,
   readPDVOfflineCatalog,
   type PDVOfflineCatalogSnapshot,
 } from "@/features/pdv/services/pdvOfflineCatalogService";
@@ -26,6 +29,8 @@ import {
   readPDVOfflineOrderQueue,
   type PDVOfflineOrder,
 } from "@/features/pdv/services/pdvOfflineOrderQueueService";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getLocalDeviceInfo, getShortDeviceId, type LocalDeviceInfo } from "@/lib/localDevice";
 import { cn } from "@/lib/utils";
 
 interface PWAInstallDiagnosticCardProps {
@@ -86,10 +91,14 @@ export function PWAInstallDiagnosticCard({ restaurantId }: PWAInstallDiagnosticC
   const { canInstall, installed, promptInstall } = usePWAInstallPrompt();
   const networkStatus = useNetworkStatus();
   const serviceWorker = useServiceWorkerStatus();
+  const { user } = useCurrentUser();
   const [queue, setQueue] = useState<PDVOfflineOrder[]>([]);
   const [catalog, setCatalog] = useState<PDVOfflineCatalogSnapshot | null>(null);
+  const [deviceInfo, setDeviceInfo] = useState<LocalDeviceInfo | null>(null);
 
   const refreshLocalDiagnostics = useCallback(() => {
+    setDeviceInfo(getLocalDeviceInfo());
+
     if (!restaurantId) {
       setQueue([]);
       setCatalog(null);
@@ -121,20 +130,34 @@ export function PWAInstallDiagnosticCard({ restaurantId }: PWAInstallDiagnosticC
 
   const queueSummary = useMemo(() => {
     const errorCount = queue.filter((order) => order.status === "error").length;
-    const pendingCount = queue.filter((order) => order.status !== "error").length;
+    const reviewCount = queue.filter((order) => order.status === "review").length;
+    const pendingCount = queue.filter((order) => order.status === "pending" || order.status === "syncing").length;
     const lastAttemptAt = queue
       .map((order) => order.lastAttemptAt)
       .filter((value): value is string => Boolean(value))
       .sort()
       .at(-1);
+    const lastOrder = [...queue].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).at(-1) ?? null;
 
     return {
       errorCount,
+      reviewCount,
       pendingCount,
       totalCount: queue.length,
       lastAttemptAt,
+      lastOrder,
     };
   }, [queue]);
+
+  const catalogFreshness = getPDVOfflineCatalogFreshness(catalog?.syncedAt ?? null);
+  const catalogTone = catalogFreshness.isExpired
+    ? "danger"
+    : catalogFreshness.isStale
+      ? "warning"
+      : catalog?.syncedAt
+        ? "success"
+        : "muted";
+  const operatorLabel = user?.name || user?.email || "Operador nao identificado";
 
   const handleInstall = async () => {
     const outcome = await promptInstall();
@@ -169,7 +192,7 @@ export function PWAInstallDiagnosticCard({ restaurantId }: PWAInstallDiagnosticC
 
   const queueTone = queueSummary.errorCount > 0
     ? "danger"
-    : queueSummary.pendingCount > 0
+    : queueSummary.reviewCount > 0 || queueSummary.pendingCount > 0
       ? "warning"
       : "success";
 
@@ -225,7 +248,7 @@ export function PWAInstallDiagnosticCard({ restaurantId }: PWAInstallDiagnosticC
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <DiagnosticTile
             icon={Wifi}
             label="Conexão"
@@ -241,20 +264,44 @@ export function PWAInstallDiagnosticCard({ restaurantId }: PWAInstallDiagnosticC
             tone={serviceWorkerTone}
           />
           <DiagnosticTile
+            icon={Laptop}
+            label="Dispositivo"
+            value={deviceInfo?.label ?? "Nao identificado"}
+            detail={`ID ${getShortDeviceId(deviceInfo?.id)} · ${operatorLabel}`}
+            tone={deviceInfo ? "success" : "muted"}
+          />
+          <DiagnosticTile
             icon={Database}
             label="Fila PDV"
             value={`${queueSummary.totalCount} pedido${queueSummary.totalCount === 1 ? "" : "s"}`}
-            detail={`${queueSummary.pendingCount} pendente${queueSummary.pendingCount === 1 ? "" : "s"}, ${queueSummary.errorCount} com erro`}
+            detail={`${queueSummary.pendingCount} pendente${queueSummary.pendingCount === 1 ? "" : "s"}, ${queueSummary.reviewCount} em revisao, ${queueSummary.errorCount} com erro`}
             tone={queueTone}
           />
           <DiagnosticTile
             icon={Clock3}
             label="Última sincronização"
             value={formatDateTime(catalog?.syncedAt)}
-            detail={`Tentativa de fila: ${formatDateTime(queueSummary.lastAttemptAt)}`}
-            tone={catalog?.syncedAt ? "success" : "muted"}
+            detail={`${catalogFreshness.label}. Tentativa: ${formatDateTime(queueSummary.lastAttemptAt)}`}
+            tone={catalogTone}
           />
         </div>
+
+        {queueSummary.lastOrder && (
+          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span className="flex min-w-0 items-center gap-2">
+              <UserRound className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                Ultimo pedido local: {queueSummary.lastOrder.operatorName || queueSummary.lastOrder.operatorEmail || "operador nao registrado"}
+              </span>
+            </span>
+            <span className="flex min-w-0 items-center gap-2">
+              <Laptop className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {queueSummary.lastOrder.deviceLabel || "dispositivo sem ID"} · {formatDateTime(queueSummary.lastOrder.createdAt)}
+              </span>
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

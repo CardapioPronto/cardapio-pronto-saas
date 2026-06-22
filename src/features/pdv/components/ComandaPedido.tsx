@@ -133,7 +133,7 @@ export const ComandaPedido = ({
               <span>
                 {tipoPedido === "balcao"
                   ? "Este pedido será salvo neste dispositivo e sincronizado quando a internet voltar."
-                  : "Pedidos de mesa exigem conexão. Altere para balcão para salvar offline."}
+                  : "Este pedido de mesa sera salvo no dispositivo. Ao reconectar, o Pubfy valida mudancas na mesa antes de sincronizar."}
               </span>
             </div>
           )}
@@ -164,7 +164,7 @@ export const ComandaPedido = ({
               itensPedido.length === 0
               || salvandoPedido
               || isChecking
-              || (!isOnline && tipoPedido === "mesa")
+              || precisaMesa
             }
           >
             {salvandoPedido ? (
@@ -175,8 +175,8 @@ export const ComandaPedido = ({
             ) : (
               isChecking
                 ? "Verificando conexão..."
-                : !isOnline && tipoPedido === "balcao"
-                  ? "Salvar pedido offline"
+                : !isOnline
+                  ? tipoPedido === "mesa" ? "Salvar mesa offline" : "Salvar pedido offline"
                   : precisaMesa
                     ? "Selecionar mesa para finalizar"
                     : "Finalizar Pedido"

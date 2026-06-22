@@ -324,6 +324,7 @@ export default function PDV() {
             isSyncing={offlineQueue.isSyncing}
             onSync={() => void offlineQueue.syncPendingOrders()}
             onRetry={(clientOrderId) => void offlineQueue.retryOrder(clientOrderId)}
+            onConfirmReview={(clientOrderId) => void offlineQueue.confirmTableOrder(clientOrderId)}
             onRemove={offlineQueue.removeOrder}
           />
           {visualizacaoAtiva === "novo" ? (

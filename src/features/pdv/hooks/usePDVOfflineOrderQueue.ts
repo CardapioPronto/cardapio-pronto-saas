@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { supabase } from "@/integrations/supabase/client";
 import { captureCrmLeadFromOrder } from "@/services/crmService";
 import { salvarPedido } from "../services/pedidoService";
 import type { DadosClientePedido, ItemPedido } from "../types";
 import {
   enqueuePDVOfflineOrder,
+  evaluatePDVOfflineTableSnapshot,
   PDVOfflineOrder,
+  type PDVOfflineOrderOperator,
+  type PDVOfflineTableSnapshot,
+  type PDVOfflineTableValidation,
   readPDVOfflineOrderQueue,
   writePDVOfflineOrderQueue,
 } from "../services/pdvOfflineOrderQueueService";
@@ -30,7 +35,10 @@ const errorMessageFromResult = (result: {
   return "Não foi possível sincronizar este pedido.";
 };
 
-export function usePDVOfflineOrderQueue(restaurantId: string) {
+export function usePDVOfflineOrderQueue(
+  restaurantId: string,
+  operator: PDVOfflineOrderOperator | null = null,
+) {
   const { isOnline, isChecking } = useNetworkStatus();
   const [orders, setOrders] = useState<PDVOfflineOrder[]>([]);
   const syncingIdsRef = useRef(new Set<string>());
@@ -59,28 +67,89 @@ export function usePDVOfflineOrderQueue(restaurantId: string) {
     persist(current.filter((order) => order.clientOrderId !== clientOrderId));
   }, [persist, restaurantId]);
 
-  const syncOrder = useCallback(async (order: PDVOfflineOrder) => {
-    if (!isOnline || isChecking || syncingIdsRef.current.has(order.clientOrderId)) return false;
+  const validateTableOrder = useCallback(async (
+    order: PDVOfflineOrder,
+  ): Promise<PDVOfflineTableValidation> => {
+    if (order.orderType !== "mesa" || !order.table) {
+      return { outcome: "safe", conflict: null };
+    }
 
+    const { data, error } = await supabase
+      .from("mesas")
+      .select("id, number, status, is_active, updated_at")
+      .eq("id", order.table.id)
+      .eq("restaurant_id", order.restaurantId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return evaluatePDVOfflineTableSnapshot(
+      order.table,
+      data
+        ? {
+            number: data.number,
+            status: data.status,
+            isActive: data.is_active,
+            updatedAt: data.updated_at,
+          }
+        : null,
+    );
+  }, []);
+
+  const syncOrder = useCallback(async (
+    order: PDVOfflineOrder,
+    options: { confirmTableConflict?: boolean } = {},
+  ) => {
+    if (!isOnline || isChecking || syncingIdsRef.current.has(order.clientOrderId)) return false;
     syncingIdsRef.current.add(order.clientOrderId);
+
+    if (order.orderType === "mesa") {
+      try {
+        const validation = await validateTableOrder(order);
+        const canContinue = validation.outcome === "safe"
+          || (validation.outcome === "review" && options.confirmTableConflict === true);
+
+        if (!canContinue) {
+          updateOrder(order.clientOrderId, (current) => ({
+            ...current,
+            status: "review",
+            tableConflict: validation.conflict,
+            lastError: null,
+          }));
+          toast.warning(validation.conflict?.reason ?? "Este pedido de mesa precisa de revisao.");
+          syncingIdsRef.current.delete(order.clientOrderId);
+          return false;
+        }
+      } catch (error) {
+        updateOrder(order.clientOrderId, (current) => ({
+          ...current,
+          status: "error",
+          lastError: error instanceof Error ? error.message : "Nao foi possivel validar a mesa.",
+        }));
+        syncingIdsRef.current.delete(order.clientOrderId);
+        return false;
+      }
+    }
+
     updateOrder(order.clientOrderId, (current) => ({
       ...current,
       status: "syncing",
       attempts: current.attempts + 1,
       lastAttemptAt: new Date().toISOString(),
       lastError: null,
+      tableConflict: null,
     }));
 
     try {
       const result = await salvarPedido(
         order.restaurantId,
-        "Balcão",
+        order.orderType === "mesa" ? `Mesa ${order.table?.number ?? ""}` : "Balcao",
         order.items,
         order.total,
         "",
         order.customer.nomeCliente,
         order.customer.telefoneCliente,
-        undefined,
+        order.orderType === "mesa" ? order.table?.id : undefined,
         undefined,
         order.clientOrderId,
         true,
@@ -106,7 +175,11 @@ export function usePDVOfflineOrderQueue(restaurantId: string) {
       }
 
       removeOrder(order.clientOrderId);
-      toast.success("Pedido offline sincronizado com sucesso.");
+      toast.success(
+        order.orderType === "mesa"
+          ? `Pedido da Mesa ${order.table?.number} sincronizado com sucesso.`
+          : "Pedido offline sincronizado com sucesso.",
+      );
       return true;
     } catch (error) {
       updateOrder(order.clientOrderId, (current) => ({
@@ -118,7 +191,7 @@ export function usePDVOfflineOrderQueue(restaurantId: string) {
     } finally {
       syncingIdsRef.current.delete(order.clientOrderId);
     }
-  }, [isChecking, isOnline, removeOrder, updateOrder]);
+  }, [isChecking, isOnline, removeOrder, updateOrder, validateTableOrder]);
 
   const syncPendingOrders = useCallback(async () => {
     if (!isOnline || isChecking) return;
@@ -141,20 +214,33 @@ export function usePDVOfflineOrderQueue(restaurantId: string) {
     return syncOrder(pendingOrder);
   }, [restaurantId, syncOrder, updateOrder]);
 
+  const confirmTableOrder = useCallback(async (clientOrderId: string) => {
+    const order = readPDVOfflineOrderQueue(restaurantId)
+      .find((item) => item.clientOrderId === clientOrderId);
+    if (!order || order.orderType !== "mesa") return false;
+
+    return syncOrder(order, { confirmTableConflict: true });
+  }, [restaurantId, syncOrder]);
+
   const enqueueOrder = useCallback((params: {
+    orderType?: "balcao" | "mesa";
+    table?: PDVOfflineTableSnapshot | null;
     items: ItemPedido[];
     total: number;
     customer: DadosClientePedido;
   }) => {
     const order = enqueuePDVOfflineOrder({
       restaurantId,
+      orderType: params.orderType,
+      table: params.table,
       items: params.items,
       total: params.total,
       customer: params.customer,
+      operator,
     });
     reload();
     return order;
-  }, [reload, restaurantId]);
+  }, [operator, reload, restaurantId]);
 
   useEffect(() => {
     reload();
@@ -179,12 +265,14 @@ export function usePDVOfflineOrderQueue(restaurantId: string) {
 
   return {
     orders,
-    pendingCount: orders.filter((order) => order.status !== "error").length,
+    pendingCount: orders.filter((order) => order.status === "pending" || order.status === "syncing").length,
+    reviewCount: orders.filter((order) => order.status === "review").length,
     errorCount: orders.filter((order) => order.status === "error").length,
     totalCount: orders.length,
     isSyncing: useMemo(() => orders.some((order) => order.status === "syncing"), [orders]),
     enqueueOrder,
     retryOrder,
+    confirmTableOrder,
     removeOrder,
     syncPendingOrders,
   };

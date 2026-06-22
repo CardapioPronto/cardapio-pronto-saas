@@ -6,15 +6,16 @@ O Pubfy ja possui base PWA instalavel pelo navegador, com `manifest.webmanifest`
 
 O app shell pode continuar abrindo apos o primeiro acesso, mesmo com conexao instavel. APIs, Supabase, pagamentos, WhatsApp, iFood, relatorios, edicao de cardapio e rotinas administrativas continuam exigindo internet.
 
-O Dashboard tambem exibe o card **App e offline**, com prompt de instalacao quando o navegador libera, estado do service worker, versao/cache do PWA, status de conexao, ultima sincronizacao local do PDV e fila offline pendente neste dispositivo.
+O Dashboard tambem exibe o card **App e offline**, com prompt de instalacao quando o navegador libera, estado do service worker, versao/cache do PWA, status de conexao, identificacao local do dispositivo, ultima sincronizacao local do PDV e fila offline pendente neste dispositivo.
 
 O PDV ja possui suporte offline parcial:
 
 - Catalogo local por restaurante com produtos, categorias, areas e mesas.
+- Alerta quando o catalogo local esta antigo, para evitar venda com preco/produto/mesa desatualizado.
 - Indicador online/offline baseado em probe real do Supabase, nao apenas `navigator.onLine`.
 - Banner global de perda de conexao.
-- Fila local para pedido de balcao offline, com sincronizacao quando a conexao voltar.
-- Bloqueio claro para pedido de mesa offline, pois ainda ha risco de conflito operacional.
+- Fila local para pedidos de balcao e mesa offline, com dispositivo, operador, tentativas e erro de sincronizacao.
+- Pedido de mesa compara status e versao da mesa ao reconectar; mudancas exigem revisao explicita antes da sincronizacao.
 
 Ainda nao ha app nativo com Capacitor, projeto Android/iOS, publicacao em loja ou modo offline completo para todos os canais.
 
@@ -44,6 +45,7 @@ Objetivo: deixar o operador navegar pelo PDV com dados ja sincronizados quando a
 - [x] Atualizar o cache quando a conexao estiver online.
 - [x] Mostrar ao operador quando os dados foram sincronizados pela ultima vez.
 - [x] Usar dados locais no PDV quando o Supabase estiver indisponivel.
+- [x] Avisar quando o catalogo local passar de 8 horas sem sincronizar.
 
 Resultado: o usuario consegue consultar o ultimo catalogo sincronizado e montar comandas com os dados disponiveis localmente.
 
@@ -56,10 +58,12 @@ Objetivo: permitir registrar vendas simples sem perder pedido quando a internet 
 - [x] Mostrar painel de pedidos pendentes de sincronizacao no PDV.
 - [x] Sincronizar pedidos pendentes quando a internet voltar.
 - [x] Evitar duplicidade com `client_order_id`.
-- [ ] Expandir para pedidos de mesa com tratamento de conflito.
-- [ ] Registrar auditoria detalhada dos erros de sincronizacao para suporte.
+- [x] Registrar dispositivo local, operador, tentativas, ultima tentativa e erro visivel para suporte.
+- [x] Salvar pedido de mesa offline com snapshot de status/versao da mesa.
+- [x] Validar a mesa ao reconectar e exigir confirmacao quando houver mudanca.
+- [~] Registrar auditoria detalhada dos erros de sincronizacao para suporte. Parcial: o contexto fica no dispositivo; falta painel central por restaurante/dispositivo.
 
-Resultado atual: pedidos de balcao podem ser salvos offline e sincronizados depois. Pedidos de mesa continuam exigindo conexao.
+Resultado atual: pedidos de balcao podem ser sincronizados automaticamente; pedidos de mesa tambem ficam na fila, mas mudancas na mesa interrompem o envio e exigem revisao do operador.
 
 ### Fase 4: consistencia e conflitos
 
@@ -67,8 +71,8 @@ Objetivo: tornar a sincronizacao confiavel para uso operacional mais amplo.
 
 - [x] Usar `client_order_id` unico em cada pedido local e restricao unica no banco.
 - [x] Reenvio seguro para pedidos de balcao.
-- [ ] Revalidar mesa, usuario, produtos e totais com relatorio visivel quando houver divergencia.
-- [ ] Definir regra de conflito para mesas: se a mesa mudou online enquanto o app estava offline, manter o pedido e sinalizar revisao.
+- [~] Revalidar mesa, usuario, produtos e totais com relatorio visivel quando houver divergencia. Mesa, produtos, estoque e total sao revalidados; falta relatorio detalhado de divergencias.
+- [x] Definir regra de conflito para mesas: manter o pedido local, bloquear sincronizacao automatica e exigir revisao quando status/versao mudarem.
 - [ ] Criar painel administrativo de pedidos offline com falha por restaurante/dispositivo.
 
 Resultado esperado: sincronizacao confiavel para pedido de mesa, revisao assistida e suporte com contexto.
@@ -108,10 +112,11 @@ Pode ser prometido hoje:
 - Indicador online/offline e banner de perda de conexao.
 - Catalogo local do PDV.
 - Pedido de balcao salvo offline e sincronizado depois.
+- Pedido de mesa salvo offline com revisao de conflito ao reconectar, ainda em validacao de piloto.
 
 Nao prometer ainda:
 
-- Pedido de mesa offline completo.
+- Pedido de mesa offline sem revisao de conflito ou validacao do servidor.
 - Pagamento online offline.
 - WhatsApp, iFood ou webhooks offline.
 - Edicao de cardapio offline.
@@ -120,8 +125,8 @@ Nao prometer ainda:
 
 ## Proximos passos recomendados
 
-1. Expandir fila offline para mesa com revisao de conflito.
-2. Criar monitoramento por restaurante dos pedidos offline com erro.
+1. Criar monitoramento por restaurante dos pedidos offline com erro.
+2. Adicionar relatorio detalhado para divergencia de produto/estoque na sincronizacao.
 3. Automatizar a versao do service worker no pipeline de release.
-4. Testar em aparelho Android real durante um turno piloto.
+4. Testar mesa offline em dois dispositivos durante um turno piloto.
 5. Avaliar Capacitor somente depois da estabilidade do PWA em piloto.

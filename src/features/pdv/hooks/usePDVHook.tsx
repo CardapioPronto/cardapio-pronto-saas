@@ -29,6 +29,8 @@ import { useOrdersRealtimeSubscription } from "./useOrdersRealtimeSubscription";
 import { captureCrmLeadFromOrder } from "@/services/crmService";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { usePDVOfflineOrderQueue } from "./usePDVOfflineOrderQueue";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { readPDVOfflineCatalog } from "../services/pdvOfflineCatalogService";
 
 const getCreatedOrderId = (pedido: unknown) => {
   if (!pedido || typeof pedido !== "object") return null;
@@ -43,7 +45,18 @@ const getCreatedOrderId = (pedido: unknown) => {
 
 export const usePDVHook = (restaurantId: string) => {
   const { isOnline, isChecking } = useNetworkStatus();
-  const offlineQueue = usePDVOfflineOrderQueue(restaurantId);
+  const { user: currentUser } = useCurrentUser();
+  const offlineOperator = useMemo(
+    () => currentUser
+      ? {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+        }
+      : null,
+    [currentUser],
+  );
+  const offlineQueue = usePDVOfflineOrderQueue(restaurantId, offlineOperator);
   // Estados do PDV
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
   const [mesaSelecionada, setMesaSelecionada] = useState("");
@@ -383,13 +396,27 @@ export const usePDVHook = (restaurantId: string) => {
     }
 
     if (!isOnline) {
-      if (tipoPedido !== "balcao") {
-        toast.error("Pedidos de mesa exigem conexão. Altere para balcão para salvar offline.");
-        return false;
-      }
-
       try {
+        const cachedTable = tipoPedido === "mesa"
+          ? readPDVOfflineCatalog(restaurantId)?.mesas.find((mesa) => mesa.id === mesaSelecionada)
+          : null;
+
+        if (tipoPedido === "mesa" && !cachedTable) {
+          toast.error("A mesa selecionada nao esta disponivel no catalogo local. Sincronize o PDV antes de ficar offline.");
+          return false;
+        }
+
         const pedidoOffline = offlineQueue.enqueueOrder({
+          orderType: tipoPedido,
+          table: cachedTable
+            ? {
+                id: cachedTable.id,
+                number: cachedTable.number,
+                name: cachedTable.name,
+                status: cachedTable.status,
+                updatedAt: cachedTable.updated_at,
+              }
+            : null,
           items: itensPedido,
           total: totalPedido,
           customer: dadosCliente,
@@ -397,7 +424,9 @@ export const usePDVHook = (restaurantId: string) => {
 
         setPedidoRecemFinalizado({
           id: `offline-${pedidoOffline.clientOrderId}`,
-          mesa: "Balcão",
+          mesa: pedidoOffline.orderType === "mesa"
+            ? `Mesa ${pedidoOffline.table?.number}`
+            : "Balcao",
           cliente: dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined,
           clientName: dadosCliente.nomeCliente?.trim() || nomeCliente.trim() || undefined,
           itensPedido: [...itensPedido],
@@ -411,7 +440,11 @@ export const usePDVHook = (restaurantId: string) => {
         setItensPedido([]);
         setNomeCliente("");
         setMesaSelecionada("");
-        toast.success("Pedido salvo neste dispositivo. Ele será sincronizado quando a internet voltar.");
+        toast.success(
+          pedidoOffline.orderType === "mesa"
+            ? `Pedido da Mesa ${pedidoOffline.table?.number} salvo. A mesa sera validada ao reconectar.`
+            : "Pedido salvo neste dispositivo. Ele sera sincronizado quando a internet voltar.",
+        );
         return true;
       } catch (error) {
         console.error("Erro ao salvar pedido offline:", error);
