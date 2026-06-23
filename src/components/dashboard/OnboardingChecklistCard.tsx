@@ -19,6 +19,9 @@ import type { DashboardOverview } from "@/services/dashboardService";
 
 interface OnboardingChecklistCardProps {
   overview: DashboardOverview | null;
+  canAccessPDV: boolean;
+  canManageProducts: boolean;
+  canManageSettings: boolean;
 }
 
 type ChecklistItem = {
@@ -31,7 +34,12 @@ type ChecklistItem = {
   icon: typeof Store;
 };
 
-export const OnboardingChecklistCard = ({ overview }: OnboardingChecklistCardProps) => {
+export const OnboardingChecklistCard = ({
+  overview,
+  canAccessPDV,
+  canManageProducts,
+  canManageSettings,
+}: OnboardingChecklistCardProps) => {
   if (!overview) return null;
 
   const menuReady = overview.isRestaurantActive === true &&
@@ -76,7 +84,14 @@ export const OnboardingChecklistCard = ({ overview }: OnboardingChecklistCardPro
       actionLabel: "Abrir PDV",
       icon: ShoppingCart,
     },
-  ];
+  ].filter((item) => {
+    if (item.id === "restaurant-profile") return canManageSettings;
+    if (item.id === "menu-products" || item.id === "public-menu") return canManageProducts;
+    if (item.id === "test-order") return canAccessPDV;
+    return false;
+  });
+
+  if (items.length === 0) return null;
 
   const completed = items.filter((item) => item.done).length;
   const progress = Math.round((completed / items.length) * 100);

@@ -277,10 +277,10 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
 - [ ] E2E cadastro dono -> confirmacao -> restaurante -> trial -> dashboard.
 - [ ] E2E checkout publico com produto, cupom, endereco e pedido na entrega.
 - [ ] E2E checkout publico com pagamento online em modo homologacao.
-- [ ] E2E PDV: mesa/balcao, cupom, finalizar, cancelar e reabrir.
+- [~] E2E PDV: mesa/balcao, cupom, finalizar, cancelar e reabrir.
 - [ ] E2E Cozinha: pedido entra, muda para preparo e pronto.
-- [ ] E2E permissoes: funcionario sem acesso nao ve financeiro/configuracoes.
-- [ ] E2E assinatura: trial ativo, expirado, active, past_due e bloqueio.
+- [x] E2E permissoes: funcionario sem acesso nao ve financeiro/configuracoes.
+- [x] E2E assinatura: trial ativo, expirado, active, past_due e bloqueio.
 - [ ] E2E iFood/WhatsApp podem ser simulados com mocks ou ambiente de homolog.
 
 #### Criterio de aceite
@@ -291,8 +291,30 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
 
 #### Evidencia
 
-- Suite atual passou com 6 testes E2E de smoke publico/PWA.
-- Pendente ampliar para fluxos autenticados e transacionais.
+- 2026-06-22: criada fixture Playwright autenticada e idempotente em
+  `e2e/fixtures/authenticatedSupabase.ts`, com sessao e respostas HTTP
+  deterministicas para dono e funcionario restrito, compativel com o Supabase
+  do build local e com o placeholder usado no CI.
+- 2026-06-22: `e2e/authenticated-critical-flows.spec.ts` valida dono no
+  Dashboard com indicadores financeiros, abertura do PDV, catalogo carregado e
+  historico disponivel. A cobertura do PDV permanece parcial porque ainda nao
+  executa mesa/balcao, cupom, finalizacao, cancelamento e reabertura.
+- 2026-06-22: permissao de funcionario validada de ponta a ponta: valores
+  financeiros aparecem como `Restrito`, Configuracoes nao aparece na navegacao
+  e o acesso direto retorna `Acesso negado`. O teste revelou e levou a correcao
+  dos atalhos de Configuracoes e do checklist de onboarding, que agora respeitam
+  as permissoes efetivas.
+- 2026-06-22: assinatura validada nos estados `active`, trial ativo, trial
+  expirado, `past_due` dentro da tolerancia e `past_due` fora da tolerancia com
+  bloqueio da operacao.
+- 2026-06-22: validacoes executadas com sucesso: `npm run typecheck`,
+  `npm run lint`, 94/94 testes Vitest, `npm run build` e 13/13 testes Playwright
+  (publico, PWA e autenticados). O workflow `Production Readiness` ja executa
+  toda a suite Playwright e passa a incorporar os novos cenarios sem etapa
+  manual adicional.
+- Pendente ampliar para cadastro completo, checkout publico transacional,
+  pagamento online homologado, ciclo integral do PDV, Cozinha e mocks dedicados
+  de iFood/WhatsApp.
 
 ---
 
@@ -1200,6 +1222,7 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-22 | M5 — E2E dos fluxos criticos | Implementado parcialmente `[~]` | `[x]` Fixture autenticada/idempotente. `[x]` Permissoes de funcionario. `[x]` Assinatura active, trial, past_due e bloqueio. `[~]` PDV com acesso, catalogo e historico, ainda sem ciclo transacional. Evidencias: `typecheck`, `lint`, 94/94 testes, `build`, Playwright 13/13. |
 | 2026-06-22 | M7 — Mesa offline e conflito | Implementado parcialmente `[~]` | `[x]` Pedido de mesa salvo offline. `[x]` Validacao de status/versao ao reconectar. `[x]` Estado `review`, confirmacao explicita e bloqueio para mesa indisponivel. `[~]` Revalidacao de estoque/produto usa RPC, mas falta relatorio detalhado e piloto em dois dispositivos. Evidencias: `typecheck`, `lint:src`, 94/94 testes, `build`, Playwright PWA 2/2. |
 | 2026-06-18 | M7 — Offline, impressao e maquininha | Implementado parcialmente `[~]` | `[x]` Diagnostico da fila offline com pendentes, falhas, ultima tentativa, dispositivo e operador. `[x]` Alerta de catalogo local antigo. `[~]` Offline alem de balcao e impressao operacional avancada. `[ ]` Maquininha, modelos fisicos testados e fechamento de caixa. Evidencias: `typecheck`, `lint:src`, `build`, `playwright e2e/pwa-offline.spec.ts` 2/2. |
 | 2026-06-18 | Bloco 4 — PWA instalavel | Implementado parcialmente `[~]` | `[x]` Prompt de instalacao no Dashboard, diagnostico PWA/offline, cache de service worker versionado e aviso de nova versao. `[~]` E2E PWA: shell/metadados/update cobertos; pendente teste autenticado para badge/fila local do PDV. Evidencias: `typecheck`, `lint:src`, `build`, `playwright e2e/pwa-offline.spec.ts` 2/2. |

@@ -34,6 +34,9 @@ const Dashboard = () => {
   const { user, loading: userLoading } = useCurrentUser();
   const { hasPermission, loading: permissionsLoading } = usePermissionsV2();
   const canViewFinancials = hasPermission("orders_metrics_view");
+  const canAccessPDV = hasPermission("pdv_access");
+  const canManageProducts = hasPermission("products_view");
+  const canManageSettings = hasPermission("settings_view");
   const { stats, loading: statsLoading, recentSales, popularProducts, overview } = useDashboardData(
     user?.restaurant_id || null,
     canViewFinancials
@@ -53,7 +56,12 @@ const Dashboard = () => {
       <div className="space-y-5">
         <DashboardExecutiveSummary overview={overview} />
 
-        <OnboardingChecklistCard overview={overview} />
+        <OnboardingChecklistCard
+          overview={overview}
+          canAccessPDV={canAccessPDV}
+          canManageProducts={canManageProducts}
+          canManageSettings={canManageSettings}
+        />
 
         <PWAInstallDiagnosticCard restaurantId={user?.restaurant_id || null} />
 

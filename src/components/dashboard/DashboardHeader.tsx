@@ -18,6 +18,7 @@ import { NetworkStatusBadge } from "@/components/pwa/NetworkStatusBadge";
 import { SupportContextButton } from "@/components/support/SupportContextButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cleanupStaleRadixOverlays } from "@/lib/radixOverlayCleanup";
+import { usePermissionsV2 } from "@/hooks/usePermissionsV2";
 
 interface DashboardHeaderProps {
   title: string;
@@ -28,7 +29,9 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const { user } = useCurrentUser();
+  const { hasPermission } = usePermissionsV2();
   const { notifications, unreadCount, loading } = useDashboardNotifications();
+  const canOpenSettings = hasPermission("settings_view");
 
   useEffect(() => {
     setMenuOpen(false);
@@ -135,14 +138,25 @@ const DashboardHeader = ({ title }: DashboardHeaderProps) => {
           </PopoverContent>
         </Popover>
 
-        <Link to="/configuracoes" aria-label="Abrir configurações do usuário">
-          <Avatar className="h-9 w-9 border bg-navy text-white">
-            <AvatarImage src={user?.avatar_url || undefined} alt={user?.name || "Usuário"} />
-            <AvatarFallback className="bg-navy text-sm font-semibold text-white">
-              {initials || <Settings className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
+        {canOpenSettings ? (
+          <Link to="/configuracoes" aria-label="Abrir configurações do usuário">
+            <Avatar className="h-9 w-9 border bg-navy text-white">
+              <AvatarImage src={user?.avatar_url || undefined} alt={user?.name || "Usuário"} />
+              <AvatarFallback className="bg-navy text-sm font-semibold text-white">
+                {initials || <Settings className="h-4 w-4" />}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        ) : (
+          <div aria-label="Perfil do usuário">
+            <Avatar className="h-9 w-9 border bg-navy text-white">
+              <AvatarImage src={user?.avatar_url || undefined} alt={user?.name || "Usuário"} />
+              <AvatarFallback className="bg-navy text-sm font-semibold text-white">
+                {initials || <Settings className="h-4 w-4" />}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
       </div>
     </header>
   );
