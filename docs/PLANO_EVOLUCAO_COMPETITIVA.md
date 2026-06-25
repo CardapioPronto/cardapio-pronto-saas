@@ -275,7 +275,7 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
 #### Escopo MVP
 
 - [ ] E2E cadastro dono -> confirmacao -> restaurante -> trial -> dashboard.
-- [ ] E2E checkout publico com produto, cupom, endereco e pedido na entrega.
+- [x] E2E checkout publico com produto, cupom, endereco e pedido na entrega.
 - [ ] E2E checkout publico com pagamento online em modo homologacao.
 - [~] E2E PDV: mesa/balcao, cupom, finalizar, cancelar e reabrir.
 - [ ] E2E Cozinha: pedido entra, muda para preparo e pronto.
@@ -313,6 +313,13 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   estados `preparo`, `pronto`, `finalizado` e reabertura para `pendente`.
   Marcacao do item PDV segue `[~]`, pois ainda faltam cupom, pagamento,
   impressao automatica e integracao completa com Cozinha/KDS.
+- 2026-06-25: checkout publico transacional coberto em `e2e/public-flows.spec.ts`
+  com fixture dedicada em `e2e/fixtures/publicMenuSupabase.ts`. O cenario abre
+  cardapio publico por slug, adiciona produto com observacao, preenche delivery
+  com endereco, aplica cupom `E2E10`, valida payload de `create_public_menu_order`,
+  confirma captura opcional de lead em `capture_crm_lead_from_order`, envia o
+  pedido e abre `/pedido/:trackingId` para validar acompanhamento. Marcacao do
+  item de checkout publico sem pagamento online: `[x]`.
 - 2026-06-22: permissao de funcionario validada de ponta a ponta: valores
   financeiros aparecem como `Restrito`, Configuracoes nao aparece na navegacao
   e o acesso direto retorna `Acesso negado`. O teste revelou e levou a correcao
@@ -336,9 +343,12 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   e2e/authenticated-critical-flows.spec.ts`, `npm run lint`,
   `npx playwright test authenticated-critical-flows.spec.ts` com 8/8 testes e
   `npx playwright test` com 15/15 testes.
-- Pendente ampliar para cadastro completo, checkout publico transacional,
-  pagamento online homologado, PDV com cupom, Cozinha/KDS e mocks dedicados de
-  iFood/WhatsApp.
+- 2026-06-25: validacoes da fatia checkout publico: `npm run typecheck`,
+  `npx eslint e2e/public-flows.spec.ts e2e/fixtures/publicMenuSupabase.ts`,
+  `npm run lint`, `npx playwright test public-flows.spec.ts` com 5/5 testes e
+  `npx playwright test` com 16/16 testes.
+- Pendente ampliar para cadastro completo, pagamento online homologado, PDV com
+  cupom, Cozinha/KDS e mocks dedicados de iFood/WhatsApp.
 
 ---
 
@@ -1246,6 +1256,7 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-25 | M5 — Checkout publico transacional E2E | Implementado `[x]` | `[x]` E2E abre cardapio publico por slug, adiciona produto com observacao, preenche endereco delivery, aplica cupom e cria pedido. `[x]` Valida payload de `create_public_menu_order`, captura CRM opcional e acompanhamento em `/pedido/:trackingId`. `[~]` Pagamento online segue em item separado. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright publico 5/5 e Playwright completo 16/16. |
 | 2026-06-25 | M5 — PDV mesa e status E2E | Implementado parcialmente `[~]` | `[x]` E2E seleciona mesa, cria pedido com `order_type=mesa` e `table_id` correto. `[x]` Historico valida progressao `preparo -> pronto -> finalizado -> pendente`. `[~]` Ainda faltam cupom, pagamento, impressao automatica e Cozinha/KDS. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 8/8 e Playwright completo 15/15. |
 | 2026-06-25 | M5 — PDV transacional E2E | Implementado parcialmente `[~]` | `[x]` Fixture autenticada cria pedido por `create_pos_order` e atualiza historico em memoria. `[x]` E2E valida pedido de balcao com cliente, telefone, opt-in, observacao, payload RPC, historico, cancelamento e reabertura. `[~]` Ainda faltam mesa, cupom, pagamento/finalizacao completa, impressao automatica e Cozinha. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 7/7 e Playwright completo 14/14. |
 | 2026-06-25 | Qualidade/performance — preload da landing | Implementado `[x]` | `[x]` Removido o preload global da imagem Unsplash do hero em `index.html`, que era carregado tambem em `/dashboard` e `/pdv` e gerava alerta de recurso pre-carregado nao utilizado. `[~]` Imagem ainda e servida externamente pelo Unsplash; para producao comercial, recomenda-se versionar uma imagem propria otimizada em WebP/AVIF. Evidencia: validacao de build apos o ajuste. |
