@@ -299,6 +299,14 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   Dashboard com indicadores financeiros, abertura do PDV, catalogo carregado e
   historico disponivel. A cobertura do PDV permanece parcial porque ainda nao
   executa mesa/balcao, cupom, finalizacao, cancelamento e reabertura.
+- 2026-06-25: fatia transacional do PDV adicionada ao Playwright. A fixture
+  autenticada passou a simular `create_pos_order`, `get_orders_summary`,
+  `update_order_status` e `capture_crm_lead_from_order` com estado em memoria
+  por teste. O novo cenario cria pedido de balcao com cliente, telefone,
+  opt-in de marketing e observacao de item, valida o payload enviado para a RPC,
+  confirma exibicao no historico, cancela o pedido e reabre para `pendente`.
+  Marcacao do item PDV segue `[~]`, pois ainda faltam mesa, cupom, pagamento,
+  finalizacao completa, impressao automatica e integracao com Cozinha.
 - 2026-06-22: permissao de funcionario validada de ponta a ponta: valores
   financeiros aparecem como `Restrito`, Configuracoes nao aparece na navegacao
   e o acesso direto retorna `Acesso negado`. O teste revelou e levou a correcao
@@ -312,9 +320,15 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   (publico, PWA e autenticados). O workflow `Production Readiness` ja executa
   toda a suite Playwright e passa a incorporar os novos cenarios sem etapa
   manual adicional.
+- 2026-06-25: validacoes da fatia PDV: `npm run typecheck`, `npx eslint
+  e2e/authenticated-critical-flows.spec.ts e2e/fixtures/authenticatedSupabase.ts`,
+  `npm run lint`, `npx playwright test authenticated-critical-flows.spec.ts`
+  com 7/7 testes e `npx playwright test` com 14/14 testes. A primeira execucao
+  Playwright no sandbox falhou por `EPERM` ao gravar `test-results/.last-run.json`;
+  a mesma suite passou fora do sandbox.
 - Pendente ampliar para cadastro completo, checkout publico transacional,
-  pagamento online homologado, ciclo integral do PDV, Cozinha e mocks dedicados
-  de iFood/WhatsApp.
+  pagamento online homologado, PDV de mesa/cupom/finalizacao completa, Cozinha
+  e mocks dedicados de iFood/WhatsApp.
 
 ---
 
@@ -1222,6 +1236,7 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-25 | M5 — PDV transacional E2E | Implementado parcialmente `[~]` | `[x]` Fixture autenticada cria pedido por `create_pos_order` e atualiza historico em memoria. `[x]` E2E valida pedido de balcao com cliente, telefone, opt-in, observacao, payload RPC, historico, cancelamento e reabertura. `[~]` Ainda faltam mesa, cupom, pagamento/finalizacao completa, impressao automatica e Cozinha. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 7/7 e Playwright completo 14/14. |
 | 2026-06-25 | Qualidade/performance — preload da landing | Implementado `[x]` | `[x]` Removido o preload global da imagem Unsplash do hero em `index.html`, que era carregado tambem em `/dashboard` e `/pdv` e gerava alerta de recurso pre-carregado nao utilizado. `[~]` Imagem ainda e servida externamente pelo Unsplash; para producao comercial, recomenda-se versionar uma imagem propria otimizada em WebP/AVIF. Evidencia: validacao de build apos o ajuste. |
 | 2026-06-22 | M5 — E2E dos fluxos criticos | Implementado parcialmente `[~]` | `[x]` Fixture autenticada/idempotente. `[x]` Permissoes de funcionario. `[x]` Assinatura active, trial, past_due e bloqueio. `[~]` PDV com acesso, catalogo e historico, ainda sem ciclo transacional. Evidencias: `typecheck`, `lint`, 94/94 testes, `build`, Playwright 13/13. |
 | 2026-06-22 | M7 — Mesa offline e conflito | Implementado parcialmente `[~]` | `[x]` Pedido de mesa salvo offline. `[x]` Validacao de status/versao ao reconectar. `[x]` Estado `review`, confirmacao explicita e bloqueio para mesa indisponivel. `[~]` Revalidacao de estoque/produto usa RPC, mas falta relatorio detalhado e piloto em dois dispositivos. Evidencias: `typecheck`, `lint:src`, 94/94 testes, `build`, Playwright PWA 2/2. |
