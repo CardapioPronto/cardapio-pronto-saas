@@ -450,8 +450,8 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 
 #### Escopo MVP
 
-- [ ] Persistir checklist de onboarding por restaurante.
-- [ ] Criar status de saude da conta para Super Admin: travado, ativo,
+- [~] Persistir checklist de onboarding por restaurante.
+- [~] Criar status de saude da conta para Super Admin: travado, ativo,
       risco, pronto para venda.
 - [ ] Criar importacao assistida de cardapio por CSV.
 - [ ] Criar importacao assistida de clientes por CSV com opt-in claro.
@@ -470,7 +470,26 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 #### Evidencia
 
 - Botao de suporte contextual e base de problemas comuns ja existem.
-- Pendente persistencia, importacao e gestao de chamados.
+- 2026-06-25: primeira fatia M8 implementada tecnicamente. Criada migration
+  `20260625173000_create_restaurant_onboarding_progress.sql` com tabela
+  `restaurant_onboarding_progress`, RLS por restaurante/super admin, indice por
+  restaurante/status e trigger de `updated_at`. O Dashboard passou a carregar o
+  progresso persistido do checklist, permitir concluir/reabrir/dispensar etapas
+  manuais quando o usuario tem permissao de configuracao e calcular saude da
+  implantacao (`Travado`, `Em risco`, `Ativo`, `Pronto para venda`) a partir de
+  dados reais + etapas persistidas. Marcacao `[~]` porque ainda falta aplicar a
+  migration no ambiente remoto/piloto, expor visao agregada no Super Admin e
+  validar com restaurante real.
+- 2026-06-25: validacoes M8 executadas com sucesso: `npx tsc --noEmit`,
+  `npx eslint src/services/onboardingProgressService.ts
+  src/services/onboardingProgressService.test.ts
+  src/components/dashboard/OnboardingChecklistCard.tsx src/pages/Dashboard.tsx`,
+  `npx vitest run src/services/onboardingProgressService.test.ts` com 3/3
+  testes, `npm run build`, `npm run lint`, `npm run test` com 97/97 testes e
+  `npx playwright test` com 18/18 testes. A primeira execucao Vitest no sandbox
+  falhou por `spawn EPERM` do esbuild; a mesma validacao passou fora do sandbox.
+- Pendente importacao assistida, gestao de chamados, central de ajuda editavel,
+  painel Super Admin de saude agregada e rotina de 7 dias.
 
 ---
 
@@ -1283,6 +1302,7 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-25 | M8 — Onboarding guiado persistente | Implementado parcialmente `[~]` | `[x]` Migration `restaurant_onboarding_progress` com RLS por restaurante/super admin. `[x]` Dashboard carrega progresso persistido, permite concluir/reabrir/dispensar etapas manuais e calcula saude da implantacao. `[~]` Saude ainda aparece no Dashboard; falta painel agregado Super Admin, aplicar/validar migration em ambiente remoto/piloto e rotina de 7 dias. Evidencias: `tsc --noEmit`, ESLint focado, Vitest unitario 3/3, `build`, `lint`, Vitest completo 97/97 e Playwright 18/18. |
 | 2026-06-25 | M5 — Cozinha/KDS E2E | Implementado `[x]` | `[x]` E2E cria pedido no PDV e valida entrada do mesmo pedido em `/cozinha`. `[x]` Avanca card de `Entrada` para `Em preparo` e `Pronto`, conferindo `update_order_status` com `preparo` e `pronto`. `[x]` Tela recebeu `data-testid` invisivel em cards/colunas para automacao estavel. Evidencias: ESLint focado, `build`, Playwright autenticado 9/9, `tsc --noEmit`, `lint` e Playwright completo 18/18. |
 | 2026-06-25 | M5 — Checkout publico PIX online E2E | Implementado parcialmente `[~]` | `[x]` Fixture publica habilita configuracao de pagamento online e simula `pagarme-create-order-payment`. `[x]` E2E valida pedido `payment_method=pix_online`, chamada externa `payment_method=pix`, PIX copia e cola no sucesso e acompanhamento como `Aguardando pagamento`. `[~]` Falta homologacao real Pagar.me, credenciais finais e webhook assinado. Evidencias: `tsc --noEmit`, ESLint focado, `lint`, Playwright publico 6/6, PWA 2/2 e Playwright completo 17/17. |
 | 2026-06-25 | Qualidade E2E — PWA service worker | Implementado `[x]` | `[x]` Teste PWA agora aguarda `navigator.serviceWorker.ready` como Promise real, garante controle da pagina e recarrega online antes de validar cache/offline. `[x]` Remove flutuacao observada na suite completa durante a fatia PIX. Evidencias: `npx eslint e2e/pwa-offline.spec.ts`, `npx playwright test pwa-offline.spec.ts` 2/2 e `npx playwright test` 17/17. |

@@ -3713,6 +3713,73 @@ export type Database = {
           },
         ]
       }
+      restaurant_onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          notes: string | null
+          restaurant_id: string
+          skipped_at: string | null
+          skipped_by: string | null
+          status: string
+          step_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          restaurant_id: string
+          skipped_at?: string | null
+          skipped_by?: string | null
+          status?: string
+          step_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          restaurant_id?: string
+          skipped_at?: string | null
+          skipped_by?: string | null
+          status?: string
+          step_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_onboarding_progress_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_onboarding_progress_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_onboarding_progress_skipped_by_fkey"
+            columns: ["skipped_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_payment_settings: {
         Row: {
           allow_counter: boolean
