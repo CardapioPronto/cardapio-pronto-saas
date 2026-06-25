@@ -307,6 +307,12 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   confirma exibicao no historico, cancela o pedido e reabre para `pendente`.
   Marcacao do item PDV segue `[~]`, pois ainda faltam mesa, cupom, pagamento,
   finalizacao completa, impressao automatica e integracao com Cozinha.
+- 2026-06-25: fatia de mesa adicionada ao mesmo arquivo E2E. O novo cenario
+  seleciona `Mesa 1`, cria pedido de mesa, valida `order_type = mesa` e
+  `table_id` no payload da RPC, confirma exibicao no historico e percorre os
+  estados `preparo`, `pronto`, `finalizado` e reabertura para `pendente`.
+  Marcacao do item PDV segue `[~]`, pois ainda faltam cupom, pagamento,
+  impressao automatica e integracao completa com Cozinha/KDS.
 - 2026-06-22: permissao de funcionario validada de ponta a ponta: valores
   financeiros aparecem como `Restrito`, Configuracoes nao aparece na navegacao
   e o acesso direto retorna `Acesso negado`. O teste revelou e levou a correcao
@@ -326,9 +332,13 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   com 7/7 testes e `npx playwright test` com 14/14 testes. A primeira execucao
   Playwright no sandbox falhou por `EPERM` ao gravar `test-results/.last-run.json`;
   a mesma suite passou fora do sandbox.
+- 2026-06-25: validacoes da fatia PDV mesa: `npm run typecheck`, `npx eslint
+  e2e/authenticated-critical-flows.spec.ts`, `npm run lint`,
+  `npx playwright test authenticated-critical-flows.spec.ts` com 8/8 testes e
+  `npx playwright test` com 15/15 testes.
 - Pendente ampliar para cadastro completo, checkout publico transacional,
-  pagamento online homologado, PDV de mesa/cupom/finalizacao completa, Cozinha
-  e mocks dedicados de iFood/WhatsApp.
+  pagamento online homologado, PDV com cupom, Cozinha/KDS e mocks dedicados de
+  iFood/WhatsApp.
 
 ---
 
@@ -1236,6 +1246,7 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-25 | M5 — PDV mesa e status E2E | Implementado parcialmente `[~]` | `[x]` E2E seleciona mesa, cria pedido com `order_type=mesa` e `table_id` correto. `[x]` Historico valida progressao `preparo -> pronto -> finalizado -> pendente`. `[~]` Ainda faltam cupom, pagamento, impressao automatica e Cozinha/KDS. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 8/8 e Playwright completo 15/15. |
 | 2026-06-25 | M5 — PDV transacional E2E | Implementado parcialmente `[~]` | `[x]` Fixture autenticada cria pedido por `create_pos_order` e atualiza historico em memoria. `[x]` E2E valida pedido de balcao com cliente, telefone, opt-in, observacao, payload RPC, historico, cancelamento e reabertura. `[~]` Ainda faltam mesa, cupom, pagamento/finalizacao completa, impressao automatica e Cozinha. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 7/7 e Playwright completo 14/14. |
 | 2026-06-25 | Qualidade/performance — preload da landing | Implementado `[x]` | `[x]` Removido o preload global da imagem Unsplash do hero em `index.html`, que era carregado tambem em `/dashboard` e `/pdv` e gerava alerta de recurso pre-carregado nao utilizado. `[~]` Imagem ainda e servida externamente pelo Unsplash; para producao comercial, recomenda-se versionar uma imagem propria otimizada em WebP/AVIF. Evidencia: validacao de build apos o ajuste. |
 | 2026-06-22 | M5 — E2E dos fluxos criticos | Implementado parcialmente `[~]` | `[x]` Fixture autenticada/idempotente. `[x]` Permissoes de funcionario. `[x]` Assinatura active, trial, past_due e bloqueio. `[~]` PDV com acesso, catalogo e historico, ainda sem ciclo transacional. Evidencias: `typecheck`, `lint`, 94/94 testes, `build`, Playwright 13/13. |

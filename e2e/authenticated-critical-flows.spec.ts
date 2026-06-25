@@ -83,6 +83,63 @@ test.describe("fluxos críticos autenticados", () => {
       .toEqual(["cancelado", "pendente"]);
   });
 
+  test("PDV cria pedido de mesa e percorre preparo, pronto, finalizado e reabertura", async ({ page }) => {
+    const supabaseMock = await installAuthenticatedSupabaseMock(page, "owner");
+
+    await page.goto("/pdv");
+
+    await expect(page.getByRole("heading", { name: "Restaurante E2E" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("X-Burger E2E", { exact: true })).toBeVisible();
+    await expect(page.getByText("Comanda: Mesa não selecionada")).toBeVisible();
+
+    await page.getByRole("button", { name: "Selecionar mesa", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Selecionar Mesa" })).toBeVisible();
+    await page.getByRole("button", { name: /Mesa 1/ }).click();
+    await expect(page.getByText("Comanda: Mesa 1")).toBeVisible();
+
+    await page.getByRole("button", { name: /X-Burger E2E/ }).click();
+    await expect(page.getByRole("heading", { name: "Adicionar X-Burger E2E" })).toBeVisible();
+    await page.getByRole("button", { name: "Adicionar ao Pedido" }).click();
+
+    await page.getByLabel("Nome do Cliente").fill("Cliente Mesa E2E");
+    await expect(page.getByRole("button", { name: "Finalizar Pedido" })).toBeEnabled();
+    await page.getByRole("button", { name: "Finalizar Pedido" }).click();
+
+    await expect(page.getByRole("tab", { name: "Histórico" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText("Cliente Mesa E2E")).toBeVisible();
+    await expect(page.getByText("Mesa 1").first()).toBeVisible();
+
+    await expect.poll(() => supabaseMock.getCreatedPosOrders()).toHaveLength(1);
+    const [createdOrder] = supabaseMock.getCreatedPosOrders();
+    expect(createdOrder.payload).toMatchObject({
+      restaurant_id: "00000000-0000-4000-8000-000000000101",
+      order_type: "mesa",
+      table_id: "00000000-0000-4000-8000-000000000501",
+      customer_name: "Cliente Mesa E2E",
+      items: [{
+        product_id: "00000000-0000-4000-8000-000000000301",
+        quantity: 1,
+      }],
+    });
+
+    await page.getByRole("button", { name: "Iniciar preparo" }).first().click();
+    await expect(page.getByText("Em preparo").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Marcar como pronto" }).first().click();
+    await expect(page.getByText("Pronto").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Finalizar pedido" }).first().click();
+    await expect(page.getByText("Finalizado").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Reabrir pedido" }).first().click();
+    await expect(page.getByText("Pendente").first()).toBeVisible();
+
+    await expect.poll(() => supabaseMock.getStatusChanges().map((change) => change.status))
+      .toEqual(["preparo", "pronto", "finalizado", "pendente"]);
+  });
+
   test("funcionário restrito não vê financeiro nem acessa configurações", async ({ page }) => {
     await installAuthenticatedSupabaseMock(page, "restricted_employee");
 
