@@ -27,23 +27,38 @@ export type PublicCrmCapture = {
   source: string | null;
 };
 
+export type PublicOnlinePaymentRequest = {
+  orderId: string | null;
+  trackingId: string | null;
+  paymentMethod: string | null;
+};
+
 export type PublicMenuSupabaseMockControls = {
   getCreatedOrders: () => PublicMenuOrder[];
   getCouponValidations: () => PublicCouponValidation[];
   getCrmCaptures: () => PublicCrmCapture[];
+  getOnlinePaymentRequests: () => PublicOnlinePaymentRequest[];
 };
 
 type PublicMenuMockState = {
+  onlinePaymentEnabled: boolean;
   createdOrders: PublicMenuOrder[];
   couponValidations: PublicCouponValidation[];
   crmCaptures: PublicCrmCapture[];
+  onlinePaymentRequests: PublicOnlinePaymentRequest[];
   trackingOrders: Map<string, JsonRecord>;
 };
 
-const createMockState = (): PublicMenuMockState => ({
+type PublicMenuMockOptions = {
+  onlinePaymentEnabled?: boolean;
+};
+
+const createMockState = (options: PublicMenuMockOptions = {}): PublicMenuMockState => ({
+  onlinePaymentEnabled: options.onlinePaymentEnabled ?? false,
   createdOrders: [],
   couponValidations: [],
   crmCaptures: [],
+  onlinePaymentRequests: [],
   trackingOrders: new Map(),
 });
 
@@ -281,10 +296,10 @@ const rpcPayload = (
       return {};
     case "get_public_restaurant_payment_settings":
       return {
-        enabled: false,
-        methods: [],
-        allowedFulfillment: [],
-        onboardingStatus: "not_started",
+        enabled: state.onlinePaymentEnabled,
+        methods: state.onlinePaymentEnabled ? ["pix"] : [],
+        allowedFulfillment: state.onlinePaymentEnabled ? ["delivery"] : [],
+        onboardingStatus: state.onlinePaymentEnabled ? "approved" : "not_started",
       };
     case "validate_public_coupon":
       return validateCoupon(state, requestBody);
@@ -307,6 +322,40 @@ const rpcPayload = (
     default:
       return {};
   }
+};
+
+const createOnlinePayment = (
+  state: PublicMenuMockState,
+  requestBody: JsonRecord,
+) => {
+  const orderId = typeof requestBody.order_id === "string" ? requestBody.order_id : null;
+  const trackingId = typeof requestBody.tracking_id === "string" ? requestBody.tracking_id : null;
+  const paymentMethod = typeof requestBody.payment_method === "string"
+    ? requestBody.payment_method
+    : null;
+
+  state.onlinePaymentRequests.push({ orderId, trackingId, paymentMethod });
+
+  if (trackingId) {
+    const order = state.trackingOrders.get(trackingId);
+    if (order) {
+      order.status = "awaiting_payment";
+      order.payment_status = "pending";
+      order.payment = {
+        qr_code: "000201PIX-E2E-COPIA-E-COLA",
+        qr_code_url: null,
+      };
+    }
+  }
+
+  return {
+    status: "pending",
+    payment_method: "pix",
+    qr_code: "000201PIX-E2E-COPIA-E-COLA",
+    qr_code_url: null,
+    expires_at: "2099-12-31T23:59:59.000Z",
+    amount: 50.4,
+  };
 };
 
 const fulfillJson = async (
@@ -350,6 +399,11 @@ const handleSupabaseRequest = async (
     return;
   }
 
+  if (url.pathname === "/functions/v1/pagarme-create-order-payment") {
+    await fulfillJson(route, createOnlinePayment(state, parseRequestBody(route)));
+    return;
+  }
+
   if (url.pathname.startsWith("/functions/v1/")) {
     await fulfillJson(route, { ok: true });
     return;
@@ -371,8 +425,9 @@ const handleSupabaseRequest = async (
 
 export async function installPublicMenuSupabaseMock(
   page: Page,
+  options: PublicMenuMockOptions = {},
 ): Promise<PublicMenuSupabaseMockControls> {
-  const state = createMockState();
+  const state = createMockState(options);
 
   await page.addInitScript(() => {
     window.localStorage.setItem("pubfy_cookie_consent_v1", "accepted");
@@ -398,5 +453,6 @@ export async function installPublicMenuSupabaseMock(
     getCreatedOrders: () => [...state.createdOrders],
     getCouponValidations: () => [...state.couponValidations],
     getCrmCaptures: () => [...state.crmCaptures],
+    getOnlinePaymentRequests: () => [...state.onlinePaymentRequests],
   };
 }

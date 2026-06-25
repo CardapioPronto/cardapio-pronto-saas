@@ -276,9 +276,9 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
 
 - [ ] E2E cadastro dono -> confirmacao -> restaurante -> trial -> dashboard.
 - [x] E2E checkout publico com produto, cupom, endereco e pedido na entrega.
-- [ ] E2E checkout publico com pagamento online em modo homologacao.
+- [~] E2E checkout publico com pagamento online em modo homologacao.
 - [~] E2E PDV: mesa/balcao, cupom, finalizar, cancelar e reabrir.
-- [ ] E2E Cozinha: pedido entra, muda para preparo e pronto.
+- [x] E2E Cozinha: pedido entra, muda para preparo e pronto.
 - [x] E2E permissoes: funcionario sem acesso nao ve financeiro/configuracoes.
 - [x] E2E assinatura: trial ativo, expirado, active, past_due e bloqueio.
 - [ ] E2E iFood/WhatsApp podem ser simulados com mocks ou ambiente de homolog.
@@ -320,6 +320,20 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   confirma captura opcional de lead em `capture_crm_lead_from_order`, envia o
   pedido e abre `/pedido/:trackingId` para validar acompanhamento. Marcacao do
   item de checkout publico sem pagamento online: `[x]`.
+- 2026-06-25: pagamento PIX online do checkout publico coberto em modo mock de
+  homologacao. A fixture `e2e/fixtures/publicMenuSupabase.ts` habilita
+  `get_public_restaurant_payment_settings`, simula a Edge Function
+  `pagarme-create-order-payment`, valida o payload `payment_method=pix_online`
+  do pedido, registra a chamada externa como `payment_method=pix` e exibe o PIX
+  copia e cola na tela de sucesso e no acompanhamento `/pedido/:trackingId` como
+  `Aguardando pagamento`. Marcacao `[~]`, pois ainda faltam homologacao real do
+  Pagar.me, credenciais finais e webhook assinado.
+- 2026-06-25: fatia Cozinha/KDS adicionada ao E2E autenticado. O cenario cria
+  um pedido pelo PDV, abre `/cozinha`, valida o mesmo pedido na coluna `Entrada`
+  e avanca para `Em preparo` e `Pronto`, conferindo tambem as chamadas de
+  `update_order_status` para `preparo` e `pronto`. A tela de Cozinha recebeu
+  `data-testid` invisivel em colunas e cards para estabilizar a automacao sem
+  alterar a UI. Marcacao do item Cozinha/KDS: `[x]`.
 - 2026-06-22: permissao de funcionario validada de ponta a ponta: valores
   financeiros aparecem como `Restrito`, Configuracoes nao aparece na navegacao
   e o acesso direto retorna `Acesso negado`. O teste revelou e levou a correcao
@@ -347,8 +361,21 @@ Objetivo: reduzir regressao nos fluxos que mais quebram operacao real.
   `npx eslint e2e/public-flows.spec.ts e2e/fixtures/publicMenuSupabase.ts`,
   `npm run lint`, `npx playwright test public-flows.spec.ts` com 5/5 testes e
   `npx playwright test` com 16/16 testes.
-- Pendente ampliar para cadastro completo, pagamento online homologado, PDV com
-  cupom, Cozinha/KDS e mocks dedicados de iFood/WhatsApp.
+- 2026-06-25: validacoes da fatia PIX online e estabilidade E2E: `npx tsc
+  --noEmit`, `npx eslint e2e/public-flows.spec.ts
+  e2e/fixtures/publicMenuSupabase.ts`, `npx eslint e2e/pwa-offline.spec.ts`,
+  `npm run lint`, `npx playwright test public-flows.spec.ts` com 6/6 testes,
+  `npx playwright test pwa-offline.spec.ts` com 2/2 testes e
+  `npx playwright test` com 17/17 testes. O teste PWA passou a aguardar
+  `navigator.serviceWorker.ready` de fato e recarregar online sob controle do
+  service worker antes de validar offline, removendo flutuacao da suite.
+- 2026-06-25: validacoes da fatia Cozinha/KDS: `npx eslint
+  src/pages/Cozinha.tsx e2e/authenticated-critical-flows.spec.ts`,
+  `npm run build`, `npx playwright test authenticated-critical-flows.spec.ts`
+  com 9/9 testes, `npx tsc --noEmit`, `npm run lint` e
+  `npx playwright test` com 18/18 testes.
+- Pendente ampliar para cadastro completo, pagamento online homologado com
+  credenciais/webhook reais, PDV com cupom e mocks dedicados de iFood/WhatsApp.
 
 ---
 
@@ -1256,6 +1283,9 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-25 | M5 — Cozinha/KDS E2E | Implementado `[x]` | `[x]` E2E cria pedido no PDV e valida entrada do mesmo pedido em `/cozinha`. `[x]` Avanca card de `Entrada` para `Em preparo` e `Pronto`, conferindo `update_order_status` com `preparo` e `pronto`. `[x]` Tela recebeu `data-testid` invisivel em cards/colunas para automacao estavel. Evidencias: ESLint focado, `build`, Playwright autenticado 9/9, `tsc --noEmit`, `lint` e Playwright completo 18/18. |
+| 2026-06-25 | M5 — Checkout publico PIX online E2E | Implementado parcialmente `[~]` | `[x]` Fixture publica habilita configuracao de pagamento online e simula `pagarme-create-order-payment`. `[x]` E2E valida pedido `payment_method=pix_online`, chamada externa `payment_method=pix`, PIX copia e cola no sucesso e acompanhamento como `Aguardando pagamento`. `[~]` Falta homologacao real Pagar.me, credenciais finais e webhook assinado. Evidencias: `tsc --noEmit`, ESLint focado, `lint`, Playwright publico 6/6, PWA 2/2 e Playwright completo 17/17. |
+| 2026-06-25 | Qualidade E2E — PWA service worker | Implementado `[x]` | `[x]` Teste PWA agora aguarda `navigator.serviceWorker.ready` como Promise real, garante controle da pagina e recarrega online antes de validar cache/offline. `[x]` Remove flutuacao observada na suite completa durante a fatia PIX. Evidencias: `npx eslint e2e/pwa-offline.spec.ts`, `npx playwright test pwa-offline.spec.ts` 2/2 e `npx playwright test` 17/17. |
 | 2026-06-25 | M5 — Checkout publico transacional E2E | Implementado `[x]` | `[x]` E2E abre cardapio publico por slug, adiciona produto com observacao, preenche endereco delivery, aplica cupom e cria pedido. `[x]` Valida payload de `create_public_menu_order`, captura CRM opcional e acompanhamento em `/pedido/:trackingId`. `[~]` Pagamento online segue em item separado. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright publico 5/5 e Playwright completo 16/16. |
 | 2026-06-25 | M5 — PDV mesa e status E2E | Implementado parcialmente `[~]` | `[x]` E2E seleciona mesa, cria pedido com `order_type=mesa` e `table_id` correto. `[x]` Historico valida progressao `preparo -> pronto -> finalizado -> pendente`. `[~]` Ainda faltam cupom, pagamento, impressao automatica e Cozinha/KDS. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 8/8 e Playwright completo 15/15. |
 | 2026-06-25 | M5 — PDV transacional E2E | Implementado parcialmente `[~]` | `[x]` Fixture autenticada cria pedido por `create_pos_order` e atualiza historico em memoria. `[x]` E2E valida pedido de balcao com cliente, telefone, opt-in, observacao, payload RPC, historico, cancelamento e reabertura. `[~]` Ainda faltam mesa, cupom, pagamento/finalizacao completa, impressao automatica e Cozinha. Evidencias: `typecheck`, ESLint focado, `lint`, Playwright autenticado 7/7 e Playwright completo 14/14. |

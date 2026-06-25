@@ -140,6 +140,59 @@ test.describe("fluxos críticos autenticados", () => {
       .toEqual(["preparo", "pronto", "finalizado", "pendente"]);
   });
 
+  test("Cozinha recebe pedido do PDV e avança de entrada para pronto", async ({ page }) => {
+    const supabaseMock = await installAuthenticatedSupabaseMock(page, "owner");
+
+    await page.goto("/pdv");
+
+    await expect(page.getByRole("heading", { name: "Restaurante E2E" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("X-Burger E2E", { exact: true })).toBeVisible();
+
+    await page.getByRole("tab", { name: "Balcão" }).click();
+    await expect(page.getByText("Comanda: Balcão")).toBeVisible();
+
+    await page.getByRole("button", { name: /X-Burger E2E/ }).click();
+    await expect(page.getByRole("heading", { name: "Adicionar X-Burger E2E" })).toBeVisible();
+    await page.getByRole("button", { name: "Adicionar ao Pedido" }).click();
+
+    await page.getByLabel("Nome do Cliente").fill("Cliente Cozinha E2E");
+    await expect(page.getByRole("button", { name: "Finalizar Pedido" })).toBeEnabled();
+    await page.getByRole("button", { name: "Finalizar Pedido" }).click();
+
+    await expect(page.getByRole("tab", { name: "Histórico" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText("Cliente Cozinha E2E")).toBeVisible();
+
+    await expect.poll(() => supabaseMock.getCreatedPosOrders()).toHaveLength(1);
+    const [createdOrder] = supabaseMock.getCreatedPosOrders();
+
+    await page.goto("/cozinha");
+
+    await expect(page.getByRole("heading", { name: "Restaurante E2E" })).toBeVisible({
+      timeout: 30_000,
+    });
+    const orderCard = page.getByTestId(`kitchen-order-${createdOrder.id}`);
+    await expect(page.getByTestId("kitchen-column-pendente").getByText("Cliente Cozinha E2E")).toBeVisible();
+    await expect(orderCard.getByText("Balcao")).toBeVisible();
+    await expect(orderCard.getByText("Entrada", { exact: true })).toBeVisible();
+
+    await orderCard.getByRole("button", { name: "Iniciar" }).click();
+    await expect(page.getByTestId("kitchen-column-preparo").getByTestId(`kitchen-order-${createdOrder.id}`)).toBeVisible();
+    await expect(orderCard.getByText("Em preparo", { exact: true })).toBeVisible();
+
+    await orderCard.getByRole("button", { name: "Pronto" }).click();
+    await expect(page.getByTestId("kitchen-column-pronto").getByTestId(`kitchen-order-${createdOrder.id}`)).toBeVisible();
+    await expect(orderCard.getByText("Pronto", { exact: true })).toBeVisible();
+
+    await expect.poll(() =>
+      supabaseMock
+        .getStatusChanges()
+        .filter((change) => change.orderId === createdOrder.id)
+        .map((change) => change.status),
+    ).toEqual(["preparo", "pronto"]);
+  });
+
   test("funcionário restrito não vê financeiro nem acessa configurações", async ({ page }) => {
     await installAuthenticatedSupabaseMock(page, "restricted_employee");
 

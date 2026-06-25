@@ -127,7 +127,10 @@ const KitchenOrderCard = ({ order, now, canManage, updating, onChangeStatus }: K
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <Card className={cn("overflow-hidden rounded-md border bg-white shadow-sm", isLate && "border-red-300")}>
+    <Card
+      data-testid={`kitchen-order-${order.id}`}
+      className={cn("overflow-hidden rounded-md border bg-white shadow-sm", isLate && "border-red-300")}
+    >
       <CardContent className="space-y-4 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -429,7 +432,11 @@ const Cozinha = () => {
             const columnOrders = filteredOrders.filter((order) => column.statuses.includes(order.status));
 
             return (
-              <div key={column.id} className={cn("min-h-[520px] rounded-md border bg-muted/25", column.className)}>
+              <div
+                key={column.id}
+                data-testid={`kitchen-column-${column.id}`}
+                className={cn("min-h-[520px] rounded-md border bg-muted/25", column.className)}
+              >
                 <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white/95 p-3 backdrop-blur lg:p-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="rounded-md bg-muted p-2">

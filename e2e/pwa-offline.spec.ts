@@ -35,18 +35,43 @@ async function readPWAStatus(page: import("@playwright/test").Page) {
   });
 }
 
+async function waitForServiceWorkerControl(page: import("@playwright/test").Page) {
+  await page.evaluate(async () => {
+    if (!navigator.serviceWorker) throw new Error("Service Worker indisponivel neste navegador.");
+
+    await navigator.serviceWorker.ready;
+    if (navigator.serviceWorker.controller) return;
+
+    await new Promise<void>((resolve) => {
+      const timeoutId = window.setTimeout(resolve, 10_000);
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        () => {
+          window.clearTimeout(timeoutId);
+          resolve();
+        },
+        { once: true },
+      );
+    });
+  });
+
+  if (!(await page.evaluate(() => Boolean(navigator.serviceWorker?.controller)))) {
+    await page.reload({ waitUntil: "domcontentloaded" });
+  }
+
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, {
+    timeout: 30_000,
+  });
+}
+
 test("PWA mantém shell carregado e sinaliza queda de conexão", async ({ context, page }) => {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Login" })).toBeVisible({ timeout: 90_000 });
 
-  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.ready), null, {
-    timeout: 30_000,
-  });
+  await waitForServiceWorkerControl(page);
   await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForServiceWorkerControl(page);
   await expect(page.getByRole("heading", { name: "Login" })).toBeVisible({ timeout: 90_000 });
-  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, {
-    timeout: 30_000,
-  });
 
   const pwaStatus = await readPWAStatus(page);
   expect(pwaStatus?.serviceWorkerVersion).toBe(SERVICE_WORKER_VERSION);

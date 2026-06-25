@@ -180,3 +180,88 @@ test("checkout público cria pedido delivery com cupom, endereço e acompanhamen
   await expect(page.getByText("Pizza Pública E2E")).toBeVisible();
   await expect(page.getByText("Obs: Sem azeitona")).toBeVisible();
 });
+
+test("checkout público gera pagamento PIX online em modo homologação/mock", async ({ page }) => {
+  const publicMenuMock = await installPublicMenuSupabaseMock(page, {
+    onlinePaymentEnabled: true,
+  });
+
+  await page.goto("/cardapio/publico-e2e");
+
+  await expect(page.getByRole("heading", { name: "Restaurante Público E2E" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole("button", { name: "Adicionar" }).first().click();
+  await expect(page.getByRole("heading", { name: "Pizza Pública E2E" })).toBeVisible();
+  await page.getByRole("button", { name: /Adicionar •/ }).click();
+
+  await page.getByRole("button", { name: "Finalizar pedido" }).click();
+  await expect(page.getByRole("heading", { name: "Como deseja pedir?" })).toBeVisible();
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(page.getByRole("heading", { name: "Endereço de entrega" })).toBeVisible();
+  await fillCheckoutInput(page, "Nome completo *", "Cliente PIX E2E");
+  await fillCheckoutInput(page, "Telefone (WhatsApp) *", "(11) 96666-5555");
+  await fillCheckoutInput(page, "CEP *", "01001000");
+  await fillCheckoutInput(page, "Rua *", "Praça da Sé");
+  await fillCheckoutInput(page, "Número *", "200");
+  await fillCheckoutInput(page, "Bairro *", "Sé");
+  await fillCheckoutInput(page, "Cidade *", "São Paulo");
+  await fillCheckoutInput(page, "UF *", "SP");
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(page.getByRole("heading", { name: "Forma de pagamento" })).toBeVisible();
+  await page.getByText("PIX online", { exact: true }).click();
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(page.getByRole("heading", { name: "Revisar pedido" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Confirmar e enviar .*R\$\s*50,40/ })).toBeVisible();
+  await page.getByRole("button", { name: /Confirmar e enviar/ }).click();
+
+  await expect(page.locator("h4").filter({ hasText: "Pedido enviado!" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText("PIX copia e cola")).toBeVisible();
+  await expect(page.locator("textarea").first()).toHaveValue("000201PIX-E2E-COPIA-E-COLA");
+
+  await expect.poll(() => publicMenuMock.getCreatedOrders()).toHaveLength(1);
+  const [createdOrder] = publicMenuMock.getCreatedOrders();
+  expect(createdOrder.payload).toMatchObject({
+    restaurant_id: "00000000-0000-4000-8000-000000002101",
+    fulfillment_type: "delivery",
+    customer_name: "Cliente PIX E2E",
+    customer_phone: "(11) 96666-5555",
+    payment_method: "pix_online",
+    delivery_fee: 7.5,
+    address: {
+      zip_code: "01001000",
+      street: "Praça da Sé",
+      number: "200",
+      neighborhood: "Sé",
+      city: "São Paulo",
+      state: "SP",
+    },
+    items: [{
+      product_id: "00000000-0000-4000-8000-000000002301",
+      quantity: 1,
+      observations: null,
+      flavor_selection: null,
+    }],
+  });
+
+  await expect.poll(() => publicMenuMock.getOnlinePaymentRequests()).toEqual([{
+    orderId: createdOrder.orderId,
+    trackingId: createdOrder.trackingId,
+    paymentMethod: "pix",
+  }]);
+
+  await page.getByRole("button", { name: "Acompanhar pedido" }).click();
+
+  await expect(page).toHaveURL(/\/pedido\/public-track-e2e-1$/);
+  await expect(page.getByRole("heading", { name: "Aguardando pagamento" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText("Pagamento PIX")).toBeVisible();
+  await expect(page.locator("textarea").first()).toHaveValue("000201PIX-E2E-COPIA-E-COLA");
+});
