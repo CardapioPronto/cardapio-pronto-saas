@@ -1,8 +1,10 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Copy, Headphones, Lightbulb, ListChecks, Mail, Send } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Copy, Headphones, History, Lightbulb, ListChecks, Mail, MessageSquareText, Send } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,13 +20,44 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getSupportKnowledgeForPath } from "@/components/support/supportKnowledgeBase";
-import { createSupportTicket, type SupportTicketPriority } from "@/services/supportTicketService";
+import { cn } from "@/lib/utils";
+import {
+  addSupportTicketComment,
+  createSupportTicket,
+  listMySupportTickets,
+  listSupportTicketEvents,
+  type SupportTicketPriority,
+  type SupportTicketStatus,
+} from "@/services/supportTicketService";
 
 const SUPPORT_EMAIL = "contato@pubfy.com.br";
 
 interface SupportContextButtonProps {
   title: string;
 }
+
+const ticketStatusLabels: Record<SupportTicketStatus, string> = {
+  open: "Aberto",
+  in_progress: "Em atendimento",
+  waiting_customer: "Aguardando cliente",
+  resolved: "Resolvido",
+  closed: "Fechado",
+};
+
+const ticketStatusClasses: Record<SupportTicketStatus, string> = {
+  open: "border-red-200 bg-red-50 text-red-700",
+  in_progress: "border-sky-200 bg-sky-50 text-sky-800",
+  waiting_customer: "border-amber-200 bg-amber-50 text-amber-800",
+  resolved: "border-green/30 bg-green/10 text-green",
+  closed: "border-muted bg-muted text-muted-foreground",
+};
+
+const ticketEventLabels: Record<string, string> = {
+  created: "Chamado aberto",
+  status_changed: "Status alterado",
+  comment: "Comentario",
+  system_note: "Nota",
+};
 
 const getCurrentUrl = () => {
   if (typeof window === "undefined") return "";
@@ -41,14 +74,65 @@ const getBrowserContext = () => {
   ].join("\n");
 };
 
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+
 export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
   const location = useLocation();
   const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState("");
   const [priority, setPriority] = React.useState<SupportTicketPriority>("normal");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [selectedTicketId, setSelectedTicketId] = React.useState<string | null>(null);
+  const [replyMessage, setReplyMessage] = React.useState("");
   const knowledge = React.useMemo(() => getSupportKnowledgeForPath(location.pathname), [location.pathname]);
+
+  const { data: supportTickets = [], isLoading: isLoadingTickets } = useQuery({
+    queryKey: ["my-support-tickets", user?.id, user?.restaurant_id],
+    queryFn: () => listMySupportTickets(),
+    enabled: open && !!user?.id,
+  });
+
+  const selectedTicket = React.useMemo(
+    () => supportTickets.find((ticket) => ticket.id === selectedTicketId) || null,
+    [selectedTicketId, supportTickets],
+  );
+
+  const { data: selectedTicketEvents = [], isLoading: isLoadingTicketEvents } = useQuery({
+    queryKey: ["support-ticket-events", selectedTicketId],
+    queryFn: () => listSupportTicketEvents(selectedTicketId || ""),
+    enabled: open && !!selectedTicketId,
+  });
+
+  React.useEffect(() => {
+    if (!selectedTicketId && supportTickets.length > 0) {
+      setSelectedTicketId(supportTickets[0].id);
+    }
+  }, [selectedTicketId, supportTickets]);
+
+  const addCommentMutation = useMutation({
+    mutationFn: (payload: { ticketId: string; message: string }) => {
+      if (!user?.id) throw new Error("Usuario nao autenticado.");
+      return addSupportTicketComment({
+        ticketId: payload.ticketId,
+        message: payload.message,
+        actorId: user.id,
+        actorName: user.name,
+        actorEmail: user.email,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Resposta registrada no chamado.");
+      setReplyMessage("");
+      queryClient.invalidateQueries({ queryKey: ["support-ticket-events", selectedTicketId] });
+    },
+    onError: (error) => {
+      console.error("Erro ao responder chamado:", error);
+      toast.error("Nao foi possivel registrar a resposta.");
+    },
+  });
 
   const context = React.useMemo(() => {
     const timestamp = new Intl.DateTimeFormat("pt-BR", {
@@ -126,7 +210,8 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
       toast.success(`Chamado aberto: ${ticket.id.slice(0, 8)}.`);
       setMessage("");
       setPriority("normal");
-      setOpen(false);
+      setSelectedTicketId(ticket.id);
+      queryClient.invalidateQueries({ queryKey: ["my-support-tickets", user.id, user.restaurant_id] });
     } catch (error) {
       console.error("Erro ao abrir chamado de suporte:", error);
       toast.error("Nao foi possivel abrir o chamado. Voce ainda pode copiar o contexto ou abrir email.");
@@ -135,14 +220,31 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
     }
   };
 
+  const submitTicketReply = () => {
+    if (!selectedTicketId) return;
+    addCommentMutation.mutate({
+      ticketId: selectedTicketId,
+      message: replyMessage,
+    });
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setReplyMessage("");
+          setSelectedTicketId(null);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Abrir suporte com contexto">
           <Headphones className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Suporte com contexto</DialogTitle>
           <DialogDescription>
@@ -224,6 +326,122 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
             <Label htmlFor="support-context">Contexto que sera enviado</Label>
             <Textarea id="support-context" value={context} readOnly className="min-h-48 font-mono text-xs" />
           </div>
+
+          {user?.id ? (
+            <>
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquareText className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-medium">Chamados recentes</h3>
+                </div>
+
+                {isLoadingTickets ? (
+                  <div className="rounded-md border p-4 text-sm text-muted-foreground">Carregando chamados...</div>
+                ) : supportTickets.length === 0 ? (
+                  <div className="rounded-md border p-4 text-sm text-muted-foreground">
+                    Nenhum chamado aberto por este restaurante ainda.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+                    <div className="space-y-2">
+                      {supportTickets.map((ticket) => (
+                        <button
+                          key={ticket.id}
+                          type="button"
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className={cn(
+                            "w-full rounded-md border bg-background p-3 text-left transition-colors hover:bg-muted/40",
+                            selectedTicketId === ticket.id && "border-primary bg-primary/5",
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium">{ticket.subject}</span>
+                            <Badge className={cn("border", ticketStatusClasses[ticket.status])}>
+                              {ticketStatusLabels[ticket.status]}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{ticket.message}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">{formatDate(ticket.createdAt)}</p>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="rounded-md border p-4">
+                      {!selectedTicket ? (
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                          Selecione um chamado para ver o historico.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <History className="h-4 w-4 text-primary" />
+                              <h4 className="text-sm font-medium">Historico</h4>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {selectedTicket.screenTitle} · {selectedTicket.pathname}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Textarea
+                              value={replyMessage}
+                              onChange={(event) => setReplyMessage(event.target.value)}
+                              placeholder="Responder ou complementar este chamado."
+                              className="min-h-24"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={submitTicketReply}
+                              disabled={addCommentMutation.isPending || replyMessage.trim().length < 3}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              {addCommentMutation.isPending ? "Enviando..." : "Responder chamado"}
+                            </Button>
+                          </div>
+
+                          {isLoadingTicketEvents ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Carregando historico...</div>
+                          ) : selectedTicketEvents.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Sem eventos registrados.</div>
+                          ) : (
+                            <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                              {selectedTicketEvents.map((event) => (
+                                <div key={event.id} className="rounded-md border bg-muted/20 p-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-sm font-medium">
+                                        {ticketEventLabels[event.eventType] || event.eventType}
+                                      </p>
+                                      <p className="mt-1 text-xs text-muted-foreground">
+                                        {event.actorRole === "customer" ? "Voce" : event.actorName || "Atendimento"}
+                                      </p>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{formatDate(event.createdAt)}</span>
+                                  </div>
+                                  {event.oldStatus && event.newStatus ? (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                      {ticketStatusLabels[event.oldStatus]} &gt; {ticketStatusLabels[event.newStatus]}
+                                    </p>
+                                  ) : null}
+                                  {event.message ? (
+                                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.message}</p>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">

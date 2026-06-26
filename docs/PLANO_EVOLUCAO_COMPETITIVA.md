@@ -541,8 +541,10 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
   `npx playwright test` com 18/18 testes.
 - 2026-06-26: comentario interno de atendimento no chamado implementado no
   Super Admin, gravando evento `comment` em `support_ticket_events`.
-- Pendente importacao assistida, anexos, comentarios do cliente, central de
-  ajuda editavel, validacao remota/piloto das migrations M8 e rotina de 7 dias.
+- 2026-06-26: comentario do cliente implementado no modal de suporte, com lista
+  de chamados recentes, historico e resposta gravada em `support_ticket_events`.
+- Pendente importacao assistida, anexos, central de ajuda editavel, validacao
+  remota/piloto das migrations M8 e rotina de 7 dias.
 
 ---
 
@@ -1324,7 +1326,7 @@ Evidencia:
 - 2026-06-11: Fatia 3 adicionou base contextual de ajuda no modal de suporte, com tutoriais curtos e problemas comuns por tela para Dashboard, PDV, Pedidos, Cozinha, Cardapio, Produtos/Categorias, Relatorios, Atendimento, Automacoes, Assinaturas/Pagamentos e Configuracoes.
 - 2026-06-26: Fatia M8 adicionou abertura interna de chamado no modal global de suporte, com prioridade, status inicial `open`, contexto tecnico e RLS em `support_tickets`. Item segue `[~]` porque anexos, comentarios bidirecionais e validacao remota ainda nao foram implementados.
 - 2026-06-26: Painel operacional de chamados adicionado ao Super Admin, com contadores por status, lista priorizada por status/prioridade e mudanca de status registrada como atividade administrativa. Item continua `[~]` por faltar anexos, comentarios bidirecionais e validacao remota/piloto.
-- 2026-06-26: Historico de chamados adicionado com `support_ticket_events`, trigger de abertura/mudanca de status, modal de detalhes e comentario interno no Super Admin. Item continua `[~]` por faltar anexos, comentarios do cliente e validacao remota/piloto.
+- 2026-06-26: Historico de chamados adicionado com `support_ticket_events`, trigger de abertura/mudanca de status, modal de detalhes e comentarios no Super Admin/cliente. Item continua `[~]` por faltar anexos e validacao remota/piloto.
 
 ---
 
@@ -1358,7 +1360,8 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
-| 2026-06-26 | M8 — Comentario interno em chamados | Implementado parcialmente `[~]` | `[x]` Super Admin registra comentario no historico do chamado (`support_ticket_events`). `[~]` Falta comentario do cliente e anexos. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
+| 2026-06-26 | M8 — Comentario do cliente em chamados | Implementado parcialmente `[~]` | `[x]` Modal de suporte lista chamados recentes e permite resposta do cliente. `[~]` Falta anexos e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
+| 2026-06-26 | M8 — Comentario interno em chamados | Implementado parcialmente `[~]` | `[x]` Super Admin registra comentario no historico do chamado (`support_ticket_events`). `[~]` Falta anexos e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-26 | M8 — Historico de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `support_ticket_events` registra abertura/mudanca de status. `[x]` Modal no `/admin` mostra mensagem, contexto e timeline. `[~]` Falta anexos, comentario do cliente e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-26 | M8 — Painel operacional de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `/admin` lista chamados recentes de `support_tickets`, mostra contadores por status e prioridade do chamado. `[x]` Super admin pode alterar status para `Aberto`, `Em atendimento`, `Aguardando cliente`, `Resolvido` ou `Fechado`, com registro em `admin_activity_logs`. `[~]` Falta anexos, comentarios bidirecionais e validacao remota/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-26 | M8 — Chamado interno com contexto | Implementado parcialmente `[~]` | `[x]` Migration `support_tickets` com prioridade, status, metadata, RLS por solicitante/restaurante/super admin e trigger de `updated_at`. `[x]` Modal global de suporte cria chamado interno com tela, rota, versao, navegador, usuario, restaurante e mensagem; copiar contexto/e-mail continuam como fallback. `[~]` Falta anexos, historico de interacoes e aplicacao/validacao da migration no remoto/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `build`, `lint`, Vitest 97/97 e Playwright 18/18. |
