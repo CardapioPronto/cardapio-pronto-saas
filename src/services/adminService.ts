@@ -8,6 +8,7 @@ type SystemSetting = Database['public']['Tables']['system_settings']['Row'];
 type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 type Restaurant = Database['public']['Tables']['restaurants']['Row'];
+type SupportTicket = Database['public']['Tables']['support_tickets']['Row'];
 
 export const IFOOD_SAAS_APP_SETTING_KEY = 'ifood_saas_app';
 
@@ -24,6 +25,8 @@ export interface IfoodSaasAppSettings {
 }
 
 export type AdminOnboardingHealthStatus = 'blocked' | 'at_risk' | 'active' | 'ready_to_sell';
+export type AdminSupportTicketPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type AdminSupportTicketStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed';
 
 export interface AdminOnboardingHealthRow {
   restaurantId: string;
@@ -45,6 +48,23 @@ export interface AdminOnboardingHealthRow {
   healthStatus: AdminOnboardingHealthStatus;
   nextStep: string;
   lastProgressAt: string | null;
+}
+
+export interface AdminSupportTicketRow {
+  id: string;
+  restaurantId: string | null;
+  restaurantName: string;
+  restaurantSlug: string | null;
+  requesterName: string | null;
+  requesterEmail: string | null;
+  screenTitle: string;
+  pathname: string;
+  subject: string;
+  message: string;
+  priority: AdminSupportTicketPriority;
+  status: AdminSupportTicketStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SuperAdminRecord {
@@ -140,6 +160,24 @@ const normalizeHealthStatus = (value: unknown): AdminOnboardingHealthStatus => {
   return 'at_risk';
 };
 
+const normalizeTicketPriority = (value: unknown): AdminSupportTicketPriority => {
+  if (value === 'low' || value === 'normal' || value === 'high' || value === 'urgent') return value;
+  return 'normal';
+};
+
+const normalizeTicketStatus = (value: unknown): AdminSupportTicketStatus => {
+  if (
+    value === 'open'
+    || value === 'in_progress'
+    || value === 'waiting_customer'
+    || value === 'resolved'
+    || value === 'closed'
+  ) {
+    return value;
+  }
+  return 'open';
+};
+
 const normalizeOnboardingHealthRow = (value: unknown): AdminOnboardingHealthRow => {
   const row = asRecord(value);
   return {
@@ -172,6 +210,95 @@ export async function listAdminOnboardingHealth(): Promise<AdminOnboardingHealth
   return Array.isArray(data)
     ? data.map(normalizeOnboardingHealthRow)
     : [];
+}
+
+export async function listAdminSupportTickets(limit = 12): Promise<AdminSupportTicketRow[]> {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .select('*, restaurants(name, slug)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const priorityOrder: Record<AdminSupportTicketPriority, number> = {
+    urgent: 1,
+    high: 2,
+    normal: 3,
+    low: 4,
+  };
+  const statusOrder: Record<AdminSupportTicketStatus, number> = {
+    open: 1,
+    in_progress: 2,
+    waiting_customer: 3,
+    resolved: 4,
+    closed: 5,
+  };
+
+  return ((data || []) as Array<SupportTicket & { restaurants?: { name?: string | null; slug?: string | null } | null }>)
+    .map((ticket) => ({
+      id: ticket.id,
+      restaurantId: ticket.restaurant_id,
+      restaurantName: ticket.restaurants?.name || 'Restaurante nao vinculado',
+      restaurantSlug: ticket.restaurants?.slug || null,
+      requesterName: ticket.requester_name,
+      requesterEmail: ticket.requester_email,
+      screenTitle: ticket.screen_title,
+      pathname: ticket.pathname,
+      subject: ticket.subject,
+      message: ticket.message,
+      priority: normalizeTicketPriority(ticket.priority),
+      status: normalizeTicketStatus(ticket.status),
+      createdAt: ticket.created_at,
+      updatedAt: ticket.updated_at,
+    }))
+    .sort((a, b) => {
+      const byStatus = statusOrder[a.status] - statusOrder[b.status];
+      if (byStatus !== 0) return byStatus;
+      const byPriority = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (byPriority !== 0) return byPriority;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+}
+
+export async function updateAdminSupportTicketStatus(
+  id: string,
+  status: AdminSupportTicketStatus,
+): Promise<AdminSupportTicketRow> {
+  const canonicalStatus = normalizeTicketStatus(status);
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .update({ status: canonicalStatus, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*, restaurants(name, slug)')
+    .single();
+
+  if (error) throw error;
+
+  await logAdminActivity(
+    'update_support_ticket',
+    'support_tickets',
+    id,
+    { status: canonicalStatus },
+  );
+
+  const ticket = data as SupportTicket & { restaurants?: { name?: string | null; slug?: string | null } | null };
+  return {
+    id: ticket.id,
+    restaurantId: ticket.restaurant_id,
+    restaurantName: ticket.restaurants?.name || 'Restaurante nao vinculado',
+    restaurantSlug: ticket.restaurants?.slug || null,
+    requesterName: ticket.requester_name,
+    requesterEmail: ticket.requester_email,
+    screenTitle: ticket.screen_title,
+    pathname: ticket.pathname,
+    subject: ticket.subject,
+    message: ticket.message,
+    priority: normalizeTicketPriority(ticket.priority),
+    status: normalizeTicketStatus(ticket.status),
+    createdAt: ticket.created_at,
+    updatedAt: ticket.updated_at,
+  };
 }
 
 // Função para listar todos os super admins

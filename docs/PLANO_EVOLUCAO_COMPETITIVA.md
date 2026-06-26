@@ -457,7 +457,7 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 - [ ] Criar importacao assistida de clientes por CSV com opt-in claro.
 - [ ] Criar "setup rapido" por segmento: pizzaria, hamburgueria, cafeteria,
       sushi, bar, marmitaria.
-- [ ] Criar abertura de chamado dentro do app com contexto, anexos e status.
+- [~] Criar abertura de chamado dentro do app com contexto, anexos e status.
 - [ ] Criar central de ajuda editavel pelo Super Admin.
 - [ ] Criar rotina de acompanhamento dos primeiros 7 dias.
 
@@ -500,8 +500,36 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
   `npx eslint src/pages/admin/AdminDashboard.tsx src/services/adminService.ts
   src/integrations/supabase/types.ts`, `npm run build`, `npm run lint`,
   `npm run test` com 97/97 testes e `npx playwright test` com 18/18 testes.
-- Pendente importacao assistida, gestao de chamados, central de ajuda editavel,
-  aplicacao/validacao das migrations M8 no remoto/piloto e rotina de 7 dias.
+- 2026-06-26: abertura de chamado dentro do app implementada parcialmente.
+  Criada a migration `20260625193000_create_support_tickets.sql` com tabela
+  `support_tickets`, prioridade, status, origem `in_app`, contexto tecnico,
+  metadata, RLS por solicitante/restaurante/super admin e trigger de
+  `updated_at`. O modal global de suporte agora permite escolher prioridade e
+  criar chamado interno com usuario, restaurante, tela, rota, versao, navegador
+  e mensagem, preservando copiar contexto e abrir e-mail como fallback.
+  Marcacao `[~]` porque ainda faltam anexos, historico de interacoes e painel
+  operacional para atendimento/CS acompanhar e mudar status.
+- 2026-06-26: validacoes da fatia de chamados M8: `npx tsc --noEmit`,
+  `npx eslint src/components/support/SupportContextButton.tsx
+  src/services/supportTicketService.ts src/integrations/supabase/types.ts`,
+  `npm run build`, `npm run lint`, `npm run test` com 97/97 testes e
+  `npx playwright test` com 18/18 testes.
+- 2026-06-26: painel operacional de chamados adicionado ao Super Admin. O
+  `/admin` passou a listar chamados recentes de `support_tickets`, consolidar
+  contadores por status, destacar prioridade e permitir que super admins alterem
+  o status entre `Aberto`, `Em atendimento`, `Aguardando cliente`, `Resolvido`
+  e `Fechado`, registrando atividade administrativa via `log_admin_activity`.
+  Marcacao permanece `[~]` porque ainda faltam anexos, historico de interacoes
+  e validacao com dados reais no ambiente remoto/piloto.
+- 2026-06-26: validacoes da fatia de painel de chamados M8: `npx tsc --noEmit`,
+  `npx eslint src/pages/admin/AdminDashboard.tsx src/services/adminService.ts
+  src/integrations/supabase/types.ts`, `npm run build`, `npm run test` com
+  97/97 testes e `npx playwright test` com 18/18 testes. `npm run lint`
+  completo nao foi contabilizado como evidencia desta fatia porque a sessao do
+  executor permaneceu aberta sem processo visivel do workspace.
+- Pendente importacao assistida, anexos e historico detalhado de chamados, central
+  de ajuda editavel, aplicacao/validacao das migrations M8 no remoto/piloto e
+  rotina de 7 dias.
 
 ---
 
@@ -1270,7 +1298,7 @@ Objetivo: reduzir dependencia de implantacao manual.
 - [ ] Permitir que o Super Admin edite tutoriais, problemas comuns e links de ajuda sem precisar publicar nova versao.
 - [ ] Adicionar videos curtos ou GIFs por tela para acelerar implantacao de clientes menos tecnicos.
 - [ ] Medir uso do suporte contextual: telas mais acessadas, problemas mais copiados e artigos que resolvem sem chamado.
-- [ ] Criar abertura de chamado integrada ao painel, com prioridade, anexos, status e historico por restaurante.
+- [~] Criar abertura de chamado integrada ao painel, com prioridade, anexos, status e historico por restaurante.
 - [ ] Sugerir automaticamente o proximo passo do onboarding com base no comportamento real do restaurante.
 - [ ] Enviar lembretes por e-mail/WhatsApp quando uma etapa critica de implantacao ficar parada.
 - [ ] Criar trilhas de onboarding por perfil: salao, delivery, multiunidade, franquia e operacao com pagamento online.
@@ -1281,6 +1309,8 @@ Evidencia:
 - 2026-06-10: Fatia 1 adicionou card de implantacao guiada no Dashboard com progresso, proximos passos e atalhos para completar dados do restaurante, cadastrar produtos/categorias, abrir QR Code/link rastreavel e fazer pedido de teste. O Dashboard passou a carregar sinais de perfil completo e total de pedidos, e o Cardapio Digital aceita link direto por aba com `?tab=qrcode`.
 - 2026-06-11: Fatia 2 adicionou botao global de suporte no cabecalho do dashboard, abrindo modal com descricao do usuario, tela atual, URL, usuario, restaurante, versao, status online e navegador, com acoes para copiar contexto ou abrir e-mail preenchido.
 - 2026-06-11: Fatia 3 adicionou base contextual de ajuda no modal de suporte, com tutoriais curtos e problemas comuns por tela para Dashboard, PDV, Pedidos, Cozinha, Cardapio, Produtos/Categorias, Relatorios, Atendimento, Automacoes, Assinaturas/Pagamentos e Configuracoes.
+- 2026-06-26: Fatia M8 adicionou abertura interna de chamado no modal global de suporte, com prioridade, status inicial `open`, contexto tecnico e RLS em `support_tickets`. Item segue `[~]` porque anexos, historico por restaurante e validacao remota ainda nao foram implementados.
+- 2026-06-26: Painel operacional de chamados adicionado ao Super Admin, com contadores por status, lista priorizada por status/prioridade e mudanca de status registrada como atividade administrativa. Item continua `[~]` por faltar anexos e historico detalhado de interacoes.
 
 ---
 
@@ -1314,6 +1344,8 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-06-26 | M8 — Painel operacional de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `/admin` lista chamados recentes de `support_tickets`, mostra contadores por status e prioridade do chamado. `[x]` Super admin pode alterar status para `Aberto`, `Em atendimento`, `Aguardando cliente`, `Resolvido` ou `Fechado`, com registro em `admin_activity_logs`. `[~]` Falta anexos, historico detalhado de interacoes e validacao remota/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `build`, Vitest 97/97 e Playwright 18/18. `npm run lint` completo nao foi contabilizado porque a sessao do executor permaneceu aberta sem processo visivel do workspace. |
+| 2026-06-26 | M8 — Chamado interno com contexto | Implementado parcialmente `[~]` | `[x]` Migration `support_tickets` com prioridade, status, metadata, RLS por solicitante/restaurante/super admin e trigger de `updated_at`. `[x]` Modal global de suporte cria chamado interno com tela, rota, versao, navegador, usuario, restaurante e mensagem; copiar contexto/e-mail continuam como fallback. `[~]` Falta anexos, historico de interacoes e aplicacao/validacao da migration no remoto/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `build`, `lint`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-25 | M8 — Saúde de implantação no Super Admin | Implementado parcialmente `[~]` | `[x]` RPC `get_admin_onboarding_health()` consolida restaurantes por `Travado`, `Em risco`, `Ativo` e `Pronto para venda`. `[x]` `/admin` exibe cards por status e tabela priorizada com progresso, proximo passo, base de cardapio e ultimo pedido. `[~]` Falta aplicar/validar migrations M8 no remoto/piloto e usar com dados reais de implantação. Evidencias: `tsc --noEmit`, ESLint focado, `build`, `lint`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-25 | M8 — Onboarding guiado persistente | Implementado parcialmente `[~]` | `[x]` Migration `restaurant_onboarding_progress` com RLS por restaurante/super admin. `[x]` Dashboard carrega progresso persistido, permite concluir/reabrir/dispensar etapas manuais e calcula saude da implantacao. `[~]` Falta aplicar/validar migration em ambiente remoto/piloto e rotina de 7 dias. Evidencias: `tsc --noEmit`, ESLint focado, Vitest unitario 3/3, `build`, `lint`, Vitest completo 97/97 e Playwright 18/18. |
 | 2026-06-25 | M5 — Cozinha/KDS E2E | Implementado `[x]` | `[x]` E2E cria pedido no PDV e valida entrada do mesmo pedido em `/cozinha`. `[x]` Avanca card de `Entrada` para `Em preparo` e `Pronto`, conferindo `update_order_status` com `preparo` e `pronto`. `[x]` Tela recebeu `data-testid` invisivel em cards/colunas para automacao estavel. Evidencias: ESLint focado, `build`, Playwright autenticado 9/9, `tsc --noEmit`, `lint` e Playwright completo 18/18. |

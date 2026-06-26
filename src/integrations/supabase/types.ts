@@ -4340,6 +4340,78 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          context: string
+          created_at: string
+          id: string
+          message: string
+          metadata: Json
+          pathname: string
+          priority: string
+          requester_email: string | null
+          requester_id: string | null
+          requester_name: string | null
+          restaurant_id: string | null
+          screen_title: string
+          source: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          id?: string
+          message: string
+          metadata?: Json
+          pathname: string
+          priority?: string
+          requester_email?: string | null
+          requester_id?: string | null
+          requester_name?: string | null
+          restaurant_id?: string | null
+          screen_title: string
+          source?: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          pathname?: string
+          priority?: string
+          requester_email?: string | null
+          requester_id?: string | null
+          requester_name?: string | null
+          restaurant_id?: string | null
+          screen_title?: string
+          source?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_admins: {
         Row: {
           created_at: string

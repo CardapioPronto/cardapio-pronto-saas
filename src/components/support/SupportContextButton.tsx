@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Copy, Headphones, Lightbulb, ListChecks, Mail } from "lucide-react";
+import { Copy, Headphones, Lightbulb, ListChecks, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getSupportKnowledgeForPath } from "@/components/support/supportKnowledgeBase";
+import { createSupportTicket, type SupportTicketPriority } from "@/services/supportTicketService";
 
 const SUPPORT_EMAIL = "contato@pubfy.com.br";
 
@@ -45,6 +46,8 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
   const { user } = useCurrentUser();
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState("");
+  const [priority, setPriority] = React.useState<SupportTicketPriority>("normal");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const knowledge = React.useMemo(() => getSupportKnowledgeForPath(location.pathname), [location.pathname]);
 
   const context = React.useMemo(() => {
@@ -85,6 +88,51 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
     const subject = encodeURIComponent(`Suporte Pubfy - ${title}`);
     const body = encodeURIComponent(fullMessage);
     window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+  };
+
+  const submitTicket = async () => {
+    if (!user?.id) {
+      toast.error("Entre na conta para abrir um chamado pelo app.");
+      return;
+    }
+
+    const cleanMessage = message.trim();
+    if (cleanMessage.length < 3) {
+      toast.error("Descreva rapidamente o que aconteceu.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const ticket = await createSupportTicket({
+        restaurantId: user.restaurant_id,
+        requesterId: user.id,
+        requesterName: user.name,
+        requesterEmail: user.email,
+        screenTitle: title,
+        pathname: `${location.pathname}${location.search}`,
+        subject: `Suporte Pubfy - ${title}`,
+        message: cleanMessage,
+        context,
+        priority,
+        metadata: {
+          url: getCurrentUrl(),
+          appVersion: import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_SENTRY_RELEASE || "local",
+          browser: typeof navigator === "undefined" ? null : navigator.userAgent,
+          online: typeof navigator === "undefined" ? null : navigator.onLine,
+        },
+      });
+
+      toast.success(`Chamado aberto: ${ticket.id.slice(0, 8)}.`);
+      setMessage("");
+      setPriority("normal");
+      setOpen(false);
+    } catch (error) {
+      console.error("Erro ao abrir chamado de suporte:", error);
+      toast.error("Nao foi possivel abrir o chamado. Voce ainda pode copiar o contexto ou abrir email.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -158,6 +206,21 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="support-priority">Prioridade</Label>
+            <select
+              id="support-priority"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as SupportTicketPriority)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="low">Baixa</option>
+              <option value="normal">Normal</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="support-context">Contexto que sera enviado</Label>
             <Textarea id="support-context" value={context} readOnly className="min-h-48 font-mono text-xs" />
           </div>
@@ -168,9 +231,13 @@ export const SupportContextButton = ({ title }: SupportContextButtonProps) => {
             <Copy className="mr-2 h-4 w-4" />
             Copiar contexto
           </Button>
-          <Button type="button" onClick={openEmail}>
+          <Button type="button" variant="outline" onClick={openEmail}>
             <Mail className="mr-2 h-4 w-4" />
             Abrir email
+          </Button>
+          <Button type="button" onClick={submitTicket} disabled={isSubmitting || message.trim().length < 3}>
+            <Send className="mr-2 h-4 w-4" />
+            {isSubmitting ? "Abrindo..." : "Criar chamado"}
           </Button>
         </DialogFooter>
       </DialogContent>
