@@ -4340,6 +4340,66 @@ export type Database = {
           },
         ]
       }
+      support_ticket_events: {
+        Row: {
+          actor_email: string | null
+          actor_id: string | null
+          actor_name: string | null
+          actor_role: string
+          created_at: string
+          event_type: string
+          id: string
+          message: string | null
+          metadata: Json
+          new_status: string | null
+          old_status: string | null
+          ticket_id: string
+        }
+        Insert: {
+          actor_email?: string | null
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string
+          created_at?: string
+          event_type: string
+          id?: string
+          message?: string | null
+          metadata?: Json
+          new_status?: string | null
+          old_status?: string | null
+          ticket_id: string
+        }
+        Update: {
+          actor_email?: string | null
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          message?: string | null
+          metadata?: Json
+          new_status?: string | null
+          old_status?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           context: string

@@ -519,17 +519,30 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
   contadores por status, destacar prioridade e permitir que super admins alterem
   o status entre `Aberto`, `Em atendimento`, `Aguardando cliente`, `Resolvido`
   e `Fechado`, registrando atividade administrativa via `log_admin_activity`.
-  Marcacao permanece `[~]` porque ainda faltam anexos, historico de interacoes
+  Marcacao permanece `[~]` porque ainda faltavam anexos, historico de interacoes
   e validacao com dados reais no ambiente remoto/piloto.
 - 2026-06-26: validacoes da fatia de painel de chamados M8: `npx tsc --noEmit`,
   `npx eslint src/pages/admin/AdminDashboard.tsx src/services/adminService.ts
   src/integrations/supabase/types.ts`, `npm run build`, `npm run test` com
-  97/97 testes e `npx playwright test` com 18/18 testes. `npm run lint`
-  completo nao foi contabilizado como evidencia desta fatia porque a sessao do
-  executor permaneceu aberta sem processo visivel do workspace.
-- Pendente importacao assistida, anexos e historico detalhado de chamados, central
-  de ajuda editavel, aplicacao/validacao das migrations M8 no remoto/piloto e
-  rotina de 7 dias.
+  97/97 testes e `npx playwright test` com 18/18 testes. Em 2026-06-26, o
+  `npm run lint` completo foi reexecutado e passou limpo.
+- 2026-06-26: historico detalhado de chamados implementado parcialmente.
+  Criada a migration `20260626100000_create_support_ticket_events.sql` com
+  tabela `support_ticket_events`, RLS por participante/restaurante/super admin
+  e trigger para registrar abertura e mudanca de status automaticamente. O
+  `/admin` ganhou modal de detalhes do chamado com prioridade, status, dados do
+  restaurante/solicitante, mensagem original, contexto tecnico e linha do tempo
+  de eventos. Marcacao permanece `[~]` porque ainda faltam anexos, comentarios
+  bidirecionais e validacao com dados reais no ambiente remoto/piloto.
+- 2026-06-26: validacoes da fatia de historico de chamados M8: `npx tsc
+  --noEmit`, `npx eslint src/pages/admin/AdminDashboard.tsx
+  src/services/adminService.ts src/integrations/supabase/types.ts`,
+  `npm run lint`, `npm run build`, `npm run test` com 97/97 testes e
+  `npx playwright test` com 18/18 testes.
+- 2026-06-26: comentario interno de atendimento no chamado implementado no
+  Super Admin, gravando evento `comment` em `support_ticket_events`.
+- Pendente importacao assistida, anexos, comentarios do cliente, central de
+  ajuda editavel, validacao remota/piloto das migrations M8 e rotina de 7 dias.
 
 ---
 
@@ -1309,8 +1322,9 @@ Evidencia:
 - 2026-06-10: Fatia 1 adicionou card de implantacao guiada no Dashboard com progresso, proximos passos e atalhos para completar dados do restaurante, cadastrar produtos/categorias, abrir QR Code/link rastreavel e fazer pedido de teste. O Dashboard passou a carregar sinais de perfil completo e total de pedidos, e o Cardapio Digital aceita link direto por aba com `?tab=qrcode`.
 - 2026-06-11: Fatia 2 adicionou botao global de suporte no cabecalho do dashboard, abrindo modal com descricao do usuario, tela atual, URL, usuario, restaurante, versao, status online e navegador, com acoes para copiar contexto ou abrir e-mail preenchido.
 - 2026-06-11: Fatia 3 adicionou base contextual de ajuda no modal de suporte, com tutoriais curtos e problemas comuns por tela para Dashboard, PDV, Pedidos, Cozinha, Cardapio, Produtos/Categorias, Relatorios, Atendimento, Automacoes, Assinaturas/Pagamentos e Configuracoes.
-- 2026-06-26: Fatia M8 adicionou abertura interna de chamado no modal global de suporte, com prioridade, status inicial `open`, contexto tecnico e RLS em `support_tickets`. Item segue `[~]` porque anexos, historico por restaurante e validacao remota ainda nao foram implementados.
-- 2026-06-26: Painel operacional de chamados adicionado ao Super Admin, com contadores por status, lista priorizada por status/prioridade e mudanca de status registrada como atividade administrativa. Item continua `[~]` por faltar anexos e historico detalhado de interacoes.
+- 2026-06-26: Fatia M8 adicionou abertura interna de chamado no modal global de suporte, com prioridade, status inicial `open`, contexto tecnico e RLS em `support_tickets`. Item segue `[~]` porque anexos, comentarios bidirecionais e validacao remota ainda nao foram implementados.
+- 2026-06-26: Painel operacional de chamados adicionado ao Super Admin, com contadores por status, lista priorizada por status/prioridade e mudanca de status registrada como atividade administrativa. Item continua `[~]` por faltar anexos, comentarios bidirecionais e validacao remota/piloto.
+- 2026-06-26: Historico de chamados adicionado com `support_ticket_events`, trigger de abertura/mudanca de status, modal de detalhes e comentario interno no Super Admin. Item continua `[~]` por faltar anexos, comentarios do cliente e validacao remota/piloto.
 
 ---
 
@@ -1344,7 +1358,9 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
-| 2026-06-26 | M8 — Painel operacional de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `/admin` lista chamados recentes de `support_tickets`, mostra contadores por status e prioridade do chamado. `[x]` Super admin pode alterar status para `Aberto`, `Em atendimento`, `Aguardando cliente`, `Resolvido` ou `Fechado`, com registro em `admin_activity_logs`. `[~]` Falta anexos, historico detalhado de interacoes e validacao remota/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `build`, Vitest 97/97 e Playwright 18/18. `npm run lint` completo nao foi contabilizado porque a sessao do executor permaneceu aberta sem processo visivel do workspace. |
+| 2026-06-26 | M8 — Comentario interno em chamados | Implementado parcialmente `[~]` | `[x]` Super Admin registra comentario no historico do chamado (`support_ticket_events`). `[~]` Falta comentario do cliente e anexos. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
+| 2026-06-26 | M8 — Historico de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `support_ticket_events` registra abertura/mudanca de status. `[x]` Modal no `/admin` mostra mensagem, contexto e timeline. `[~]` Falta anexos, comentario do cliente e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
+| 2026-06-26 | M8 — Painel operacional de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `/admin` lista chamados recentes de `support_tickets`, mostra contadores por status e prioridade do chamado. `[x]` Super admin pode alterar status para `Aberto`, `Em atendimento`, `Aguardando cliente`, `Resolvido` ou `Fechado`, com registro em `admin_activity_logs`. `[~]` Falta anexos, comentarios bidirecionais e validacao remota/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-26 | M8 — Chamado interno com contexto | Implementado parcialmente `[~]` | `[x]` Migration `support_tickets` com prioridade, status, metadata, RLS por solicitante/restaurante/super admin e trigger de `updated_at`. `[x]` Modal global de suporte cria chamado interno com tela, rota, versao, navegador, usuario, restaurante e mensagem; copiar contexto/e-mail continuam como fallback. `[~]` Falta anexos, historico de interacoes e aplicacao/validacao da migration no remoto/piloto. Evidencias: `tsc --noEmit`, ESLint focado, `build`, `lint`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-25 | M8 — Saúde de implantação no Super Admin | Implementado parcialmente `[~]` | `[x]` RPC `get_admin_onboarding_health()` consolida restaurantes por `Travado`, `Em risco`, `Ativo` e `Pronto para venda`. `[x]` `/admin` exibe cards por status e tabela priorizada com progresso, proximo passo, base de cardapio e ultimo pedido. `[~]` Falta aplicar/validar migrations M8 no remoto/piloto e usar com dados reais de implantação. Evidencias: `tsc --noEmit`, ESLint focado, `build`, `lint`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-25 | M8 — Onboarding guiado persistente | Implementado parcialmente `[~]` | `[x]` Migration `restaurant_onboarding_progress` com RLS por restaurante/super admin. `[x]` Dashboard carrega progresso persistido, permite concluir/reabrir/dispensar etapas manuais e calcula saude da implantacao. `[~]` Falta aplicar/validar migration em ambiente remoto/piloto e rotina de 7 dias. Evidencias: `tsc --noEmit`, ESLint focado, Vitest unitario 3/3, `build`, `lint`, Vitest completo 97/97 e Playwright 18/18. |

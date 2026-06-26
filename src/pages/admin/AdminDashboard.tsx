@@ -1,8 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -19,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import {
   Users,
@@ -29,9 +38,14 @@ import {
   AlertTriangle,
   LifeBuoy,
   MessageSquareWarning,
+  Eye,
+  History,
+  Send,
 } from 'lucide-react';
 import {
+  addAdminSupportTicketComment,
   listAdminOnboardingHealth,
+  listAdminSupportTicketEvents,
   listAdminSupportTickets,
   listAllRestaurants,
   listSuperAdmins,
@@ -88,6 +102,13 @@ const ticketPriorityClasses: Record<AdminSupportTicketPriority, string> = {
   urgent: 'border-red-200 bg-red-50 text-red-700',
 };
 
+const ticketEventLabels: Record<string, string> = {
+  created: 'Chamado aberto',
+  status_changed: 'Status alterado',
+  comment: 'Comentario',
+  system_note: 'Nota do sistema',
+};
+
 const formatDate = (value: string | null) => {
   if (!value) return 'Sem registro';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(value));
@@ -100,6 +121,8 @@ const countByHealth = (
 
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [ticketComment, setTicketComment] = useState('');
 
   const { data: restaurants, isLoading: isLoadingRestaurants } = useQuery({
     queryKey: ['admin-restaurants'],
@@ -126,6 +149,17 @@ const AdminDashboard = () => {
     queryFn: () => listAdminSupportTickets(),
   });
 
+  const selectedTicket = useMemo(
+    () => supportTickets.find((ticket) => ticket.id === selectedTicketId) || null,
+    [selectedTicketId, supportTickets],
+  );
+
+  const { data: selectedTicketEvents = [], isLoading: isLoadingTicketEvents } = useQuery({
+    queryKey: ['admin-support-ticket-events', selectedTicketId],
+    queryFn: () => listAdminSupportTicketEvents(selectedTicketId || ''),
+    enabled: !!selectedTicketId,
+  });
+
   const updateTicketStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: AdminSupportTicketStatus }) =>
       updateAdminSupportTicketStatus(id, status),
@@ -138,6 +172,28 @@ const AdminDashboard = () => {
       toast.error('Nao foi possivel atualizar o chamado.');
     },
   });
+
+  const addTicketCommentMutation = useMutation({
+    mutationFn: ({ ticketId, message }: { ticketId: string; message: string }) =>
+      addAdminSupportTicketComment(ticketId, message),
+    onSuccess: () => {
+      toast.success('Comentario registrado.');
+      setTicketComment('');
+      queryClient.invalidateQueries({ queryKey: ['admin-support-ticket-events', selectedTicketId] });
+    },
+    onError: (error) => {
+      console.error('Erro ao registrar comentario no chamado:', error);
+      toast.error('Nao foi possivel registrar o comentario.');
+    },
+  });
+
+  const submitTicketComment = () => {
+    if (!selectedTicketId) return;
+    addTicketCommentMutation.mutate({
+      ticketId: selectedTicketId,
+      message: ticketComment,
+    });
+  };
 
   // Calculate active subscriptions
   const activeSubscriptions = subscriptions?.data?.filter(sub => sub.status === 'active');
@@ -395,18 +451,19 @@ const AdminDashboard = () => {
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Abertura</TableHead>
+                <TableHead className="text-right">Detalhes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingSupportTickets ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     Carregando chamados de suporte...
                   </TableCell>
                 </TableRow>
               ) : prioritySupportTickets.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     Nenhum chamado recente para acompanhar.
                   </TableCell>
                 </TableRow>
@@ -458,6 +515,12 @@ const AdminDashboard = () => {
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(ticket.createdAt)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button type="button" variant="outline" size="sm" onClick={() => setSelectedTicketId(ticket.id)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Ver
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -465,6 +528,133 @@ const AdminDashboard = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!selectedTicketId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTicketId(null);
+            setTicketComment('');
+          }
+        }}
+      >
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedTicket?.subject || 'Detalhes do chamado'}</DialogTitle>
+            <DialogDescription>
+              Contexto tecnico, mensagem original e historico operacional do atendimento.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!selectedTicket ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Carregando chamado...
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="space-y-4">
+                <div className="rounded-md border p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <Badge className={cn('border', ticketPriorityClasses[selectedTicket.priority])}>
+                      {ticketPriorityLabels[selectedTicket.priority]}
+                    </Badge>
+                    <Badge className={cn('border', ticketStatusClasses[selectedTicket.status])}>
+                      {ticketStatusLabels[selectedTicket.status]}
+                    </Badge>
+                  </div>
+                  <dl className="grid gap-3 text-sm md:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-muted-foreground">Restaurante</dt>
+                      <dd className="mt-1">{selectedTicket.restaurantName}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-muted-foreground">Solicitante</dt>
+                      <dd className="mt-1">{selectedTicket.requesterName || selectedTicket.requesterEmail || 'Nao informado'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-muted-foreground">Tela</dt>
+                      <dd className="mt-1">{selectedTicket.screenTitle}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase text-muted-foreground">Rota</dt>
+                      <dd className="mt-1 break-all">{selectedTicket.pathname}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <div className="rounded-md border p-4">
+                  <h3 className="text-sm font-medium">Mensagem original</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{selectedTicket.message}</p>
+                </div>
+
+                <div className="rounded-md border p-4">
+                  <h3 className="text-sm font-medium">Contexto tecnico</h3>
+                  <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                    {selectedTicket.context}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="rounded-md border p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <History className="h-4 w-4 text-green" />
+                  <h3 className="text-sm font-medium">Historico</h3>
+                </div>
+
+                <div className="mb-4 space-y-2">
+                  <Textarea
+                    value={ticketComment}
+                    onChange={(event) => setTicketComment(event.target.value)}
+                    placeholder="Registrar comentario interno do atendimento."
+                    className="min-h-24"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={submitTicketComment}
+                    disabled={addTicketCommentMutation.isPending || ticketComment.trim().length < 3}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {addTicketCommentMutation.isPending ? 'Registrando...' : 'Registrar comentario'}
+                  </Button>
+                </div>
+
+                {isLoadingTicketEvents ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">Carregando historico...</div>
+                ) : selectedTicketEvents.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">Nenhum evento registrado ainda.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedTicketEvents.map((event) => (
+                      <div key={event.id} className="rounded-md border bg-muted/20 p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {ticketEventLabels[event.eventType] || event.eventType}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {event.actorName || event.actorEmail || (event.actorRole === 'system' ? 'Sistema' : 'Atendimento')}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{formatDate(event.createdAt)}</span>
+                        </div>
+                        {event.oldStatus && event.newStatus ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {ticketStatusLabels[event.oldStatus]} &gt; {ticketStatusLabels[event.newStatus]}
+                          </p>
+                        ) : null}
+                        {event.message ? (
+                          <p className="mt-2 text-sm text-muted-foreground">{event.message}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

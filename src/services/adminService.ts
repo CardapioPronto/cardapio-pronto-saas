@@ -9,6 +9,7 @@ type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 type Restaurant = Database['public']['Tables']['restaurants']['Row'];
 type SupportTicket = Database['public']['Tables']['support_tickets']['Row'];
+type SupportTicketEvent = Database['public']['Tables']['support_ticket_events']['Row'];
 
 export const IFOOD_SAAS_APP_SETTING_KEY = 'ifood_saas_app';
 
@@ -61,10 +62,24 @@ export interface AdminSupportTicketRow {
   pathname: string;
   subject: string;
   message: string;
+  context: string;
   priority: AdminSupportTicketPriority;
   status: AdminSupportTicketStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AdminSupportTicketEventRow {
+  id: string;
+  ticketId: string;
+  eventType: string;
+  actorName: string | null;
+  actorEmail: string | null;
+  actorRole: string;
+  message: string | null;
+  oldStatus: AdminSupportTicketStatus | null;
+  newStatus: AdminSupportTicketStatus | null;
+  createdAt: string;
 }
 
 export interface SuperAdminRecord {
@@ -247,6 +262,7 @@ export async function listAdminSupportTickets(limit = 12): Promise<AdminSupportT
       pathname: ticket.pathname,
       subject: ticket.subject,
       message: ticket.message,
+      context: ticket.context,
       priority: normalizeTicketPriority(ticket.priority),
       status: normalizeTicketStatus(ticket.status),
       createdAt: ticket.created_at,
@@ -294,10 +310,97 @@ export async function updateAdminSupportTicketStatus(
     pathname: ticket.pathname,
     subject: ticket.subject,
     message: ticket.message,
+    context: ticket.context,
     priority: normalizeTicketPriority(ticket.priority),
     status: normalizeTicketStatus(ticket.status),
     createdAt: ticket.created_at,
     updatedAt: ticket.updated_at,
+  };
+}
+
+export async function listAdminSupportTicketEvents(ticketId: string): Promise<AdminSupportTicketEventRow[]> {
+  const { data, error } = await supabase
+    .from('support_ticket_events')
+    .select('*')
+    .eq('ticket_id', ticketId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return ((data || []) as SupportTicketEvent[]).map((event) => ({
+    id: event.id,
+    ticketId: event.ticket_id,
+    eventType: event.event_type,
+    actorName: event.actor_name,
+    actorEmail: event.actor_email,
+    actorRole: event.actor_role,
+    message: event.message,
+    oldStatus: event.old_status ? normalizeTicketStatus(event.old_status) : null,
+    newStatus: event.new_status ? normalizeTicketStatus(event.new_status) : null,
+    createdAt: event.created_at,
+  }));
+}
+
+export async function addAdminSupportTicketComment(
+  ticketId: string,
+  message: string,
+): Promise<AdminSupportTicketEventRow> {
+  const cleanMessage = message.trim();
+  if (cleanMessage.length < 3) {
+    throw new Error('Informe um comentario com pelo menos 3 caracteres.');
+  }
+
+  const { data: currentUser } = await supabase.auth.getUser();
+  const userId = currentUser.user?.id || null;
+  let actorName: string | null = null;
+  let actorEmail: string | null = currentUser.user?.email || null;
+
+  if (userId) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('name, email')
+      .eq('id', userId)
+      .maybeSingle();
+
+    actorName = profile?.name || null;
+    actorEmail = profile?.email || actorEmail;
+  }
+
+  const { data, error } = await supabase
+    .from('support_ticket_events')
+    .insert({
+      ticket_id: ticketId,
+      event_type: 'comment',
+      actor_id: userId,
+      actor_name: actorName,
+      actor_email: actorEmail,
+      actor_role: 'support',
+      message: cleanMessage,
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+
+  await logAdminActivity(
+    'comment_support_ticket',
+    'support_tickets',
+    ticketId,
+    { commentLength: cleanMessage.length },
+  );
+
+  const event = data as SupportTicketEvent;
+  return {
+    id: event.id,
+    ticketId: event.ticket_id,
+    eventType: event.event_type,
+    actorName: event.actor_name,
+    actorEmail: event.actor_email,
+    actorRole: event.actor_role,
+    message: event.message,
+    oldStatus: event.old_status ? normalizeTicketStatus(event.old_status) : null,
+    newStatus: event.new_status ? normalizeTicketStatus(event.new_status) : null,
+    createdAt: event.created_at,
   };
 }
 
