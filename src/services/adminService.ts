@@ -23,6 +23,30 @@ export interface IfoodSaasAppSettings {
   notes: string;
 }
 
+export type AdminOnboardingHealthStatus = 'blocked' | 'at_risk' | 'active' | 'ready_to_sell';
+
+export interface AdminOnboardingHealthRow {
+  restaurantId: string;
+  restaurantName: string;
+  slug: string | null;
+  active: boolean | null;
+  createdAt: string | null;
+  totalProducts: number;
+  availableProducts: number;
+  totalCategories: number;
+  totalOrders: number;
+  lastOrderAt: string | null;
+  menuThemeConfigured: boolean;
+  restaurantProfileCompleted: boolean;
+  teamTrainingResolved: boolean;
+  supportHandoffResolved: boolean;
+  completedSteps: number;
+  progressPercent: number;
+  healthStatus: AdminOnboardingHealthStatus;
+  nextStep: string;
+  lastProgressAt: string | null;
+}
+
 export interface SuperAdminRecord {
   user_id: string;
   email: string | null;
@@ -99,6 +123,55 @@ async function invokeSuperAdmins(action: 'list' | 'add' | 'remove', body: Record
   if (error) throw new Error(await getFunctionErrorMessage(error));
   if (!data?.admins) throw new Error('Resposta inválida do serviço de administradores');
   return data;
+}
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+
+const asString = (value: unknown, fallback = '') => typeof value === 'string' ? value : fallback;
+const asNullableString = (value: unknown) => typeof value === 'string' ? value : null;
+const asNumber = (value: unknown, fallback = 0) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+const asBoolean = (value: unknown) => typeof value === 'boolean' ? value : false;
+
+const normalizeHealthStatus = (value: unknown): AdminOnboardingHealthStatus => {
+  if (value === 'blocked' || value === 'at_risk' || value === 'active' || value === 'ready_to_sell') {
+    return value;
+  }
+  return 'at_risk';
+};
+
+const normalizeOnboardingHealthRow = (value: unknown): AdminOnboardingHealthRow => {
+  const row = asRecord(value);
+  return {
+    restaurantId: asString(row.restaurantId),
+    restaurantName: asString(row.restaurantName, 'Restaurante'),
+    slug: asNullableString(row.slug),
+    active: typeof row.active === 'boolean' ? row.active : null,
+    createdAt: asNullableString(row.createdAt),
+    totalProducts: asNumber(row.totalProducts),
+    availableProducts: asNumber(row.availableProducts),
+    totalCategories: asNumber(row.totalCategories),
+    totalOrders: asNumber(row.totalOrders),
+    lastOrderAt: asNullableString(row.lastOrderAt),
+    menuThemeConfigured: asBoolean(row.menuThemeConfigured),
+    restaurantProfileCompleted: asBoolean(row.restaurantProfileCompleted),
+    teamTrainingResolved: asBoolean(row.teamTrainingResolved),
+    supportHandoffResolved: asBoolean(row.supportHandoffResolved),
+    completedSteps: asNumber(row.completedSteps),
+    progressPercent: asNumber(row.progressPercent),
+    healthStatus: normalizeHealthStatus(row.healthStatus),
+    nextStep: asString(row.nextStep, 'Revisar implantacao'),
+    lastProgressAt: asNullableString(row.lastProgressAt),
+  };
+};
+
+export async function listAdminOnboardingHealth(): Promise<AdminOnboardingHealthRow[]> {
+  const { data, error } = await supabase.rpc('get_admin_onboarding_health');
+  if (error) throw error;
+
+  return Array.isArray(data)
+    ? data.map(normalizeOnboardingHealthRow)
+    : [];
 }
 
 // Função para listar todos os super admins

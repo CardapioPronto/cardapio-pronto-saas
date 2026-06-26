@@ -4666,6 +4666,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_admin_onboarding_health: { Args: never; Returns: Json }
       apply_ingredient_movement: { Args: { p_args: Json }; Returns: Json }
       apply_ingredients_for_order: {
         Args: { p_allow_negative?: boolean; p_order_id: string }
