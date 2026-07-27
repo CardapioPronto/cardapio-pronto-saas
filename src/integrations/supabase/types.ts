@@ -4340,66 +4340,6 @@ export type Database = {
           },
         ]
       }
-      support_ticket_events: {
-        Row: {
-          actor_email: string | null
-          actor_id: string | null
-          actor_name: string | null
-          actor_role: string
-          created_at: string
-          event_type: string
-          id: string
-          message: string | null
-          metadata: Json
-          new_status: string | null
-          old_status: string | null
-          ticket_id: string
-        }
-        Insert: {
-          actor_email?: string | null
-          actor_id?: string | null
-          actor_name?: string | null
-          actor_role?: string
-          created_at?: string
-          event_type: string
-          id?: string
-          message?: string | null
-          metadata?: Json
-          new_status?: string | null
-          old_status?: string | null
-          ticket_id: string
-        }
-        Update: {
-          actor_email?: string | null
-          actor_id?: string | null
-          actor_name?: string | null
-          actor_role?: string
-          created_at?: string
-          event_type?: string
-          id?: string
-          message?: string | null
-          metadata?: Json
-          new_status?: string | null
-          old_status?: string | null
-          ticket_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "support_ticket_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "support_ticket_events_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "support_tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       support_tickets: {
         Row: {
           context: string
@@ -4798,7 +4738,6 @@ export type Database = {
         }
         Returns: string
       }
-      get_admin_onboarding_health: { Args: never; Returns: Json }
       apply_ingredient_movement: { Args: { p_args: Json }; Returns: Json }
       apply_ingredients_for_order: {
         Args: { p_allow_negative?: boolean; p_order_id: string }
@@ -4913,6 +4852,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_admin_onboarding_health: { Args: never; Returns: Json }
       get_affiliate_dashboard: { Args: never; Returns: Json }
       get_cart_abandonment_dashboard: {
         Args: { p_from: string; p_restaurant_id: string; p_to: string }
