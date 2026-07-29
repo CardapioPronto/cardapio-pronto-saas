@@ -34,7 +34,7 @@ export default defineTool({
       .limit(limit);
 
     if (error) {
-      return { content: [{ type: "text", text: error.message }], isError: true } };
+      return { content: [{ type: "text", text: error.message }], isError: true };
     }
 
     return {
