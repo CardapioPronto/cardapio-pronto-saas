@@ -24,6 +24,7 @@ const log = createLogger("login");
 
 const Login = () => {
   const location = useLocation();
+  const next = new URLSearchParams(location.search).get("next") ?? "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,10 +35,20 @@ const Login = () => {
   const { appUser, loading: sessionLoading } = useUserSession();
   const navigate = useNavigate();
 
+  const isSameOriginRelative = (value: string) => {
+    return value.startsWith("/") && !value.startsWith("//");
+  };
+
   useEffect(() => {
     if (user && !adminLoading && !sessionLoading) {
       const isAffiliateOnly = appUser?.role === "affiliate";
       log.debug("user logged in", { userId: user.id, isSuperAdmin, isAffiliateOnly });
+
+      if (isSameOriginRelative(next)) {
+        navigate(next);
+        return;
+      }
+
       if (isSuperAdmin) {
         navigate("/admin");
       } else if (isAffiliateOnly) {
@@ -46,7 +57,7 @@ const Login = () => {
         navigate("/dashboard");
       }
     }
-  }, [user, isSuperAdmin, adminLoading, sessionLoading, appUser?.role, navigate]);
+  }, [user, isSuperAdmin, adminLoading, sessionLoading, appUser?.role, navigate, next]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
