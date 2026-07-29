@@ -75,6 +75,8 @@ const AffiliateTerms = lazy(() => import('@/pages/affiliate/AffiliateTerms'));
 const AffiliatePanel = lazy(() => import('@/pages/affiliate/AffiliatePanel'));
 const AffiliateMaterials = lazy(() => import('@/pages/affiliate/AffiliateMaterials'));
 
+const OAuthConsent = lazy(() => import('@/pages/OAuthConsent'));
+
 const RouteFallback = () => <AppBootstrapLoader />;
 
 const AppRoutes = () => {
@@ -113,6 +115,7 @@ const AppRoutes = () => {
           <AffiliateAccountSignup />
         </AuthLayout>
       } />
+      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
       <Route path="/menu/:id" element={<CardapioPublico />} />
       <Route path="/cardapio/:slug" element={<CardapioPublico />} />
       <Route path="/pedido/:id" element={<AcompanharPedido />} />
