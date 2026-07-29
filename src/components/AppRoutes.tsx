@@ -75,6 +75,8 @@ const AffiliateTerms = lazy(() => import('@/pages/affiliate/AffiliateTerms'));
 const AffiliatePanel = lazy(() => import('@/pages/affiliate/AffiliatePanel'));
 const AffiliateMaterials = lazy(() => import('@/pages/affiliate/AffiliateMaterials'));
 
+const OAuthConsent = lazy(() => import('@/pages/OAuthConsent'));
+
 const RouteFallback = () => <AppBootstrapLoader />;
 
 const AppRoutes = () => {
