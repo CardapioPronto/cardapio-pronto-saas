@@ -115,6 +115,7 @@ const AppRoutes = () => {
           <AffiliateAccountSignup />
         </AuthLayout>
       } />
+      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
       <Route path="/menu/:id" element={<CardapioPublico />} />
       <Route path="/cardapio/:slug" element={<CardapioPublico />} />
       <Route path="/pedido/:id" element={<AcompanharPedido />} />
