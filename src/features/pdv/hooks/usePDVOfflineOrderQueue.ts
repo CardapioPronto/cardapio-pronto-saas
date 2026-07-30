@@ -88,7 +88,7 @@ export function usePDVOfflineOrderQueue(
       data
         ? {
             number: data.number,
-            status: data.status as PDVOfflineCurrentTableState["status"],
+            status: data.status as "livre" | "ocupada" | "reservada" | "indisponivel",
             isActive: data.is_active,
             updatedAt: data.updated_at,
           }
