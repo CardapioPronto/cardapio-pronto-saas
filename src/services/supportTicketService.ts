@@ -186,13 +186,13 @@ export const addSupportTicketComment = async (
   return {
     id: row.id,
     ticketId: row.ticket_id,
-    eventType: data.event_type,
-    actorName: data.actor_name,
-    actorEmail: data.actor_email,
-    actorRole: data.actor_role,
-    message: data.message,
-    oldStatus: normalizeTicketStatus(data.old_status),
-    newStatus: normalizeTicketStatus(data.new_status),
-    createdAt: data.created_at,
+    eventType: row.event_type,
+    actorName: row.actor_name,
+    actorEmail: row.actor_email,
+    actorRole: row.actor_role,
+    message: row.message,
+    oldStatus: normalizeTicketStatus(row.old_status),
+    newStatus: normalizeTicketStatus(row.new_status),
+    createdAt: row.created_at,
   };
 };
