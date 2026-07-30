@@ -136,7 +136,7 @@ export const listMySupportTickets = async (limit = 5): Promise<SupportTicketSumm
 };
 
 export const listSupportTicketEvents = async (ticketId: string): Promise<SupportTicketEvent[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("support_ticket_events")
     .select("id, ticket_id, event_type, actor_name, actor_email, actor_role, message, old_status, new_status, created_at")
     .eq("ticket_id", ticketId)
@@ -144,7 +144,7 @@ export const listSupportTicketEvents = async (ticketId: string): Promise<Support
 
   if (error) throw error;
 
-  return (data || []).map((event) => ({
+  return ((data || []) as any[]).map((event: any) => ({
     id: event.id,
     ticketId: event.ticket_id,
     eventType: event.event_type,
@@ -166,7 +166,7 @@ export const addSupportTicketComment = async (
     throw new Error("Informe uma resposta com pelo menos 3 caracteres.");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("support_ticket_events")
     .insert({
       ticket_id: input.ticketId,
@@ -182,9 +182,10 @@ export const addSupportTicketComment = async (
 
   if (error) throw error;
 
+  const row = data as any;
   return {
-    id: data.id,
-    ticketId: data.ticket_id,
+    id: row.id,
+    ticketId: row.ticket_id,
     eventType: data.event_type,
     actorName: data.actor_name,
     actorEmail: data.actor_email,
