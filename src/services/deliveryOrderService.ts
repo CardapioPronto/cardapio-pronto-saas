@@ -192,7 +192,7 @@ export const deliveryOrderService = {
     discount_amount: number;
     total: number;
   }> {
-    const payload: Json = {
+    const payload = {
       restaurant_id: input.restaurant_id,
       fulfillment_type: input.fulfillment_type,
       table_id: input.table_id,
@@ -228,7 +228,7 @@ export const deliveryOrderService = {
     };
 
     const { data, error } = await supabase.rpc('create_public_menu_order', {
-      payload,
+      payload: payload as unknown as Json,
     });
 
     if (error) throw error;

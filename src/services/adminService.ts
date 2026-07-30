@@ -9,7 +9,18 @@ type ActivityLog = Database['public']['Tables']['admin_activity_logs']['Row'];
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 type Restaurant = Database['public']['Tables']['restaurants']['Row'];
 type SupportTicket = Database['public']['Tables']['support_tickets']['Row'];
-type SupportTicketEvent = Database['public']['Tables']['support_ticket_events']['Row'];
+type SupportTicketEvent = {
+  id: string;
+  ticket_id: string;
+  event_type: string;
+  actor_name: string | null;
+  actor_email: string | null;
+  actor_role: string | null;
+  message: string | null;
+  old_status: string | null;
+  new_status: string | null;
+  created_at: string;
+};
 
 export const IFOOD_SAAS_APP_SETTING_KEY = 'ifood_saas_app';
 
@@ -319,7 +330,7 @@ export async function updateAdminSupportTicketStatus(
 }
 
 export async function listAdminSupportTicketEvents(ticketId: string): Promise<AdminSupportTicketEventRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('support_ticket_events')
     .select('*')
     .eq('ticket_id', ticketId)
@@ -366,7 +377,7 @@ export async function addAdminSupportTicketComment(
     actorEmail = profile?.email || actorEmail;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('support_ticket_events')
     .insert({
       ticket_id: ticketId,

@@ -149,7 +149,7 @@ export const cartAbandonmentService = {
       p_accepts_email: input.acceptsEmail ?? false,
       p_accepts_whatsapp: input.acceptsWhatsapp ?? false,
       p_fulfillment_type: input.fulfillmentType || null,
-      p_cart_snapshot: {
+      p_cart_snapshot: ({
         subtotal: input.subtotal,
         item_count: input.items.reduce((sum, item) => sum + item.quantity, 0),
         items: input.items.map((item) => ({
@@ -158,7 +158,7 @@ export const cartAbandonmentService = {
           price: item.price,
           flavor_selection: item.flavor_selection,
         })),
-      },
+      } as unknown as Json),
     });
 
     if (error) {
