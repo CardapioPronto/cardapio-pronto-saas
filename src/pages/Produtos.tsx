@@ -255,7 +255,6 @@ const Produtos = () => {
               <ImportarCardapioDialog
                 restaurantId={restaurantId}
                 categorias={categorias}
-                produtosExistentes={produtos.map((produto) => produto.name)}
                 onImported={() => {
                   void fetchProdutos();
                   void fetchCategorias();
