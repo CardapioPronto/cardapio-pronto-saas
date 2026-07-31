@@ -453,7 +453,7 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 - [~] Persistir checklist de onboarding por restaurante.
 - [~] Criar status de saude da conta para Super Admin: travado, ativo,
       risco, pronto para venda.
-- [ ] Criar importacao assistida de cardapio por CSV.
+- [x] Criar importacao assistida de cardapio por CSV.
 - [ ] Criar importacao assistida de clientes por CSV com opt-in claro.
 - [ ] Criar "setup rapido" por segmento: pizzaria, hamburgueria, cafeteria,
       sushi, bar, marmitaria.
@@ -470,6 +470,17 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 #### Evidencia
 
 - Botao de suporte contextual e base de problemas comuns ja existem.
+- 2026-07-30: importacao assistida de cardapio por CSV entregue. Novo modulo puro
+  `src/lib/menuCsvImport.ts` (deteccao de delimitador `; , tab |`, campos entre
+  aspas, aliases de cabecalho, preco pt-BR/en-US, booleano sim/nao, validacao de
+  URL de imagem, duplicidade no arquivo e contra o cardapio atual, deducao de
+  categorias novas) com 9 testes em `src/lib/menuCsvImport.test.ts` passando.
+  Novo componente `src/components/produtos/ImportarCardapioDialog.tsx` com upload
+  de arquivo ou colagem, download de modelo CSV, pre-visualizacao linha a linha
+  com situacao/erros, criacao automatica das categorias ausentes, insercao dos
+  produtos validos e gravacao de custo em `product_financial_settings`. Ligado a
+  pagina `/produtos` atras da permissao `products_manage`. Linhas invalidas sao
+  ignoradas sem bloquear a importacao. Typecheck limpo.
 - 2026-06-25: primeira fatia M8 implementada tecnicamente. Criada migration
   `20260625173000_create_restaurant_onboarding_progress.sql` com tabela
   `restaurant_onboarding_progress`, RLS por restaurante/super admin, indice por
