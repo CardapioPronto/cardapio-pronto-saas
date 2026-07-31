@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { ProdutosList } from "@/components/produtos/ProdutosList";
 import { ProdutosFiltro } from "@/components/produtos/ProdutosFiltro";
 import { AddProdutoDialog } from "@/components/produtos/AddProdutoDialog";
+import { ImportarCardapioDialog } from "@/components/produtos/ImportarCardapioDialog";
 import { useStockSettings } from "@/hooks/useStockSettings";
 import {
   ProdutosSortDirection,
@@ -104,7 +105,7 @@ const Produtos = () => {
     sortDirection,
   });
 
-  const { categorias, loading: loadingCategorias } = useCategorias();
+  const { categorias, loading: loadingCategorias, fetchCategorias } = useCategorias();
   const canManageProducts = hasPermission("products_manage");
   const { enabled: stockControlEnabled } = useStockSettings(restaurantId);
   const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA));
@@ -245,11 +246,21 @@ const Produtos = () => {
 
         <div className="flex flex-col gap-2 sm:items-end">
           {canManageProducts && (
-            <AddProdutoDialog
-              onAddProduto={adicionarProduto}
-              restaurantId={restaurantId}
-              isSaving={isAdding}
-            />
+            <>
+              <AddProdutoDialog
+                onAddProduto={adicionarProduto}
+                restaurantId={restaurantId}
+                isSaving={isAdding}
+              />
+              <ImportarCardapioDialog
+                restaurantId={restaurantId}
+                categorias={categorias}
+                onImported={() => {
+                  void fetchProdutos();
+                  void fetchCategorias();
+                }}
+              />
+            </>
           )}
 
           <Link
