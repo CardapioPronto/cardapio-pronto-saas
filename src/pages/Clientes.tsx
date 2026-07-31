@@ -26,6 +26,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner-toast";
+import { ImportarClientesDialog } from "@/components/clientes/ImportarClientesDialog";
 import { formatPhone } from "@/utils/phoneValidation";
 import {
   getCrmCustomerDetail,
@@ -262,6 +263,7 @@ const Clientes = () => {
                 </CardDescription>
               </div>
               <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+                <ImportarClientesDialog onImported={load} />
                 <Button variant="outline" onClick={openCampaigns} className="w-full lg:w-auto">
                   <Send className="mr-2 h-4 w-4" />
                   Criar campanha
