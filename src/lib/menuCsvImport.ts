@@ -49,9 +49,8 @@ const FIELD_ALIASES: Record<string, keyof Omit<MenuCsvRow, "linha" | "erros">> =
   imagem: "imagem_url",
   image_url: "imagem_url",
   custo: "custo",
-  custo_price: "custo",
   cost_price: "custo",
-  preco_custo: "preco_custo" as never,
+  preco_custo: "custo",
 };
 
 export function detectDelimiter(headerLine: string): string {
@@ -165,7 +164,7 @@ export function parseMenuCsv(content: string, options: ParseMenuCsvOptions = {})
   const columnIndex = new Map<string, number>();
 
   headers.forEach((header, index) => {
-    const key = FIELD_ALIASES[header as keyof typeof FIELD_ALIASES] ?? (header === "preco_custo" ? "custo" : undefined);
+    const key = FIELD_ALIASES[header];
     if (key && !columnIndex.has(key)) columnIndex.set(key, index);
   });
 
