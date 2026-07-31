@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,20 +25,28 @@ import { AlertTriangle, Download, FileUp, Upload } from "lucide-react";
 interface ImportarCardapioDialogProps {
   restaurantId: string;
   categorias: Array<{ id: string; name: string }>;
-  produtosExistentes?: string[];
   onImported: () => void;
 }
 
 export function ImportarCardapioDialog({
   restaurantId,
   categorias,
-  produtosExistentes = [],
   onImported,
 }: ImportarCardapioDialogProps) {
   const [open, setOpen] = useState(false);
   const [conteudo, setConteudo] = useState("");
   const [importando, setImportando] = useState(false);
+  const [produtosExistentes, setProdutosExistentes] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const carregarProdutosExistentes = useCallback(async () => {
+    if (!restaurantId) return;
+    const { data } = await supabase
+      .from("products")
+      .select("name")
+      .eq("restaurant_id", restaurantId);
+    setProdutosExistentes((data ?? []).map((produto) => produto.name));
+  }, [restaurantId]);
 
   const resultado = useMemo(
     () =>
@@ -158,7 +166,17 @@ export function ImportarCardapioDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : fecharEResetar())}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          setOpen(true);
+          void carregarProdutosExistentes();
+        } else {
+          fecharEResetar();
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline">
           <FileUp className="mr-2 h-4 w-4" />
