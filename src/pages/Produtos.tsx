@@ -13,6 +13,7 @@ import { ProdutosList } from "@/components/produtos/ProdutosList";
 import { ProdutosFiltro } from "@/components/produtos/ProdutosFiltro";
 import { AddProdutoDialog } from "@/components/produtos/AddProdutoDialog";
 import { ImportarCardapioDialog } from "@/components/produtos/ImportarCardapioDialog";
+import { SetupRapidoSegmentoDialog } from "@/components/produtos/SetupRapidoSegmentoDialog";
 import { useStockSettings } from "@/hooks/useStockSettings";
 import {
   ProdutosSortDirection,
@@ -256,6 +257,14 @@ const Produtos = () => {
                 restaurantId={restaurantId}
                 categorias={categorias}
                 onImported={() => {
+                  void fetchProdutos();
+                  void fetchCategorias();
+                }}
+              />
+              <SetupRapidoSegmentoDialog
+                restaurantId={restaurantId}
+                categorias={categorias}
+                onApplied={() => {
                   void fetchProdutos();
                   void fetchCategorias();
                 }}
