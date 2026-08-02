@@ -28,6 +28,7 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 const CardapioPublico = lazy(() => import('@/pages/CardapioPublico'));
 const AcompanharPedido = lazy(() => import('@/pages/AcompanharPedido'));
 const FAQ = lazy(() => import('@/pages/FAQ'));
+const Ajuda = lazy(() => import('@/pages/Ajuda'));
 const Demonstracao = lazy(() => import('@/pages/Demonstracao'));
 const Funcionalidades = lazy(() => import('@/pages/Funcionalidades'));
 const Sobre = lazy(() => import('@/pages/Sobre'));
@@ -62,6 +63,7 @@ const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'));
 const AdminSuperAdmins = lazy(() => import('@/pages/admin/AdminSuperAdmins'));
 const AdminPlanos = lazy(() => import('@/pages/admin/AdminPlanos'));
 const AdminBlog = lazy(() => import('@/pages/admin/AdminBlog'));
+const AdminHelpCenter = lazy(() => import('@/pages/admin/AdminHelpCenter'));
 const AdminContact = lazy(() => import('@/pages/admin/AdminContact'));
 const AdminContactRecipients = lazy(() => import('@/pages/admin/AdminContactRecipients'));
 const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
@@ -120,6 +122,7 @@ const AppRoutes = () => {
       <Route path="/cardapio/:slug" element={<CardapioPublico />} />
       <Route path="/pedido/:id" element={<AcompanharPedido />} />
       <Route path="/faq" element={<FAQ />} />
+      <Route path="/ajuda" element={<Ajuda />} />
       <Route path="/demonstracao" element={<Demonstracao />} />
       <Route path="/funcionalidades" element={<Funcionalidades />} />
       <Route path="/sobre" element={<Sobre />} />
@@ -372,6 +375,11 @@ const AppRoutes = () => {
       <Route path="/admin/blog" element={
         <AdminProtectedRoute>
           <AdminBlog />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/ajuda" element={
+        <AdminProtectedRoute>
+          <AdminHelpCenter />
         </AdminProtectedRoute>
       } />
       <Route path="/admin/contact" element={
