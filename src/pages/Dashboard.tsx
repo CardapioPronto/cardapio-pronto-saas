@@ -11,6 +11,7 @@ import { PopularProducts as PopularProductsComponent } from "@/components/dashbo
 import { DashboardExecutiveSummary } from "@/components/dashboard/DashboardExecutiveSummary";
 import { OperationsOverview } from "@/components/dashboard/OperationsOverview";
 import { OnboardingChecklistCard } from "@/components/dashboard/OnboardingChecklistCard";
+import { FollowUpFirstWeekCard } from "@/components/dashboard/FollowUpFirstWeekCard";
 import { PWAInstallDiagnosticCard } from "@/components/dashboard/PWAInstallDiagnosticCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -66,6 +67,8 @@ const Dashboard = () => {
           canManageSettings={canManageSettings}
           canManageOnboarding={canManageOnboarding}
         />
+
+        <FollowUpFirstWeekCard restaurantId={user?.restaurant_id || null} overview={overview} />
 
         <PWAInstallDiagnosticCard restaurantId={user?.restaurant_id || null} />
 

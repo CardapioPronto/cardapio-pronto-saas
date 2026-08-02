@@ -24,6 +24,7 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
     { icon: List, label: "Restaurantes", href: "/admin/restaurants" },
     { icon: Database, label: "Dados do Sistema", href: "/admin/data" },
     { icon: BookOpen, label: "Blog", href: "/admin/blog" },
+    { icon: BookOpen, label: "Central de Ajuda", href: "/admin/ajuda" },
     { icon: Mail, label: "Mensagens", href: "/admin/contact" },
     { icon: MailOpen, label: "Destinatários Email", href: "/admin/contact-recipients" },
     { icon: Settings, label: "Configurações", href: "/admin/settings" },
