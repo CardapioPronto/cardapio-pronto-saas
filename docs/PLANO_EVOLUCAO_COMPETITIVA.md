@@ -454,8 +454,8 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 - [~] Criar status de saude da conta para Super Admin: travado, ativo,
       risco, pronto para venda.
 - [x] Criar importacao assistida de cardapio por CSV.
-- [ ] Criar importacao assistida de clientes por CSV com opt-in claro.
-- [ ] Criar "setup rapido" por segmento: pizzaria, hamburgueria, cafeteria,
+- [x] Criar importacao assistida de clientes por CSV com opt-in claro.
+- [x] Criar "setup rapido" por segmento: pizzaria, hamburgueria, cafeteria,
       sushi, bar, marmitaria.
 - [~] Criar abertura de chamado dentro do app com contexto, anexos e status.
 - [ ] Criar central de ajuda editavel pelo Super Admin.
@@ -470,6 +470,16 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 #### Evidencia
 
 - Botao de suporte contextual e base de problemas comuns ja existem.
+- 2026-08-02: setup rapido por segmento entregue. Novo modulo puro
+  `src/lib/segmentQuickSetup.ts` com 6 modelos (pizzaria, hamburgueria,
+  cafeteria, sushi, bar, marmitaria), cada um com categorias e 8 produtos-modelo,
+  e `planSegmentSetup()` que compara sem acento/caixa com o cardapio atual para
+  nunca duplicar categorias ou produtos. Testes em
+  `src/lib/segmentQuickSetup.test.ts` (4/4 passando). Novo componente
+  `src/components/produtos/SetupRapidoSegmentoDialog.tsx` com selecao de
+  segmento, pre-visualizacao do que sera criado x ja existente e aplicacao em
+  lote (categorias faltantes + produtos novos). Ligado a pagina `/produtos`
+  atras da permissao `products_manage`.
 - 2026-07-30: importacao assistida de cardapio por CSV entregue. Novo modulo puro
   `src/lib/menuCsvImport.ts` (deteccao de delimitador `; , tab |`, campos entre
   aspas, aliases de cabecalho, preco pt-BR/en-US, booleano sim/nao, validacao de
