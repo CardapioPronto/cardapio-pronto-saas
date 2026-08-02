@@ -1668,6 +1668,57 @@ export type Database = {
           },
         ]
       }
+      help_articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_featured: boolean
+          keywords: string[]
+          order_position: number
+          published: boolean
+          slug: string
+          summary: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_featured?: boolean
+          keywords?: string[]
+          order_position?: number
+          published?: boolean
+          slug: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_featured?: boolean
+          keywords?: string[]
+          order_position?: number
+          published?: boolean
+          slug?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       ifood_events: {
         Row: {
           acknowledged_at: string | null
