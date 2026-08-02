@@ -458,8 +458,8 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 - [x] Criar "setup rapido" por segmento: pizzaria, hamburgueria, cafeteria,
       sushi, bar, marmitaria.
 - [~] Criar abertura de chamado dentro do app com contexto, anexos e status.
-- [ ] Criar central de ajuda editavel pelo Super Admin.
-- [ ] Criar rotina de acompanhamento dos primeiros 7 dias.
+- [x] Criar central de ajuda editavel pelo Super Admin.
+- [~] Criar rotina de acompanhamento dos primeiros 7 dias.
 
 #### Criterio de aceite
 
@@ -469,6 +469,26 @@ Objetivo: reduzir tempo ate primeiro pedido real e custo de implantacao.
 
 #### Evidencia
 
+- 2026-08-02: central de ajuda editavel entregue. Migration cria a tabela
+  `help_articles` (slug, titulo, resumo, conteudo, categoria, palavras-chave,
+  ordem, destaque, publicado) com leitura publica apenas de artigos publicados,
+  escrita restrita a super admin via `is_super_admin`, grants explicitos e
+  trigger de `updated_at`, alem de 5 artigos iniciais. Novo servico
+  `src/services/helpCenterService.ts` (listagem, upsert, exclusao, slugify e
+  busca), pagina publica `/ajuda` (`src/pages/Ajuda.tsx`) com busca e
+  agrupamento por categoria e painel `/admin/ajuda`
+  (`src/pages/admin/AdminHelpCenter.tsx`) com CRUD completo e rascunho x
+  publicado. Link adicionado ao menu do Super Admin.
+- 2026-08-02: rotina de acompanhamento dos primeiros 7 dias implementada
+  parcialmente. Novo modulo puro `src/lib/onboardingFollowUp.ts` com plano D0-D7
+  (ativacao, cardapio, publicacao e pedido de teste, treinamento da equipe,
+  canais de venda e revisao) que calcula dia corrente, etapas concluidas,
+  atrasadas e proximo passo a partir dos dados reais do restaurante. Testes em
+  `src/lib/onboardingFollowUp.test.ts` (4/4 passando). Novo card
+  `src/components/dashboard/FollowUpFirstWeekCard.tsx` ligado ao Dashboard, com
+  progresso, status por etapa e atalho de acao. Marcacao `[~]` porque ainda
+  faltam disparos automaticos por e-mail/WhatsApp para o time de CS e a visao
+  agregada da rotina no Super Admin.
 - Botao de suporte contextual e base de problemas comuns ja existem.
 - 2026-08-02: setup rapido por segmento entregue. Novo modulo puro
   `src/lib/segmentQuickSetup.ts` com 6 modelos (pizzaria, hamburgueria,
