@@ -55,6 +55,7 @@ const Automacoes = lazy(() => import('@/pages/Automacoes'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Copiloto = lazy(() => import('@/pages/Copiloto'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
+const Onboarding = lazy(() => import('@/pages/Onboarding'));
 const Atendimento = lazy(() => import('@/pages/Atendimento'));
 const Admin = lazy(() => import('@/pages/Admin'));
 const AdminSubscriptions = lazy(() => import('@/pages/admin/AdminSubscriptions'));
@@ -313,6 +314,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['orders_manage', 'settings_view']} requireAny>
           <MainLayout>
             <Mesas />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/onboarding" element={
+        <ProtectedRoute requiredPermissions={['settings_view', 'settings_manage', 'dashboard_view']} requireAny>
+          <MainLayout>
+            <Onboarding />
           </MainLayout>
         </ProtectedRoute>
       } />
