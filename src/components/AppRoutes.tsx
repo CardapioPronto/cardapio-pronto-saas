@@ -71,6 +71,7 @@ const AdminPagarme = lazy(() => import('@/pages/admin/AdminPagarme'));
 const AdminWhatsApp = lazy(() => import('@/pages/admin/AdminWhatsApp'));
 const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
 const AdminReferrals = lazy(() => import('@/pages/admin/AdminReferrals'));
+const AdminOnboarding = lazy(() => import('@/pages/admin/AdminOnboarding'));
 const AffiliateLanding = lazy(() => import('@/pages/affiliate/AffiliateLanding'));
 const AffiliateAccountSignup = lazy(() => import('@/pages/affiliate/AffiliateAccountSignup'));
 const AffiliateSignup = lazy(() => import('@/pages/affiliate/AffiliateSignup'));
@@ -423,6 +424,11 @@ const AppRoutes = () => {
       <Route path="/admin/indicacoes" element={
         <AdminProtectedRoute>
           <AdminReferrals />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/onboarding" element={
+        <AdminProtectedRoute>
+          <AdminOnboarding />
         </AdminProtectedRoute>
       } />
       
