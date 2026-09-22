@@ -305,6 +305,13 @@ const AppRoutes = () => {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/metricas" element={
+        <ProtectedRoute requiredPermissions={['reports_view', 'orders_metrics_view', 'dashboard_view']} requireAny>
+          <MainLayout>
+            <Metricas />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/copiloto" element={
         <ProtectedRoute requiredPermissions={['reports_view', 'orders_metrics_view']} requireAny>
           <MainLayout>
