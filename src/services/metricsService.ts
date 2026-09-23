@@ -40,6 +40,7 @@ export interface MetricsOverview {
   tableOrders: number;
   tableRevenue: number;
   mesas: MesaMetric[];
+  tableOptions: { id: string; label: string }[];
   // Clientes
   totalCustomers: number;
   importedCustomers: number;
