@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -18,6 +27,17 @@ import { useRestaurantAccess } from "@/hooks/useRestaurantAccess";
 import { useMetricsOverview } from "@/hooks/useMetricsOverview";
 import { formatarMoeda } from "@/utils/dashboardUtils";
 import { RefreshCw, Store, TableIcon, ShoppingBasket, Users } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+const ALL = "__all__";
 
 const PERIODS = [
   { days: 7, label: "7 dias" },
@@ -43,6 +63,19 @@ const TABLE_STATUS_LABELS: Record<string, string> = {
   unavailable: "Indisponível",
 };
 
+const toInputDate = (date: Date) => date.toISOString().slice(0, 10);
+
+const daysAgo = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return toInputDate(date);
+};
+
+const formatDay = (value: string) => {
+  const [, month, day] = value.split("-");
+  return `${day}/${month}`;
+};
+
 const MetricCard = ({
   title,
   value,
@@ -62,9 +95,48 @@ const MetricCard = ({
 );
 
 const Metricas = () => {
-  const { activeRestaurantId } = useRestaurantAccess();
-  const [periodDays, setPeriodDays] = useState(30);
-  const { data, loading, error, reload } = useMetricsOverview(activeRestaurantId, periodDays);
+  const { activeRestaurantId, restaurants } = useRestaurantAccess();
+  const [restaurantId, setRestaurantId] = useState<string | null>(activeRestaurantId);
+  const [startDate, setStartDate] = useState(daysAgo(30));
+  const [endDate, setEndDate] = useState(toInputDate(new Date()));
+  const [categoryId, setCategoryId] = useState<string>(ALL);
+  const [tableId, setTableId] = useState<string>(ALL);
+
+  useEffect(() => {
+    setRestaurantId((current) => current ?? activeRestaurantId);
+  }, [activeRestaurantId]);
+
+  const filters = useMemo(
+    () => ({
+      startDate,
+      endDate,
+      categoryId: categoryId === ALL ? null : categoryId,
+      tableId: tableId === ALL ? null : tableId,
+    }),
+    [startDate, endDate, categoryId, tableId],
+  );
+
+  const { data, loading, error, reload } = useMetricsOverview(restaurantId, filters);
+
+  const applyPeriod = (days: number) => {
+    setStartDate(daysAgo(days));
+    setEndDate(toInputDate(new Date()));
+  };
+
+  const resetFilters = () => {
+    setRestaurantId(activeRestaurantId);
+    applyPeriod(30);
+    setCategoryId(ALL);
+    setTableId(ALL);
+  };
+
+  const hasFilters =
+    categoryId !== ALL || tableId !== ALL || restaurantId !== activeRestaurantId;
+
+  const chartData = (data?.salesByDay ?? []).map((row) => ({
+    ...row,
+    label: formatDay(row.date),
+  }));
 
   return (
     <DashboardLayout title="Métricas">
@@ -73,7 +145,8 @@ const Metricas = () => {
           <div>
             <h2 className="text-lg font-semibold">Visão geral do desempenho</h2>
             <p className="text-sm text-muted-foreground">
-              Cardápio, mesas, pedidos e clientes nos últimos {periodDays} dias.
+              Cardápio, mesas, pedidos e clientes entre{" "}
+              {formatDay(startDate)} e {formatDay(endDate)}.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -81,8 +154,10 @@ const Metricas = () => {
               <Button
                 key={period.days}
                 size="sm"
-                variant={period.days === periodDays ? "default" : "outline"}
-                onClick={() => setPeriodDays(period.days)}
+                variant={startDate === daysAgo(period.days) && endDate === toInputDate(new Date())
+                  ? "default"
+                  : "outline"}
+                onClick={() => applyPeriod(period.days)}
               >
                 {period.label}
               </Button>
@@ -92,6 +167,89 @@ const Metricas = () => {
             </Button>
           </div>
         </div>
+
+        <Card>
+          <CardContent className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-5">
+            <div className="space-y-1.5">
+              <Label>Restaurante</Label>
+              <Select
+                value={restaurantId ?? ""}
+                onValueChange={(value) => setRestaurantId(value)}
+                disabled={restaurants.length <= 1}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {restaurants.map((restaurant) => (
+                    <SelectItem key={restaurant.restaurant_id} value={restaurant.restaurant_id}>
+                      {restaurant.restaurant_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="metricas-inicio">Data inicial</Label>
+              <Input
+                id="metricas-inicio"
+                type="date"
+                value={startDate}
+                max={endDate}
+                onChange={(event) => setStartDate(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="metricas-fim">Data final</Label>
+              <Input
+                id="metricas-fim"
+                type="date"
+                value={endDate}
+                min={startDate}
+                onChange={(event) => setEndDate(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Categoria do produto</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todas as categorias</SelectItem>
+                  {(data?.categories ?? []).map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mesa</Label>
+              <Select value={tableId} onValueChange={setTableId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todas as mesas</SelectItem>
+                  {(data?.tableOptions ?? []).map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {hasFilters ? (
+              <div className="md:col-span-2 xl:col-span-5">
+                <Button size="sm" variant="ghost" onClick={resetFilters}>
+                  Limpar filtros
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         {error ? (
           <Card>
@@ -131,6 +289,35 @@ const Metricas = () => {
                 hint={`${data.convertedImportedCustomers} de ${data.importedCustomers} clientes importados compraram`}
               />
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Vendas por dia</CardTitle>
+                <CardDescription>Faturamento diário com os filtros aplicados.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {chartData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma venda no período filtrado.</p>
+                ) : (
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip
+                          formatter={(value: number, name) =>
+                            name === "revenue" ? formatarMoeda(value) : value
+                          }
+                          labelFormatter={(label) => `Dia ${label}`}
+                        />
+                        <Bar dataKey="revenue" name="Faturamento" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Tabs defaultValue="pedidos">
               <TabsList>
@@ -196,7 +383,7 @@ const Metricas = () => {
                   <CardHeader>
                     <CardTitle>Pedidos por mesa</CardTitle>
                     <CardDescription>
-                      {data.tableOrders} pedidos atendidos em mesas nos últimos {periodDays} dias.
+                      {data.tableOrders} pedidos atendidos em mesas no período filtrado.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -241,7 +428,7 @@ const Metricas = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Mais vendidos</CardTitle>
-                    <CardDescription>Itens com maior saída no período.</CardDescription>
+                    <CardDescription>Itens com maior saída no período filtrado.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {data.topProducts.length === 0 ? (
