@@ -304,6 +304,13 @@ export const fetchMetricsOverview = async (
     tableOrders,
     tableRevenue,
     mesas,
+    tableOptions: (mesasRes.data ?? [])
+      .filter((mesa) => mesa.is_active !== false)
+      .map((mesa) => ({
+        id: mesa.id,
+        label: String(mesa.name || `Mesa ${mesa.number ?? ""}`).trim(),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR", { numeric: true })),
     totalCustomers: customers.length,
     importedCustomers: imported.length,
     convertedImportedCustomers: convertedImported,
