@@ -8,8 +8,16 @@ export interface MesaMetric {
   revenue: number;
 }
 
+export interface MetricsFilters {
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  categoryId?: string | null;
+  tableId?: string | null;
+}
+
 export interface MetricsOverview {
-  periodDays: number;
+  startDate: string;
+  endDate: string;
   // Vendas / pedidos
   totalSales: number;
   totalOrders: number;
@@ -17,11 +25,13 @@ export interface MetricsOverview {
   canceledOrders: number;
   openOrders: number;
   ordersByType: { type: string; orders: number; revenue: number }[];
+  salesByDay: { date: string; orders: number; revenue: number }[];
   // Cardápio
   totalProducts: number;
   availableProducts: number;
   totalCategories: number;
   topProducts: { name: string; quantity: number; revenue: number }[];
+  categories: { id: string; name: string }[];
   // Mesas
   totalTables: number;
   occupiedTables: number;
@@ -51,13 +61,43 @@ const isImportedSource = (source: string | null, tags: string[] | null) => {
 
 const onlyDigits = (value: string | null | undefined) => (value ?? "").replace(/\D/g, "");
 
+const chunk = <T,>(items: T[], size: number): T[][] => {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    result.push(items.slice(index, index + size));
+  }
+  return result;
+};
+
+interface OrderItemRow {
+  order_id: string;
+  product_id: string | null;
+  product_name: string | null;
+  quantity: number | null;
+  price: number | null;
+}
+
+const fetchOrderItems = async (orderIds: string[]): Promise<OrderItemRow[]> => {
+  if (orderIds.length === 0) return [];
+  const batches = await Promise.all(
+    chunk(orderIds, 300).map((ids) =>
+      supabase
+        .from("order_items")
+        .select("order_id, product_id, product_name, quantity, price")
+        .in("order_id", ids),
+    ),
+  );
+  return batches.flatMap((batch) => (batch.data ?? []) as OrderItemRow[]);
+};
+
 export const fetchMetricsOverview = async (
   restaurantId: string,
-  periodDays: number,
+  filters: MetricsFilters,
 ): Promise<MetricsOverview> => {
-  const since = new Date();
-  since.setDate(since.getDate() - periodDays);
-  const sinceIso = since.toISOString();
+  const startIso = new Date(`${filters.startDate}T00:00:00`).toISOString();
+  const endIso = new Date(`${filters.endDate}T23:59:59.999`).toISOString();
+  const categoryId = filters.categoryId || null;
+  const tableId = filters.tableId || null;
 
   const [ordersRes, allOrderPhonesRes, mesasRes, productsRes, categoriesRes, customersRes] =
     await Promise.all([
@@ -65,7 +105,8 @@ export const fetchMetricsOverview = async (
         .from("orders")
         .select("id, total, status, table_id, order_type, customer_phone, created_at")
         .eq("restaurant_id", restaurantId)
-        .gte("created_at", sinceIso),
+        .gte("created_at", startIso)
+        .lte("created_at", endIso),
       supabase
         .from("orders")
         .select("customer_phone, status")
@@ -77,11 +118,11 @@ export const fetchMetricsOverview = async (
         .eq("restaurant_id", restaurantId),
       supabase
         .from("products")
-        .select("id, available")
+        .select("id, available, category_id")
         .eq("restaurant_id", restaurantId),
       supabase
         .from("categories")
-        .select("id")
+        .select("id, name")
         .eq("restaurant_id", restaurantId),
       supabase
         .from("crm_customer_profiles")
@@ -98,8 +139,35 @@ export const fetchMetricsOverview = async (
     customersRes.error;
   if (firstError) throw firstError;
 
-  const orders = ordersRes.data ?? [];
+  const allProducts = (productsRes.data ?? []) as {
+    id: string;
+    available: boolean | null;
+    category_id: string | null;
+  }[];
+  const products = categoryId
+    ? allProducts.filter((product) => product.category_id === categoryId)
+    : allProducts;
+
+  let orders = ordersRes.data ?? [];
+  if (tableId) {
+    orders = orders.filter((order) => order.table_id === tableId);
+  }
+
+  // Itens dos pedidos (necessários para top produtos e filtro por categoria)
+  const items = await fetchOrderItems(orders.map((order) => order.id));
+
+  if (categoryId) {
+    const categoryProductIds = new Set(products.map((product) => product.id));
+    const ordersWithCategory = new Set(
+      items
+        .filter((item) => item.product_id && categoryProductIds.has(item.product_id))
+        .map((item) => item.order_id),
+    );
+    orders = orders.filter((order) => ordersWithCategory.has(order.id));
+  }
+
   const validOrders = orders.filter((order) => !CANCELED.has(String(order.status ?? "").toLowerCase()));
+  const validOrderIds = new Set(validOrders.map((order) => order.id));
 
   const totalSales = validOrders.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
   const totalOrders = validOrders.length;
@@ -108,17 +176,13 @@ export const fetchMetricsOverview = async (
     OPEN.has(String(order.status ?? "").toLowerCase()),
   ).length;
 
-  // Itens dos pedidos do período (top produtos)
-  const orderIds = validOrders.map((order) => order.id);
-  let topProducts: MetricsOverview["topProducts"] = [];
-  if (orderIds.length > 0) {
-    const { data: items } = await supabase
-      .from("order_items")
-      .select("product_name, quantity, price, order_id")
-      .in("order_id", orderIds.slice(0, 900));
-
-    const byProduct = new Map<string, { quantity: number; revenue: number }>();
-    (items ?? []).forEach((item) => {
+  // Top produtos (respeitando os filtros aplicados)
+  const categoryProductIds = new Set(products.map((product) => product.id));
+  const byProduct = new Map<string, { quantity: number; revenue: number }>();
+  items
+    .filter((item) => validOrderIds.has(item.order_id))
+    .filter((item) => !categoryId || (item.product_id ? categoryProductIds.has(item.product_id) : false))
+    .forEach((item) => {
       const name = String(item.product_name ?? "Produto");
       const quantity = Number(item.quantity ?? 0);
       const revenue = quantity * Number(item.price ?? 0);
@@ -128,11 +192,10 @@ export const fetchMetricsOverview = async (
         revenue: current.revenue + revenue,
       });
     });
-    topProducts = Array.from(byProduct.entries())
-      .map(([name, value]) => ({ name, ...value }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 8);
-  }
+  const topProducts = Array.from(byProduct.entries())
+    .map(([name, value]) => ({ name, ...value }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 8);
 
   // Pedidos por tipo
   const byType = new Map<string, { orders: number; revenue: number }>();
@@ -145,8 +208,25 @@ export const fetchMetricsOverview = async (
     });
   });
 
+  // Vendas por dia
+  const byDay = new Map<string, { orders: number; revenue: number }>();
+  validOrders.forEach((order) => {
+    const date = String(order.created_at ?? "").slice(0, 10);
+    if (!date) return;
+    const current = byDay.get(date) ?? { orders: 0, revenue: 0 };
+    byDay.set(date, {
+      orders: current.orders + 1,
+      revenue: current.revenue + Number(order.total ?? 0),
+    });
+  });
+  const salesByDay = Array.from(byDay.entries())
+    .map(([date, value]) => ({ date, ...value }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   // Pedidos por mesa
-  const mesasData = (mesasRes.data ?? []).filter((mesa) => mesa.is_active !== false);
+  const mesasData = (mesasRes.data ?? [])
+    .filter((mesa) => mesa.is_active !== false)
+    .filter((mesa) => !tableId || mesa.id === tableId);
   const byTable = new Map<string, { orders: number; revenue: number }>();
   validOrders.forEach((order) => {
     if (!order.table_id) return;
@@ -191,13 +271,17 @@ export const fetchMetricsOverview = async (
   ).length;
 
   const newCustomersInPeriod = customers.filter(
-    (customer) => customer.created_at && customer.created_at >= sinceIso,
+    (customer) =>
+      customer.created_at && customer.created_at >= startIso && customer.created_at <= endIso,
   ).length;
 
-  const products = productsRes.data ?? [];
+  const categories = ((categoriesRes.data ?? []) as { id: string; name: string | null }[])
+    .map((category) => ({ id: category.id, name: String(category.name ?? "Sem nome") }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return {
-    periodDays,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
     totalSales,
     totalOrders,
     averageTicket: totalOrders > 0 ? totalSales / totalOrders : 0,
@@ -206,10 +290,12 @@ export const fetchMetricsOverview = async (
     ordersByType: Array.from(byType.entries())
       .map(([type, value]) => ({ type, ...value }))
       .sort((a, b) => b.orders - a.orders),
+    salesByDay,
     totalProducts: products.length,
     availableProducts: products.filter((product) => product.available !== false).length,
-    totalCategories: (categoriesRes.data ?? []).length,
+    totalCategories: categoryId ? 1 : categories.length,
     topProducts,
+    categories,
     totalTables: mesas.length,
     occupiedTables: mesas.filter((mesa) => mesa.status === "occupied" || mesa.status === "ocupada").length,
     tablesWithOrders,
