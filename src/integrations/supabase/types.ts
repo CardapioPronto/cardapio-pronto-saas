@@ -505,6 +505,89 @@ export type Database = {
           },
         ]
       }
+      cash_register_sessions: {
+        Row: {
+          card_machine_batch: string | null
+          card_machine_provider: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          declared_cash: number
+          declared_credit: number
+          declared_debit: number
+          declared_pix: number
+          declared_voucher: number
+          difference_amount: number
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          restaurant_id: string
+          status: string
+          system_orders_count: number
+          system_sales_total: number
+          updated_at: string
+          withdrawals: number
+        }
+        Insert: {
+          card_machine_batch?: string | null
+          card_machine_provider?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          declared_cash?: number
+          declared_credit?: number
+          declared_debit?: number
+          declared_pix?: number
+          declared_voucher?: number
+          difference_amount?: number
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          restaurant_id: string
+          status?: string
+          system_orders_count?: number
+          system_sales_total?: number
+          updated_at?: string
+          withdrawals?: number
+        }
+        Update: {
+          card_machine_batch?: string | null
+          card_machine_provider?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          declared_cash?: number
+          declared_credit?: number
+          declared_debit?: number
+          declared_pix?: number
+          declared_voucher?: number
+          difference_amount?: number
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          restaurant_id?: string
+          status?: string
+          system_orders_count?: number
+          system_sales_total?: number
+          updated_at?: string
+          withdrawals?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
