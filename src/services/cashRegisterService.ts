@@ -67,17 +67,32 @@ export const openSession = async (restaurantId: string, openingAmount: number) =
 };
 
 /** Vendas do sistema (pedidos não cancelados) desde a abertura do caixa. */
+export interface SessionOrder {
+  id: string;
+  order_number: string;
+  created_at: string;
+  customer_name: string | null;
+  total: number;
+  status: string;
+  payment_method: string | null;
+  payment_provider: string | null;
+  payment_status: string | null;
+}
+
 export const fetchSessionSales = async (restaurantId: string, since: string) => {
   const { data, error } = await supabase
     .from("orders")
-    .select("total, status")
+    .select("id, order_number, created_at, customer_name, total, status, payment_method, payment_provider, payment_status")
     .eq("restaurant_id", restaurantId)
-    .gte("created_at", since);
+    .gte("created_at", since)
+    .order("created_at", { ascending: true })
+    .limit(1000);
   if (error) throw error;
-  const valid = (data ?? []).filter((order) => !CANCELED.has(String(order.status ?? "").toLowerCase()));
+  const valid = ((data ?? []) as SessionOrder[]).filter((order) => !CANCELED.has(String(order.status ?? "").toLowerCase()));
   return {
     count: valid.length,
     total: Math.round(valid.reduce((sum, order) => sum + Number(order.total ?? 0), 0) * 100) / 100,
+    orders: valid,
   };
 };
 

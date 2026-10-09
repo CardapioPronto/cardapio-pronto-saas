@@ -42,3 +42,12 @@ O total do sistema e recalculado no momento do fechamento para evitar valor desa
 - O PDV ainda nao grava forma de pagamento por pedido; a conciliacao e pelo total do turno.
 - Sem integracao automatica com adquirente/TEF.
 - Sem relatorio impresso do fechamento (pode ser exportado em versao futura).
+
+## Forma de pagamento por pedido (2026-10-08)
+- No PDV (Histórico de pedidos), cada pedido tem o campo **Forma de pagamento**: Dinheiro, PIX, Crédito, Débito, Voucher ou Misto.
+- **Finalizar pedido** só libera depois de escolher a forma. Em pedido finalizado, a forma pode ser corrigida.
+- Pedidos pagos online (Pagar.me) aparecem como "Pago online" e ficam fora da gaveta e da maquininha.
+- Gravação pela função segura `set_pos_order_payment` (só pedidos do próprio restaurante, não cancelados, sem alterar pagamento online); marca `payment_status = paid` e `paid_at`.
+- Em **Caixa**, o quadro "Conferência por forma de pagamento" compara sistema × declarado em cada forma (dinheiro do sistema × gaveta − troco + sangrias) e lista pedido a pedido; clicar numa forma filtra a lista.
+- Pedidos "Misto" e "Sem forma registrada" aparecem como **Explicar**; o caixa avisa quantos estão sem forma.
+- Regra em `src/lib/paymentMethods.ts` (testes em `paymentMethods.test.ts`).

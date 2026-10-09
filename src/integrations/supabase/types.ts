@@ -5492,6 +5492,10 @@ export type Database = {
           restaurant_name: string
         }[]
       }
+      set_pos_order_payment: {
+        Args: { p_method: string; p_order_id: string }
+        Returns: Json
+      }
       set_restaurant_group_menu_matrix: {
         Args: {
           p_group_id: string

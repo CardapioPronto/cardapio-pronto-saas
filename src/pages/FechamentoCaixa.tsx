@@ -25,7 +25,9 @@ import {
   fetchSessionSales,
   openSession,
   type CashRegisterSession,
+  type SessionOrder,
 } from "@/services/cashRegisterService";
+import PaymentMethodReconciliation from "@/components/caixa/PaymentMethodReconciliation";
 import { RefreshCw } from "lucide-react";
 import CashClosingAiReview, { type CashAiReview } from "@/components/caixa/CashClosingAiReview";
 
@@ -58,7 +60,7 @@ const FechamentoCaixa = () => {
   const { toast } = useToast();
   const [session, setSession] = useState<CashRegisterSession | null>(null);
   const [history, setHistory] = useState<CashRegisterSession[]>([]);
-  const [sales, setSales] = useState({ count: 0, total: 0 });
+  const [sales, setSales] = useState<{ count: number; total: number; orders: SessionOrder[] }>({ count: 0, total: 0, orders: [] });
   const [openingInput, setOpeningInput] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -74,7 +76,7 @@ const FechamentoCaixa = () => {
       ]);
       setSession(open);
       setHistory(recent);
-      setSales(open ? await fetchSessionSales(activeRestaurantId, open.opened_at) : { count: 0, total: 0 });
+      setSales(open ? await fetchSessionSales(activeRestaurantId, open.opened_at) : { count: 0, total: 0, orders: [] });
     } catch (error) {
       toast({
         title: "Não foi possível carregar o caixa",
@@ -266,6 +268,17 @@ const FechamentoCaixa = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            <PaymentMethodReconciliation
+              orders={sales.orders}
+              declared={{
+                dinheiro: Math.max(0, declaration.declaredCash - declaration.openingAmount + declaration.withdrawals),
+                pix: declaration.declaredPix,
+                credito: declaration.declaredCredit,
+                debito: declaration.declaredDebit,
+                voucher: declaration.declaredVoucher,
+              }}
+            />
 
             <CashClosingAiReview
               key={session.id}
