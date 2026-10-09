@@ -4700,6 +4700,78 @@ export type Database = {
           },
         ]
       }
+      waitlist_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          customer_phone: string | null
+          finished_at: string | null
+          id: string
+          mesa_id: string | null
+          notes: string | null
+          notified_at: string | null
+          party_size: number
+          public_token: string
+          restaurant_id: string
+          seated_at: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          finished_at?: string | null
+          id?: string
+          mesa_id?: string | null
+          notes?: string | null
+          notified_at?: string | null
+          party_size?: number
+          public_token?: string
+          restaurant_id: string
+          seated_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          finished_at?: string | null
+          id?: string
+          mesa_id?: string | null
+          notes?: string | null
+          notified_at?: string | null
+          party_size?: number
+          public_token?: string
+          restaurant_id?: string
+          seated_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_entries_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "mesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_entries_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_instance_events: {
         Row: {
           created_at: string | null
@@ -4933,6 +5005,7 @@ export type Database = {
         Args: { target_restaurant_id: string }
         Returns: boolean
       }
+      cancel_public_waitlist: { Args: { _token: string }; Returns: undefined }
       capture_crm_lead_from_order: {
         Args: {
           p_accepts_marketing?: boolean
@@ -5121,6 +5194,18 @@ export type Database = {
         Args: { p_restaurant_id: string }
         Returns: Json
       }
+      get_public_waitlist_status: {
+        Args: { _token: string }
+        Returns: {
+          out_created_at: string
+          out_customer_name: string
+          out_notified_at: string
+          out_party_size: number
+          out_queue_position: number
+          out_restaurant_name: string
+          out_status: string
+        }[]
+      }
       get_recipe_costs: { Args: { p_restaurant_id: string }; Returns: Json }
       get_referral_program_admin_settings: { Args: never; Returns: Json }
       get_referral_program_public_settings: { Args: never; Returns: Json }
@@ -5276,6 +5361,15 @@ export type Database = {
       is_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_super_admin_v2: { Args: { user_id: string }; Returns: boolean }
       is_user_active: { Args: { _user_id: string }; Returns: boolean }
+      join_public_waitlist: {
+        Args: {
+          _name: string
+          _party_size: number
+          _phone: string
+          _slug: string
+        }
+        Returns: string
+      }
       list_affiliate_campaign_materials: {
         Args: never
         Returns: {
