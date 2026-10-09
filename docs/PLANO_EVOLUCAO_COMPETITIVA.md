@@ -421,10 +421,10 @@ Objetivo: aproximar o Pubfy de sistemas de PDV maduros em rotina de loja.
       dispositivo e usuario.
 - [x] Avisar quando catalogo local esta antigo.
 - [~] Melhorar impressao com perfis por via, tamanho e destino operacional.
-- [ ] Documentar modelos de impressora testados.
-- [ ] Avaliar integracao com maquininha/parceiro ou concilicao manual
+- [~] Documentar modelos de impressora testados.
+- [x] Avaliar integracao com maquininha/parceiro ou concilicao manual
       estruturada.
-- [ ] Criar fechamento de caixa basico se a estrategia comercial exigir PDV
+- [x] Criar fechamento de caixa basico se a estrategia comercial exigir PDV
       presencial completo.
 
 #### Criterio de aceite
@@ -440,6 +440,8 @@ Objetivo: aproximar o Pubfy de sistemas de PDV maduros em rotina de loja.
 - 2026-06-18: M7 iniciado com diagnostico offline ampliado. Pedidos offline de balcao agora registram dispositivo local, operador, tentativas, ultima tentativa e erro; o painel do PDV e o card `App e offline` exibem esse contexto. O PDV tambem alerta quando o catalogo local passa de 8 horas sem sincronizar. Evidencias: `npm run typecheck`, `npm run lint:src`, `npm run build` e `npx playwright test e2e/pwa-offline.spec.ts` com 2 testes passando.
 - 2026-06-22: Fila offline expandida para pedidos de mesa. O dispositivo salva snapshot de mesa/status/versao; ao reconectar, mesa inalterada sincroniza normalmente, mesa alterada entra em `review` e exige confirmacao, e mesa desativada/indisponivel permanece bloqueada. Produtos, estoque e total continuam revalidados pela RPC transacional antes da criacao. Evidencias: `npm run typecheck`, `npm run lint:src`, `npm run test` com 94 testes em 22 arquivos, `npm run build` e `npx playwright test e2e/pwa-offline.spec.ts` com 2/2 testes passando.
 - Marcacao: diagnostico de fila e alerta de catalogo antigo `[x]`; offline alem de balcao permanece `[~]` apesar da mesa offline implementada, pois faltam piloto em dois dispositivos e relatorio detalhado de divergencia de estoque/produto; impressao `[~]` porque ha perfis por via/tamanho no navegador, mas faltam destino fisico por impressora e modelos testados; maquininha/caixa seguem pendentes.
+- 2026-10-08: Maquininha decidida como **conciliacao manual estruturada** (integracao TEF/adquirente fica para demanda do piloto). Criados tabela `cash_register_sessions` (RLS por restaurante, um caixa aberto por loja, caixa fechado imutavel, trigger de validacao) e tela `/caixa` com abertura por troco, vendas do sistema desde a abertura, declaracao de dinheiro/sangria/PIX/credito/debito/voucher, maquininha e lote, diferenca Conferido/Sobra/Falta e historico. Regra em `src/lib/cashRegister.ts`. Documentacao: `docs/FECHAMENTO_CAIXA.md`; matriz e roteiro de homologacao de impressoras em `docs/IMPRESSAO_OPERACIONAL.md`. Evidencias: Vitest `cashRegister.test.ts` 4/4 e typecheck sem erros nos arquivos novos.
+- Marcacao 2026-10-08: maquininha `[x]` e fechamento de caixa `[x]`; modelos de impressora `[~]` (matriz documentada, faltam testes fisicos em loja); offline e impressao avancada seguem `[~]`. Limite: o PDV ainda nao grava forma de pagamento por pedido, entao a conciliacao e pelo total do turno.
 
 ---
 
@@ -1401,6 +1403,7 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 
 | Data | Bloco | Status | Evidencia/observacao |
 | --- | --- | --- | --- |
+| 2026-10-08 | M7 — Fechamento de caixa e maquininha | Implementado parcialmente `[~]` | `[x]` Conciliacao manual estruturada da maquininha (credito, debito, voucher, lote). `[x]` Tela `/caixa` com abertura, diferenca e historico; tabela `cash_register_sessions` com RLS. `[~]` Matriz de impressoras documentada, faltam testes fisicos. `[~]` Offline em dois dispositivos. Evidencias: Vitest 4/4, typecheck. |
 | 2026-06-26 | M8 — Comentario do cliente em chamados | Implementado parcialmente `[~]` | `[x]` Modal de suporte lista chamados recentes e permite resposta do cliente. `[~]` Falta anexos e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-26 | M8 — Comentario interno em chamados | Implementado parcialmente `[~]` | `[x]` Super Admin registra comentario no historico do chamado (`support_ticket_events`). `[~]` Falta anexos e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
 | 2026-06-26 | M8 — Historico de chamados no Super Admin | Implementado parcialmente `[~]` | `[x]` `support_ticket_events` registra abertura/mudanca de status. `[x]` Modal no `/admin` mostra mensagem, contexto e timeline. `[~]` Falta anexos, comentario do cliente e validacao remota/piloto. Evidencias: `tsc`, ESLint, `lint`, `build`, Vitest 97/97 e Playwright 18/18. |
