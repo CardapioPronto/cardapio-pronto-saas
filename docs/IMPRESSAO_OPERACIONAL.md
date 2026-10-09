@@ -53,3 +53,26 @@ Nesta fase, o Pubfy usa a impressao nativa do navegador. Isso permite operar com
 - O tamanho de papel configurado em Sistema e usado no teste de impressao e nas reimpressoes do PDV.
 - Com impressao automatica ativa, o PDV oferece as vias padrao logo apos finalizar o pedido.
 - A via de cozinha separa os itens por categoria/setor e usa **Geral** quando o produto nao tem categoria.
+
+## Matriz de impressoras (M7)
+
+Como a impressao usa o driver do sistema operacional, qualquer modelo com driver instalado funciona.
+A tabela abaixo registra a homologacao em loja; `Pendente` significa que o modelo e recomendado, mas
+ainda nao foi validado fisicamente no piloto.
+
+| Modelo | Papel | Conexao | Sistema | Status | Observacoes |
+| --- | --- | --- | --- | --- | --- |
+| Epson TM-T20X | 80mm | USB/Ethernet | Windows | Pendente | Driver Epson APD; configurar margens 0 |
+| Elgin i9 | 80mm | USB/Ethernet | Windows | Pendente | Driver Elgin; ativar corte automatico no driver |
+| Bematech MP-4200 TH | 80mm | USB/Ethernet | Windows | Pendente | Ajustar largura de papel 72mm util |
+| Elgin i7 / Knup 58mm | 58mm | USB | Windows | Pendente | Usar perfil 58mm em Configuracoes > Sistema |
+| Impressora A4 comum | A4 | USB/Wi-Fi | Qualquer | Validado | Impressao nativa do navegador |
+| Salvar como PDF | A4/80mm | - | Qualquer | Validado | Usado nos testes automatizados |
+
+### Roteiro de homologacao de um modelo
+
+1. Instale o driver do fabricante e defina a impressora como padrao do navegador.
+2. No Chrome, desative cabecalho/rodape e use margens **Nenhuma**.
+3. Em **Configuracoes > Sistema**, escolha o tamanho de papel e clique em **Testar Impressao**.
+4. Imprima as tres vias (cozinha, caixa, cliente) de um pedido real.
+5. Confira largura, corte, acentuacao e legibilidade; registre o resultado nesta tabela.
