@@ -430,3 +430,16 @@ export async function alterarStatusPedido(pedidoId: string, novoStatus: PedidoSt
     return { success: false, error };
   }
 }
+
+export async function registrarPagamentoPedido(pedidoId: string, formaPagamento: string) {
+  const { error } = await supabase.rpc('set_pos_order_payment' as never, {
+    p_order_id: pedidoId,
+    p_method: formaPagamento,
+  } as never);
+  if (error) {
+    console.error('Erro ao registrar pagamento:', error);
+    toast.error(error.message || 'Não foi possível registrar a forma de pagamento.');
+    return { success: false as const, error };
+  }
+  return { success: true as const };
+}
