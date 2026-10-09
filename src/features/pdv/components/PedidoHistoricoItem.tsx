@@ -1,5 +1,9 @@
 
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { METHOD_LABEL, POS_PAYMENT_METHODS, classifyOrderPayment } from "@/lib/paymentMethods";
+import { registrarPagamentoPedido } from "../services/pedidoService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pedido, PedidoStatus } from "../types";
@@ -28,6 +32,39 @@ export const PedidoHistoricoItem = ({
   canManageOrders,
 }: PedidoHistoricoItemProps) => {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
+  const metodoAtual = classifyOrderPayment({
+    id: String(pedido.id),
+    total: pedido.total,
+    payment_method: pedido.payment_method ?? null,
+    payment_provider: (pedido as { payment_provider?: string | null }).payment_provider ?? null,
+    payment_status: pedido.payment_status ?? null,
+  });
+  const pagoOnline = metodoAtual === "online";
+  const [formaPagamento, setFormaPagamento] = useState<string>(
+    metodoAtual === "online" || metodoAtual === "sem_forma" ? "" : metodoAtual,
+  );
+  const [salvandoPagamento, setSalvandoPagamento] = useState(false);
+
+  const salvarFormaPagamento = async (valor: string) => {
+    setFormaPagamento(valor);
+    if (pedido.status !== "finalizado") return;
+    setSalvandoPagamento(true);
+    const r = await registrarPagamentoPedido(String(pedido.id), valor);
+    setSalvandoPagamento(false);
+    if (r.success) pedido.payment_method = valor;
+  };
+
+  const finalizarComPagamento = async () => {
+    if (!pagoOnline) {
+      if (!formaPagamento) return;
+      setSalvandoPagamento(true);
+      const r = await registrarPagamentoPedido(String(pedido.id), formaPagamento);
+      setSalvandoPagamento(false);
+      if (!r.success) return;
+      pedido.payment_method = formaPagamento;
+    }
+    alterarStatusPedido(pedido.id, "finalizado");
+  };
   const { printOrder, printing } = usePrint();
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -166,6 +203,32 @@ export const PedidoHistoricoItem = ({
           <span>R$ {pedido.total.toFixed(2)}</span>
         </div>
 
+        {pedido.status !== "cancelado" && (
+          pagoOnline ? (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Pagamento</span>
+              <Badge variant="secondary">Pago online</Badge>
+            </div>
+          ) : canManageOrders ? (
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">
+                Forma de pagamento{pedido.status === "finalizado" ? " (pode corrigir)" : ""}
+              </span>
+              <Select value={formaPagamento} onValueChange={(v) => void salvarFormaPagamento(v)} disabled={salvandoPagamento}>
+                <SelectTrigger aria-label="Forma de pagamento"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {POS_PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : metodoAtual !== "sem_forma" ? (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Pagamento</span>
+              <Badge variant="outline">{METHOD_LABEL[metodoAtual]}</Badge>
+            </div>
+          ) : null
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -214,10 +277,12 @@ export const PedidoHistoricoItem = ({
         {canManageOrders && pedido.status === 'pronto' && (
           <Button 
             variant="outline" 
-            onClick={() => alterarStatusPedido(pedido.id, 'finalizado')}
+            onClick={() => void finalizarComPagamento()}
+            disabled={salvandoPagamento || (!pagoOnline && !formaPagamento)}
+            title={!pagoOnline && !formaPagamento ? "Escolha a forma de pagamento" : undefined}
             className="border-green-500 text-green-500 hover:bg-green-50"
           >
-            <CheckCircle className="h-4 w-4 mr-1" /> Finalizar pedido
+            <CheckCircle className="h-4 w-4 mr-1" /> {!pagoOnline && !formaPagamento ? "Escolha o pagamento para finalizar" : "Finalizar pedido"}
           </Button>
         )}
         
