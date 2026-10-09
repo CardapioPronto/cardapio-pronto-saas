@@ -507,6 +507,8 @@ export type Database = {
       }
       cash_register_sessions: {
         Row: {
+          ai_review: Json | null
+          ai_reviewed_at: string | null
           card_machine_batch: string | null
           card_machine_provider: string | null
           closed_at: string | null
@@ -531,6 +533,8 @@ export type Database = {
           withdrawals: number
         }
         Insert: {
+          ai_review?: Json | null
+          ai_reviewed_at?: string | null
           card_machine_batch?: string | null
           card_machine_provider?: string | null
           closed_at?: string | null
@@ -555,6 +559,8 @@ export type Database = {
           withdrawals?: number
         }
         Update: {
+          ai_review?: Json | null
+          ai_reviewed_at?: string | null
           card_machine_batch?: string | null
           card_machine_provider?: string | null
           closed_at?: string | null
