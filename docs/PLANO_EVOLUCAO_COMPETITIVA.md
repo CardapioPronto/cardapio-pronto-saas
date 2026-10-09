@@ -631,11 +631,11 @@ Objetivo: escolher evolucoes que aumentem competitividade sem diluir foco.
 #### Backlog candidato
 
 - [ ] Reservas online simples.
-- [ ] Lista de espera digital.
+- [x] Lista de espera digital.
 - [ ] Integracao mais profunda com Google Business Profile.
 - [ ] Roteirizacao ou app simples do entregador.
 - [ ] Totem/autoatendimento web para tablet.
-- [ ] Fechamento de caixa e sangria/suprimento.
+- [x] Fechamento de caixa e sangria/suprimento.
 - [ ] CMV real com compras e fornecedores.
 - [ ] Biblioteca de campanhas prontas por data comemorativa.
 - [ ] Sugestoes automaticas do copiloto baseadas no funil de conversao.
@@ -649,7 +649,9 @@ Objetivo: escolher evolucoes que aumentem competitividade sem diluir foco.
 
 #### Evidencia
 
-- Pendente selecao apos piloto.
+- Pendente selecao apos piloto para os demais itens.
+- 2026-10-08: **Lista de espera digital** escolhida por baixo custo, uso diario em salao e ausencia de dependencia externa. Criados tabela `waitlist_entries` (RLS por restaurante, trigger de validacao e horarios automaticos, realtime), RPCs publicas `join_public_waitlist` (rate limit 5/10min, deduplicacao por telefone em 12h), `get_public_waitlist_status` e `cancel_public_waitlist` (acesso so pelo token do cliente). Telas: `/lista-espera` (fila em tempo real, chamar via WhatsApp, sentar com mesa, desistiu/nao veio, espera media, QR Code para imprimir) e publica `/fila/:slug` (entrar, posicao, estimativa, sair). Regras em `src/lib/waitlist.ts`; guia em `docs/LISTA_ESPERA.md`. Evidencias: Vitest `waitlist.test.ts` 4/4, typecheck sem erros, fluxo publico testado no restaurante real `bardofalcao` (entrou como 1º, registro de teste removido).
+- Marcacao 2026-10-08: lista de espera `[x]`; fechamento de caixa `[x]` (entregue no M7). Limite: o aviso ao cliente abre o WhatsApp do atendente (sem envio automatico pela instancia Evolution).
 
 ---
 
