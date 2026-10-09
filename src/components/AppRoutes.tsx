@@ -55,6 +55,8 @@ const Automacoes = lazy(() => import('@/pages/Automacoes'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Metricas = lazy(() => import('@/pages/Metricas'));
 const FechamentoCaixa = lazy(() => import('@/pages/FechamentoCaixa'));
+const ListaEspera = lazy(() => import('@/pages/ListaEspera'));
+const FilaPublica = lazy(() => import('@/pages/FilaPublica'));
 const Copiloto = lazy(() => import('@/pages/Copiloto'));
 const Mesas = lazy(() => import('@/pages/Mesas'));
 const Onboarding = lazy(() => import('@/pages/Onboarding'));
@@ -124,6 +126,7 @@ const AppRoutes = () => {
       <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
       <Route path="/menu/:id" element={<CardapioPublico />} />
       <Route path="/cardapio/:slug" element={<CardapioPublico />} />
+      <Route path="/fila/:slug" element={<FilaPublica />} />
       <Route path="/pedido/:id" element={<AcompanharPedido />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/ajuda" element={<Ajuda />} />
@@ -310,6 +313,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['pdv_access', 'orders_manage']} requireAny>
           <MainLayout>
             <FechamentoCaixa />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/lista-espera" element={
+        <ProtectedRoute requiredPermissions={['pdv_access', 'orders_manage']} requireAny>
+          <MainLayout>
+            <ListaEspera />
           </MainLayout>
         </ProtectedRoute>
       } />
