@@ -65,6 +65,7 @@ const operationalLinks: NavItem[] = [
   { to: "/categorias", label: "Categorias", icon: Tags, permissions: ["products_view"] },
   { to: "/cardapio", label: "Menu Digital", icon: Store, permissions: ["products_view"] },
   { to: "/mesas", label: "Áreas e Mesas", icon: TableIcon, permissions: ["settings_view"] },
+  { to: "/lista-espera", label: "Lista de espera", icon: Users, permissions: ["pdv_access", "orders_manage"] },
   { to: "/caixa", label: "Caixa", icon: CreditCard, permissions: ["pdv_access", "orders_manage"] },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3, permissions: ["reports_view"] },
   { to: "/metricas", label: "Métricas", icon: BarChart3, permissions: ["reports_view", "orders_metrics_view", "dashboard_view"] },
