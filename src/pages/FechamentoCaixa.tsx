@@ -27,6 +27,7 @@ import {
   type CashRegisterSession,
 } from "@/services/cashRegisterService";
 import { RefreshCw } from "lucide-react";
+import CashClosingAiReview, { type CashAiReview } from "@/components/caixa/CashClosingAiReview";
 
 const EMPTY_FORM = {
   cash: "",
@@ -265,6 +266,34 @@ const FechamentoCaixa = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            <CashClosingAiReview
+              key={session.id}
+              sessionId={session.id}
+              initialReview={(session.ai_review as CashAiReview | null) ?? null}
+              declared={{
+                cash: declaration.declaredCash,
+                withdrawals: declaration.withdrawals,
+                pix: declaration.declaredPix,
+                credit: declaration.declaredCredit,
+                debit: declaration.declaredDebit,
+                voucher: declaration.declaredVoucher,
+                provider: form.provider,
+                batch: form.batch,
+              }}
+              onApplyExtracted={(values) => {
+                const toInput = (value: number | null, current: string) =>
+                  value === null ? current : value.toFixed(2).replace(".", ",");
+                setForm((current) => ({
+                  ...current,
+                  credit: toInput(values.credit, current.credit),
+                  debit: toInput(values.debit, current.debit),
+                  voucher: toInput(values.voucher, current.voucher),
+                  provider: values.provider ?? current.provider,
+                  batch: values.batch ?? current.batch,
+                }));
+              }}
+            />
           </>
         )}
 

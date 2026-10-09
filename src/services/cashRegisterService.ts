@@ -20,6 +20,8 @@ export interface CashRegisterSession {
   card_machine_batch: string | null;
   difference_amount: number;
   notes: string | null;
+  ai_review: unknown | null;
+  ai_reviewed_at: string | null;
 }
 
 // Tabela nova ainda não presente nos tipos gerados.
