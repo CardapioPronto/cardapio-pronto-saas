@@ -140,7 +140,8 @@ async function safePostIfoodOrderAction(
     await postIfoodOrderAction(token, ifoodOrderId, action, body);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (/iFood 4\d\d:/i.test(message)) return;
+    // Só ignora conflitos de estado (ação já aplicada). 401/403/404 etc. devem aparecer.
+    if (/iFood (400|409|422):/i.test(message) && !/InvalidParameter|Unauthorized/i.test(message)) return;
     throw error;
   }
 }
@@ -157,6 +158,23 @@ export async function fetchIfoodOrderDetails(
     },
   });
   return data as IfoodOrderDetails;
+}
+
+async function pickIfoodCancellationReason(token: string, ifoodOrderId: string): Promise<string> {
+  const data = await ifoodFetch(
+    `${IFOOD_ORDER_PREFIX}/${encodeURIComponent(ifoodOrderId)}/cancellationReasons`,
+    { method: "GET", headers: { Authorization: `Bearer ${token}` } },
+  );
+  const raw = (data as { reasons?: unknown } | null)?.reasons ?? data;
+  const reasons = (Array.isArray(raw) ? raw : []) as Array<{ code?: unknown; cancelCodeId?: unknown }>;
+  const codes = reasons.map((r) => String(r.code ?? r.cancelCodeId ?? "")).filter(Boolean);
+  if (codes.length === 0) {
+    throw new Error("O iFood não permite cancelar este pedido agora (prazo encerrado ou cancelamento em andamento).");
+  }
+  for (const preferred of ["509", "503", "501"]) {
+    if (codes.includes(preferred)) return preferred;
+  }
+  return codes[0];
 }
 
 function isTakeoutLike(orderType: string) {
@@ -202,9 +220,9 @@ export async function pushPubfyStatusToIfood(
       break;
     }
     case "cancelado": {
-      await safePostIfoodOrderAction(token, ifoodOrderId, "requestCancellation", {
-        reason: "503",
-      });
+      // iFood exige um código válido obtido em /cancellationReasons para cada pedido.
+      const reason = await pickIfoodCancellationReason(token, ifoodOrderId);
+      await postIfoodOrderAction(token, ifoodOrderId, "requestCancellation", { reason });
       actions.push("requestCancellation");
       break;
     }
