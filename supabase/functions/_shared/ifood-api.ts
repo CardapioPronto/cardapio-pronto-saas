@@ -92,7 +92,18 @@ export async function ifoodFetch(path: string, init: RequestInit = {}) {
   return body;
 }
 
+// Cache de token em memória: o iFood recomenda reusar o token até perto da
+// expiração; gerar token em excesso pode causar bloqueio temporário.
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
+
 export async function getIfoodAccessToken(config: IfoodCredentials): Promise<string> {
+  const cacheKey = config.client_id;
+  const cached = tokenCache.get(cacheKey);
+  // Margem de 60s para não usar um token prestes a expirar.
+  if (cached && cached.expiresAt - 60_000 > Date.now()) {
+    return cached.token;
+  }
+
   const body = new URLSearchParams({
     grantType: "client_credentials",
     clientId: config.client_id,
@@ -110,6 +121,11 @@ export async function getIfoodAccessToken(config: IfoodCredentials): Promise<str
 
   const token = data?.accessToken || data?.access_token;
   if (!token) throw new Error("Token do iFood não retornado");
+  const expiresIn = Number(data?.expiresIn || data?.expires_in || 3600);
+  tokenCache.set(cacheKey, {
+    token: String(token),
+    expiresAt: Date.now() + expiresIn * 1000,
+  });
   return String(token);
 }
 

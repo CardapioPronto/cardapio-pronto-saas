@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
-import { loadIfoodSaasAppCredentials } from "./ifood-api.ts";
+import { getIfoodAccessToken, loadIfoodSaasAppCredentials } from "./ifood-api.ts";
 
 export type IfoodPollConfig = {
   restaurant_id: string;
@@ -53,24 +53,8 @@ const ifoodFetch = async (path: string, init: RequestInit = {}) => {
 
 const getIfoodToken = async (admin: SupabaseClient) => {
   const appCredentials = await loadIfoodSaasAppCredentials(admin);
-  const body = new URLSearchParams({
-    grantType: "client_credentials",
-    clientId: appCredentials.client_id,
-    clientSecret: appCredentials.client_secret,
-  });
-
-  const data = await ifoodFetch("/authentication/v1.0/oauth/token", {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-
-  const token = data?.accessToken || data?.access_token;
-  if (!token) throw new Error("Token do iFood não retornado");
-  return String(token);
+  // Reusa o token em cache (margem de expiração) para evitar bloqueio do iFood.
+  return getIfoodAccessToken({ ...appCredentials, merchant_id: "" });
 };
 
 const normalizeMoney = (value: unknown): number => {
@@ -380,7 +364,9 @@ export async function pollIfoodEvents(
   if (!config.is_enabled) throw new Error("Integração com iFood está desativada");
 
   const token = await getIfoodToken(admin);
-  const eventsPayload = await ifoodFetch("/events/v1.0/events:polling?groups=ORDER_STATUS&categories=ALL", {
+  // Endpoint atual da Order API: /order/v1.0/events:polling (o antigo
+  // /events/v1.0/... foi descontinuado pelo iFood).
+  const eventsPayload = await ifoodFetch("/order/v1.0/events:polling?groups=ORDER_STATUS&categories=ALL", {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -464,7 +450,7 @@ export async function pollIfoodEvents(
   }
 
   if (acknowledgedIds.length > 0) {
-    await ifoodFetch("/events/v1.0/events/acknowledgment", {
+    await ifoodFetch("/order/v1.0/events/acknowledgment", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
