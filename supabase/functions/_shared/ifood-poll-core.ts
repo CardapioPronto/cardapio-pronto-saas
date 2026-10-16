@@ -364,7 +364,9 @@ export async function pollIfoodEvents(
   if (!config.is_enabled) throw new Error("Integração com iFood está desativada");
 
   const token = await getIfoodToken(admin);
-  const eventsPayload = await ifoodFetch("/events/v1.0/events:polling?groups=ORDER_STATUS&categories=ALL", {
+  // Endpoint atual da Order API: /order/v1.0/events:polling (o antigo
+  // /events/v1.0/... foi descontinuado pelo iFood).
+  const eventsPayload = await ifoodFetch("/order/v1.0/events:polling?groups=ORDER_STATUS&categories=ALL", {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -448,7 +450,7 @@ export async function pollIfoodEvents(
   }
 
   if (acknowledgedIds.length > 0) {
-    await ifoodFetch("/events/v1.0/events/acknowledgment", {
+    await ifoodFetch("/order/v1.0/events/acknowledgment", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
