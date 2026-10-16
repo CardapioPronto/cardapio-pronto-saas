@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
-import { loadIfoodSaasAppCredentials } from "./ifood-api.ts";
+import { getIfoodAccessToken, loadIfoodSaasAppCredentials } from "./ifood-api.ts";
 
 export type IfoodPollConfig = {
   restaurant_id: string;
@@ -53,24 +53,8 @@ const ifoodFetch = async (path: string, init: RequestInit = {}) => {
 
 const getIfoodToken = async (admin: SupabaseClient) => {
   const appCredentials = await loadIfoodSaasAppCredentials(admin);
-  const body = new URLSearchParams({
-    grantType: "client_credentials",
-    clientId: appCredentials.client_id,
-    clientSecret: appCredentials.client_secret,
-  });
-
-  const data = await ifoodFetch("/authentication/v1.0/oauth/token", {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-
-  const token = data?.accessToken || data?.access_token;
-  if (!token) throw new Error("Token do iFood não retornado");
-  return String(token);
+  // Reusa o token em cache (margem de expiração) para evitar bloqueio do iFood.
+  return getIfoodAccessToken({ ...appCredentials, merchant_id: "" });
 };
 
 const normalizeMoney = (value: unknown): number => {
