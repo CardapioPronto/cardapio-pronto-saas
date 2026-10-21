@@ -58,6 +58,6 @@ test("financial overview requires report access before requesting data (simulate
     await route.fulfill({ json: {} });
   });
   await page.goto("/financeiro");
-  await expect(page.getByRole("heading", { name: "Acesso Negado", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Acesso negado", exact: true })).toBeVisible();
   expect(reads).toBe(0);
 });
