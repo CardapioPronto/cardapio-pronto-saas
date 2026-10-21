@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { INSTRUCTIONS, REVIEW_SCHEMA } from "./review-schema.ts";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId } from "../_shared/run-id.ts";
+import { summarizeCashActivity, type CashActivityOrder } from "../_shared/cash-shift-activity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,6 @@ const corsHeaders = {
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/responses";
 const MODEL = "openai/gpt-6-astra";
 const MAX_IMAGE_CHARS = 8_000_000; // ~6MB base64
-const CANCELED = new Set(["cancelled", "canceled", "cancelado", "cancelada"]);
 
 const json = (body: unknown, status = 200, extra?: HeadersInit) => {
   const headers = new Headers({ ...corsHeaders, "Content-Type": "application/json" });
@@ -29,7 +29,8 @@ const num = (v: unknown) => {
 };
 
 async function readResponsesStream(response: Response): Promise<string> {
-  const reader = response.body!.getReader();
+  if (!response.body) throw new Error("Resposta da análise sem conteúdo");
+  const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let text = "";
@@ -101,25 +102,13 @@ Deno.serve(async (req) => {
     if (!session) return json({ error: "Caixa não encontrado" }, 404);
     if (session.status !== "open") return json({ error: "Este caixa já foi fechado." }, 409);
 
-    const { data: orders, error: ordersError } = await supabase
-      .from("orders")
-      .select("total, status, order_type, payment_method, payment_status, created_at")
-      .eq("restaurant_id", session.restaurant_id)
-      .gte("created_at", session.opened_at);
+    const { data: activityData, error: ordersError } = await supabase.rpc("get_cash_shift_activity", {
+      p_restaurant_id: session.restaurant_id, p_since: session.opened_at,
+    });
     if (ordersError) throw ordersError;
-
-    const valid = (orders ?? []).filter((o) => !CANCELED.has(String(o.status ?? "").toLowerCase()));
-    const canceled = (orders ?? []).filter((o) => CANCELED.has(String(o.status ?? "").toLowerCase()));
-    const group = (rows: typeof valid, key: "order_type" | "payment_method") => {
-      const map: Record<string, { pedidos: number; total: number }> = {};
-      rows.forEach((o) => {
-        const k = String(o[key] ?? "nao_informado");
-        map[k] ??= { pedidos: 0, total: 0 };
-        map[k].pedidos += 1;
-        map[k].total = Math.round((map[k].total + Number(o.total ?? 0)) * 100) / 100;
-      });
-      return map;
-    };
+    const activityInput = activityData as { orders: CashActivityOrder[]; since: string; until: string };
+    if (!activityInput || !Array.isArray(activityInput.orders)) throw new Error("Conferência indisponível");
+    const activity = summarizeCashActivity(activityInput.orders, activityInput.since, activityInput.until);
 
     const declared = {
       troco_inicial: num(session.opening_amount),
@@ -135,13 +124,16 @@ Deno.serve(async (req) => {
 
     const shift = {
       aberto_em: session.opened_at,
-      pedidos_validos: valid.length,
-      total_vendas_sistema: Math.round(valid.reduce((s, o) => s + Number(o.total ?? 0), 0) * 100) / 100,
-      pedidos_cancelados: canceled.length,
-      total_cancelado: Math.round(canceled.reduce((s, o) => s + Number(o.total ?? 0), 0) * 100) / 100,
-      por_tipo: group(valid, "order_type"),
-      por_forma_pagamento: group(valid, "payment_method"),
-      observacao: "O PDV pode nao registrar forma de pagamento por pedido (nao_informado).",
+      apurado_ate: activity.until,
+      pedidos_validos: activity.count,
+      total_vendas_sistema: activity.total,
+      total_recebido_local: activity.receivedTotal,
+      dinheiro_esperado_gaveta: num(session.opening_amount) + activity.cashReceived - declared.sangrias,
+      pagamentos_pendentes: { pedidos: activity.pending.length, total: activity.pendingTotal },
+      canais_externos: { pedidos: activity.external.length, total_bruto: activity.externalTotal, repasse_confirmado: false },
+      revisar: { pedidos: activity.review.length, total: activity.reviewTotal },
+      por_forma_pagamento: activity.byMethod,
+      observacao: "Compare declaração somente com recebimentos locais confirmados por paid_at. Vendas não são recebimentos. Pendentes e externos não entram na gaveta. Misto, estornos, datas ausentes e coleta iFood desconhecida exigem revisão; não invente parcelas ou repasses.",
     };
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -179,7 +171,8 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const runHeaders: HeadersInit = gateway.getRunId() ? { "X-Lovable-AIG-Run-ID": gateway.getRunId()! } : {};
+    const runId = gateway.getRunId();
+    const runHeaders: HeadersInit = runId ? { "X-Lovable-AIG-Run-ID": runId } : {};
 
     if (!aiResponse.ok) {
       const detail = await aiResponse.text().catch(() => "");

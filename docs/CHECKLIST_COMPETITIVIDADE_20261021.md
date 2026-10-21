@@ -56,7 +56,7 @@ Este checklist é a fila atualizada de prioridades. O histórico de entregas per
 
 Achados: o caixa busca pedidos por data de criação, exclui apenas cancelados, limita a leitura a 1.000 pedidos e recebe os totais de fechamento calculados no navegador. As políticas existentes isolam o restaurante, mas não exigem uma permissão específica de gestão de caixa. Isso é risco de consistência e de acesso dentro da própria loja, não prova de vazamento entre restaurantes.
 
-- [ ] Separar venda realizada, valor efetivamente recebido, pagamento pendente e repasse de canal externo; conciliar recebimentos do turno, inclusive pedido antigo pago agora.
+- [~] Separar venda realizada, valor efetivamente recebido, pagamento pendente e repasse de canal externo; conciliar recebimentos do turno, inclusive pedido antigo pago agora. **2026-10-21:** separação implementada no Caixa e na IA, por `created_at`/`paid_at`; recebimentos externos brutos ficam fora da gaveta. Falta comprovar repasses bancários e validar turno real autenticado (ver `FECHAMENTO_CAIXA.md`).
 - [ ] Vincular recebimentos ao caixa/turno e produzir fechamento definitivo com cálculo e congelamento do conjunto de dados no servidor, sem aceitar totais financeiros arbitrários do navegador.
 - [ ] Remover truncamento de 1.000 pedidos mediante agregação/paginação; proteger fechamento contra recebimentos simultâneos e reenvios.
 - [ ] Exigir permissão específica para abrir, movimentar e fechar caixa, também na camada de dados; auditar correções de forma de pagamento e exceções.
@@ -265,5 +265,6 @@ Fontes oficiais consultadas em 21/10/2026. São ofertas declaradas pelos fornece
 | Data | ID | Responsável | Status | Evidência e próximos passos |
 | --- | --- | --- | --- | --- |
 | 2026-10-21 | Auditoria | — | Checklist elaborado | Leitura de código/documentação e comparação de mercado; nenhum novo recurso implementado ou operação real executada |
+| 2026-10-21 | C01.1 | Lovable (implementação); responsável pelo piloto a definir | Parcial `[~]` | Migrações aplicadas: RPC invoker por restaurante e preservação de `paid_at` nas três tabelas; separação no Caixa/IA e totais históricos distintos. Vitest 17/17; build OK; RPC sem acesso anônimo e sem bypass de RLS. E2E simulado criado, execução bloqueada por Chromium ausente na versão do runner. Sem turno autenticado, repasse real ou teste concorrente. |
 
 Para cada entrega futura: preencher ID, responsável, data, testes, evidência da operação e limitações restantes. Fechar os subitens individualmente; o bloco só fica `[x]` após cumprir seu aceite.

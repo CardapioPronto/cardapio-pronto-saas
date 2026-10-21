@@ -21,6 +21,11 @@ describe("parseMoneyInput", () => {
 });
 
 describe("summarizeCashClosing", () => {
+  it("uses confirmed cash receipts rather than declared PIX for the drawer", () => {
+    const result = summarizeCashClosing({ ...base, declaredCash: 150, declaredPix: 999, withdrawals: 10 }, 100, 0.009, 60);
+    expect(result.expectedCashInDrawer).toBe(150);
+    expect(result.difference).toBe(959);
+  });
   it("fecha sem diferença quando valores batem", () => {
     const result = summarizeCashClosing(
       { ...base, declaredCash: 150, declaredPix: 30, declaredCredit: 70, declaredDebit: 50 },

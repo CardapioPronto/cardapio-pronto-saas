@@ -527,7 +527,10 @@ export type Database = {
           opening_amount: number
           restaurant_id: string
           status: string
+          system_external_total: number | null
           system_orders_count: number
+          system_pending_total: number | null
+          system_received_total: number | null
           system_sales_total: number
           updated_at: string
           withdrawals: number
@@ -553,7 +556,10 @@ export type Database = {
           opening_amount?: number
           restaurant_id: string
           status?: string
+          system_external_total?: number | null
           system_orders_count?: number
+          system_pending_total?: number | null
+          system_received_total?: number | null
           system_sales_total?: number
           updated_at?: string
           withdrawals?: number
@@ -579,7 +585,10 @@ export type Database = {
           opening_amount?: number
           restaurant_id?: string
           status?: string
+          system_external_total?: number | null
           system_orders_count?: number
+          system_pending_total?: number | null
+          system_received_total?: number | null
           system_sales_total?: number
           updated_at?: string
           withdrawals?: number
@@ -5069,6 +5078,10 @@ export type Database = {
       get_affiliate_dashboard: { Args: never; Returns: Json }
       get_cart_abandonment_dashboard: {
         Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: Json
+      }
+      get_cash_shift_activity: {
+        Args: { p_restaurant_id: string; p_since: string; p_until?: string }
         Returns: Json
       }
       get_checkout_plan_summaries: { Args: never; Returns: Json }
