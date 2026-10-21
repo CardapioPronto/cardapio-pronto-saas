@@ -25,11 +25,13 @@ import {
   fetchSessionSales,
   openSession,
   type CashRegisterSession,
-  type SessionOrder,
 } from "@/services/cashRegisterService";
 import PaymentMethodReconciliation from "@/components/caixa/PaymentMethodReconciliation";
 import { RefreshCw } from "lucide-react";
 import CashClosingAiReview, { type CashAiReview } from "@/components/caixa/CashClosingAiReview";
+import { summarizeCashActivity, type CashShiftActivity } from "../../supabase/functions/_shared/cash-shift-activity";
+
+const emptyActivity = () => summarizeCashActivity([], new Date().toISOString(), new Date().toISOString());
 
 const EMPTY_FORM = {
   cash: "",
@@ -60,7 +62,8 @@ const FechamentoCaixa = () => {
   const { toast } = useToast();
   const [session, setSession] = useState<CashRegisterSession | null>(null);
   const [history, setHistory] = useState<CashRegisterSession[]>([]);
-  const [sales, setSales] = useState<{ count: number; total: number; orders: SessionOrder[] }>({ count: 0, total: 0, orders: [] });
+  const [sales, setSales] = useState<CashShiftActivity>(emptyActivity);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [openingInput, setOpeningInput] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -69,6 +72,7 @@ const FechamentoCaixa = () => {
   const load = useCallback(async () => {
     if (!activeRestaurantId) return;
     setLoading(true);
+    setLoadFailed(false);
     try {
       const [open, recent] = await Promise.all([
         fetchOpenSession(activeRestaurantId),
@@ -76,8 +80,9 @@ const FechamentoCaixa = () => {
       ]);
       setSession(open);
       setHistory(recent);
-      setSales(open ? await fetchSessionSales(activeRestaurantId, open.opened_at) : { count: 0, total: 0, orders: [] });
+      setSales(open ? await fetchSessionSales(activeRestaurantId, open.opened_at) : emptyActivity());
     } catch (error) {
+      setLoadFailed(true);
       toast({
         title: "Não foi possível carregar o caixa",
         description: error instanceof Error ? error.message : undefined,
@@ -105,7 +110,7 @@ const FechamentoCaixa = () => {
     [form, session],
   );
 
-  const summary = summarizeCashClosing(declaration, sales.total);
+  const summary = summarizeCashClosing(declaration, sales.receivedTotal, 0.009, sales.cashReceived);
 
   const handleOpen = async () => {
     if (!activeRestaurantId) return;
@@ -131,10 +136,14 @@ const FechamentoCaixa = () => {
     setSaving(true);
     try {
       const fresh = await fetchSessionSales(activeRestaurantId, session.opened_at);
-      const finalSummary = summarizeCashClosing(declaration, fresh.total);
+      if (fresh.review.length > 0 && !form.notes.trim()) throw new Error("Justifique os pedidos a revisar nas observações antes de fechar.");
+      const finalSummary = summarizeCashClosing(declaration, fresh.receivedTotal, 0.009, fresh.cashReceived);
       await closeSession(session.id, {
         system_orders_count: fresh.count,
         system_sales_total: fresh.total,
+        system_received_total: fresh.receivedTotal,
+        system_pending_total: fresh.pendingTotal,
+        system_external_total: fresh.externalTotal,
         declared_cash: declaration.declaredCash,
         declared_pix: declaration.declaredPix,
         declared_credit: declaration.declaredCredit,
@@ -183,11 +192,12 @@ const FechamentoCaixa = () => {
               Abra o caixa com o troco, registre o que entrou e confira com o relatório da maquininha.
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
+          <Button size="sm" variant="outline" aria-label="Atualizar caixa" title="Atualizar caixa" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
 
+        {loadFailed && <p role="alert" className="text-destructive">Conferência indisponível. Atualize o caixa antes de continuar.</p>}
         {!session ? (
           <Card>
             <CardHeader>
@@ -205,7 +215,7 @@ const FechamentoCaixa = () => {
                   onChange={(event) => setOpeningInput(event.target.value)}
                 />
               </div>
-              <Button onClick={() => void handleOpen()} disabled={saving || !activeRestaurantId}>
+              <Button onClick={() => void handleOpen()} disabled={saving || loading || loadFailed || !activeRestaurantId}>
                 Abrir caixa
               </Button>
             </CardContent>
@@ -224,7 +234,7 @@ const FechamentoCaixa = () => {
                 <p className="mt-1 text-xs text-muted-foreground">{sales.count} pedidos válidos</p>
               </CardContent></Card>
               <Card><CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">Vendas declaradas</p>
+                <p className="text-sm text-muted-foreground">Recebimentos declarados</p>
                 <p className="mt-1 text-xl font-bold">{formatarMoeda(summary.declaredSales)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Maquininha: {formatarMoeda(summary.cardMachineTotal)}</p>
               </CardContent></Card>
@@ -233,6 +243,18 @@ const FechamentoCaixa = () => {
                 <p className="mt-1 text-xl font-bold">{formatarMoeda(summary.difference)}</p>
                 <div className="mt-1"><DifferenceBadge value={summary.difference} /></div>
               </CardContent></Card>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                { label: "Recebido no caixa", total: sales.receivedTotal, note: `${sales.received.length} pedidos confirmados por data de pagamento` },
+                { label: "Pagamento pendente no turno", total: sales.pendingTotal, note: `${sales.pending.length} pedidos sem recebimento confirmado` },
+                { label: "Recebido por canal externo", total: sales.externalTotal, note: "Valor bruto; repasse bancário não confirmado" },
+              ].map(item => <Card key={item.label}><CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">{item.label}</p>
+                <p className="mt-1 text-xl font-bold">{formatarMoeda(item.total)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{item.note}</p>
+              </CardContent></Card>)}
             </div>
 
             <Card>
@@ -263,16 +285,19 @@ const FechamentoCaixa = () => {
                     placeholder="Justifique diferenças, estornos ou vendas fora do sistema."
                   />
                 </div>
-                <Button onClick={() => void handleClose()} disabled={saving}>
+                <Button onClick={() => void handleClose()} disabled={saving || loading || loadFailed}>
                   Fechar caixa
                 </Button>
               </CardContent>
             </Card>
 
             <PaymentMethodReconciliation
-              orders={sales.orders}
+              orders={sales.received}
+              pendingOrders={sales.pending}
+              externalOrders={sales.external}
+              reviewOrders={sales.review}
               declared={{
-                dinheiro: Math.max(0, declaration.declaredCash - declaration.openingAmount + declaration.withdrawals),
+                dinheiro: declaration.declaredCash - declaration.openingAmount + declaration.withdrawals,
                 pix: declaration.declaredPix,
                 credito: declaration.declaredCredit,
                 debito: declaration.declaredDebit,
@@ -322,7 +347,8 @@ const FechamentoCaixa = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Período</TableHead>
-                    <TableHead className="text-right">Sistema</TableHead>
+                    <TableHead className="text-right">Vendas</TableHead>
+                    <TableHead className="text-right">Recebido no caixa</TableHead>
                     <TableHead className="text-right">Maquininha</TableHead>
                     <TableHead>Referência</TableHead>
                     <TableHead>Resultado</TableHead>
@@ -335,6 +361,7 @@ const FechamentoCaixa = () => {
                         {formatDateTime(item.opened_at)} → {formatDateTime(item.closed_at)}
                       </TableCell>
                       <TableCell className="text-right">{formatarMoeda(Number(item.system_sales_total))}</TableCell>
+                      <TableCell className="text-right">{item.system_received_total == null ? "Histórico sem classificação" : formatarMoeda(Number(item.system_received_total))}</TableCell>
                       <TableCell className="text-right">
                         {formatarMoeda(
                           Number(item.declared_credit) + Number(item.declared_debit) + Number(item.declared_voucher),

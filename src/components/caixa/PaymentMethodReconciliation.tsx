@@ -16,6 +16,9 @@ import type { SessionOrder } from "@/services/cashRegisterService";
 interface Props {
   orders: SessionOrder[];
   declared: DeclaredByMethod;
+  pendingOrders?: SessionOrder[];
+  externalOrders?: SessionOrder[];
+  reviewOrders?: SessionOrder[];
 }
 
 const DiffBadge = ({ value }: { value: number | null }) => {
@@ -24,7 +27,7 @@ const DiffBadge = ({ value }: { value: number | null }) => {
   return <Badge variant={value < 0 ? "destructive" : "outline"}>{value < 0 ? "Falta" : "Sobra"} {formatarMoeda(Math.abs(value))}</Badge>;
 };
 
-const PaymentMethodReconciliation = ({ orders, declared }: Props) => {
+const PaymentMethodReconciliation = ({ orders, declared, pendingOrders = [], externalOrders = [], reviewOrders = [] }: Props) => {
   const [filter, setFilter] = useState<ReconciliationMethod | "todos">("todos");
   const rows = useMemo(() => compareByMethod(orders, declared), [orders, declared]);
   const classified = useMemo(() => orders.map((o) => ({ ...o, method: classifyOrderPayment(o) })), [orders]);
@@ -36,11 +39,11 @@ const PaymentMethodReconciliation = ({ orders, declared }: Props) => {
       <CardHeader>
         <CardTitle>Conferência por forma de pagamento</CardTitle>
         <CardDescription>
-          Compara o que o PDV registrou em cada pedido com o que foi contado e lido na maquininha.
-          Dinheiro do sistema é comparado com gaveta − troco + sangrias.
+          Recebimentos locais confirmados por data de pagamento, incluindo pedidos de turnos anteriores.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {reviewOrders.length > 0 && <p role="alert" className="text-destructive">{reviewOrders.length} pedidos a revisar: pagamento misto, data ausente, coleta iFood não identificada ou cancelamento/estorno. Justifique nas observações.</p>}
         {missing > 0 && (
           <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
             {missing} {missing === 1 ? "pedido está" : "pedidos estão"} sem forma de pagamento. Registre no PDV (Histórico de pedidos) antes de fechar.
@@ -83,7 +86,7 @@ const PaymentMethodReconciliation = ({ orders, declared }: Props) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Hora</TableHead>
+                    <TableHead>Recebido em</TableHead>
                     <TableHead>Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Forma</TableHead>
@@ -93,7 +96,7 @@ const PaymentMethodReconciliation = ({ orders, declared }: Props) => {
                 <TableBody>
                   {visible.map((o) => (
                     <TableRow key={o.id}>
-                      <TableCell>{new Date(o.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</TableCell>
+                      <TableCell>{o.paid_at ? new Date(o.paid_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "Sem data"}</TableCell>
                       <TableCell>#{o.order_number}</TableCell>
                       <TableCell className="max-w-40 truncate">{o.customer_name || "—"}</TableCell>
                       <TableCell>
@@ -107,6 +110,22 @@ const PaymentMethodReconciliation = ({ orders, declared }: Props) => {
             </div>
           )}
         </div>
+        {[
+          { label: "Pagamentos pendentes", items: pendingOrders },
+          { label: "Canais externos · repasse não confirmado", items: externalOrders },
+          { label: "Pedidos a revisar", items: reviewOrders },
+        ].filter(group => group.items.length > 0).map(group => (
+          <details key={group.label} className="border-t pt-3">
+            <summary className="cursor-pointer text-sm font-semibold">{group.label} ({group.items.length})</summary>
+            <div className="max-h-80 overflow-auto"><Table><TableHeader><TableRow>
+              <TableHead>Pedido</TableHead><TableHead>Pagamento</TableHead><TableHead>Data do pagamento</TableHead><TableHead className="text-right">Valor</TableHead>
+            </TableRow></TableHeader><TableBody>{group.items.map(o => <TableRow key={o.id}>
+              <TableCell>#{o.order_number}</TableCell><TableCell>{o.payment_method || "Sem forma"} · {o.payment_status === "paid" ? "Confirmado" : o.payment_status === "refunded" ? "Estornado" : "Sem confirmação"}</TableCell>
+              <TableCell>{o.paid_at ? new Date(o.paid_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "Sem data"}</TableCell>
+              <TableCell className="text-right">{formatarMoeda(Number(o.total))}</TableCell>
+            </TableRow>)}</TableBody></Table></div>
+          </details>
+        ))}
       </CardContent>
     </Card>
   );

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { summarizeCashActivity, type CashActivityOrder } from "../../supabase/functions/_shared/cash-shift-activity";
 
 export interface CashRegisterSession {
   id: string;
@@ -10,6 +11,9 @@ export interface CashRegisterSession {
   closed_at: string | null;
   system_orders_count: number;
   system_sales_total: number;
+  system_received_total: number | null;
+  system_pending_total: number | null;
+  system_external_total: number | null;
   declared_cash: number;
   declared_pix: number;
   declared_credit: number;
@@ -27,8 +31,6 @@ export interface CashRegisterSession {
 // Tabela nova ainda não presente nos tipos gerados.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const table = () => (supabase as any).from("cash_register_sessions");
-
-const CANCELED = new Set(["cancelled", "canceled", "cancelado", "cancelada"]);
 
 export const fetchOpenSession = async (restaurantId: string) => {
   const { data, error } = await table()
@@ -66,34 +68,16 @@ export const openSession = async (restaurantId: string, openingAmount: number) =
   return data as CashRegisterSession;
 };
 
-/** Vendas do sistema (pedidos não cancelados) desde a abertura do caixa. */
-export interface SessionOrder {
-  id: string;
-  order_number: string;
-  created_at: string;
-  customer_name: string | null;
-  total: number;
-  status: string;
-  payment_method: string | null;
-  payment_provider: string | null;
-  payment_status: string | null;
-}
+export type SessionOrder = CashActivityOrder;
 
 export const fetchSessionSales = async (restaurantId: string, since: string) => {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("id, order_number, created_at, customer_name, total, status, payment_method, payment_provider, payment_status")
-    .eq("restaurant_id", restaurantId)
-    .gte("created_at", since)
-    .order("created_at", { ascending: true })
-    .limit(1000);
+  const { data, error } = await supabase.rpc("get_cash_shift_activity", {
+    p_restaurant_id: restaurantId, p_since: since,
+  });
   if (error) throw error;
-  const valid = ((data ?? []) as SessionOrder[]).filter((order) => !CANCELED.has(String(order.status ?? "").toLowerCase()));
-  return {
-    count: valid.length,
-    total: Math.round(valid.reduce((sum, order) => sum + Number(order.total ?? 0), 0) * 100) / 100,
-    orders: valid,
-  };
+  const activity = data as unknown as { orders: SessionOrder[]; since: string; until: string };
+  if (!activity || !Array.isArray(activity.orders) || !activity.until) throw new Error("Resposta inválida da conferência do turno");
+  return summarizeCashActivity(activity.orders, activity.since, activity.until);
 };
 
 export const closeSession = async (

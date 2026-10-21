@@ -30,12 +30,13 @@ export const parseMoneyInput = (value: string): number => {
 /**
  * Conciliação do fechamento:
  * vendas declaradas = (dinheiro contado - troco inicial + sangrias) + PIX + crédito + débito + voucher
- * diferença = vendas declaradas - vendas registradas no sistema
+ * diferença = recebimentos declarados - recebimentos locais confirmados
  */
 export const summarizeCashClosing = (
   declaration: CashDeclaration,
   systemSalesTotal: number,
   tolerance = 0.009,
+  confirmedCashReceived?: number,
 ): CashClosingSummary => {
   const cashSales =
     declaration.declaredCash - declaration.openingAmount + declaration.withdrawals;
@@ -45,7 +46,7 @@ export const summarizeCashClosing = (
   const difference = round(declaredSales - systemSalesTotal);
   const nonCashDeclared = declaration.declaredPix + cardMachineTotal;
   const expectedCashInDrawer = round(
-    declaration.openingAmount + Math.max(0, systemSalesTotal - nonCashDeclared) - declaration.withdrawals,
+    declaration.openingAmount + (confirmedCashReceived ?? Math.max(0, systemSalesTotal - nonCashDeclared)) - declaration.withdrawals,
   );
 
   return {
