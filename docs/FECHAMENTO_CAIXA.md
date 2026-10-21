@@ -39,7 +39,7 @@ O total do sistema e recalculado no momento do fechamento para evitar valor desa
 
 ## Limites conhecidos
 
-- O PDV ainda nao grava forma de pagamento por pedido; a conciliacao e pelo total do turno.
+- Pedidos antigos podem não ter forma ou data de pagamento; não são convertidos automaticamente em recebimentos.
 - Sem integracao automatica com adquirente/TEF.
 - Sem relatorio impresso do fechamento (pode ser exportado em versao futura).
 
@@ -51,3 +51,30 @@ O total do sistema e recalculado no momento do fechamento para evitar valor desa
 - Em **Caixa**, o quadro "Conferência por forma de pagamento" compara sistema × declarado em cada forma (dinheiro do sistema × gaveta − troco + sangrias) e lista pedido a pedido; clicar numa forma filtra a lista.
 - Pedidos "Misto" e "Sem forma registrada" aparecem como **Explicar**; o caixa avisa quantos estão sem forma.
 - Regra em `src/lib/paymentMethods.ts` (testes em `paymentMethods.test.ts`).
+
+## C01.1 — Vendas versus recebimentos (2026-10-21)
+
+**Status `[~]`: código e migrações entregues; piloto real e repasses ainda pendentes.**
+
+- **Vendas no sistema:** pedidos não cancelados criados no turno. É competência da venda, não prova de entrada de dinheiro.
+- **Recebido no caixa:** pedidos com `payment_status = paid`, data `paid_at` no turno e forma local identificada. Pedido antigo pago agora entra uma vez; pagamento já recebido antes não entra novamente.
+- **Pagamento pendente no turno:** pedidos criados no turno sem confirmação; `not_required` e `failed` não comprovam recebimento.
+- **Recebido por canal externo:** pagamentos confirmados por provedor externo, em valor bruto; não entram na gaveta ou na declaração local. A transferência bancária, taxas e valor líquido ainda não são comprovados.
+- **A revisar:** misto sem parcelas, pagamento sem data, coleta iFood desconhecida e cancelamento/estorno após cobrança. Aparecem em lista e exigem justificativa no fechamento; não são imputados automaticamente às formas locais.
+
+```text
+recebimentos declarados = gaveta - troco + sangrias + PIX + crédito + débito + voucher
+diferença = recebimentos declarados - recebimentos locais confirmados
+gaveta esperada = troco inicial + recebimentos confirmados em dinheiro - sangrias
+período = [abertura, instante da consulta), usando o corte retornado pelo servidor
+```
+
+A consulta `get_cash_shift_activity` é somente leitura, SECURITY INVOKER, restrita ao restaurante via `get_user_restaurant_id()`, e retorna pedidos por criação OU pagamento sem o limite de 1.000 linhas do endpoint de tabelas. UI e IA reutilizam `cash-shift-activity.ts`. Notificações repetidas não mudam a primeira `paid_at`: triggers em `orders`, `order_payments` e `delivery_orders`. Datas antigas potencialmente incorretas não foram reconstruídas.
+
+Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos separadamente; históricos anteriores mantêm recebimentos nulos com identificação de histórico sem classificação.
+
+**Evidências:** 17 testes Vitest aprovados (10 cenários de atividade, 5 de cálculo e 2 de forma), migrações aplicadas, acesso anônimo à RPC negado, invoker sem bypass de RLS, três triggers existentes, build OK e função de IA implantada. E2E simulado em `e2e/cash-shift.spec.ts` criado; runner bloqueado pela ausência do Chromium da sua versão. Tentativa de navegador sem sessão ficou no carregamento inicial; não valida a tela autenticada. Nenhuma cobrança ou alteração de pedidos reais foi executada.
+
+**Piloto pendente:** abra um turno, receba pedido antigo de R$ 100 em dinheiro, registre venda pendente de R$ 50 e pagamento externo de R$ 80; confira recebimento local R$ 100, pendente R$ 50 e externo R$ 80. Com troco R$ 100 e gaveta R$ 200, diferença deve ser zero. Feche e confira o histórico.
+
+**Próximos itens, fora desta entrega:** vinculação dos recebimentos ao caixa, congelamento/cálculo definitivo no servidor, concorrência, permissões financeiras, parcelas do misto e repasses bancários efetivos. A leitura sem truncamento não comprova capacidade em volume extremo. Permanecem 219 apontamentos de segurança anteriores; esta entrega não adicionou novos.
