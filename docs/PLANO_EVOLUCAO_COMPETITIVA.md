@@ -3,6 +3,8 @@
 Criado em: 2026-05-28  
 Objetivo: organizar a evolucao do Pubfy para competir no mercado brasileiro de sistemas para restaurantes, sem interromper o piloto operacional do que ja existe.
 
+**Revisao atual — 2026-10-21:** seguir `docs/CHECKLIST_COMPETITIVIDADE_20261021.md` como fila priorizada de correcoes, complementos e validacoes. A revisao separa recursos ja existentes de lacunas reais, inclui referencias oficiais de mercado e criterios de aceite. Prioridade inicial: integridade do caixa/recebimentos e pagamento misto; depois piloto, integracoes, fiscal e hardware. As marcacoes abaixo preservam o historico e nao comprovam homologacao atual por si so.
+
 ---
 
 ## Decisao de trabalho

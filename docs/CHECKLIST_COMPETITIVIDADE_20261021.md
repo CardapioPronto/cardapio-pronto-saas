@@ -171,6 +171,8 @@ Achados: o caixa busca pedidos por data de criação, exclui apenas cancelados, 
 - [ ] Restaurar carrinho por link de recuperação com validação atual de preço, estoque, cupom e consentimento.
 - [ ] Medir conversão de clientes importados por coorte e primeira compra após importação, além da taxa histórica atual; não atribuir venda antiga à importação.
 - [ ] Transformar insights do copiloto em tarefas mensuráveis e medir receita/conversão por regra de upsell; não prometer que toda receita atribuída é incremental.
+- [ ] Para restaurantes que anunciam, acrescentar configuração consentida de Meta Pixel/GA4 e validar eventos de compra sem duplicidade; o funil próprio existente deve ser preservado.
+- [ ] Evoluir recência, frequência e gasto para segmentação RFV explicável quando houver histórico suficiente; não apresentar a segmentação atual como um motor RFV já validado.
 
 **Aceite:** gatilho envia uma única comunicação elegível, descadastro interrompe novos envios e recompra posterior é rastreada. CRM, cashback, upsell e funil já existem; evolução é automação e qualidade da medição.
 
@@ -222,7 +224,7 @@ Achados: o caixa busca pedidos por data de criação, exclui apenas cancelados, 
 | `src/services/metricsService.ts`: conversão cruza telefones com pedidos históricos; leitura de itens não propaga erro e consultas não têm paginação explícita | C06/C10 precisam confiabilidade de volume, erro e coorte |
 | `supabase/functions/_shared/ifood-poll-core.ts`: endpoint atual, categorias ALL, mapeamento e consumo/estorno de estoque | Não reimplementar as correções do iFood; homologar e observar |
 | `src/features/pdv/services/pdvOfflineOrderQueueService.ts` e `src/hooks/usePrint.ts` | Fila local/conflitos e impressão no navegador existem; não equivalem a fila central ou confirmação de impressão física |
-| `src/pages/AdminOnboarding.tsx` não é o caminho do painel; a página está em `src/pages/admin/AdminOnboarding.tsx`, com `/admin/onboarding` | Usar implementação atual, não listas antigas que dizem faltar a tela |
+| `src/pages/admin/AdminOnboarding.tsx` e serviços de progresso/saúde do onboarding | Usar implementação atual, não listas antigas que dizem faltar a tela |
 
 Alguns documentos históricos ficaram contraditórios com as entregas posteriores:
 
@@ -233,7 +235,32 @@ Alguns documentos históricos ficaram contraditórios com as entregas posteriore
 
 **Regra desta revisão:** preferir evidência atual ao texto antigo, sem converter automaticamente implementação em homologação. Atualizar cada documento afetado quando executar seu bloco.
 
-## 7. Registro de execução
+## 7. Referências de mercado
+
+Fontes oficiais consultadas em 21/10/2026. São ofertas declaradas pelos fornecedores, não testes independentes; recursos podem depender de plano, módulo adicional, parceiro e contrato. A comparação não é um ranking de qualidade, preço ou participação de mercado.
+
+| Sistema | Oferta pública verificada | Lacuna/oportunidade para o Pubfy |
+| --- | --- | --- |
+| Saipos | CRM conectado ao PDV, classificação RFV e campanhas WhatsApp de aniversário, boas-vindas e reativação; app com visão por loja/consolidada | Aprofundar jornadas mensuráveis e canal de mensagens, não recriar CRM ou multiunidade |
+| Consumer/MenuDino | Campanhas WhatsApp segmentadas/agendadas; fidelidade por pontos/carimbos; cadastro de cardápio e treinamento assistidos | Garantir orquestração e implantação confiáveis; carimbos são alternativa opcional ao cashback, não ausência de fidelidade no Pubfy |
+| Anota AI | Cupons, cashback configurável por dia, Meta Pixel e relatórios com filtro/comparação de períodos | Integração de anúncios e regras de campanha podem agregar valor; cupons, cashback e relatórios básicos já existem no Pubfy |
+| Goomer | Planos com CRM, cupons, chatbot, fidelidade, venda sugestiva, e-mail e Google Analytics conforme pacote | Explicitar oferta/limites e medir aquisição; botão de WhatsApp não equivale a automação de CRM |
+
+### Links oficiais
+
+- Saipos CRM: https://saipos.com/sistema/saipos-crm
+- Saipos app de gestão: https://saipos.com/sistema/app-de-gestao
+- Consumer campanhas: https://ajuda.programaconsumer.com.br/como-utilizar-o-modulo-de-campanhas-inteligentes/
+- Consumer fidelidade: https://ajuda.programaconsumer.com.br/como-controlar-cartoes-de-fidelidade-em-seu-restaurante-no-programa-consumer/
+- Consumer implantação/oferta: https://www.consumer.com.br/
+- Anota AI marketing: https://anota.ai/home/funcionalidade/marketing-para-restaurante/
+- Anota AI relatórios: https://anota.ai/ajuda/relatorios/
+- Goomer planos: https://goomer.com.br/planos
+- Goomer CRM: https://ajuda.goomer.com.br/goomergo/painel/crm/clientes
+
+**Leitura estratégica:** quantidade de módulos não basta. Caixa correto, implantação rápida, retorno mensurável e resolução de falhas são os pontos que precisam de prova no Pubfy. A posição relativa em fiscal, hardware e continuidade foi inferida da auditoria do Pubfy e do segmento PDV, não de testes práticos dos concorrentes.
+
+## 8. Registro de execução
 
 | Data | ID | Responsável | Status | Evidência e próximos passos |
 | --- | --- | --- | --- | --- |
