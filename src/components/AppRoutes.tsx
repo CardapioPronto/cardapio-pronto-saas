@@ -55,6 +55,7 @@ const Automacoes = lazy(() => import('@/pages/Automacoes'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Metricas = lazy(() => import('@/pages/Metricas'));
 const FechamentoCaixa = lazy(() => import('@/pages/FechamentoCaixa'));
+const Financeiro = lazy(() => import('@/pages/Financeiro'));
 const ListaEspera = lazy(() => import('@/pages/ListaEspera'));
 const FilaPublica = lazy(() => import('@/pages/FilaPublica'));
 const Copiloto = lazy(() => import('@/pages/Copiloto'));
@@ -313,6 +314,13 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermissions={['pdv_access', 'orders_manage']} requireAny>
           <MainLayout>
             <FechamentoCaixa />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro" element={
+        <ProtectedRoute requiredPermissions={['reports_view']}>
+          <MainLayout>
+            <Financeiro />
           </MainLayout>
         </ProtectedRoute>
       } />
