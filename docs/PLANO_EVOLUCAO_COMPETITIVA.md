@@ -1431,3 +1431,4 @@ Ao final de cada operacao, atualizar o checklist do bloco afetado e adicionar um
 | 2026-06-18 | Revisao de maturidade operacional | Criado | Auditoria pos-implementacoes registrada com veredito de piloto assistido, evidencias automatizadas, leitura competitiva e blocos M1-M10 para go-live/escala comercial. |
 | 2026-05-28 | Plano inicial | Criado | Backlog competitivo registrado para execucao incremental. |
 | 2026-05-28 | Bloco 1 — CRM de clientes | Implementado tecnicamente | Migration + tela `/clientes` + servico frontend. Pendente aplicar migration e validar no piloto. |
+| 2026-10-26 | C01.4 — Consulta da auditoria do caixa | Implementado parcialmente `[~]` | `[x]` Consulta por restaurante, período e ação, paginação, responsável e detalhes antes/depois. Evidências: 20 testes unitários (5 novos de consulta) e 1 E2E simulado aprovados; build OK. `[ ]` Aprovação de exceções e validação real de acesso seguem pendentes. Ver `FECHAMENTO_CAIXA.md`. |

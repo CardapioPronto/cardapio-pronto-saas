@@ -89,6 +89,7 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 - Somente leitura: não apaga, edita ou aprova eventos. As regras existentes da tabela restringem acesso por restaurante e permissões; a página mantém a exigência `cash_manage`.
 - Eventos anteriores à implantação dos gatilhos não são reconstruídos. Responsável sem perfil acessível aparece como indisponível, não como Sistema. Datas seguem o horário local do navegador.
 - Testes de serviço cobrem restaurante, período com limite final exclusivo, paginação, ação, identificação do operador e falha explícita. Testes de tela simulados não substituem operação real.
+- Evidência desta fatia: 20 testes unitários aprovados (5 de consulta e 15 de regressão do caixa) e 1 E2E simulado aprovado, incluindo detalhes de correção, paginação e fechamento com diferença de R$ -20,00; build OK.
 
 **Roteiro do piloto:** corrija uma forma de pagamento já registrada no PDV, feche o turno e consulte as duas ações no histórico; abra os detalhes, confira operador e valores e teste um colaborador sem `cash_manage`.
 
