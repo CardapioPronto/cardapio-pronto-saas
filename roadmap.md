@@ -15,3 +15,7 @@
 - [x] Integrar seleção de unidade, rota e menu com permissões existentes; testar cálculos e consulta simulada.
 - [x] Documentar limites de sangrias, despesas e repasses em docs/FINANCEIRO_RESTAURANTE.md.
 - [ ] Validar acompanhamento com conta real do gerente — bloqueado: Supabase externo sem sessão disponível.
+
+## C01.2/C01.3 — Fechamento definitivo no servidor
+- [x] Calcular e congelar o fechamento no servidor, sem totais do navegador; bloquear fechamento duplo.
+- [ ] Validar com turno real e teste concorrente — bloqueado: Supabase externo sem sessão disponível.
