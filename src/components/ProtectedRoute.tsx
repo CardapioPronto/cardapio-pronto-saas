@@ -12,6 +12,7 @@ const PERMISSION_LABELS: Record<PermissionType, string> = {
   dashboard_view: 'Ver Dashboard',
   subscription_view: 'Ver Assinatura',
   pdv_access: 'Acessar PDV',
+  cash_manage: 'Gerenciar Caixa',
   orders_view: 'Ver Pedidos',
   orders_manage: 'Gerenciar Pedidos',
   orders_metrics_view: 'Ver valores e indicadores de pedidos',

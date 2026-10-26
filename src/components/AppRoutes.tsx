@@ -311,7 +311,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/caixa" element={
-        <ProtectedRoute requiredPermissions={['pdv_access', 'orders_manage']} requireAny>
+        <ProtectedRoute requiredPermissions={['cash_manage']}>
           <MainLayout>
             <FechamentoCaixa />
           </MainLayout>
