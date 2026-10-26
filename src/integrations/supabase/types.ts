@@ -549,6 +549,57 @@ export type Database = {
           },
         ]
       }
+      cash_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          reason: string
+          receipt_reference: string | null
+          restaurant_id: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind: string
+          reason: string
+          receipt_reference?: string | null
+          restaurant_id: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          reason?: string
+          receipt_reference?: string | null
+          restaurant_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_register_sessions: {
         Row: {
           ai_review: Json | null
@@ -574,6 +625,7 @@ export type Database = {
           opening_amount: number
           restaurant_id: string
           status: string
+          supplies_total: number | null
           system_external_total: number | null
           system_orders_count: number
           system_pending_total: number | null
@@ -606,6 +658,7 @@ export type Database = {
           opening_amount?: number
           restaurant_id: string
           status?: string
+          supplies_total?: number | null
           system_external_total?: number | null
           system_orders_count?: number
           system_pending_total?: number | null
@@ -638,6 +691,7 @@ export type Database = {
           opening_amount?: number
           restaurant_id?: string
           status?: string
+          supplies_total?: number | null
           system_external_total?: number | null
           system_orders_count?: number
           system_pending_total?: number | null
