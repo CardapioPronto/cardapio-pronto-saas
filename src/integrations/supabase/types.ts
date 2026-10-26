@@ -5658,6 +5658,7 @@ export type Database = {
         | "settings_system_manage"
         | "settings_integrations_manage"
         | "settings_audit_view"
+        | "cash_manage"
       user_type: "owner" | "employee" | "manager"
     }
     CompositeTypes: {
@@ -5809,6 +5810,7 @@ export const Constants = {
         "settings_system_manage",
         "settings_integrations_manage",
         "settings_audit_view",
+        "cash_manage",
       ],
       user_type: ["owner", "employee", "manager"],
     },
