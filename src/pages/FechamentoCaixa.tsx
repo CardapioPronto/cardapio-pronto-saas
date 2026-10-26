@@ -30,6 +30,8 @@ import PaymentMethodReconciliation from "@/components/caixa/PaymentMethodReconci
 import { RefreshCw } from "lucide-react";
 import CashClosingAiReview, { type CashAiReview } from "@/components/caixa/CashClosingAiReview";
 import CashAuditHistory from "@/components/caixa/CashAuditHistory";
+import CashMovementsPanel from "@/components/caixa/CashMovementsPanel";
+import { fetchSessionMovements, summarizeCashMovements, type CashMovement } from "@/services/cashMovementService";
 import { summarizeCashActivity, type CashShiftActivity } from "../../supabase/functions/_shared/cash-shift-activity";
 
 const emptyActivity = () => summarizeCashActivity([], new Date().toISOString(), new Date().toISOString());
@@ -40,7 +42,6 @@ const EMPTY_FORM = {
   credit: "",
   debit: "",
   voucher: "",
-  withdrawals: "",
   provider: "",
   batch: "",
   notes: "",
@@ -69,6 +70,7 @@ const FechamentoCaixa = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [movements, setMovements] = useState<CashMovement[]>([]);
 
   const load = useCallback(async () => {
     if (!activeRestaurantId) return;
@@ -82,6 +84,7 @@ const FechamentoCaixa = () => {
       setSession(open);
       setHistory(recent);
       setSales(open ? await fetchSessionSales(activeRestaurantId, open.opened_at) : emptyActivity());
+      setMovements(open ? await fetchSessionMovements(open.id) : []);
     } catch (error) {
       setLoadFailed(true);
       toast({
@@ -106,9 +109,9 @@ const FechamentoCaixa = () => {
       declaredCredit: parseMoneyInput(form.credit),
       declaredDebit: parseMoneyInput(form.debit),
       declaredVoucher: parseMoneyInput(form.voucher),
-      withdrawals: parseMoneyInput(form.withdrawals),
+      withdrawals: summarizeCashMovements(movements).netWithdrawals,
     }),
-    [form, session],
+    [form, session, movements],
   );
 
   const summary = summarizeCashClosing(declaration, sales.receivedTotal, 0.009, sales.cashReceived);
@@ -252,18 +255,19 @@ const FechamentoCaixa = () => {
               </CardContent></Card>)}
             </div>
 
+            {activeRestaurantId && <CashMovementsPanel restaurantId={activeRestaurantId} sessionId={session.id} movements={movements} onChanged={load} />}
+
             <Card>
               <CardHeader>
                 <CardTitle>Conferência e fechamento</CardTitle>
                 <CardDescription>
                   Conte a gaveta e copie os totais do relatório da maquininha (crédito, débito e voucher).
-                  Dinheiro esperado na gaveta: {formatarMoeda(summary.expectedCashInDrawer)}.
+                  Dinheiro esperado na gaveta: {formatarMoeda(summary.expectedCashInDrawer)} (já considera sangrias e suprimentos lançados).
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
                   {field("cash", "Dinheiro contado na gaveta")}
-                  {field("withdrawals", "Sangrias / retiradas")}
                   {field("pix", "PIX recebido")}
                   {field("credit", "Crédito (maquininha)")}
                   {field("debit", "Débito (maquininha)")}
