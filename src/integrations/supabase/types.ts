@@ -505,6 +505,50 @@ export type Database = {
           },
         ]
       }
+      cash_audit_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          order_id: string | null
+          restaurant_id: string
+          session_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          order_id?: string | null
+          restaurant_id: string
+          session_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          order_id?: string | null
+          restaurant_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_audit_events_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_register_sessions: {
         Row: {
           ai_review: Json | null
