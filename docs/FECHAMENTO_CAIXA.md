@@ -94,3 +94,10 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 **Roteiro do piloto:** corrija uma forma de pagamento já registrada no PDV, feche o turno e consulte as duas ações no histórico; abra os detalhes, confira operador e valores e teste um colaborador sem `cash_manage`.
 
 **Atualização das entregas anteriores:** cálculo definitivo e congelamento agora ocorrem em `close_cash_register_session`; abertura/fechamento exigem `cash_manage`. O vínculo explícito pedido→caixa, aprovação de exceções, volume/concorrência e validação real continuam pendentes.
+
+## C02 — Sangrias e suprimentos (2026-10-26)
+
+- Lance cada sangria (retirada) ou suprimento (reforço de troco) em **Caixa → Sangrias e suprimentos**, com motivo e, se houver, número do recibo/envelope.
+- Lançamentos são imutáveis; erros se corrigem com lançamento contrário explicado.
+- Dinheiro esperado = troco + dinheiro recebido + suprimentos − sangrias. O servidor usa o livro no fechamento; o campo digitado de sangrias foi removido.
+- Limite: ainda sem anexo de foto do comprovante.

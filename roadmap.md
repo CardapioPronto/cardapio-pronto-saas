@@ -25,3 +25,7 @@
 - [x] Consultar auditoria do caixa com período, ação, responsável, valores anteriores/novos e paginação — 20 testes unitários e 1 fluxo de tela simulado aprovados.
 - [ ] Aprovação de exceções no fechamento — depende de definir a política de aprovação e os casos autorizáveis; não foi incluída na consulta somente leitura.
 - [ ] Validar com colaborador sem permissão — bloqueado: Supabase externo sem sessão disponível.
+
+## C02 — Livro de sangrias e suprimentos
+- [x] Lançamentos individuais com motivo, comprovante, responsável e horário; fechamento usa o livro — 4 testes unitários.
+- [ ] Foto do comprovante e validação em turno real — bloqueado: Supabase externo sem sessão disponível.

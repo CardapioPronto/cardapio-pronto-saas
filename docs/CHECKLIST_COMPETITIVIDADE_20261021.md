@@ -70,7 +70,7 @@ Achados: o caixa busca pedidos por data de criação, exclui apenas cancelados, 
 **P0 · ampliar base existente · esforço médio · referência M7**
 
 - [~] Substituir o rótulo “Misto” por parcelas com forma, valor, confirmação e eventual estorno; a soma deve bater com o total líquido do pedido.
-- [~] Registrar sangria e suprimento como movimentos individuais, com operador, horário, motivo e comprovante; hoje há declaração agregada de retiradas, não um livro completo de movimentos.
+- [~] Registrar sangria e suprimento como movimentos individuais, com operador, horário, motivo e comprovante; hoje há declaração agregada de retiradas, não um livro completo de movimentos. **2026-10-26:** livro `cash_movements` em **Caixa → Sangrias e suprimentos**: cada lançamento tem tipo, valor, motivo, referência de comprovante, responsável e horário; só `cash_manage` lança, só em caixa aberto, sem edição/exclusão; o fechamento no servidor usa a soma do livro (grava `withdrawals` e `supplies_total`). Falta: anexo de foto do comprovante e validação em turno real.
 - [ ] Gerar relatório de fechamento por forma, recebimento, operador e divergência, com exportação/impressão e aprovação de exceções.
 
 **Aceite:** pedido de R$ 100 recebido com R$ 40 em dinheiro e R$ 60 em PIX aparece corretamente nas duas formas; retirada/suprimento altera o saldo esperado sem virar venda; fechamento histórico permanece verificável.
