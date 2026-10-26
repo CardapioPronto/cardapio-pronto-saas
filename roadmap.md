@@ -19,3 +19,8 @@
 ## C01.2/C01.3 — Fechamento definitivo no servidor
 - [x] Calcular e congelar o fechamento no servidor, sem totais do navegador; bloquear fechamento duplo.
 - [ ] Validar com turno real e teste concorrente — bloqueado: Supabase externo sem sessão disponível.
+
+## C01.4 — Permissão e auditoria do caixa
+- [x] Permissão Gerenciar Caixa no banco, rota, menu e cadastro de funcionários; auditoria de forma de pagamento e fechamentos.
+- [ ] Tela de consulta da auditoria e aprovação de exceções.
+- [ ] Validar com colaborador sem permissão — bloqueado: Supabase externo sem sessão disponível.

@@ -16,6 +16,7 @@ export const PERMISSION_LABELS: Record<PermissionType, string> = {
   dashboard_view: "Dashboard",
   subscription_view: "Assinatura",
   pdv_access: "PDV",
+  cash_manage: "Gerenciar Caixa",
   orders_view: "Ver Pedidos",
   orders_manage: "Gerenciar Pedidos",
   orders_metrics_view: "Valores de Pedidos",
@@ -58,6 +59,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description: "Operação de venda e atendimento",
     permissions: [
       { value: "pdv_access", label: "Acesso ao PDV", description: "Permite usar o sistema de PDV" },
+      { value: "cash_manage", label: "Gerenciar Caixa", description: "Abrir, conferir e fechar o caixa" },
       { value: "orders_view", label: "Ver Pedidos", description: "Visualizar lista de pedidos" },
       { value: "orders_manage", label: "Gerenciar Pedidos", description: "Criar, editar e cancelar pedidos" },
       { value: "orders_metrics_view", label: "Ver Valores e Indicadores", description: "Visualizar faturamento, totais e subtotais dos pedidos" },

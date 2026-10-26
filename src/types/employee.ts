@@ -29,7 +29,7 @@ export const ROLE_PRESETS: RolePreset[] = [
     description: 'Acesso total operacional (sem financeiro/funcionários por padrão)',
     user_type: 'manager',
     permissions: [
-      'dashboard_view', 'pdv_access',
+      'dashboard_view', 'pdv_access', 'cash_manage',
       'orders_view', 'orders_manage', 'orders_metrics_view',
       'products_view', 'products_manage',
       'reports_view', 'settings_view',
@@ -41,9 +41,9 @@ export const ROLE_PRESETS: RolePreset[] = [
   {
     id: 'cashier',
     label: 'Caixa',
-    description: 'PDV, pedidos e visualização de produtos',
+    description: 'PDV, pedidos, caixa e visualização de produtos',
     user_type: 'employee',
-    permissions: ['pdv_access', 'orders_view', 'orders_manage', 'products_view'],
+    permissions: ['pdv_access', 'cash_manage', 'orders_view', 'orders_manage', 'products_view'],
   },
   {
     id: 'waiter',
