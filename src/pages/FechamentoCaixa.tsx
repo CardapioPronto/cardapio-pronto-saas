@@ -29,6 +29,7 @@ import {
 import PaymentMethodReconciliation from "@/components/caixa/PaymentMethodReconciliation";
 import { RefreshCw } from "lucide-react";
 import CashClosingAiReview, { type CashAiReview } from "@/components/caixa/CashClosingAiReview";
+import CashAuditHistory from "@/components/caixa/CashAuditHistory";
 import { summarizeCashActivity, type CashShiftActivity } from "../../supabase/functions/_shared/cash-shift-activity";
 
 const emptyActivity = () => summarizeCashActivity([], new Date().toISOString(), new Date().toISOString());
@@ -372,6 +373,7 @@ const FechamentoCaixa = () => {
             )}
           </CardContent>
         </Card>
+        {activeRestaurantId && <CashAuditHistory key={activeRestaurantId} restaurantId={activeRestaurantId} refreshKey={`${session?.id ?? "closed"}:${history[0]?.id ?? ""}`} />}
       </div>
     </DashboardLayout>
   );

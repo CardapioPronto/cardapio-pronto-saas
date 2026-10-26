@@ -78,3 +78,19 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 **Piloto pendente:** abra um turno, receba pedido antigo de R$ 100 em dinheiro, registre venda pendente de R$ 50 e pagamento externo de R$ 80; confira recebimento local R$ 100, pendente R$ 50 e externo R$ 80. Com troco R$ 100 e gaveta R$ 200, diferença deve ser zero. Feche e confira o histórico.
 
 **Próximos itens, fora desta entrega:** vinculação dos recebimentos ao caixa, congelamento/cálculo definitivo no servidor, concorrência, permissões financeiras, parcelas do misto e repasses bancários efetivos. A leitura sem truncamento não comprova capacidade em volume extremo. Permanecem 219 apontamentos de segurança anteriores; esta entrega não adicionou novos.
+
+## C01.4 — Consulta da auditoria (2026-10-26)
+
+**Status `[~]`: consulta implementada; aprovação de exceções e piloto autenticado pendentes.**
+
+- Em **Caixa → Auditoria do caixa**, consulte correções de forma de pagamento e fechamentos, mesmo sem turno aberto.
+- Filtros de data inicial/final e ação; paginação de 25 eventos com contagem do período, sem truncar o histórico.
+- Cada evento mostra data, responsável disponível, referência do pedido/caixa e detalhes dos valores anteriores e posteriores; fechamento inclui recebimento, diferença e observações registrados.
+- Somente leitura: não apaga, edita ou aprova eventos. As regras existentes da tabela restringem acesso por restaurante e permissões; a página mantém a exigência `cash_manage`.
+- Eventos anteriores à implantação dos gatilhos não são reconstruídos. Responsável sem perfil acessível aparece como indisponível, não como Sistema. Datas seguem o horário local do navegador.
+- Testes de serviço cobrem restaurante, período com limite final exclusivo, paginação, ação, identificação do operador e falha explícita. Testes de tela simulados não substituem operação real.
+- Evidência desta fatia: 20 testes unitários aprovados (5 de consulta e 15 de regressão do caixa) e 1 E2E simulado aprovado, incluindo detalhes de correção, paginação e fechamento com diferença de R$ -20,00; build OK.
+
+**Roteiro do piloto:** corrija uma forma de pagamento já registrada no PDV, feche o turno e consulte as duas ações no histórico; abra os detalhes, confira operador e valores e teste um colaborador sem `cash_manage`.
+
+**Atualização das entregas anteriores:** cálculo definitivo e congelamento agora ocorrem em `close_cash_register_session`; abertura/fechamento exigem `cash_manage`. O vínculo explícito pedido→caixa, aprovação de exceções, volume/concorrência e validação real continuam pendentes.

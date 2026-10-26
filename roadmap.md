@@ -22,5 +22,6 @@
 
 ## C01.4 — Permissão e auditoria do caixa
 - [x] Permissão Gerenciar Caixa no banco, rota, menu e cadastro de funcionários; auditoria de forma de pagamento e fechamentos.
-- [ ] Tela de consulta da auditoria e aprovação de exceções.
+- [x] Consultar auditoria do caixa com período, ação, responsável, valores anteriores/novos e paginação — 20 testes unitários e 1 fluxo de tela simulado aprovados.
+- [ ] Aprovação de exceções no fechamento — depende de definir a política de aprovação e os casos autorizáveis; não foi incluída na consulta somente leitura.
 - [ ] Validar com colaborador sem permissão — bloqueado: Supabase externo sem sessão disponível.
