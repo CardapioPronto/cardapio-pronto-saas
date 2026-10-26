@@ -15,7 +15,7 @@ test("cash audit filters, paginates and opens immutable changes (simulated)", as
     const closed = url.searchParams.get("event_type") === "eq.cash_session_closed";
     const second = url.searchParams.get("offset") === "25";
     const event = { id: second ? "second" : "first", actor_id: "actor", restaurant_id: "00000000-0000-4000-8000-000000000101", created_at: new Date().toISOString(), event_type: closed ? "cash_session_closed" : "payment_method_changed", order_id: closed ? null : "pedido-123", session_id: closed ? "turno-123" : null, old_value: closed ? null : { payment_method: "dinheiro", payment_status: "paid" }, new_value: closed ? { difference: -20, received: 100, notes: "Conferência de teste" } : { payment_method: "pix", payment_status: "paid" } };
-    await route.fulfill({ json: [event], headers: { "content-range": "0-0/26" } });
+    await route.fulfill({ json: [event], headers: { "content-range": "0-0/26", "access-control-expose-headers": "content-range" } });
   });
   await page.goto("/caixa");
   const audit = page.getByRole("region", { name: "Auditoria do caixa" });
