@@ -80,13 +80,20 @@ export const fetchSessionSales = async (restaurantId: string, since: string) => 
   return summarizeCashActivity(activity.orders, activity.since, activity.until);
 };
 
-export const closeSession = async (
-  sessionId: string,
-  payload: Partial<CashRegisterSession>,
-) => {
-  const { error } = await table()
-    .update({ ...payload, status: "closed" })
-    .eq("id", sessionId)
-    .eq("status", "open");
+export interface CloseDeclaration {
+  declared_cash: number; declared_pix: number; declared_credit: number; declared_debit: number;
+  declared_voucher: number; withdrawals: number;
+  card_machine_provider: string | null; card_machine_batch: string | null; notes: string | null;
+}
+
+/** Definitive closing: the server recalculates and freezes system totals; only declared values are sent. */
+export const closeSession = async (sessionId: string, d: CloseDeclaration) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("close_cash_register_session", {
+    p_session_id: sessionId, p_declared_cash: d.declared_cash, p_declared_pix: d.declared_pix,
+    p_declared_credit: d.declared_credit, p_declared_debit: d.declared_debit, p_declared_voucher: d.declared_voucher,
+    p_withdrawals: d.withdrawals, p_provider: d.card_machine_provider, p_batch: d.card_machine_batch, p_notes: d.notes,
+  });
   if (error) throw error;
+  return data as { difference: number; received: number; sales: number; orders: number; until: string };
 };

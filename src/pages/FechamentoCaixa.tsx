@@ -138,12 +138,7 @@ const FechamentoCaixa = () => {
       const fresh = await fetchSessionSales(activeRestaurantId, session.opened_at);
       if (fresh.review.length > 0 && !form.notes.trim()) throw new Error("Justifique os pedidos a revisar nas observações antes de fechar.");
       const finalSummary = summarizeCashClosing(declaration, fresh.receivedTotal, 0.009, fresh.cashReceived);
-      await closeSession(session.id, {
-        system_orders_count: fresh.count,
-        system_sales_total: fresh.total,
-        system_received_total: fresh.receivedTotal,
-        system_pending_total: fresh.pendingTotal,
-        system_external_total: fresh.externalTotal,
+      const closed = await closeSession(session.id, {
         declared_cash: declaration.declaredCash,
         declared_pix: declaration.declaredPix,
         declared_credit: declaration.declaredCredit,
@@ -152,11 +147,10 @@ const FechamentoCaixa = () => {
         withdrawals: declaration.withdrawals,
         card_machine_provider: form.provider.trim() || null,
         card_machine_batch: form.batch.trim() || null,
-        difference_amount: finalSummary.difference,
         notes: form.notes.trim() || null,
       });
       setForm(EMPTY_FORM);
-      toast({ title: "Caixa fechado", description: `Diferença: ${formatarMoeda(finalSummary.difference)}` });
+      toast({ title: "Caixa fechado", description: `Diferença calculada pelo servidor: ${formatarMoeda(Number(closed?.difference ?? finalSummary.difference))}` });
       await load();
     } catch (error) {
       toast({
