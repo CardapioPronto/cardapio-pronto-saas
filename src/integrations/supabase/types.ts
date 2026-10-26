@@ -513,6 +513,9 @@ export type Database = {
           card_machine_provider: string | null
           closed_at: string | null
           closed_by: string | null
+          closing_cash_received: number | null
+          closing_snapshot: Json | null
+          closing_until: string | null
           created_at: string
           declared_cash: number
           declared_credit: number
@@ -542,6 +545,9 @@ export type Database = {
           card_machine_provider?: string | null
           closed_at?: string | null
           closed_by?: string | null
+          closing_cash_received?: number | null
+          closing_snapshot?: Json | null
+          closing_until?: string | null
           created_at?: string
           declared_cash?: number
           declared_credit?: number
@@ -571,6 +577,9 @@ export type Database = {
           card_machine_provider?: string | null
           closed_at?: string | null
           closed_by?: string | null
+          closing_cash_received?: number | null
+          closing_snapshot?: Json | null
+          closing_until?: string | null
           created_at?: string
           declared_cash?: number
           declared_credit?: number
@@ -5020,6 +5029,21 @@ export type Database = {
           p_accepts_marketing?: boolean
           p_order_id: string
           p_source?: string
+        }
+        Returns: Json
+      }
+      close_cash_register_session: {
+        Args: {
+          p_batch?: string
+          p_declared_cash: number
+          p_declared_credit: number
+          p_declared_debit: number
+          p_declared_pix: number
+          p_declared_voucher: number
+          p_notes?: string
+          p_provider?: string
+          p_session_id: string
+          p_withdrawals: number
         }
         Returns: Json
       }
