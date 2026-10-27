@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { uploadCashReceipt } from "@/services/cashReceiptService";
 
 export type CashMovementKind = "sangria" | "suprimento";
 export interface CashMovement {
@@ -9,6 +10,7 @@ export interface CashMovement {
   amount: number;
   reason: string;
   receipt_reference: string | null;
+  receipt_path?: string | null;
   created_by: string;
   created_at: string;
   actorName?: string | null;
@@ -49,12 +51,13 @@ export async function fetchSessionMovements(sessionId: string): Promise<CashMove
 }
 
 export async function addCashMovement(params: {
-  restaurantId: string; sessionId: string; kind: CashMovementKind; amount: number; reason: string; receipt?: string;
+  restaurantId: string; sessionId: string; kind: CashMovementKind; amount: number; reason: string; receipt?: string; photo?: File | null;
 }) {
   const invalid = validateCashMovement(params);
   if (invalid) throw new Error(invalid);
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Sessão expirada. Entre novamente.");
+  const receiptPath = params.photo ? await uploadCashReceipt(params.photo, params.restaurantId, params.sessionId, auth.user.id) : null;
   const { error } = await table().insert({
     restaurant_id: params.restaurantId,
     session_id: params.sessionId,
@@ -62,6 +65,7 @@ export async function addCashMovement(params: {
     amount: Math.round(params.amount * 100) / 100,
     reason: params.reason.trim(),
     receipt_reference: params.receipt?.trim() || null,
+    receipt_path: receiptPath,
     created_by: auth.user.id,
   } as never);
   if (error) throw error;
