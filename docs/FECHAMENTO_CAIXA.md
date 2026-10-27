@@ -41,7 +41,7 @@ O total do sistema e recalculado no momento do fechamento para evitar valor desa
 
 - Pedidos antigos podem não ter forma ou data de pagamento; não são convertidos automaticamente em recebimentos.
 - Sem integracao automatica com adquirente/TEF.
-- Sem relatorio impresso do fechamento (pode ser exportado em versao futura).
+- Relatório de fechamento disponível conforme seção C02 abaixo; impressão física ainda exige validação na loja.
 
 ## Forma de pagamento por pedido (2026-10-08)
 - No PDV (Histórico de pedidos), cada pedido tem o campo **Forma de pagamento**: Dinheiro, PIX, Crédito, Débito, Voucher ou Misto.
@@ -101,3 +101,15 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 - Lançamentos são imutáveis; erros se corrigem com lançamento contrário explicado.
 - Dinheiro esperado = troco + dinheiro recebido + suprimentos − sangrias. O servidor usa o livro no fechamento; o campo digitado de sangrias foi removido.
 - Limite: ainda sem anexo de foto do comprovante.
+
+## C02 — Relatório verificável (2026-10-27)
+
+**Status `[~]`: consulta, CSV e impressão entregues; aprovação de exceções e piloto real pendentes.**
+
+- Em **Caixa → Últimos fechamentos → Ver relatório**, consulte troco, sangrias, suprimentos, responsáveis da abertura/fechamento, vendas, recebimentos locais, pendentes, externo bruto, declaração por forma, diferença e observações.
+- Relatório usa exclusivamente valores e pedidos congelados do fechamento. Não altera caixa nem consulta formas atuais dos pedidos. Novos fechamentos preservam a forma; históricos anteriores mostram “Não disponível” onde ela falta.
+- Dinheiro líquido declarado = gaveta − troco + sangrias − suprimentos. Externo bruto não comprova repasse e não entra na conferência local.
+- Lista de pedidos paginada em 25 na tela; CSV e impressão incluem todos os pedidos do snapshot. Impressão abre janela nativa, com opção de salvar PDF. Datas usam São Paulo. Nomes não autorizados/indisponíveis não são inventados.
+- Exportação protege campos textuais contra fórmulas de planilha; impressão insere texto, não HTML vindo do usuário.
+- Piloto: abra com R$ 100, lance sangria R$ 30 e suprimento R$ 10, conte R$ 80, feche e confira dinheiro líquido zero. Consulte relatório, exporte CSV e salve PDF. Confirme responsáveis e que corrigir pedido depois não altera o relatório.
+- Limites: últimos 15 fechamentos na lista existente; sem aprovação de exceções, anexos ou homologação em impressora física. Validação autenticada bloqueada por Supabase externo sem sessão disponível.

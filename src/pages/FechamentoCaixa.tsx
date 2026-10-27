@@ -31,6 +31,7 @@ import { RefreshCw } from "lucide-react";
 import CashClosingAiReview, { type CashAiReview } from "@/components/caixa/CashClosingAiReview";
 import CashAuditHistory from "@/components/caixa/CashAuditHistory";
 import CashMovementsPanel from "@/components/caixa/CashMovementsPanel";
+import CashClosingReportDialog from "@/components/caixa/CashClosingReportDialog";
 import { fetchSessionMovements, summarizeCashMovements, type CashMovement } from "@/services/cashMovementService";
 import { summarizeCashActivity, type CashShiftActivity } from "../../supabase/functions/_shared/cash-shift-activity";
 
@@ -71,6 +72,7 @@ const FechamentoCaixa = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [movements, setMovements] = useState<CashMovement[]>([]);
+  const [reportSessionId, setReportSessionId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!activeRestaurantId) return;
@@ -351,6 +353,7 @@ const FechamentoCaixa = () => {
                     <TableHead className="text-right">Maquininha</TableHead>
                     <TableHead>Referência</TableHead>
                     <TableHead>Resultado</TableHead>
+                    <TableHead>Relatório</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -370,6 +373,7 @@ const FechamentoCaixa = () => {
                         {[item.card_machine_provider, item.card_machine_batch].filter(Boolean).join(" · ") || "-"}
                       </TableCell>
                       <TableCell><DifferenceBadge value={Number(item.difference_amount)} /></TableCell>
+                      <TableCell><Button variant="outline" size="sm" onClick={() => setReportSessionId(item.id)}>Ver relatório</Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -378,6 +382,7 @@ const FechamentoCaixa = () => {
           </CardContent>
         </Card>
         {activeRestaurantId && <CashAuditHistory key={activeRestaurantId} restaurantId={activeRestaurantId} refreshKey={`${session?.id ?? "closed"}:${history[0]?.id ?? ""}`} />}
+        {activeRestaurantId && <CashClosingReportDialog key={activeRestaurantId} restaurantId={activeRestaurantId} sessionId={reportSessionId} onClose={() => setReportSessionId(null)} />}
       </div>
     </DashboardLayout>
   );

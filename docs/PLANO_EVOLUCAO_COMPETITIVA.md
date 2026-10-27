@@ -5,6 +5,8 @@ Objetivo: organizar a evolucao do Pubfy para competir no mercado brasileiro de s
 
 **Revisao atual — 2026-10-21:** seguir `docs/CHECKLIST_COMPETITIVIDADE_20261021.md` como fila priorizada de correcoes, complementos e validacoes. A revisao separa recursos ja existentes de lacunas reais, inclui referencias oficiais de mercado e criterios de aceite. Prioridade inicial: integridade do caixa/recebimentos e pagamento misto; depois piloto, integracoes, fiscal e hardware. As marcacoes abaixo preservam o historico e nao comprovam homologacao atual por si so.
 
+**Entrega C02 — 2026-10-27 `[~]`:** relatório de fechamento congelado com responsáveis, recebimentos, formas e divergências, exportação CSV e impressão/PDF. Históricos sem forma preservada continuam explícitos como indisponíveis. Aprovação de exceções e piloto real pendentes; guia em `FECHAMENTO_CAIXA.md`.
+
 ---
 
 ## Decisao de trabalho
