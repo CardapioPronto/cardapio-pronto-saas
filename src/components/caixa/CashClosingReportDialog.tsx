@@ -44,7 +44,7 @@ export default function CashClosingReportDialog({ restaurantId, sessionId, onClo
     doc.body.append(table);
     target.focus(); target.print();
   };
-  const rows = report ? closingReportRows(report).slice(0, 17) : [];
+  const rows = report ? closingReportRows(report).slice(0, 16) : [];
   return <Dialog open={Boolean(sessionId)} onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-y-auto">
       <DialogHeader><DialogTitle>Relatório de fechamento</DialogTitle><DialogDescription>Valores registrados no encerramento · horário de São Paulo</DialogDescription></DialogHeader>

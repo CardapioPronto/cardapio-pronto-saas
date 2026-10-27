@@ -31,5 +31,6 @@
 - [ ] Foto do comprovante e validação em turno real — bloqueado: Supabase externo sem sessão disponível.
 
 ## C02 — Relatório de fechamento
-- [ ] Consultar relatório congelado com operadores, recebimentos, formas e divergências; exportar CSV e imprimir.
+- [x] Consultar relatório congelado com operadores, recebimentos, formas e divergências; exportar CSV e imprimir — 15 testes unitários e fluxo de navegador simulado aprovados.
 - [ ] Aprovação de exceções — bloqueado: política de aprovação ainda não definida.
+- [ ] Validar relatório em turno real e impressora física — bloqueado: Supabase externo sem sessão disponível e hardware da loja.
