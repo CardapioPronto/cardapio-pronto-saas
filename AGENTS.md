@@ -5,3 +5,4 @@
 - Preserve sales and receipt totals as separate nullable historical fields; never reinterpret legacy closing totals as confirmed receipts.
 - The read-only financial page queries the active tenant through the shared cash-activity classification; its partial cash flow subtracts closed-session withdrawals at closing time, never inferring bank balances or unrecorded expenses.
 - Cash audit history reads immutable events with tenant filtering, half-open date intervals, server-side pagination and existing restricted actor lookup; it never edits historical records.
+- Closing reports read tenant-scoped closed sessions and frozen snapshots only; unavailable historical payment methods remain unknown instead of being rebuilt from mutable orders.
