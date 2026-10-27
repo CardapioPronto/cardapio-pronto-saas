@@ -32,8 +32,7 @@ export function validateCashMovement(input: { amount: number; reason: string; re
   return null;
 }
 
-// Tabela ainda não presente nos tipos gerados.
-const table = () => (supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> }).from("cash_movements");
+const table = () => supabase.from("cash_movements");
 
 export async function fetchSessionMovements(sessionId: string): Promise<CashMovement[]> {
   const { data, error } = await table().select("*").eq("session_id", sessionId)
