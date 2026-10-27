@@ -29,3 +29,7 @@
 ## C02 — Livro de sangrias e suprimentos
 - [x] Lançamentos individuais com motivo, comprovante, responsável e horário; fechamento usa o livro — 4 testes unitários.
 - [ ] Foto do comprovante e validação em turno real — bloqueado: Supabase externo sem sessão disponível.
+
+## C02 — Relatório de fechamento
+- [ ] Consultar relatório congelado com operadores, recebimentos, formas e divergências; exportar CSV e imprimir.
+- [ ] Aprovação de exceções — bloqueado: política de aprovação ainda não definida.

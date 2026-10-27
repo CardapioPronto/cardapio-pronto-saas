@@ -9,6 +9,10 @@ export interface CashRegisterSession {
   opening_amount: number;
   status: "open" | "closed";
   closed_at: string | null;
+  closed_by?: string | null;
+  closing_snapshot?: unknown;
+  closing_cash_received?: number | null;
+  supplies_total?: number | null;
   system_orders_count: number;
   system_sales_total: number;
   system_received_total: number | null;
