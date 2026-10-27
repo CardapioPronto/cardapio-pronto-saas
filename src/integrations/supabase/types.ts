@@ -557,6 +557,7 @@ export type Database = {
           id: string
           kind: string
           reason: string
+          receipt_path: string | null
           receipt_reference: string | null
           restaurant_id: string
           session_id: string
@@ -568,6 +569,7 @@ export type Database = {
           id?: string
           kind: string
           reason: string
+          receipt_path?: string | null
           receipt_reference?: string | null
           restaurant_id: string
           session_id: string
@@ -579,6 +581,7 @@ export type Database = {
           id?: string
           kind?: string
           reason?: string
+          receipt_path?: string | null
           receipt_reference?: string | null
           restaurant_id?: string
           session_id?: string

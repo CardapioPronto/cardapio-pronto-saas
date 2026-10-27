@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fetchClosingReport } from "@/services/cashClosingReportService";
+import ClosedCashReceipts from "./ClosedCashReceipts";
 import { closingReportCsv, closingReportRows, reportMoney, reportDate, CLASS_LABEL, type ClosingReport } from "@/lib/cashClosingReport";
 
 export default function CashClosingReportDialog({ restaurantId, sessionId, onClose }: {
@@ -57,6 +58,7 @@ export default function CashClosingReportDialog({ restaurantId, sessionId, onClo
         {report.session.notes && <p className="whitespace-pre-wrap break-words text-sm">Observações: {report.session.notes}</p>}
         <Table><TableHeader><TableRow><TableHead>Forma</TableHead><TableHead>Sistema</TableHead><TableHead>Declarado líquido</TableHead><TableHead>Diferença</TableHead></TableRow></TableHeader><TableBody>{report.methods.map(m => <TableRow key={m.label}><TableCell>{m.label}</TableCell><TableCell>{reportMoney(m.system)}</TableCell><TableCell>{reportMoney(m.declared)}</TableCell><TableCell>{reportMoney(m.difference)}</TableCell></TableRow>)}</TableBody></Table>
         <h3 className="font-semibold">Pedidos congelados ({report.orders.length})</h3>
+        <ClosedCashReceipts key={report.session.id} restaurantId={restaurantId} sessionId={report.session.id} />
         <Table><TableHeader><TableRow><TableHead>Pedido</TableHead><TableHead>Classificação</TableHead><TableHead>Recebido em</TableHead><TableHead>Valor</TableHead></TableRow></TableHeader><TableBody>{report.orders.slice(page * 25, (page + 1) * 25).map(o => <TableRow key={o.id}><TableCell>{o.order_number ?? o.id}</TableCell><TableCell>{CLASS_LABEL[o.class ?? ""] ?? "Venda sem recebimento no turno"}</TableCell><TableCell>{reportDate(o.paid_at)}</TableCell><TableCell>{reportMoney(o.total)}</TableCell></TableRow>)}</TableBody></Table>
         {report.orders.length > 25 && <div className="flex items-center justify-between gap-2"><Button variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</Button><span className="text-sm">{page + 1} / {Math.ceil(report.orders.length / 25)}</span><Button variant="outline" disabled={(page + 1) * 25 >= report.orders.length} onClick={() => setPage(p => p + 1)}>Próxima</Button></div>}
       </>}

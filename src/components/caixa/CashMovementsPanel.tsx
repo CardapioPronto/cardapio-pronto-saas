@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { X } from "lucide-react";
+import CashReceiptButton from "@/components/caixa/CashReceiptButton";
+import { validateCashReceipt } from "@/lib/cashReceipt";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,13 +28,16 @@ export default function CashMovementsPanel({ restaurantId, sessionId, movements,
   const [reason, setReason] = useState("");
   const [receipt, setReceipt] = useState("");
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
   const totals = summarizeCashMovements(movements);
 
   const submit = async () => {
     setSaving(true);
     try {
-      await addCashMovement({ restaurantId, sessionId, kind, amount: parseMoneyInput(amount), reason, receipt });
+      await addCashMovement({ restaurantId, sessionId, kind, amount: parseMoneyInput(amount), reason, receipt, photo });
       setAmount(""); setReason(""); setReceipt("");
+      setPhoto(null); if (photoInput.current) photoInput.current.value = "";
       toast({ title: kind === "sangria" ? "Sangria registrada" : "Suprimento registrado" });
       await onChanged();
     } catch (error) {
@@ -76,6 +82,17 @@ export default function CashMovementsPanel({ restaurantId, sessionId, movements,
           <Button onClick={() => void submit()} disabled={saving}>Registrar</Button>
         </div>
 
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-0 space-y-1.5"><Label htmlFor="mov-photo">Foto do comprovante (opcional · até 6 MB)</Label>
+            <Input ref={photoInput} id="mov-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={e => {
+              const file = e.target.files?.[0]; if (!file) { setPhoto(null); return; }
+              const error = validateCashReceipt(file);
+              if (error) { toast({ title: error, variant: "destructive" }); e.target.value = ""; setPhoto(null); } else setPhoto(file);
+            }} />
+          </div>
+          {photo && <Button variant="ghost" size="icon" aria-label="Remover foto selecionada" title="Remover foto selecionada" disabled={saving} onClick={() => { setPhoto(null); if (photoInput.current) photoInput.current.value = ""; }}><X className="h-4 w-4" /></Button>}
+        </div>
+
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variant="outline">Sangrias: {formatarMoeda(totals.withdrawals)}</Badge>
           <Badge variant="outline">Suprimentos: {formatarMoeda(totals.supplies)}</Badge>
@@ -97,7 +114,7 @@ export default function CashMovementsPanel({ restaurantId, sessionId, movements,
                   <TableCell>{m.kind === "sangria" ? "Sangria" : "Suprimento"}</TableCell>
                   <TableCell>{formatarMoeda(m.amount)}</TableCell>
                   <TableCell className="max-w-xs break-words">{m.reason}</TableCell>
-                  <TableCell>{m.receipt_reference ?? "-"}</TableCell>
+                  <TableCell><div className="space-y-2">{m.receipt_reference ?? "-"}{m.receipt_path && <CashReceiptButton path={m.receipt_path} />}</div></TableCell>
                   <TableCell>{m.actorName ?? "-"}</TableCell>
                 </TableRow>
               ))}

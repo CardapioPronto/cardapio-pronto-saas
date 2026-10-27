@@ -100,7 +100,7 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 - Lance cada sangria (retirada) ou suprimento (reforço de troco) em **Caixa → Sangrias e suprimentos**, com motivo e, se houver, número do recibo/envelope.
 - Lançamentos são imutáveis; erros se corrigem com lançamento contrário explicado.
 - Dinheiro esperado = troco + dinheiro recebido + suprimentos − sangrias. O servidor usa o livro no fechamento; o campo digitado de sangrias foi removido.
-- Limite: ainda sem anexo de foto do comprovante.
+- Foto opcional disponível conforme atualização abaixo.
 
 ## C02 — Relatório verificável (2026-10-27)
 
@@ -114,3 +114,12 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 - Piloto: abra com R$ 100, lance sangria R$ 30 e suprimento R$ 10, conte R$ 80, feche e confira dinheiro líquido zero. Consulte relatório, exporte CSV e salve PDF. Confirme responsáveis e que corrigir pedido depois não altera o relatório.
 - Limites: últimos 15 fechamentos na lista existente; sem aprovação de exceções, anexos ou homologação em impressora física. Validação autenticada bloqueada por Supabase externo sem sessão disponível.
 - Evidência: 15 testes unitários aprovados (6 do relatório e 9 de regressão); navegador com dados simulados confirmou abertura, CSV e janela de impressão. O runner Node de E2E ficou bloqueado por ausência do Chromium da sua versão; verificação executada pelo navegador Python disponível. Nenhum pedido ou caixa real foi alterado. Migração não acrescentou avisos aos 219 anteriores.
+
+### Fotos privadas dos movimentos — 2026-10-27 `[~]`
+
+- Antes de **Registrar**, selecione a foto do comprovante (JPG/PNG/WebP, até 6 MB). Foto é opcional. Falha no upload impede gravar movimento sem a foto selecionada.
+- Em **Ver foto**, consulta privada no turno e em **Últimos fechamentos → Ver relatório → Movimentos e comprovantes** (paginação de 25). URLs expiram em 60 segundos; abrir novamente renova o acesso. CSV/PDF não embutem fotos ou links privados.
+- Bucket `cash-receipts` privado; caminho restaurante/turno/operador/arquivo aleatório. Upload só com `cash_manage`, próprio operador e caixa aberto; leitura exige restaurante ativo e permissão financeira. Sem edição/exclusão dos anexos vinculados. Gatilho valida existência e caminho e bloqueia a sessão durante inserção para coordenar com fechamento.
+- Novos movimentos guardam `receipt_path`; antigos permanecem sem foto. Não acrescentamos foto a movimento antigo para preservar sua imutabilidade.
+- Evidências: 17 testes unitários aprovados; consulta do comprovante em fechamento simulado confirmou imagem e retorno ao relatório. Transferência e acesso com conta real não homologados: Supabase externo sem sessão disponível. Migração não gerou novos avisos de segurança; 219 anteriores permanecem.
+- Limite técnico: upload e inserção não são uma transação única. Se a inserção falhar após transferir, o arquivo pode permanecer órfão privado, sem movimento vinculado; limpeza operacional não implementada. Nenhum caixa ou pedido real foi alterado.
