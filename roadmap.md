@@ -29,7 +29,8 @@
 ## C02 — Livro de sangrias e suprimentos
 - [x] Lançamentos individuais com motivo, comprovante, responsável e horário; fechamento usa o livro — 4 testes unitários.
 - [x] Anexar foto privada ao lançamento e consultar comprovante no caixa e no relatório fechado — 17 testes unitários e consulta de foto em navegador simulado aprovados.
-- [ ] Recuperar foto não vinculada após falha no lançamento, sem permitir excluir comprovantes registrados; testar e atualizar checklist.
+- [x] Recuperar foto não vinculada após falha confirmada no lançamento e verificar gravação por ID antes de repetir; 22 testes unitários e checklist atualizado.
+- [ ] Validar remoção concorrente com conta real e tratar órfãos históricos/desconexão total — bloqueado: Supabase externo sem sessão disponível para homologação; limpeza geral fora desta fatia.
 - [ ] Validação em turno real — bloqueado: Supabase externo sem sessão disponível.
 
 ## C02 — Relatório de fechamento
