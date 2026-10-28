@@ -122,4 +122,12 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 - Bucket `cash-receipts` privado; caminho restaurante/turno/operador/arquivo aleatório. Upload só com `cash_manage`, próprio operador e caixa aberto; leitura exige restaurante ativo e permissão financeira. Sem edição/exclusão dos anexos vinculados. Gatilho valida existência e caminho e bloqueia a sessão durante inserção para coordenar com fechamento.
 - Novos movimentos guardam `receipt_path`; antigos permanecem sem foto. Não acrescentamos foto a movimento antigo para preservar sua imutabilidade.
 - Evidências: 17 testes unitários aprovados; consulta do comprovante em fechamento simulado confirmou imagem e retorno ao relatório. Transferência e acesso com conta real não homologados: Supabase externo sem sessão disponível. Migração não gerou novos avisos de segurança; 219 anteriores permanecem.
-- Limite técnico: upload e inserção não são uma transação única. Se a inserção falhar após transferir, o arquivo pode permanecer órfão privado, sem movimento vinculado; limpeza operacional não implementada. Nenhum caixa ou pedido real foi alterado.
+- Limite técnico: upload e inserção não são uma transação única. A recuperação abaixo cobre falhas confirmadas durante o envio, não todos os órfãos históricos ou encerramento da página. Nenhum caixa ou pedido real foi alterado.
+
+### Recuperação de comprovantes — 2026-10-28 `[~]`
+
+- Cada tentativa gera um ID de movimento. Se a gravação devolver erro ou perder a resposta, consulta esse ID no restaurante ativo antes de permitir nova tentativa: movimento encontrado é tratado como sucesso, preservando a foto.
+- Se o movimento não existe, tenta remover somente a foto desta tentativa pelo Storage. A política exige restaurante ativo, próprio operador e `cash_manage`; trava a sessão como a inserção e recusa fotos já vinculadas. Não permite editar ou apagar comprovantes registrados.
+- Se não conseguir confirmar o lançamento, a mensagem orienta atualizar o caixa e conferir os movimentos antes de repetir. Se a limpeza falhar, informa que a foto permanece privada; não oculta o problema.
+- Evidências: 22 testes unitários aprovados, incluindo resposta perdida após gravação, consulta indisponível, limpeza bem-sucedida, limpeza recusada e tentativa sem anexo; aplicação compilada sem erros. Migrações aplicadas sem novos avisos de segurança; 219 avisos anteriores permanecem.
+- Pendências: validar acesso e corrida inserção/remoção com contas reais; Supabase externo sem sessão disponível. Não há limpeza agendada para órfãos anteriores, desconexão total ou fechamento da página durante o envio.

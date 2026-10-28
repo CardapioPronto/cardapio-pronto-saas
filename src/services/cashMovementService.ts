@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { uploadCashReceipt } from "@/services/cashReceiptService";
+import { removeUnlinkedCashReceipt, uploadCashReceipt } from "@/services/cashReceiptService";
 
 export type CashMovementKind = "sangria" | "suprimento";
 export interface CashMovement {
@@ -58,7 +58,11 @@ export async function addCashMovement(params: {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Sessão expirada. Entre novamente.");
   const receiptPath = params.photo ? await uploadCashReceipt(params.photo, params.restaurantId, params.sessionId, auth.user.id) : null;
+  const movementId = crypto.randomUUID();
+  let failure: unknown;
+  try {
   const { error } = await table().insert({
+    id: movementId,
     restaurant_id: params.restaurantId,
     session_id: params.sessionId,
     kind: params.kind,
@@ -68,5 +72,26 @@ export async function addCashMovement(params: {
     receipt_path: receiptPath,
     created_by: auth.user.id,
   } as never);
-  if (error) throw error;
+  if (!error) return;
+  failure = error;
+  } catch (error) {
+    failure = error;
+  }
+
+  // A lost response is not proof of a failed INSERT. Confirm before allowing another attempt.
+  try {
+    const { data, error } = await table().select("id").eq("restaurant_id", params.restaurantId).eq("id", movementId).maybeSingle();
+    if (error) throw error;
+    if (data) return;
+  } catch {
+    throw new Error("Não foi possível confirmar o lançamento. Atualize o caixa e confira os movimentos antes de tentar novamente. A foto foi preservada.");
+  }
+  if (receiptPath) {
+    try {
+      await removeUnlinkedCashReceipt(receiptPath);
+    } catch {
+      throw new Error("O lançamento não foi registrado e a foto não pôde ser removida. Ela continua privada; confira sua conexão antes de tentar novamente.");
+    }
+  }
+  throw failure;
 }

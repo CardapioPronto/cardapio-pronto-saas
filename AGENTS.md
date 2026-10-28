@@ -7,3 +7,4 @@
 - Cash audit history reads immutable events with tenant filtering, half-open date intervals, server-side pagination and existing restricted actor lookup; it never edits historical records.
 - Closing reports read tenant-scoped closed sessions and frozen snapshots only; unavailable historical payment methods remain unknown instead of being rebuilt from mutable orders.
 - Cash receipt photos use private tenant/session/actor storage paths and short-lived signed URLs; paths are attached at movement insertion and linked photos cannot be overwritten or deleted by clients.
+- Failed movement inserts are checked by their generated ID before cleanup or retry; Storage only removes own unlinked photos under the same session lock as insertion, preventing deletion of committed receipts.

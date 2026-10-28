@@ -5124,6 +5124,10 @@ export type Database = {
         Args: { target_restaurant_id: string }
         Returns: boolean
       }
+      can_remove_unlinked_cash_receipt: {
+        Args: { p_path: string }
+        Returns: boolean
+      }
       cancel_public_waitlist: { Args: { _token: string }; Returns: undefined }
       capture_crm_lead_from_order: {
         Args: {

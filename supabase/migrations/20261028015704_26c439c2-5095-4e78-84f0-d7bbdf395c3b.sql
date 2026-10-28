@@ -1,0 +1,1 @@
+ALTER FUNCTION public.can_remove_unlinked_cash_receipt(text) SECURITY INVOKER;

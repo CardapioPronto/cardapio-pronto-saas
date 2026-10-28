@@ -13,3 +13,9 @@ export async function getCashReceiptUrl(path: string) {
   if (error) throw error;
   return data.signedUrl;
 }
+
+/** The Storage policy refuses removal when a movement already references this photo. */
+export async function removeUnlinkedCashReceipt(path: string) {
+  const { error } = await supabase.storage.from("cash-receipts").remove([path]);
+  if (error) throw error;
+}

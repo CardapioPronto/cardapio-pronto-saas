@@ -7,7 +7,7 @@ Objetivo: organizar a evolucao do Pubfy para competir no mercado brasileiro de s
 
 **Entrega C02 — 2026-10-27 `[~]`:** relatório de fechamento congelado com responsáveis, recebimentos, formas e divergências, exportação CSV e impressão/PDF. Históricos sem forma preservada continuam explícitos como indisponíveis. Aprovação de exceções e piloto real pendentes; guia em `FECHAMENTO_CAIXA.md`.
 
-**Complemento C02 — 2026-10-27 `[~]`:** fotos privadas de comprovantes vinculadas a novos movimentos, consultáveis no turno e relatório fechado; testes unitários e consulta simulada aprovados. Validação real e limpeza operacional de uploads órfãos pendentes.
+**Complemento C02 — 2026-10-27 `[~]`:** fotos privadas de comprovantes vinculadas a novos movimentos, consultáveis no turno e relatório fechado; testes unitários e consulta simulada aprovados. **2026-10-28:** recuperação de falha com consulta por ID e remoção apenas de fotos próprias não vinculadas via Storage; 22 testes unitários aprovados. Validação real/concorrente e limpeza de órfãos anteriores ou após perda de conexão continuam pendentes.
 
 ---
 
