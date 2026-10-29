@@ -612,6 +612,7 @@ export type Database = {
           closed_at: string | null
           closed_by: string | null
           closing_cash_received: number | null
+          closing_method_totals: Json | null
           closing_snapshot: Json | null
           closing_until: string | null
           created_at: string
@@ -645,6 +646,7 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closing_cash_received?: number | null
+          closing_method_totals?: Json | null
           closing_snapshot?: Json | null
           closing_until?: string | null
           created_at?: string
@@ -678,6 +680,7 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closing_cash_received?: number | null
+          closing_method_totals?: Json | null
           closing_snapshot?: Json | null
           closing_until?: string | null
           created_at?: string
@@ -2872,6 +2875,51 @@ export type Database = {
             columns: ["promotion_id"]
             isOneToOne: false
             referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_payment_splits: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          method: string
+          order_id: string
+          restaurant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method: string
+          order_id: string
+          restaurant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          order_id?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payment_splits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_payment_splits_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -5633,6 +5681,10 @@ export type Database = {
           restaurant_id: string
           restaurant_name: string
         }[]
+      }
+      set_order_payment_splits: {
+        Args: { p_order_id: string; p_splits: Json }
+        Returns: Json
       }
       set_pos_order_payment: {
         Args: { p_method: string; p_order_id: string }
