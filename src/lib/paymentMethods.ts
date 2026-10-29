@@ -27,6 +27,8 @@ export interface ReconciliationOrder {
   payment_method: string | null;
   payment_provider: string | null;
   payment_status: string | null;
+  /** Parcelas do pagamento misto; quando a soma bate com o total, rateiam a conferência por forma. */
+  splits?: { method: string; amount: number }[];
 }
 
 const ALIASES: Record<string, PosPaymentMethod> = {
