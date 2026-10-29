@@ -151,13 +151,12 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-6-luna',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: message }
           ],
-          temperature: 0.7,
-          max_tokens: 500
+          max_completion_tokens: 2000
         }),
       });
 
