@@ -5063,6 +5063,7 @@ export type Database = {
         }
         Returns: Json
       }
+      _tmp_t7: { Args: { p_session_id: string }; Returns: Json }
       accrue_referral_commission_for_payment: {
         Args: {
           p_gross_amount_cents: number
