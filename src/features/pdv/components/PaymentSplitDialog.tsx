@@ -37,7 +37,7 @@ export const PaymentSplitDialog = ({ open, onOpenChange, orderTotal, saving, onC
   ]);
 
   const total = round2(orderTotal);
-  const parsed = drafts.map((d) => ({ method: d.method, amount: parseMoneyInput(d.amountText) ?? 0 }));
+  const parsed = drafts.map((d) => ({ method: d.method, amount: parseMoneyInput(d.amountText) }));
   const sum = round2(parsed.reduce((acc, p) => acc + p.amount, 0));
   const remaining = round2(total - sum);
   const allPositive = parsed.every((p) => p.amount > 0);

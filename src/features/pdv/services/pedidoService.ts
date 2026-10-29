@@ -443,3 +443,17 @@ export async function registrarPagamentoPedido(pedidoId: string, formaPagamento:
   }
   return { success: true as const };
 }
+
+/** Registra pagamento misto como parcelas com forma e valor; o servidor valida que a soma bate com o total. */
+export async function registrarPagamentoParcelado(pedidoId: string, parcelas: { method: string; amount: number }[]) {
+  const { error } = await supabase.rpc('set_order_payment_splits' as never, {
+    p_order_id: pedidoId,
+    p_splits: parcelas,
+  } as never);
+  if (error) {
+    console.error('Erro ao registrar parcelas:', error);
+    toast.error(error.message || 'Não foi possível registrar as parcelas do pagamento.');
+    return { success: false as const, error };
+  }
+  return { success: true as const };
+}
