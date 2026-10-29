@@ -5052,22 +5052,6 @@ export type Database = {
         Returns: undefined
       }
       _prune_rate_limit_buckets: { Args: never; Returns: undefined }
-      _tmp_t1: { Args: { p_session_id: string }; Returns: Json }
-      _tmp_t2: { Args: { p_session_id: string }; Returns: Json }
-      _tmp_t3: { Args: never; Returns: Json }
-      _tmp_t5: {
-        Args: {
-          p_declared_cash: number
-          p_notes?: string
-          p_session_id: string
-        }
-        Returns: Json
-      }
-      _tmp_t7: { Args: { p_session_id: string }; Returns: Json }
-      _tmp_t9: {
-        Args: { p_declared_cash: number; p_session_id: string }
-        Returns: Json
-      }
       accrue_referral_commission_for_payment: {
         Args: {
           p_gross_amount_cents: number
