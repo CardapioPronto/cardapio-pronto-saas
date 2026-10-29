@@ -1,4 +1,9 @@
 /** One deterministic classification shared by cash UI and AI; amounts are gross BRL. */
+export interface PaymentSplit {
+  method: string;
+  amount: number;
+}
+
 export interface CashActivityOrder {
   id: string;
   order_number: string;
@@ -12,6 +17,15 @@ export interface CashActivityOrder {
   payment_status: string | null;
   source: string | null;
   order_type: string;
+  /** Parcelas do pagamento misto; quando presentes e a soma bate com o total, rateiam o recebimento por forma. */
+  splits?: PaymentSplit[];
+}
+
+/** Soma das parcelas bate com o total do pedido (tolerância de 1 centavo). */
+export function splitsMatchTotal(splits: PaymentSplit[] | undefined, total: number): boolean {
+  if (!splits || splits.length === 0) return false;
+  const sum = splits.reduce((acc, s) => acc + Math.round(Number(s.amount) * 100), 0) / 100;
+  return Math.abs(sum - Math.round(Number(total) * 100) / 100) <= 0.01;
 }
 
 const canceled = new Set(['cancelled', 'canceled', 'cancelado', 'cancelada']);
@@ -54,7 +68,20 @@ export function summarizeCashActivity(input: CashActivityOrder[], since: string,
     // iFood import does not yet establish who collected: never assume cash from its method alone.
     if (normalized(o.source) === 'ifood' && (!provider || provider === 'pdv')) { review.push(o); continue; }
     if (provider && provider !== 'pdv') { external.push(o); continue; }
-    const method = methods[normalized(o.payment_method)];
+    const rawMethod = normalized(o.payment_method);
+    if (rawMethod === 'misto') {
+      // Pagamento misto só é recebimento quando as parcelas batem com o total; caso contrário, revisar.
+      if (!splitsMatchTotal(o.splits, o.total)) { review.push(o); continue; }
+      received.push(o);
+      for (const split of o.splits!) {
+        const splitMethod = methods[normalized(split.method)];
+        if (!splitMethod) continue;
+        const cur = byMethod[splitMethod] ?? { pedidos: 0, total: 0 };
+        byMethod[splitMethod] = { pedidos: cur.pedidos + 1, total: (Math.round(cur.total * 100) + Math.round(Number(split.amount) * 100)) / 100 };
+      }
+      continue;
+    }
+    const method = methods[rawMethod];
     if (!method) { review.push(o); continue; }
     received.push(o);
     const current = byMethod[method] ?? { pedidos: 0, total: 0 };
