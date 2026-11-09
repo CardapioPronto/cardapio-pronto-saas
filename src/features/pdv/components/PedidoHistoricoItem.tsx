@@ -359,6 +359,13 @@ export const PedidoHistoricoItem = ({
           </Button>
         )}
       </CardFooter>
+      <PaymentSplitDialog
+        open={splitDialogAberto}
+        onOpenChange={setSplitDialogAberto}
+        orderTotal={pedido.total}
+        saving={salvandoPagamento}
+        onConfirm={(parcelas) => void confirmarParcelas(parcelas)}
+      />
     </Card>
   );
 };
