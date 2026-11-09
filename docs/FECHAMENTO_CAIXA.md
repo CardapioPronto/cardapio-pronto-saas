@@ -131,3 +131,10 @@ Novos fechamentos guardam vendas, recebimentos locais, pendentes e externos sepa
 - Se não conseguir confirmar o lançamento, a mensagem orienta atualizar o caixa e conferir os movimentos antes de repetir. Se a limpeza falhar, informa que a foto permanece privada; não oculta o problema.
 - Evidências: 22 testes unitários aprovados, incluindo resposta perdida após gravação, consulta indisponível, limpeza bem-sucedida, limpeza recusada e tentativa sem anexo; aplicação compilada sem erros. Migrações aplicadas sem novos avisos de segurança; 219 avisos anteriores permanecem.
 - Pendências: validar acesso e corrida inserção/remoção com contas reais; Supabase externo sem sessão disponível. Não há limpeza agendada para órfãos anteriores, desconexão total ou fechamento da página durante o envio.
+
+## C02.1 — Parcelas do pagamento misto (2026-10-29)
+
+- No PDV, ao escolher **Misto**, abre-se o diálogo **Dividir pagamento**: cada parcela tem forma (Dinheiro, PIX, Crédito, Débito ou Voucher) e valor; a soma deve ser igual ao total do pedido, com tolerância de um centavo.
+- O servidor valida a soma, substitui as parcelas atomicamente e registra o evento `payment_splits_set` na auditoria do caixa. Escolher uma forma única depois remove as parcelas.
+- A conferência por forma, o fechamento definitivo e o relatório congelado rateiam o misto nas formas correspondentes; o fechamento grava `closing_method_totals` com o total por forma. Misto sem parcelas válidas permanece em **A revisar** e exige justificativa.
+- Estorno por parcela ainda não existe: estornos seguem como pedidos a revisar.
