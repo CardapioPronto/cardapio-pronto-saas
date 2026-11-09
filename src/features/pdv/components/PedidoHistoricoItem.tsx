@@ -45,9 +45,20 @@ export const PedidoHistoricoItem = ({
     metodoAtual === "online" || metodoAtual === "sem_forma" ? "" : metodoAtual,
   );
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
+  const [splitDialogAberto, setSplitDialogAberto] = useState(false);
+  const [parcelasSalvas, setParcelasSalvas] = useState(false);
+  const [finalizarAposParcelas, setFinalizarAposParcelas] = useState(false);
 
   const salvarFormaPagamento = async (valor: string) => {
+    if (valor === "misto") {
+      setFormaPagamento(valor);
+      setParcelasSalvas(false);
+      setFinalizarAposParcelas(false);
+      setSplitDialogAberto(true);
+      return;
+    }
     setFormaPagamento(valor);
+    setParcelasSalvas(false);
     if (pedido.status !== "finalizado") return;
     setSalvandoPagamento(true);
     const r = await registrarPagamentoPedido(String(pedido.id), valor);
@@ -55,14 +66,36 @@ export const PedidoHistoricoItem = ({
     if (r.success) pedido.payment_method = valor;
   };
 
+  const confirmarParcelas = async (parcelas: PaymentSplitInput[]) => {
+    setSalvandoPagamento(true);
+    const r = await registrarPagamentoParcelado(String(pedido.id), parcelas);
+    setSalvandoPagamento(false);
+    if (!r.success) return;
+    pedido.payment_method = "misto";
+    setParcelasSalvas(true);
+    setSplitDialogAberto(false);
+    if (finalizarAposParcelas) {
+      setFinalizarAposParcelas(false);
+      alterarStatusPedido(pedido.id, "finalizado");
+    }
+  };
+
   const finalizarComPagamento = async () => {
     if (!pagoOnline) {
       if (!formaPagamento) return;
-      setSalvandoPagamento(true);
-      const r = await registrarPagamentoPedido(String(pedido.id), formaPagamento);
-      setSalvandoPagamento(false);
-      if (!r.success) return;
-      pedido.payment_method = formaPagamento;
+      if (formaPagamento === "misto") {
+        if (!parcelasSalvas && metodoAtual !== "misto") {
+          setFinalizarAposParcelas(true);
+          setSplitDialogAberto(true);
+          return;
+        }
+      } else {
+        setSalvandoPagamento(true);
+        const r = await registrarPagamentoPedido(String(pedido.id), formaPagamento);
+        setSalvandoPagamento(false);
+        if (!r.success) return;
+        pedido.payment_method = formaPagamento;
+      }
     }
     alterarStatusPedido(pedido.id, "finalizado");
   };
