@@ -254,6 +254,17 @@ export const PedidoHistoricoItem = ({
                   {POS_PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {formaPagamento === "misto" && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0"
+                  onClick={() => { setFinalizarAposParcelas(false); setSplitDialogAberto(true); }}
+                >
+                  {parcelasSalvas || metodoAtual === "misto" ? "Editar parcelas" : "Dividir valores entre as formas"}
+                </Button>
+              )}
             </div>
           ) : metodoAtual !== "sem_forma" ? (
             <div className="flex items-center justify-between text-sm">
