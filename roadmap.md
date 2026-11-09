@@ -37,3 +37,9 @@
 - [x] Consultar relatório congelado com operadores, recebimentos, formas e divergências; exportar CSV e imprimir — 15 testes unitários e fluxo de navegador simulado aprovados.
 - [ ] Aprovação de exceções — bloqueado: política de aprovação ainda não definida.
 - [ ] Validar relatório em turno real e impressora física — bloqueado: Supabase externo sem sessão disponível e hardware da loja.
+
+## C02.1 — Parcelas do pagamento misto
+- [x] Tabela de parcelas e gravação validada no servidor (soma = total do pedido), com auditoria.
+- [x] PDV divide o pagamento em formas e valores; conferência, fechamento e relatório rateiam por forma — 186 testes aprovados.
+- [ ] Estorno por parcela — fora desta fatia.
+- [ ] Validar em turno real — bloqueado: Supabase externo sem sessão disponível.

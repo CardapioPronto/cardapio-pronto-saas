@@ -1,9 +1,10 @@
 import type { CashRegisterSession } from "@/services/cashRegisterService";
-import { classifyOrderPayment, METHOD_LABEL, type PosPaymentMethod } from "@/lib/paymentMethods";
+import { classifyOrderPayment, METHOD_LABEL, splitsMatchTotal, type PosPaymentMethod } from "@/lib/paymentMethods";
 
 export interface FrozenOrder {
   id: string; order_number: string | number | null; total: number;
   paid_at: string | null; class: string | null; payment_method?: string | null;
+  splits?: { method: string; amount: number }[];
 }
 export interface ClosingReport {
   session: CashRegisterSession;
@@ -37,8 +38,16 @@ export function buildClosingReport(session: CashRegisterSession, names: Map<stri
     openedBy: names.get(session.opened_by) ?? "Responsável indisponível",
     closedBy: session.closed_by ? names.get(session.closed_by) ?? "Responsável indisponível" : "Responsável indisponível",
     methods: (Object.keys(values) as (keyof typeof values)[]).map(method => {
+      const frozen = session.closing_method_totals?.[method];
       const system = method === "dinheiro" && session.closing_cash_received != null ? Number(session.closing_cash_received)
-        : methodsKnown ? round(received.filter(o => classifyOrderPayment({ ...o, payment_method: o.payment_method ?? null, payment_provider: "pdv", payment_status: "paid" }) === method).reduce((sum, o) => sum + o.total, 0)) : null;
+        : frozen != null ? round(Number(frozen))
+        : methodsKnown ? round(received.reduce((sum, o) => {
+            const pm = o.payment_method ?? null;
+            if (pm === "misto" && splitsMatchTotal(o.splits, o.total)) {
+              return sum + o.splits!.filter(s => s.method === method).reduce((acc, s) => acc + Number(s.amount), 0);
+            }
+            return classifyOrderPayment({ ...o, payment_method: pm, payment_provider: "pdv", payment_status: "paid" }) === method ? sum + o.total : sum;
+          }, 0)) : null;
       return { label: METHOD_LABEL[method], system, declared: values[method], difference: system == null ? null : round(values[method] - system) };
     }),
   };

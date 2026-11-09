@@ -21,11 +21,11 @@ export interface CashActivityOrder {
   splits?: PaymentSplit[];
 }
 
-/** Soma das parcelas bate com o total do pedido (tolerância de 1 centavo). */
+/** Soma das parcelas bate com o total do pedido (tolerância de 1 centavo, comparada em centavos inteiros). */
 export function splitsMatchTotal(splits: PaymentSplit[] | undefined, total: number): boolean {
   if (!splits || splits.length === 0) return false;
-  const sum = splits.reduce((acc, s) => acc + Math.round(Number(s.amount) * 100), 0) / 100;
-  return Math.abs(sum - Math.round(Number(total) * 100) / 100) <= 0.01;
+  const sumCents = splits.reduce((acc, s) => acc + Math.round(Number(s.amount) * 100), 0);
+  return Math.abs(sumCents - Math.round(Number(total) * 100)) <= 1;
 }
 
 const canceled = new Set(['cancelled', 'canceled', 'cancelado', 'cancelada']);

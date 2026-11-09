@@ -11,6 +11,7 @@ export interface CashRegisterSession {
   closed_at: string | null;
   closed_by?: string | null;
   closing_snapshot?: unknown;
+  closing_method_totals?: Record<string, number> | null;
   closing_cash_received?: number | null;
   supplies_total?: number | null;
   system_orders_count: number;

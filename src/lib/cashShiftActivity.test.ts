@@ -44,3 +44,18 @@ describe('cash shift activity', () => {
     expect(activity.received).toHaveLength(1205);
   });
 });
+describe('mixed payment splits', () => {
+  it('mixed order with matching splits is received and split by method', () => {
+    const activity = summarize([order({ payment_method: 'misto', total: 100, splits: [{ method: 'dinheiro', amount: 40 }, { method: 'pix', amount: 60 }] })]);
+    expect(activity).toMatchObject({ receivedTotal: 100, cashReceived: 40, reviewTotal: 0 });
+    expect(activity.byMethod.pix.total).toBe(60);
+  });
+  it('mixed order without matching splits stays in review', () => {
+    const activity = summarize([order({ payment_method: 'misto', total: 100, splits: [{ method: 'dinheiro', amount: 30 }] })]);
+    expect(activity).toMatchObject({ receivedTotal: 0, reviewTotal: 100, cashReceived: 0 });
+  });
+  it('mixed order without any splits stays in review', () => {
+    const activity = summarize([order({ payment_method: 'misto', total: 60 })]);
+    expect(activity).toMatchObject({ receivedTotal: 0, reviewTotal: 60 });
+  });
+});

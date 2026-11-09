@@ -8,3 +8,4 @@
 - Closing reports read tenant-scoped closed sessions and frozen snapshots only; unavailable historical payment methods remain unknown instead of being rebuilt from mutable orders.
 - Cash receipt photos use private tenant/session/actor storage paths and short-lived signed URLs; paths are attached at movement insertion and linked photos cannot be overwritten or deleted by clients.
 - Failed movement inserts are checked by their generated ID before cleanup or retry; Storage only removes own unlinked photos under the same session lock as insertion, preventing deletion of committed receipts.
+- Mixed payments are stored as validated splits in order_payment_splits (server-checked sum equals order total); the shared cash-shift module, closing RPC and frozen report rate them per method, and a misto order without valid splits stays in review.

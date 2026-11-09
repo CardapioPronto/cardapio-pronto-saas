@@ -66,11 +66,11 @@ export interface MethodRow {
 
 const round = (v: number) => Math.round(v * 100) / 100;
 
-/** Parcelas válidas: soma bate com o total do pedido (tolerância de 1 centavo). */
+/** Parcelas válidas: soma bate com o total do pedido (tolerância de 1 centavo, comparada em centavos inteiros). */
 export function splitsMatchTotal(splits: { method: string; amount: number }[] | undefined, total: number): boolean {
   if (!splits || splits.length === 0) return false;
-  const sum = splits.reduce((acc, s) => acc + Math.round(Number(s.amount) * 100), 0) / 100;
-  return Math.abs(sum - round(Number(total))) <= 0.01;
+  const sumCents = splits.reduce((acc, s) => acc + Math.round(Number(s.amount) * 100), 0);
+  return Math.abs(sumCents - Math.round(Number(total) * 100)) <= 1;
 }
 
 /**
