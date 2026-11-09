@@ -1,9 +1,10 @@
 import type { CashRegisterSession } from "@/services/cashRegisterService";
-import { classifyOrderPayment, METHOD_LABEL, type PosPaymentMethod } from "@/lib/paymentMethods";
+import { classifyOrderPayment, METHOD_LABEL, splitsMatchTotal, type PosPaymentMethod } from "@/lib/paymentMethods";
 
 export interface FrozenOrder {
   id: string; order_number: string | number | null; total: number;
   paid_at: string | null; class: string | null; payment_method?: string | null;
+  splits?: { method: string; amount: number }[];
 }
 export interface ClosingReport {
   session: CashRegisterSession;
